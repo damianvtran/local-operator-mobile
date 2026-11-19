@@ -48,10 +48,14 @@ const RUN_ATTEMPT_JOBS_ENDPOINT =
 	/\/actions\/runs\/(\d+)\/attempts\/(\d+)\/jobs/;
 const TOP_PERMISSIONS_BLOCK =
 	/^permissions:\n((?: {2}[a-z-]+:\s*[a-z]+(?:\n|$))+)/m;
+const TOP_PERMISSIONS_EMPTY = /^permissions:\s*\{\s*\}\s*$/m;
 const JOB_PERMISSIONS_BLOCK =
 	/^ {4}permissions:\n((?: {6}[a-z-]+:\s*[a-z]+(?:\n|$))+)/m;
+const JOB_PERMISSIONS_EMPTY = /^ {4}permissions:\s*\{\s*\}\s*$/m;
 const PERMISSION_ENTRY = /^\s+([a-z-]+):\s*(none|read|write)\s*$/gm;
 const LOCAL_REUSABLE_USES = /^ {4}uses:\s*\.\/(\.github\/workflows\/[^\s]+)$/m;
+const STEP_RUN_HEADER = /^(\s+)run:\s*\|[-+]?\s*$/;
+const LEADING_SPACES = /^ */;
 
 type PermissionLevel = "none" | "read" | "write";
 
@@ -79,13 +83,22 @@ function parseTopLevelPermissions(
 	workflowSource: string,
 ): Record<string, PermissionLevel> {
 	const header = workflowSource.split("\njobs:\n")[0] ?? "";
+	if (TOP_PERMISSIONS_EMPTY.test(header)) return {};
 	const match = TOP_PERMISSIONS_BLOCK.exec(header);
 	return match?.[1] ? parsePermissionEntries(match[1]) : {};
 }
 
-function parseJobPermissions(block: string): Record<string, PermissionLevel> {
+/**
+ * Parse a job's explicit `permissions:` block, distinguishing `null` (no
+ * job-level `permissions:` declaration — inherit workflow-level permissions)
+ * from `{}` (explicit `permissions: {}` — revoke all scopes to `none`).
+ */
+function parseJobPermissions(
+	block: string,
+): Record<string, PermissionLevel> | null {
+	if (JOB_PERMISSIONS_EMPTY.test(block)) return {};
 	const match = JOB_PERMISSIONS_BLOCK.exec(block);
-	return match?.[1] ? parsePermissionEntries(match[1]) : {};
+	return match?.[1] ? parsePermissionEntries(match[1]) : null;
 }
 
 /**
@@ -121,7 +134,9 @@ function collectCalleeRequiredPermissions(
 
 	for (const id of jobIds(source)) {
 		const block = jobBlock(source, id);
-		for (const [scope, level] of Object.entries(parseJobPermissions(block))) {
+		for (const [scope, level] of Object.entries(
+			parseJobPermissions(block) ?? {},
+		)) {
 			requirements.push({
 				source: `${workflowRelPath}#${id}`,
 				scope,
@@ -148,12 +163,11 @@ function assertCallerGrantsAllCalleePermissions(
 		const calleeRel = LOCAL_REUSABLE_USES.exec(block)?.[1];
 		if (!calleeRel) continue;
 
-		// In GitHub Actions, an explicit job-level `permissions:` block sets the
-		// permission map for that job; if omitted, the job inherits the
-		// workflow-level `permissions:` map (unlisted scopes default to `none`).
+		// In GitHub Actions, an explicit job-level `permissions:` block (including
+		// `permissions: {}`) replaces the workflow-level map for that job; only an
+		// omitted block inherits `callerTop` (unlisted scopes default to `none`).
 		const jobPerms = parseJobPermissions(block);
-		const effectiveCallerPerms =
-			Object.keys(jobPerms).length > 0 ? jobPerms : callerTop;
+		const effectiveCallerPerms = jobPerms ?? callerTop;
 
 		for (const req of collectCalleeRequiredPermissions(calleeRel)) {
 			const allowed: PermissionLevel =
@@ -186,6 +200,74 @@ function jobBlock(workflowSource: string, id: string): string {
 	const rest = body.slice(start + marker.length);
 	const next = rest.search(NEXT_JOB_HEADER);
 	return next === -1 ? rest : rest.slice(0, next);
+}
+
+/**
+ * Extract the `run: |` block scalar of a named step inside a workflow job by
+ * YAML indentation boundaries rather than hardcoding the following step's name.
+ *
+ * WHY INDENTATION-BOUNDED. Upstream merges can insert sibling steps between
+ * two steps inside `changes.steps` (e.g. `team_bridge_diff` inserted between
+ * `sound_diff` and `diff` on `refs/pull/320/merge`). Splitting on the next
+ * step's literal name swallows any newly inserted step's YAML into the `bash`
+ * script; stopping at the first non-empty line with indentation smaller than
+ * the block scalar's content indent terminates cleanly at the next step key,
+ * sibling `- ` header, or job boundary.
+ */
+function extractStepRunBody(jobYaml: string, stepName: string): string {
+	const lines = jobYaml.split("\n");
+	const headerMarker = `- name: ${stepName}`;
+	const startIdx = lines.findIndex((line) => line.trim() === headerMarker);
+	if (startIdx === -1) {
+		throw new Error(`missing step: ${stepName}`);
+	}
+	const stepIndent = lines[startIdx]?.match(LEADING_SPACES)?.[0].length ?? 0;
+
+	let runLineIdx = -1;
+	let runKeyIndent = 0;
+	for (let i = startIdx + 1; i < lines.length; i += 1) {
+		const line = lines[i] ?? "";
+		const trimmed = line.trim();
+		if (trimmed.length === 0) continue;
+		const indent = line.match(LEADING_SPACES)?.[0].length ?? 0;
+		if (indent <= stepIndent && !trimmed.startsWith("#")) {
+			break;
+		}
+		const runMatch = STEP_RUN_HEADER.exec(line);
+		if (runMatch?.[1]) {
+			runLineIdx = i;
+			runKeyIndent = runMatch[1].length;
+			break;
+		}
+	}
+	if (runLineIdx === -1) {
+		throw new Error(`missing run: | body for step: ${stepName}`);
+	}
+
+	const bodyLines: string[] = [];
+	let contentIndent: number | null = null;
+	for (let i = runLineIdx + 1; i < lines.length; i += 1) {
+		const line = lines[i] ?? "";
+		if (line.trim().length === 0) {
+			if (contentIndent !== null) bodyLines.push("");
+			continue;
+		}
+		const indent = line.match(LEADING_SPACES)?.[0].length ?? 0;
+		if (contentIndent === null) {
+			if (indent <= runKeyIndent) break;
+			contentIndent = indent;
+		}
+		if (indent < contentIndent) break;
+		bodyLines.push(line.slice(contentIndent));
+	}
+
+	while (bodyLines.length > 0 && bodyLines[bodyLines.length - 1] === "") {
+		bodyLines.pop();
+	}
+	if (bodyLines.length === 0) {
+		throw new Error(`empty run: | body for step: ${stepName}`);
+	}
+	return bodyLines.join("\n");
 }
 
 function extractInlineNodeScript(block: string): string {
@@ -317,16 +399,10 @@ describe("ci.yml CI Gate contract", () => {
 describe("ios.yml and android.yml two-tier native-input filter", () => {
 	function extractChangesShell(workflowSource: string): string {
 		const changes = jobBlock(workflowSource, "changes");
-		const step = changes.split(
-			"- name: Decide whether the native jobs are worth running",
-		)[1];
-		if (!step) throw new Error("missing diff step");
-		const runPart = step.split("        run: |\n")[1];
-		if (!runPart) throw new Error("missing run body");
-		return runPart
-			.split("\n")
-			.map((line) => line.replace(INDENT_10, ""))
-			.join("\n");
+		return extractStepRunBody(
+			changes,
+			"Decide whether the native jobs are worth running",
+		);
 	}
 
 	function evaluateNativeFilter(
@@ -469,16 +545,10 @@ describe("ios.yml and android.yml two-tier native-input filter", () => {
 	it("android.yml sound_diff uses three-dot FETCH_HEAD...HEAD on pull_request and stays sound-path-scoped even when FULL=true", () => {
 		const android = readRepoFile(".github/workflows/android.yml");
 		const changes = jobBlock(android, "changes");
-		const soundStep = changes
-			.split("- name: Select bounded sound-native execution")[1]
-			?.split("- name: Decide whether the native jobs are worth running")[0];
-		if (!soundStep) throw new Error("missing sound_diff step");
-		const runPart = soundStep.split("        run: |\n")[1];
-		if (!runPart) throw new Error("missing sound_diff run body");
-		const script = runPart
-			.split("\n")
-			.map((line) => line.replace(INDENT_10, ""))
-			.join("\n");
+		const script = extractStepRunBody(
+			changes,
+			"Select bounded sound-native execution",
+		);
 
 		const evaluateSoundFilter = (opts: {
 			event: string;
@@ -584,6 +654,46 @@ describe("ios.yml and android.yml two-tier native-input filter", () => {
 			}).output,
 		).toBe("run=true");
 	}, 30_000);
+
+	it("extractStepRunBody stops at YAML indentation boundary when a sibling step is inserted after sound_diff (refs/pull/320/merge regression)", () => {
+		const android = readRepoFile(".github/workflows/android.yml");
+		const insertedSibling = [
+			"      - name: Select bounded Team Bridge push native execution",
+			"        id: team_bridge_diff",
+			"        env:",
+			"          BASE: deadbeef",
+			"        run: |",
+			"          set -euo pipefail",
+			'          echo "run=false" >> "$GITHUB_OUTPUT"',
+			"",
+		].join("\n");
+		const mergedLikeAndroid = android.replace(
+			"      - name: Decide whether the native jobs are worth running",
+			`${insertedSibling}\n      - name: Decide whether the native jobs are worth running`,
+		);
+		expect(mergedLikeAndroid).not.toBe(android);
+
+		const mergedChanges = jobBlock(mergedLikeAndroid, "changes");
+		const soundScript = extractStepRunBody(
+			mergedChanges,
+			"Select bounded sound-native execution",
+		);
+		const diffScript = extractStepRunBody(
+			mergedChanges,
+			"Decide whether the native jobs are worth running",
+		);
+
+		expect(soundScript).not.toContain("Select bounded Team Bridge push");
+		expect(soundScript).not.toContain("team_bridge_diff");
+		expect(soundScript).toContain('git diff --name-only "FETCH_HEAD...HEAD"');
+		expect(diffScript).toContain("native_inputs=");
+
+		// Verify extracted shell syntax parses cleanly under `bash -n`.
+		const syntaxCheck = spawnSync("bash", ["-n", "-c", soundScript], {
+			encoding: "utf8",
+		});
+		expect(syntaxCheck.status, syntaxCheck.stderr).toBe(0);
+	});
 });
 
 describe("e2e.yml and merge-gate.yml two-tier contracts", () => {
@@ -694,6 +804,23 @@ describe("e2e.yml and merge-gate.yml two-tier contracts", () => {
 		expect(violations[0]).toContain(
 			"caller job 'e2e' allows 'actions: none', but '.github/workflows/e2e.yml#account-routing-ios-proof' requests 'actions: read'",
 		);
+
+		// Negative control 2: explicit `permissions: {}` on a caller job revokes
+		// all scopes to `none` instead of falling back to top-level `contents: read`.
+		const withEmptyJobPerms = mergeGate.replace(
+			"    uses: ./.github/workflows/ios.yml",
+			"    permissions: {}\n    uses: ./.github/workflows/ios.yml",
+		);
+		expect(withEmptyJobPerms).not.toBe(mergeGate);
+		const emptyPermViolations =
+			assertCallerGrantsAllCalleePermissions(withEmptyJobPerms);
+		expect(
+			emptyPermViolations.some((v) =>
+				v.includes(
+					"caller job 'ios' allows 'contents: none', but '.github/workflows/ios.yml (top-level)' requests 'contents: read'",
+				),
+			),
+		).toBe(true);
 	});
 });
 
@@ -1126,7 +1253,9 @@ describe("scripts/ci/merge-gate.ts CLI & CI Gate precondition", () => {
 			);
 		}
 
-		// Direct pollForMergeGateRun test: ignores mismatched head_sha and non-merge-gate workflows.
+		// Direct pollForMergeGateRun test: ignores mismatched head_sha, non-merge-gate
+		// workflows, and runs explicitly bound to another PR, while keeping empty
+		// `pull_requests` (e.g. startup_failure) eligible.
 		const polled = await pollForMergeGateRun({
 			runGh: mockRunner([], {
 				mergeGateRuns: [
@@ -1149,6 +1278,16 @@ describe("scripts/ci/merge-gate.ts CLI & CI Gate precondition", () => {
 						created_at: "2026-11-19T01:27:19Z",
 					},
 					{
+						id: 4,
+						path: MERGE_GATE_WORKFLOW_PATH,
+						event: "pull_request",
+						head_sha: HEAD_SHA,
+						status: "queued",
+						conclusion: null,
+						created_at: "2026-11-19T01:27:20Z",
+						pull_requests: [{ number: 999 }],
+					},
+					{
 						id: 3,
 						path: `${MERGE_GATE_WORKFLOW_PATH}@refs/pull/320/merge`,
 						event: "pull_request",
@@ -1156,12 +1295,14 @@ describe("scripts/ci/merge-gate.ts CLI & CI Gate precondition", () => {
 						status: "in_progress",
 						conclusion: null,
 						created_at: "2026-11-19T01:27:19Z",
+						pull_requests: [],
 						html_url:
 							"https://github.com/damianvtran/local-operator-mobile/actions/runs/3",
 					},
 				],
 			}),
 			repo: REPO,
+			prNumber: 320,
 			headSha: HEAD_SHA,
 			sinceMs: nowMs,
 			pollAttempts: 1,

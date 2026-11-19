@@ -269,14 +269,23 @@ export function verifyFastCiGateGreen(options: {
 export async function pollForMergeGateRun(options: {
 	runGh: GhRunner;
 	repo: string;
+	prNumber?: number;
 	headSha: string;
 	sinceMs: number;
 	pollAttempts: number;
 	pollIntervalMs: number;
 	sleep: (ms: number) => Promise<void>;
 }): Promise<WorkflowRunSummary | null> {
-	const { runGh, repo, headSha, sinceMs, pollAttempts, pollIntervalMs, sleep } =
-		options;
+	const {
+		runGh,
+		repo,
+		prNumber,
+		headSha,
+		sinceMs,
+		pollAttempts,
+		pollIntervalMs,
+		sleep,
+	} = options;
 	for (let attempt = 1; attempt <= pollAttempts; attempt += 1) {
 		const output = ghExec(runGh, [
 			"api",
@@ -287,13 +296,32 @@ export async function pollForMergeGateRun(options: {
 		};
 		const fresh = (payload.workflow_runs ?? [])
 			.filter(
-				(run): run is RestWorkflowRun & { id: number; created_at: string } =>
-					typeof run.id === "number" &&
-					typeof run.created_at === "string" &&
-					run.head_sha === headSha &&
-					run.event === "pull_request" &&
-					isWorkflowPath(run.path, MERGE_GATE_WORKFLOW_PATH) &&
-					Date.parse(run.created_at) >= sinceMs - SINCE_SKEW_MS,
+				(run): run is RestWorkflowRun & { id: number; created_at: string } => {
+					if (
+						typeof run.id !== "number" ||
+						typeof run.created_at !== "string" ||
+						run.head_sha !== headSha ||
+						run.event !== "pull_request" ||
+						!isWorkflowPath(run.path, MERGE_GATE_WORKFLOW_PATH) ||
+						Date.parse(run.created_at) < sinceMs - SINCE_SKEW_MS
+					) {
+						return false;
+					}
+					// When GitHub populates `pull_requests`, require it to reference this
+					// PR so two PRs sharing `head_sha` armed inside the skew window cannot
+					// match each other's run. Keep empty/missing `pull_requests` eligible
+					// because plan-time `startup_failure` runs omit PR bindings and still
+					// need to surface as an immediate failure below.
+					if (
+						prNumber !== undefined &&
+						Array.isArray(run.pull_requests) &&
+						run.pull_requests.length > 0 &&
+						!run.pull_requests.some((pr) => pr.number === prNumber)
+					) {
+						return false;
+					}
+					return true;
+				},
 			)
 			.sort((a, b) => b.id - a.id);
 		const newest = fresh[0];
@@ -405,6 +433,7 @@ export async function runMergeGateCli(options: {
 	const queued = await pollForMergeGateRun({
 		runGh,
 		repo,
+		prNumber: view.number,
 		headSha: view.headRefOid,
 		sinceMs: startedAt,
 		pollAttempts,
