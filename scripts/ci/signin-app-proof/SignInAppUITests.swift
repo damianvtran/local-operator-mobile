@@ -166,12 +166,41 @@ final class SignInAppUITests: XCTestCase {
   @MainActor private func require(_ condition: Bool, _ message: String) throws {
     if !condition {
       attach("failed-app-frame")
+      attachSignInDiagnostics()
       for (name, application) in [("app", app), ("springboard", springboard), ("SafariViewService", XCUIApplication(bundleIdentifier: "com.apple.SafariViewService"))] {
         let value = XCTAttachment(string: application.debugDescription); value.name = name; value.lifetime = .keepAlways; add(value)
       }
       XCTFail(message)
       throw NSError(domain: "SignInProof", code: 1)
     }
+  }
+  /// SELF-DIAGNOSIS on failure (PR #341, run 44505768707). A failed proof used to
+  /// end on "We could not finish signing in." with no cause: the panel's stage
+  /// trail (`sign-in-diagnostics.ts`) already records each stage and an allowlisted
+  /// error CLASS, never a message, URL or token, so it is safe to publish. Open
+  /// the disclosure the reader would open and attach its text, plus the provider's
+  /// count receipt, so the next failure names the stage that failed and its class.
+  /// Never throws: this runs inside `require`'s failure path.
+  @MainActor private func attachSignInDiagnostics() {
+    let toggle = app.buttons["sign-in-diagnostics-toggle"].firstMatch
+    var lines = ["toggle exists: \(toggle.exists)"]
+    if toggle.exists {
+      if toggle.label == "Show sign-in details" { toggle.tap() }
+      let region = app.descendants(matching: .any).matching(identifier: "sign-in-diagnostics").firstMatch
+      if region.waitForExistence(timeout: 10) {
+        lines.append("trail:\n" + region.label)
+      } else {
+        lines.append("trail: disclosure did not open")
+      }
+      attach("failed-sign-in-details")
+    }
+    if let receipt = try? control("/receipt") {
+      lines.append("receipt: " + receipt.sorted { $0.key < $1.key }.map { "\($0.key)=\($0.value)" }.joined(separator: " "))
+    }
+    let text = lines.joined(separator: "\n")
+    // Also on stdout, so the job log carries the cause without opening the xcresult.
+    print("[signin-proof-diagnostics]\n" + text)
+    let value = XCTAttachment(string: text); value.name = "sign-in-diagnostics"; value.lifetime = .keepAlways; add(value)
   }
   @MainActor private func attach(_ name: String) {
     let value = XCTAttachment(screenshot: XCUIScreen.main.screenshot()); value.name = name; value.lifetime = .keepAlways; add(value)

@@ -86,6 +86,12 @@ describe("real Expo application OAuth proof boundary", () => {
 		);
 		expect(read("./run.sh")).toContain("v['relay_requests'] > 0");
 		expect(test).toContain('attach("token-500-error-and-retry-collapsed")');
+		// A failed proof names its stage and error class (PR #341, run
+		// 44505768707 ended on a bare "We could not finish signing in.").
+		expect(test).toMatch(
+			/attach\("failed-app-frame"\)\n {6}attachSignInDiagnostics\(\)/,
+		);
+		expect(test).toContain('matching(identifier: "sign-in-diagnostics")');
 		expect(test).toContain('"actual_monotonic_starts": times');
 		expect(test).toContain('attach("transition-\\(index)")');
 		expect(read("./run.sh")).toContain('TEST_RUNNER_PROOF_THEME="$theme"');
