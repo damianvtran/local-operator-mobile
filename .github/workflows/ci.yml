@@ -62,17 +62,19 @@ on:
 # `workflow_call` (a tag ref or a dispatch event, never `push` on main) are
 # never cancelled.
 #
-# `github.event_name` IS PART OF THE GROUP, and it is what keeps the release gate
-# from cancelling itself. When release.yml calls this workflow, `github.workflow`
-# inside the callee is the CALLER's name, so a group of `workflow-ref` alone is
-# identical to release.yml's own group — GitHub's documented outcome is
-# "Canceling since a deadlock for concurrency group … was detected between 'top
-# level workflow' and …", i.e. the release's `gate` job is cancelled before it
-# starts. The event name makes the call site distinct (`…-workflow_call`).
+# LITERAL WORKFLOW PREFIX (`ci-...`) AND `github.event_name` ARE PART OF THE
+# GROUP. When release.yml calls this workflow via `workflow_call`,
+# `github.workflow` inside the callee is the CALLER's name, so a group of
+# `workflow-ref` alone is identical to release.yml's own group — GitHub's
+# documented outcome is "Canceling since a deadlock for concurrency group … was
+# detected between 'top level workflow' and …", i.e. the release's `gate` job is
+# cancelled before it starts. Using the literal `'ci'` prefix plus
+# `github.event_name` keeps caller and callee lanes distinct even when called
+# from a `pull_request` or tag workflow.
 # `cancel-in-progress` never reaches a tag for the same reason: a tag run is a
 # release in progress, and cancelling it would drop the artefacts.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
+  group: ${{ format('ci-{0}-{1}', github.ref, github.event_name) }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main') }}
 
 # Least privilege: nothing here writes. The release workflow is the one place
@@ -633,3 +635,78 @@ jobs:
             docs/design/preview/*.png
             design/app-icon/store/play-feature-graphic-1024x500.png
           retention-days: 30
+
+  # ONE stable check name (`CI Gate`) to require on every pull request and read
+  # before arming the merge gate (`pnpm merge-gate <pr>`). Requiring individual
+  # jobs makes every job rename or addition a ruleset edit that strands in-flight
+  # pull requests; requiring this aggregate does not.
+  #
+  # FAIL CLOSED (`if: always()`, invariant I2):
+  #   * `changes`, `checks`, and `release-staging` MUST conclude `success` on
+  #     every trigger — never `skipped`, `failure`, or `cancelled`.
+  #   * `team-bridge-qa` runs only when `github.event_name == 'pull_request'`:
+  #     it MUST be `success` on `pull_request`, and `skipped` on non-PR triggers.
+  #   * `design-kit` is path-gated by `changes.outputs.design`: it may conclude
+  #     `skipped` ONLY on a `pull_request` whose classifier explicitly wrote
+  #     `design == 'false'`. On every other trigger — or if `changes` failed or
+  #     emitted an empty/unknown output — `skipped` is rejected as a failure.
+  ci-gate:
+    name: CI Gate
+    needs:
+      - changes
+      - checks
+      - team-bridge-qa
+      - release-staging
+      - design-kit
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verify fast-tier jobs succeeded (fail closed)
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+          EVENT: ${{ github.event_name }}
+          DESIGN_NEEDED: ${{ needs.changes.outputs.design }}
+        run: |
+          node --input-type=module <<'NODE'
+          const needs = JSON.parse(process.env.NEEDS ?? "{}");
+          const event = process.env.EVENT ?? "";
+          const designNeeded = process.env.DESIGN_NEEDED ?? "";
+
+          const expected = ["changes", "checks", "team-bridge-qa", "release-staging", "design-kit"];
+          const bad = [];
+
+          for (const job of expected) {
+            const result = needs[job]?.result ?? "missing";
+            console.log(`${job}: ${result}`);
+            if (job === "team-bridge-qa") {
+              const ok = event === "pull_request" ? result === "success" : result === "skipped";
+              if (!ok) bad.push(`${job}=${result} (event=${event})`);
+              continue;
+            }
+            if (job === "design-kit") {
+              const allowedSkip =
+                event === "pull_request" &&
+                needs.changes?.result === "success" &&
+                designNeeded === "false";
+              const ok = result === "success" || (result === "skipped" && allowedSkip);
+              if (!ok) bad.push(`${job}=${result} (design=${designNeeded || "<empty>"}, event=${event})`);
+              continue;
+            }
+            if (result !== "success") {
+              bad.push(`${job}=${result}`);
+            }
+          }
+
+          for (const [job, entry] of Object.entries(needs)) {
+            if (!expected.includes(job) && entry?.result !== "success") {
+              bad.push(`${job}=${entry?.result ?? "unknown"}`);
+            }
+          }
+
+          if (bad.length > 0) {
+            console.log(`::error title=CI Gate::${bad.join(", ")}`);
+            process.exit(1);
+          }
+          console.log("CI Gate green on this head.");
+          NODE

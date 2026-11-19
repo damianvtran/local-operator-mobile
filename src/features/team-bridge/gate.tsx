@@ -3,6 +3,7 @@ import * as WebBrowser from "expo-web-browser";
 import { type ReactNode, useState } from "react";
 import { Platform, Text, View } from "react-native";
 import { useConnection } from "@/features/auth/connection-provider";
+import { CommunityNoPlanCard } from "@/features/community/no-plan-card";
 import { t } from "@/i18n";
 import { useTeamBridge, useTeamBridgeState } from "@/team-bridge/provider";
 import type { TeamBridgeState } from "@/team-bridge/store";
@@ -144,6 +145,9 @@ export function BridgeGate({
 								{t("mobile.team_bridge.gate.manage_plan")}
 							</Text>
 						)}
+						{/* RFC v2.4 §5.1: the free community join is offered on every
+						 *  no-plan path; it renders nothing while the flag is off. */}
+						<CommunityNoPlanCard />
 					</>
 				)}
 				{gate === "signed_out" && (

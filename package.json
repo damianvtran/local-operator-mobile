@@ -39,7 +39,8 @@
 		"e2e:divergences": "node tools/mock-relay/divergences.ts",
 		"e2e:verify": "pnpm e2e:typecheck && pnpm e2e:docs && pnpm e2e:relay && pnpm e2e:divergences",
 		"audit:capture": "node tools/visual/capture.ts",
-		"audit:run": "node tools/audit/audit.ts"
+		"audit:run": "node tools/audit/audit.ts",
+		"merge-gate": "node scripts/ci/merge-gate.ts"
 	},
 	"dependencies": {
 		"@expo/metro-runtime": "~57.0.16",

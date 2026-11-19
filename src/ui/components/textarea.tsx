@@ -85,6 +85,9 @@ export type TextareaProps = {
 	 *  fights the IME's own cursor while composing. Unset leaves the field
 	 *  uncontrolled, exactly as before. */
 	selection?: TextInputProps["selection"];
+	/** A hard character cap the server enforces (e.g. the community's 4000).
+	 *  Unset leaves the field unbounded, exactly as before. */
+	maxLength?: number;
 	testID: string;
 };
 
@@ -175,6 +178,7 @@ export const Textarea = ({
 	fieldRef,
 	onSelectionChange,
 	selection,
+	maxLength,
 	testID,
 }: TextareaProps) => {
 	const { effectiveScale } = useTextScale();
@@ -320,6 +324,7 @@ export const Textarea = ({
 					</View>
 				) : null}
 				<TextInput
+					maxLength={maxLength}
 					onFocus={onFocus}
 					onBlur={onBlur}
 					ref={resolvedRef}

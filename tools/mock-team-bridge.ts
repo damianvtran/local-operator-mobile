@@ -44,6 +44,25 @@ import { TEAM_BRIDGE_FIXTURE_TOKEN } from "../src/testing/team-bridge-token.ts";
 import { DEVICES } from "./visual/matrix.ts";
 
 const MOCK_ROUTE = /^\/mock-hub\/([a-z0-9_~-]+)\/v1\/messaging(.*)$/;
+/*
+ * The community client's same-origin seam (`src/testing/community-fixture.ts`).
+ * There is no community FIXTURE here on purpose: with `MOCK_COMMUNITY_UPSTREAM`
+ * set (e.g. a local agent-server in SERVER_MODE=community, loopback only), the
+ * request is passed through unchanged so the real screens exercise the real
+ * server; unset, it answers the server's own 404 (the community is dark).
+ */
+const COMMUNITY_ROUTE = /^\/mock-community\/[a-z0-9_~-]+(\/community\/v1\/.*)$/;
+const COMMUNITY_HEADERS = [
+	"accept",
+	"authorization",
+	"content-type",
+	"idempotency-key",
+	"agent-approval-id",
+];
+const COMMUNITY_UPSTREAM = process.env.MOCK_COMMUNITY_UPSTREAM ?? "";
+/* Loopback only: a QA rig must never forward a fixture token off the machine. */
+const LOOPBACK_UPSTREAM = /^http:\/\/(127\.0\.0\.1|localhost):\d+$/;
+const COMMUNITY_FRAME_PATH = /^\/community(\/[A-Za-z0-9_-]+){0,3}$/;
 /* The profile slice's avatar route sits beside messaging, not under it. */
 const AVATAR_ROUTE =
 	/^\/mock-hub\/([a-z0-9_~-]+)\/v1\/accounts\/([A-Za-z0-9_-]+)\/avatar$/;
@@ -518,8 +537,11 @@ export function createTeamBridgeFixture(options: { root?: string } = {}) {
 						: url.searchParams.get("conversation") === "dm"
 							? dm(ADA, "Ada").id
 							: "bcv_humans";
-				const route =
-					url.searchParams.get("thread") === "1"
+				/* `path=/community/...` frames a community screen (same seam). */
+				const communityPath = url.searchParams.get("path") ?? "";
+				const route = COMMUNITY_FRAME_PATH.test(communityPath)
+					? communityPath
+					: url.searchParams.get("thread") === "1"
 						? `/team-bridge/${TENANT}/${threadId}`
 						: "/team-bridge";
 				const viewer = url.searchParams.get("viewer");
@@ -541,6 +563,43 @@ setInterval(()=>{try{
 			}
 			if (url.pathname === "/__stats") {
 				ok({ created, requests });
+				return;
+			}
+			const community = COMMUNITY_ROUTE.exec(url.pathname);
+			if (community) {
+				if (!LOOPBACK_UPSTREAM.test(COMMUNITY_UPSTREAM)) {
+					send(404, { message: "Not Found" });
+					return;
+				}
+				const headers: Record<string, string> = {};
+				for (const name of COMMUNITY_HEADERS) {
+					const value = req.headers[name];
+					if (typeof value === "string") headers[name] = value;
+				}
+				const chunks: Buffer[] = [];
+				for await (const chunk of req) chunks.push(chunk as Buffer);
+				const upstream = await fetch(
+					`${COMMUNITY_UPSTREAM}${community[1]}${url.search}`,
+					{
+						method: req.method,
+						headers,
+						body:
+							req.method === "GET" || req.method === "HEAD"
+								? undefined
+								: Buffer.concat(chunks),
+					},
+				);
+				const body = Buffer.from(await upstream.arrayBuffer());
+				if (closing || res.destroyed || res.writableEnded) return;
+				res.writeHead(upstream.status, {
+					"content-type":
+						upstream.headers.get("content-type") ?? "application/json",
+					"cache-control": "no-store",
+					...(upstream.headers.get("retry-after")
+						? { "retry-after": upstream.headers.get("retry-after") ?? "" }
+						: {}),
+				});
+				res.end(body);
 				return;
 			}
 			const avatar = AVATAR_ROUTE.exec(url.pathname);

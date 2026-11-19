@@ -41,6 +41,16 @@ on:
         description: Secret-free device callback proof only (run after the iOS proof settles)
         type: boolean
         default: false
+  # Callable by merge-gate.yml on `ready-to-merge` (`full: true`) so pure JS/UI
+  # pull requests skip per-push Gradle builds during review churn while still
+  # running the full Android APK + manifest + determinism gate once before merge.
+  workflow_call:
+    inputs:
+      full:
+        description: "Run the native build unconditionally (used by merge-gate.yml)"
+        required: false
+        type: boolean
+        default: false
 
 # THE TRIGGER IS PART OF THE KEY. The mechanism is the one e2e.yml spells out at
 # length and has the measurement for: GitHub keeps one pending run per concurrency
@@ -57,15 +67,22 @@ on:
 # is proven on e2e.yml, and applying it here keeps the first occurrence from
 # happening rather than diagnosing it afterwards.
 #
-# `github.event_name` gives each trigger its own lane; `cancel-in-progress` is
-# untouched, so a running run on `main` is still never cancelled.
+# LITERAL WORKFLOW PREFIX (`android-...`) AND `github.event_name` ARE PART OF
+# THE GROUP. Under `workflow_call` (from `merge-gate.yml`), GitHub sets
+# `github.workflow` inside the callee to the CALLER's workflow name ("Merge
+# Gate") and `github.event_name` to the caller's event (`pull_request` or
+# `workflow_dispatch`). Keying on `github.workflow` would therefore give caller
+# `merge-gate` and sibling callees `ios`, `android`, and `e2e` the EXACT SAME
+# group — deadlocking the caller or cancelling sibling jobs mid-flight! Using
+# the literal `'android'` prefix keeps caller and every sibling callee in
+# disjoint lanes.
 # MAIN STAYS UNCANCELLED, deliberately (re-checked 2026-11-18, when e2e.yml and
 # ci.yml began cancelling superseded main pushes to free the shared job pool): a
 # main push here signs and uploads to the Play internal track (`internal`, whenever
 # its `credentials` job finds the secrets), and cancelling that mid-upload is a
 # release lost, not a minute saved.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  group: ${{ format('android-{0}-{1}', github.event_name, github.ref) }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 permissions:
@@ -103,9 +120,28 @@ jobs:
         id: sound_diff
         env:
           BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          BASE_REF: ${{ github.base_ref }}
+          EVENT: ${{ github.event_name }}
+          FULL: ${{ inputs.full && 'true' || 'false' }}
         run: |
           set -euo pipefail
-          if [ -z "$BASE" ] || ! git cat-file -e "$BASE^{commit}"; then
+          # Keep `sound-ios` (macos-26) and `sound-android` path-scoped on pull
+          # requests (even when `merge-gate.yml` passes `FULL=true` on a labeled
+          # PR, where `EVENT` is still `pull_request`), while comparing three-dot
+          # `FETCH_HEAD...HEAD` against the current base branch tip so a PR
+          # behind `origin/main` does not spuriously run `sound-ios` for `main`
+          # commits outside the PR's own diff.
+          if [ "$EVENT" = "pull_request" ]; then
+            git fetch --no-tags origin "$BASE_REF"
+            files=$(git diff --name-only "FETCH_HEAD...HEAD")
+            if [ -z "$files" ]; then
+              echo "run=true" >> "$GITHUB_OUTPUT"
+            elif printf '%s\n' "$files" | grep -E '^(modules/lop-notification-sound/|scripts/ci/notification-sound-|\.github/workflows/android\.yml$)' >/dev/null; then
+              echo "run=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "run=false" >> "$GITHUB_OUTPUT"
+            fi
+          elif [ "$FULL" = "true" ] || [ -z "$BASE" ] || ! git cat-file -e "$BASE^{commit}"; then
             echo "run=true" >> "$GITHUB_OUTPUT"
           elif git diff --name-only "$BASE" HEAD | grep -E '^(modules/lop-notification-sound/|scripts/ci/notification-sound-|\.github/workflows/android\.yml$)' >/dev/null; then
             echo "run=true" >> "$GITHUB_OUTPUT"
@@ -135,11 +171,17 @@ jobs:
         env:
           BASE_REF: ${{ github.base_ref }}
           EVENT: ${{ github.event_name }}
+          FULL: ${{ inputs.full && 'true' || 'false' }}
         run: |
           set -euo pipefail
-          # Not a pull request: `main` is the release signal and a hand-run is
-          # somebody asking for this pipeline on purpose, so both run everything.
-          if [ "$EVENT" != "pull_request" ]; then
+          # Unconditional when called from merge-gate.yml (`inputs.full == true`)
+          # or on any non-PR event (`main` is the release signal and a hand-run is
+          # somebody asking for this pipeline on purpose). Note that when
+          # `merge-gate.yml` triggers on `pull_request: [labeled]` and calls this
+          # workflow via `workflow_call`, `github.event_name` inside the callee is
+          # still `pull_request` — so checking `$FULL = true` FIRST is what
+          # guarantees the merge gate always builds!
+          if [ "$FULL" = "true" ] || [ "$EVENT" != "pull_request" ]; then
             echo "native=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
@@ -156,16 +198,20 @@ jobs:
             echo "native=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          # Skipped only when EVERY changed file is documentation (ADR 0004:
-          # "docs/** or **/*.md"). Anything else, a workflow file included, runs
-          # the native jobs.
-          other=$(printf '%s\n' "$files" | grep -v -E '^(docs/|.*\.md$)' || true)
-          if [ -n "$other" ]; then
+          # Two-tier native CI: per-push PR runs build Android only when
+          # native-affecting inputs change; pure `src/**` / `app/**` / `tools/**` /
+          # `docs/**` pushes skip per-push Gradle builds during review churn and run
+          # the full Android APK + manifest + determinism gate once via
+          # `merge-gate.yml` (`ready-to-merge`) before merge.
+          native_inputs=$(printf '%s\n' "$files" \
+            | grep -E '^(android/|ios/|modules/|plugins/|assets/|design/(tokens/tokens\.json$|app-icon/|fonts/)|app\.config\.|app\.json$|eas\.json$|package\.json$|pnpm-lock\.yaml$|babel\.config\.|metro\.config\.|tsconfig\.json$|scripts/ci/|\.github/workflows/(android|ios|merge-gate)\.yml$)' \
+            || true)
+          if [ -n "$native_inputs" ]; then
             echo "native=true" >> "$GITHUB_OUTPUT"
-            printf 'native surfaces touched:\n%s\n' "$(printf '%s\n' "$other" | head -20)"
+            printf 'native surfaces touched:\n%s\n' "$(printf '%s\n' "$native_inputs" | head -20)"
           else
             echo "native=false" >> "$GITHUB_OUTPUT"
-            echo "documentation only (docs/** or *.md) — the native jobs are skipped"
+            echo "no native-affecting inputs touched on per-push PR — deferred to Merge Gate (ready-to-merge)"
           fi
 
   android:

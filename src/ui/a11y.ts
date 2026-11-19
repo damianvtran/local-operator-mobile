@@ -59,6 +59,12 @@ export type A11yRole = (typeof ROLE)[keyof typeof ROLE];
 export const SCREEN = {
 	/** Team Bridge is hub-owned: these selectors remain stable without a relay connection. */
 	teamBridgeList: "team-bridge-list",
+	/* The public community client (RFC v2.4; dark behind EXPO_PUBLIC_COMMUNITY). */
+	communityDirectory: "community-directory",
+	communityHome: "community-home",
+	communityConversation: "community-conversation",
+	communityBrowse: "community-browse",
+	communityRequests: "community-requests",
 	teamBridgeThread: "team-bridge-thread",
 	/** One message's reply thread (root + replies), not a conversation. */
 	teamBridgeReplyThread: "team-bridge-reply-thread",
@@ -183,6 +189,38 @@ export const CONTROL = {
 	teamBridgeMenu: "team-bridge-menu",
 	teamBridgeConversationsRetry: "team-bridge-conversations-retry",
 	teamBridgeGateRetry: "team-bridge-gate-retry",
+	communityNoPlanJoin: "community-no-plan-join",
+	communitySwitcherBrowse: "community-switcher-browse",
+	communityLoadRetry: "community-load-retry",
+	communityJoinOpen: "community-join-open",
+	communityJoinAgree: "community-join-agree",
+	communityJoinSubmit: "community-join-submit",
+	communityReaccept: "community-reaccept",
+	communityBrowseOpen: "community-browse-open",
+	communityRequestsOpen: "community-requests-open",
+	communitySearch: "community-search",
+	communityBrowseMode: "community-browse-mode",
+	communityBrowseChannels: "community-browse-channels",
+	communityBrowsePeople: "community-browse-people",
+	communityRequestsMode: "community-requests-mode",
+	communityRequestsDm: "community-requests-dm",
+	communityRequestsApprovals: "community-requests-approvals",
+	communityLoadOlder: "community-load-older",
+	communityComposerInput: "community-composer-input",
+	communitySend: "community-send",
+	communityAttach: "community-attach",
+	communityImagesNoteDismiss: "community-images-note-dismiss",
+	communityHomeSwitcher: "community-home-switcher",
+	communityReportConsent: "community-report-consent",
+	communityChannelJoin: "community-channel-join",
+	communityAttemptCancel: "community-attempt-cancel",
+	communityAttemptRetry: "community-attempt-retry",
+	communityAttemptDismiss: "community-attempt-dismiss",
+	communityProfileMessage: "community-profile-message",
+	communityProfileBlock: "community-profile-block",
+	communityProfileReport: "community-profile-report",
+	communityReportNote: "community-report-note",
+	communityReportSubmit: "community-report-submit",
 	teamBridgeJoin: "team-bridge-join",
 	teamBridgeJumpNewest: "team-bridge-jump-newest",
 	teamBridgeLoadOlder: "team-bridge-load-older",
@@ -866,6 +904,15 @@ export const SURFACE = {
 	teamBridgeDeliveryHelpSheet: "team-bridge-delivery-help-sheet",
 	teamBridgeNotifySheet: "team-bridge-notify-sheet",
 	teamBridgeOrganizations: "team-bridge-organizations",
+	communitySwitcherGroup: "community-switcher-group",
+	communityNoPlanCard: "community-no-plan-card",
+	communityJoinSheet: "community-join-sheet",
+	communityProfileSheet: "community-profile-sheet",
+	communityReportSheet: "community-report-sheet",
+	communityAttempt: "community-attempt",
+	communityHistory: "community-history",
+	communityImagesNote: "community-images-note",
+	communityReacceptBanner: "community-reaccept-banner",
 	/** The Team Bridge pane inside the workspace drawer. */
 	teamBridgeDrawerPane: "team-bridge-drawer-pane",
 	teamBridgeProfile: "team-bridge-profile",
@@ -1304,6 +1351,17 @@ export const IDENTIFIER_FAMILIES: readonly string[] = [
 	"team-bridge-chief-",
 	"team-bridge-org-",
 	"team-bridge-message-",
+	// Community rows are keyed by server ids (community, channel, public profile, request, approval, message).
+	"community-row-",
+	"community-featured-",
+	"community-channel-row-",
+	"community-dm-row-",
+	"community-person-",
+	"community-message-",
+	"community-author-",
+	"community-request-",
+	"community-approval-",
+	"community-report-category-",
 	"team-bridge-notify-",
 	/* Image attachments: one composer chip per staged image (its remove/retry
 	 *  controls derive from it), one rendered image per message attachment, and
@@ -2510,3 +2568,29 @@ export const teamBridgeViewerId = (value: string): string =>
 	`team-bridge-viewer-${value}`;
 export const teamBridgeProfileOpenId = (value: string): string =>
 	`team-bridge-profile-open-${value}`;
+
+/* The community client's id-keyed rows (families above). Server ids only:
+ * never a display name, so a selector survives a rename. */
+export const communityRowId = (communityId: string): string =>
+	`community-row-${communityId}`;
+export const communityFeaturedId = (communityId: string): string =>
+	`community-featured-${communityId}`;
+export const communityChannelRowId = (channelId: string): string =>
+	`community-channel-row-${channelId}`;
+export const communityDmRowId = (conversationId: string): string =>
+	`community-dm-row-${conversationId}`;
+export const communityPersonId = (publicId: string): string =>
+	`community-person-${publicId}`;
+export const communityMessageId = (messageId: string): string =>
+	`community-message-${messageId}`;
+/** The author avatar of one message: the profile tap target (design D1/D5). */
+export const communityAuthorId = (messageId: string): string =>
+	`community-author-${messageId}`;
+export const communityRequestId = (requestId: string, action: string): string =>
+	`community-request-${requestId}-${action}`;
+export const communityApprovalId = (
+	approvalId: string,
+	action: string,
+): string => `community-approval-${approvalId}-${action}`;
+export const communityReportCategoryId = (category: string): string =>
+	`community-report-category-${category}`;
