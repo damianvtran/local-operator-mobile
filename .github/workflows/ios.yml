@@ -156,7 +156,7 @@ jobs:
           # skip per-push macOS builds during review churn and run the full simulator
           # build+launch gate once via `merge-gate.yml` (`ready-to-merge`) before merge.
           native_inputs=$(printf '%s\n' "$files" \
-            | grep -E '^(ios/|android/|modules/|plugins/|assets/|app\.config\.|app\.json$|eas\.json$|package\.json$|pnpm-lock\.yaml$|babel\.config\.|metro\.config\.|tsconfig\.json$|scripts/ci/|\.github/workflows/(ios|android|merge-gate)\.yml$)' \
+            | grep -E '^(ios/|android/|modules/|plugins/|assets/|design/(tokens/tokens\.json$|app-icon/|fonts/)|app\.config\.|app\.json$|eas\.json$|package\.json$|pnpm-lock\.yaml$|babel\.config\.|metro\.config\.|tsconfig\.json$|scripts/ci/|\.github/workflows/(ios|android|merge-gate)\.yml$)' \
             || true)
           if [ -n "$native_inputs" ]; then
             echo "native=true" >> "$GITHUB_OUTPUT"

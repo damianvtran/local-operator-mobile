@@ -60,6 +60,15 @@ jobs:
 
   e2e:
     name: E2E relay contract
+    # GitHub checks nested `workflow_call` permission ceilings across EVERY job
+    # declared in the callee at plan time — before evaluating job `if:` guards —
+    # so `e2e.yml`'s dispatch-only proof jobs (`actions: read` for artifact
+    # downloads) cause a plan-time `startup_failure` unless `actions: read` is
+    # allowed here (`ios.yml`, `android.yml`, and their nested callees only
+    # request `contents: read`).
+    permissions:
+      contents: read
+      actions: read
     uses: ./.github/workflows/e2e.yml
 
   merge-gate:

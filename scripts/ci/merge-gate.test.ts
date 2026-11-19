@@ -21,8 +21,10 @@ import {
 	FAST_GATE_JOB_NAME,
 	LABEL,
 	MERGE_GATE_WORKFLOW,
+	MERGE_GATE_WORKFLOW_PATH,
 	MergeGateError,
 	parseBoundedEnv,
+	pollForMergeGateRun,
 	REQUIRED_CHECK_NAME,
 	runMergeGateCli,
 	verifyFastCiGateGreen,
@@ -44,6 +46,128 @@ const TOP_PULL_REQUEST = /^ {2}pull_request:/m;
 const ANY_IF_LINE = /^\s*if:\s*(.+)$/gm;
 const RUN_ATTEMPT_JOBS_ENDPOINT =
 	/\/actions\/runs\/(\d+)\/attempts\/(\d+)\/jobs/;
+const TOP_PERMISSIONS_BLOCK =
+	/^permissions:\n((?: {2}[a-z-]+:\s*[a-z]+(?:\n|$))+)/m;
+const JOB_PERMISSIONS_BLOCK =
+	/^ {4}permissions:\n((?: {6}[a-z-]+:\s*[a-z]+(?:\n|$))+)/m;
+const PERMISSION_ENTRY = /^\s+([a-z-]+):\s*(none|read|write)\s*$/gm;
+const LOCAL_REUSABLE_USES = /^ {4}uses:\s*\.\/(\.github\/workflows\/[^\s]+)$/m;
+
+type PermissionLevel = "none" | "read" | "write";
+
+const PERMISSION_RANK: Record<PermissionLevel, number> = {
+	none: 0,
+	read: 1,
+	write: 2,
+};
+
+function parsePermissionEntries(
+	lines: string,
+): Record<string, PermissionLevel> {
+	const result: Record<string, PermissionLevel> = {};
+	for (const match of lines.matchAll(PERMISSION_ENTRY)) {
+		const scope = match[1];
+		const level = match[2] as PermissionLevel | undefined;
+		if (scope && level) {
+			result[scope] = level;
+		}
+	}
+	return result;
+}
+
+function parseTopLevelPermissions(
+	workflowSource: string,
+): Record<string, PermissionLevel> {
+	const header = workflowSource.split("\njobs:\n")[0] ?? "";
+	const match = TOP_PERMISSIONS_BLOCK.exec(header);
+	return match?.[1] ? parsePermissionEntries(match[1]) : {};
+}
+
+function parseJobPermissions(block: string): Record<string, PermissionLevel> {
+	const match = JOB_PERMISSIONS_BLOCK.exec(block);
+	return match?.[1] ? parsePermissionEntries(match[1]) : {};
+}
+
+/**
+ * Compute every permission requested across a reusable workflow's top-level
+ * `permissions:` block, every job in `jobs:`, and any nested
+ * `.github/workflows/*.yml` callee it invokes. GitHub evaluates nested
+ * `workflow_call` permission ceilings across EVERY job at plan time before
+ * evaluating job `if:` guards!
+ */
+function collectCalleeRequiredPermissions(
+	workflowRelPath: string,
+	visited: Set<string> = new Set(),
+): Array<{ source: string; scope: string; level: PermissionLevel }> {
+	if (visited.has(workflowRelPath)) return [];
+	visited.add(workflowRelPath);
+
+	const source = readRepoFile(workflowRelPath);
+	const requirements: Array<{
+		source: string;
+		scope: string;
+		level: PermissionLevel;
+	}> = [];
+
+	for (const [scope, level] of Object.entries(
+		parseTopLevelPermissions(source),
+	)) {
+		requirements.push({
+			source: `${workflowRelPath} (top-level)`,
+			scope,
+			level,
+		});
+	}
+
+	for (const id of jobIds(source)) {
+		const block = jobBlock(source, id);
+		for (const [scope, level] of Object.entries(parseJobPermissions(block))) {
+			requirements.push({
+				source: `${workflowRelPath}#${id}`,
+				scope,
+				level,
+			});
+		}
+		const nested = LOCAL_REUSABLE_USES.exec(block)?.[1];
+		if (nested) {
+			requirements.push(...collectCalleeRequiredPermissions(nested, visited));
+		}
+	}
+
+	return requirements;
+}
+
+function assertCallerGrantsAllCalleePermissions(
+	callerSource: string,
+): string[] {
+	const callerTop = parseTopLevelPermissions(callerSource);
+	const violations: string[] = [];
+
+	for (const callerJobId of jobIds(callerSource)) {
+		const block = jobBlock(callerSource, callerJobId);
+		const calleeRel = LOCAL_REUSABLE_USES.exec(block)?.[1];
+		if (!calleeRel) continue;
+
+		// In GitHub Actions, an explicit job-level `permissions:` block sets the
+		// permission map for that job; if omitted, the job inherits the
+		// workflow-level `permissions:` map (unlisted scopes default to `none`).
+		const jobPerms = parseJobPermissions(block);
+		const effectiveCallerPerms =
+			Object.keys(jobPerms).length > 0 ? jobPerms : callerTop;
+
+		for (const req of collectCalleeRequiredPermissions(calleeRel)) {
+			const allowed: PermissionLevel =
+				effectiveCallerPerms[req.scope] ?? "none";
+			if (PERMISSION_RANK[allowed] < PERMISSION_RANK[req.level]) {
+				violations.push(
+					`caller job '${callerJobId}' allows '${req.scope}: ${allowed}', but '${req.source}' requests '${req.scope}: ${req.level}'`,
+				);
+			}
+		}
+	}
+
+	return violations;
+}
 
 function jobIds(workflowSource: string): string[] {
 	const jobsStart = workflowSource.indexOf("\njobs:\n");
@@ -187,7 +311,7 @@ describe("ci.yml CI Gate contract", () => {
 				expect(res.status, `${job}=${result}`).toBe(1);
 			}
 		}
-	});
+	}, 30_000);
 });
 
 describe("ios.yml and android.yml two-tier native-input filter", () => {
@@ -298,6 +422,7 @@ describe("ios.yml and android.yml two-tier native-input filter", () => {
 						"app/(tabs)/index.tsx",
 						"tools/visual/capture.ts",
 						"docs/ci.md",
+						"design/docs/overview.md",
 						".github/workflows/ci.yml",
 					],
 				}),
@@ -310,6 +435,11 @@ describe("ios.yml and android.yml two-tier native-input filter", () => {
 				"modules/radient-loopback/index.ts",
 				"plugins/with-android-local-network.js",
 				"assets/icon.png",
+				"design/tokens/tokens.json",
+				"design/app-icon/ios/icon-light-1024.png",
+				"design/app-icon/android/ic_notification.png",
+				"design/app-icon/splash/splash-dark.png",
+				"design/fonts/Figtree-Regular.ttf",
 				"app.config.ts",
 				"app.json",
 				"eas.json",
@@ -333,7 +463,127 @@ describe("ios.yml and android.yml two-tier native-input filter", () => {
 				).toBe("native=true");
 			}
 		},
+		30_000,
 	);
+
+	it("android.yml sound_diff uses three-dot FETCH_HEAD...HEAD on pull_request and stays sound-path-scoped even when FULL=true", () => {
+		const android = readRepoFile(".github/workflows/android.yml");
+		const changes = jobBlock(android, "changes");
+		const soundStep = changes
+			.split("- name: Select bounded sound-native execution")[1]
+			?.split("- name: Decide whether the native jobs are worth running")[0];
+		if (!soundStep) throw new Error("missing sound_diff step");
+		const runPart = soundStep.split("        run: |\n")[1];
+		if (!runPart) throw new Error("missing sound_diff run body");
+		const script = runPart
+			.split("\n")
+			.map((line) => line.replace(INDENT_10, ""))
+			.join("\n");
+
+		const evaluateSoundFilter = (opts: {
+			event: string;
+			full: string;
+			base?: string;
+			prFiles: string[] | null;
+			pushFiles?: string[];
+		}): { output: string; diffArgs: string[] } => {
+			const scratch = mkdtempSync(
+				join(process.env.LOCAL_OPERATOR_SCRATCHPAD ?? tmpdir(), "sound-diff-"),
+			);
+			try {
+				const outFile = join(scratch, "github_output");
+				const argsLog = join(scratch, "git_diff_args");
+				writeFileSync(outFile, "");
+				writeFileSync(argsLog, "");
+				writeFileSync(
+					join(scratch, "fake-git.sh"),
+					[
+						"#!/usr/bin/env bash",
+						'if [ "$1" = "fetch" ]; then exit 0; fi',
+						'if [ "$1" = "cat-file" ]; then exit 0; fi',
+						'if [ "$1" = "diff" ]; then',
+						`  printf '%s\\n' "$*" >> ${JSON.stringify(argsLog)}`,
+						'  if [ "$3" = "FETCH_HEAD...HEAD" ]; then',
+						opts.prFiles === null
+							? "    exit 0"
+							: `    printf '%s\\n' ${opts.prFiles.map((f) => JSON.stringify(f)).join(" ")}`,
+						"    exit 0",
+						"  fi",
+						`  printf '%s\\n' ${(opts.pushFiles ?? []).map((f) => JSON.stringify(f)).join(" ")}`,
+						"  exit 0",
+						"fi",
+						"exit 1",
+					].join("\n"),
+					{ mode: 0o755 },
+				);
+				const patched = script.replaceAll(
+					GIT_WORD,
+					JSON.stringify(join(scratch, "fake-git.sh")),
+				);
+				const res = spawnSync("bash", ["-c", patched], {
+					encoding: "utf8",
+					env: {
+						...process.env,
+						GITHUB_OUTPUT: outFile,
+						BASE: opts.base ?? "deadbeef",
+						BASE_REF: "main",
+						EVENT: opts.event,
+						FULL: opts.full,
+					},
+					timeout: 5_000,
+				});
+				expect(res.status, res.stderr).toBe(0);
+				return {
+					output: readFileSync(outFile, "utf8").trim(),
+					diffArgs: readFileSync(argsLog, "utf8")
+						.trim()
+						.split("\n")
+						.filter(Boolean),
+				};
+			} finally {
+				rmSync(scratch, { recursive: true, force: true });
+			}
+		};
+
+		// Behind-main PR whose own three-dot diff touches only src/, even if two-dot pushFiles had sound: run=false!
+		const prNonSound = evaluateSoundFilter({
+			event: "pull_request",
+			full: "true",
+			prFiles: ["src/features/chat/Composer.tsx"],
+			pushFiles: ["modules/lop-notification-sound/ios/SoundModule.swift"],
+		});
+		expect(prNonSound.output).toBe("run=false");
+		expect(prNonSound.diffArgs).toEqual(["diff --name-only FETCH_HEAD...HEAD"]);
+
+		// PR touching modules/lop-notification-sound/** -> run=true
+		expect(
+			evaluateSoundFilter({
+				event: "pull_request",
+				full: "false",
+				prFiles: ["modules/lop-notification-sound/ios/SoundModule.swift"],
+			}).output,
+		).toBe("run=true");
+
+		// Empty PR diff fails open -> run=true
+		expect(
+			evaluateSoundFilter({
+				event: "pull_request",
+				full: "false",
+				prFiles: null,
+			}).output,
+		).toBe("run=true");
+
+		// Non-PR invocation (`FULL=true`, e.g. push or manual trigger) -> run=true
+		expect(
+			evaluateSoundFilter({
+				event: "push",
+				full: "true",
+				base: "deadbeef",
+				prFiles: [],
+				pushFiles: ["src/index.ts"],
+			}).output,
+		).toBe("run=true");
+	}, 30_000);
 });
 
 describe("e2e.yml and merge-gate.yml two-tier contracts", () => {
@@ -403,6 +653,47 @@ describe("e2e.yml and merge-gate.yml two-tier contracts", () => {
 				);
 			}
 		}
+	}, 30_000);
+
+	it("grants every permission requested by any job across ios.yml, android.yml, e2e.yml, and nested callees (preventing plan-time startup_failure)", () => {
+		// Positive contract: merge-gate.yml satisfies every top-level, job-level,
+		// and nested callee permission ceiling across all called workflows.
+		expect(assertCallerGrantsAllCalleePermissions(mergeGate)).toEqual([]);
+
+		// Verify we actually discovered `actions: read` in e2e.yml's proof jobs and
+		// traversed nested callees in ios.yml (`signin-app-proof.yml`) and
+		// android.yml (`android-oauth-callback-proof.yml`).
+		const e2eReqs = collectCalleeRequiredPermissions(
+			".github/workflows/e2e.yml",
+		);
+		expect(
+			e2eReqs.filter((r) => r.scope === "actions" && r.level === "read").length,
+		).toBeGreaterThanOrEqual(5);
+		expect(
+			collectCalleeRequiredPermissions(".github/workflows/ios.yml").some((r) =>
+				r.source.includes("signin-app-proof.yml"),
+			),
+		).toBe(true);
+		expect(
+			collectCalleeRequiredPermissions(".github/workflows/android.yml").some(
+				(r) => r.source.includes("android-oauth-callback-proof.yml"),
+			),
+		).toBe(true);
+
+		// Negative control: omitting `actions: read` from merge-gate.yml's `e2e` job
+		// MUST fail with the exact plan-time permission ceiling violation observed in
+		// live run 44437021997!
+		const withoutActionsRead = mergeGate.replace(
+			"    permissions:\n      contents: read\n      actions: read\n    uses: ./.github/workflows/e2e.yml",
+			"    uses: ./.github/workflows/e2e.yml",
+		);
+		expect(withoutActionsRead).not.toBe(mergeGate);
+		const violations =
+			assertCallerGrantsAllCalleePermissions(withoutActionsRead);
+		expect(violations.length).toBeGreaterThanOrEqual(5);
+		expect(violations[0]).toContain(
+			"caller job 'e2e' allows 'actions: none', but '.github/workflows/e2e.yml#account-routing-ios-proof' requests 'actions: read'",
+		);
 	});
 });
 
@@ -444,6 +735,15 @@ describe("scripts/ci/merge-gate.ts CLI & CI Gate precondition", () => {
 						detail: "",
 					};
 				}
+				if (endpoint.includes("/actions/runs?head_sha=")) {
+					return {
+						ok: true,
+						stdout: JSON.stringify({
+							workflow_runs: fixtures.mergeGateRuns ?? [],
+						}),
+						detail: "",
+					};
+				}
 				const attemptMatch = RUN_ATTEMPT_JOBS_ENDPOINT.exec(endpoint);
 				if (attemptMatch) {
 					const key = `${attemptMatch[1]}:${attemptMatch[2]}`;
@@ -462,11 +762,14 @@ describe("scripts/ci/merge-gate.ts CLI & CI Gate precondition", () => {
 			if (args[0] === "pr" && args[1] === "edit") {
 				return { ok: true, stdout: "", detail: "" };
 			}
+			// Guard against regressing back to `gh run list --workflow merge-gate.yml`,
+			// which fails with HTTP 404 before `merge-gate.yml` exists on `main`.
 			if (args[0] === "run" && args[1] === "list") {
 				return {
-					ok: true,
-					stdout: JSON.stringify(fixtures.mergeGateRuns ?? []),
-					detail: "",
+					ok: false,
+					stdout: "",
+					detail:
+						"HTTP 404: workflow merge-gate.yml not found on the default branch",
 				};
 			}
 			return {
@@ -602,18 +905,37 @@ describe("scripts/ci/merge-gate.ts CLI & CI Gate precondition", () => {
 			},
 			mergeGateRuns: [
 				{
-					databaseId: 555001,
-					url: "https://github.com/damianvtran/local-operator-mobile/actions/runs/555001",
-					status: "completed",
-					conclusion: "success",
-					createdAt: "2026-11-18T11:00:00Z",
-				},
-				{
-					databaseId: 555002,
-					url: "https://github.com/damianvtran/local-operator-mobile/actions/runs/555002",
+					id: 555000,
+					path: CI_WORKFLOW_PATH,
+					event: "pull_request",
+					head_sha: HEAD_SHA,
 					status: "queued",
 					conclusion: null,
-					createdAt: "2026-11-18T12:00:05Z",
+					created_at: "2026-11-18T12:00:06Z",
+					html_url:
+						"https://github.com/damianvtran/local-operator-mobile/actions/runs/555000",
+				},
+				{
+					id: 555001,
+					path: MERGE_GATE_WORKFLOW_PATH,
+					event: "pull_request",
+					head_sha: HEAD_SHA,
+					status: "completed",
+					conclusion: "success",
+					created_at: "2026-11-18T11:00:00Z",
+					html_url:
+						"https://github.com/damianvtran/local-operator-mobile/actions/runs/555001",
+				},
+				{
+					id: 555002,
+					path: MERGE_GATE_WORKFLOW_PATH,
+					event: "pull_request",
+					head_sha: HEAD_SHA,
+					status: "queued",
+					conclusion: null,
+					created_at: "2026-11-18T12:00:05Z",
+					html_url:
+						"https://github.com/damianvtran/local-operator-mobile/actions/runs/555002",
 				},
 			],
 		});
@@ -629,6 +951,18 @@ describe("scripts/ci/merge-gate.ts CLI & CI Gate precondition", () => {
 		});
 
 		expect(queued.databaseId).toBe(555002);
+		expect(
+			calls.some(
+				(args) =>
+					args[0] === "api" &&
+					(args[1] ?? "").includes(
+						`/repos/${REPO}/actions/runs?head_sha=${HEAD_SHA}&event=pull_request&per_page=30`,
+					),
+			),
+		).toBe(true);
+		expect(calls.some((args) => args[0] === "run" && args[1] === "list")).toBe(
+			false,
+		);
 		const editCalls = calls.filter(
 			(args) => args[0] === "pr" && args[1] === "edit",
 		);
@@ -723,5 +1057,142 @@ describe("scripts/ci/merge-gate.ts CLI & CI Gate precondition", () => {
 			runMergeGateCli({ argv: ["252"], runGh: runner, log: () => {} }),
 		).rejects.toThrow("#252 is MERGED");
 		expect(calls).toHaveLength(1);
+	});
+
+	it("fails closed when the matched merge-gate.yml run completes immediately with startup_failure or failure, or when headRepository metadata is missing", async () => {
+		const nowMs = Date.parse("2026-11-19T01:27:15Z");
+		for (const badConclusion of ["startup_failure", "failure"]) {
+			const calls: string[][] = [];
+			const runner = mockRunner(calls, {
+				prView: {
+					number: 320,
+					url: "https://github.com/damianvtran/local-operator-mobile/pull/320",
+					state: "OPEN",
+					isDraft: false,
+					headRefName: "ci/two-tier-native-merge-gate",
+					headRefOid: HEAD_SHA,
+					headRepository: { nameWithOwner: REPO },
+					labels: [],
+				},
+				ciRuns: [
+					{
+						id: 44360423505,
+						path: CI_WORKFLOW_PATH,
+						event: "pull_request",
+						status: "completed",
+						conclusion: "success",
+						head_sha: HEAD_SHA,
+						run_attempt: 1,
+						created_at: "2026-11-18T17:35:48Z",
+						repository: { full_name: REPO },
+						head_repository: { full_name: REPO },
+						pull_requests: [{ number: 320 }],
+					},
+				],
+				ciJobsByRunAttempt: {
+					"44360423505:1": [
+						{ name: FAST_GATE_JOB_NAME, conclusion: "success" },
+					],
+				},
+				mergeGateRuns: [
+					{
+						id: 44437021997,
+						path: MERGE_GATE_WORKFLOW_PATH,
+						event: "pull_request",
+						head_sha: HEAD_SHA,
+						status: "completed",
+						conclusion: badConclusion,
+						created_at: "2026-11-19T01:27:19Z",
+						html_url:
+							"https://github.com/damianvtran/local-operator-mobile/actions/runs/44437021997",
+					},
+				],
+			});
+
+			await expect(
+				runMergeGateCli({
+					argv: ["320"],
+					env: {
+						MERGE_GATE_POLL_ATTEMPTS: "1",
+						MERGE_GATE_POLL_INTERVAL_MS: "0",
+					},
+					runGh: runner,
+					now: () => nowMs,
+					sleep: async () => {},
+					log: () => {},
+				}),
+			).rejects.toThrow(
+				`\`${MERGE_GATE_WORKFLOW}\` run 44437021997 completed immediately with conclusion \`${badConclusion}\` (not armed cleanly)`,
+			);
+		}
+
+		// Direct pollForMergeGateRun test: ignores mismatched head_sha and non-merge-gate workflows.
+		const polled = await pollForMergeGateRun({
+			runGh: mockRunner([], {
+				mergeGateRuns: [
+					{
+						id: 1,
+						path: CI_WORKFLOW_PATH,
+						event: "pull_request",
+						head_sha: HEAD_SHA,
+						status: "queued",
+						conclusion: null,
+						created_at: "2026-11-19T01:27:19Z",
+					},
+					{
+						id: 2,
+						path: MERGE_GATE_WORKFLOW_PATH,
+						event: "pull_request",
+						head_sha: "ffffffffffffffffffffffffffffffffffffffff",
+						status: "queued",
+						conclusion: null,
+						created_at: "2026-11-19T01:27:19Z",
+					},
+					{
+						id: 3,
+						path: `${MERGE_GATE_WORKFLOW_PATH}@refs/pull/320/merge`,
+						event: "pull_request",
+						head_sha: HEAD_SHA,
+						status: "in_progress",
+						conclusion: null,
+						created_at: "2026-11-19T01:27:19Z",
+						html_url:
+							"https://github.com/damianvtran/local-operator-mobile/actions/runs/3",
+					},
+				],
+			}),
+			repo: REPO,
+			headSha: HEAD_SHA,
+			sinceMs: nowMs,
+			pollAttempts: 1,
+			pollIntervalMs: 0,
+			sleep: async () => {},
+		});
+		expect(polled?.databaseId).toBe(3);
+
+		// Missing headRepository & headRepositoryOwner fails closed directly at the metadata guard (Reviewer NIT 1).
+		const missingHeadRepoCalls: string[][] = [];
+		await expect(
+			runMergeGateCli({
+				argv: ["320"],
+				runGh: mockRunner(missingHeadRepoCalls, {
+					prView: {
+						number: 320,
+						url: "https://github.com/damianvtran/local-operator-mobile/pull/320",
+						state: "OPEN",
+						isDraft: false,
+						headRefName: "ci/two-tier",
+						headRefOid: HEAD_SHA,
+						headRepository: null,
+						headRepositoryOwner: null,
+						labels: [],
+					},
+				}),
+				log: () => {},
+			}),
+		).rejects.toThrow(
+			"cannot verify `CI Gate` without repository, head SHA, and head repository metadata",
+		);
+		expect(missingHeadRepoCalls).toHaveLength(1);
 	});
 });

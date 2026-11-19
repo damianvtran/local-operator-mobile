@@ -34,6 +34,7 @@ import process from "node:process";
 
 export const LABEL = "ready-to-merge";
 export const MERGE_GATE_WORKFLOW = "merge-gate.yml";
+export const MERGE_GATE_WORKFLOW_PATH = ".github/workflows/merge-gate.yml";
 export const CI_WORKFLOW_PATH = ".github/workflows/ci.yml";
 export const FAST_GATE_JOB_NAME = "CI Gate";
 export const REQUIRED_CHECK_NAME = "Merge gate (full suite)";
@@ -151,7 +152,7 @@ function repoFromPrUrl(url: string): string {
 	return match?.[1] ?? "";
 }
 
-function headRepoFullName(view: PrView, baseRepo: string): string {
+function headRepoFullName(view: PrView): string {
 	if (view.headRepository?.nameWithOwner) {
 		return view.headRepository.nameWithOwner;
 	}
@@ -159,19 +160,15 @@ function headRepoFullName(view: PrView, baseRepo: string): string {
 		return `${view.headRepositoryOwner.login}/${view.headRepository.name}`;
 	}
 	// `gh pr view --json headRepository,headRepositoryOwner` omits `nameWithOwner`
-	// on older `gh` builds when owner + name are present; fall back to empty (fail
-	// closed) if neither is present.
-	return baseRepo && !view.headRepository && !view.headRepositoryOwner
-		? baseRepo
-		: "";
+	// on older `gh` builds when owner + name are present; return empty (fail
+	// closed at `verifyFastCiGateGreen`'s metadata guard) if neither is present,
+	// such as a deleted fork head repository.
+	return "";
 }
 
-function isCiWorkflowPath(path: string | undefined): boolean {
+function isWorkflowPath(path: string | undefined, expected: string): boolean {
 	const normalized = path ?? "";
-	return (
-		normalized === CI_WORKFLOW_PATH ||
-		normalized.startsWith(`${CI_WORKFLOW_PATH}@`)
-	);
+	return normalized === expected || normalized.startsWith(`${expected}@`);
 }
 
 /**
@@ -207,7 +204,7 @@ export function verifyFastCiGateGreen(options: {
 		(run) =>
 			run.head_sha === headSha &&
 			run.event === "pull_request" &&
-			isCiWorkflowPath(run.path) &&
+			isWorkflowPath(run.path, CI_WORKFLOW_PATH) &&
 			run.repository?.full_name === repo &&
 			run.head_repository?.full_name === headRepo &&
 			(run.pull_requests ?? []).some((pr) => pr.number === prNumber),
@@ -262,43 +259,60 @@ export function verifyFastCiGateGreen(options: {
 	return { runId, attempt };
 }
 
-export async function waitForMergeGateRun(options: {
+/**
+ * Query `/repos/<repo>/actions/runs?head_sha=<headSha>&event=pull_request`
+ * rather than `gh run list --workflow merge-gate.yml`: `gh run list --workflow`
+ * resolves workflow filenames against the default branch only and fails with
+ * HTTP 404 before `merge-gate.yml` lands on `main`, whereas `/actions/runs`
+ * matches both bootstrap and post-merge runs on the exact `head_sha`.
+ */
+export async function pollForMergeGateRun(options: {
 	runGh: GhRunner;
-	branch: string;
+	repo: string;
+	headSha: string;
 	sinceMs: number;
 	pollAttempts: number;
 	pollIntervalMs: number;
 	sleep: (ms: number) => Promise<void>;
 }): Promise<WorkflowRunSummary | null> {
-	const { runGh, branch, sinceMs, pollAttempts, pollIntervalMs, sleep } =
+	const { runGh, repo, headSha, sinceMs, pollAttempts, pollIntervalMs, sleep } =
 		options;
 	for (let attempt = 1; attempt <= pollAttempts; attempt += 1) {
 		const output = ghExec(runGh, [
-			"run",
-			"list",
-			"--workflow",
-			MERGE_GATE_WORKFLOW,
-			"--event",
-			"pull_request",
-			"--branch",
-			branch,
-			"--limit",
-			"20",
-			"--json",
-			"databaseId,url,status,conclusion,createdAt",
+			"api",
+			`/repos/${repo}/actions/runs?head_sha=${encodeURIComponent(headSha)}&event=pull_request&per_page=30`,
 		]);
-		const candidates = JSON.parse(output) as WorkflowRunSummary[];
-		const fresh = candidates
+		const payload = JSON.parse(output) as {
+			workflow_runs?: RestWorkflowRun[];
+		};
+		const fresh = (payload.workflow_runs ?? [])
 			.filter(
-				(candidate) =>
-					Date.parse(candidate.createdAt) >= sinceMs - SINCE_SKEW_MS,
+				(run): run is RestWorkflowRun & { id: number; created_at: string } =>
+					typeof run.id === "number" &&
+					typeof run.created_at === "string" &&
+					run.head_sha === headSha &&
+					run.event === "pull_request" &&
+					isWorkflowPath(run.path, MERGE_GATE_WORKFLOW_PATH) &&
+					Date.parse(run.created_at) >= sinceMs - SINCE_SKEW_MS,
 			)
-			.sort((a, b) => b.databaseId - a.databaseId);
-		if (fresh[0]) return fresh[0];
+			.sort((a, b) => b.id - a.id);
+		const newest = fresh[0];
+		if (newest) {
+			return {
+				databaseId: newest.id,
+				url:
+					newest.html_url ??
+					`https://github.com/${repo}/actions/runs/${String(newest.id)}`,
+				status: newest.status ?? "unknown",
+				conclusion: newest.conclusion ?? null,
+				createdAt: newest.created_at,
+			};
+		}
 		if (attempt < pollAttempts) await sleep(pollIntervalMs);
 	}
 	return null;
 }
+export { pollForMergeGateRun as waitForMergeGateRun };
 
 export async function runMergeGateCli(options: {
 	argv: string[];
@@ -348,7 +362,7 @@ export async function runMergeGateCli(options: {
 	}
 
 	const repo = env.GITHUB_REPOSITORY?.trim() || repoFromPrUrl(view.url);
-	const headRepo = headRepoFullName(view, repo);
+	const headRepo = headRepoFullName(view);
 
 	const fastGate = verifyFastCiGateGreen({
 		runGh,
@@ -388,9 +402,10 @@ export async function runMergeGateCli(options: {
 		`#${String(view.number)}: added \`${LABEL}\` on ${view.headRefOid.slice(0, 12)} (${view.headRefName}).`,
 	);
 
-	const queued = await waitForMergeGateRun({
+	const queued = await pollForMergeGateRun({
 		runGh,
-		branch: view.headRefName,
+		repo,
+		headSha: view.headRefOid,
 		sinceMs: startedAt,
 		pollAttempts,
 		pollIntervalMs,
@@ -399,10 +414,20 @@ export async function runMergeGateCli(options: {
 	if (!queued) {
 		fail(
 			[
-				`no \`${MERGE_GATE_WORKFLOW}\` pull_request run appeared for ${view.headRefName} within ${String((pollAttempts * pollIntervalMs) / 1000)}s of the label event. \`${LABEL}\` is now ON #${String(view.number)} — inspect runs before re-arming:`,
-				`  gh run list --workflow ${MERGE_GATE_WORKFLOW} --event pull_request --branch ${view.headRefName} --limit 5`,
+				`no \`${MERGE_GATE_WORKFLOW}\` pull_request run appeared for ${view.headRefOid.slice(0, 12)} (${view.headRefName}) within ${String((pollAttempts * pollIntervalMs) / 1000)}s of the label event. \`${LABEL}\` is now ON #${String(view.number)} — inspect runs before re-arming:`,
+				`  gh api "/repos/${repo}/actions/runs?head_sha=${view.headRefOid}&event=pull_request&per_page=30"`,
 				`  ${view.url}/checks`,
 			].join("\n"),
+		);
+	}
+
+	if (
+		queued.status === "completed" &&
+		queued.conclusion !== null &&
+		queued.conclusion !== "success"
+	) {
+		fail(
+			`\`${MERGE_GATE_WORKFLOW}\` run ${String(queued.databaseId)} completed immediately with conclusion \`${queued.conclusion}\` (not armed cleanly): ${queued.url}`,
 		);
 	}
 
