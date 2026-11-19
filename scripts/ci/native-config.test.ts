@@ -14,6 +14,7 @@ import {
 	EXPO_NOTIFICATIONS_RECEIVER,
 	IOS_EXCEPTION_DOMAINS,
 	IOS_FORBIDDEN_KEYS,
+	IOS_SCENE_DELEGATE,
 	LAUNCHER_LABEL,
 	summarize,
 	TEAM_BRIDGE_RECEIVER,
@@ -54,6 +55,19 @@ const validPlist = (): Record<string, unknown> => ({
 	CFBundleDisplayName: "Operator",
 	CFBundleName: "LocalOperator",
 	UIBackgroundModes: ["remote-notification", "fetch"],
+	// What expo-build-properties' `ios.enableSceneSupport` writes (57.0.23,
+	// `build/iosSceneSupport.js` SCENE_MANIFEST).
+	UIApplicationSceneManifest: {
+		UIApplicationSupportsMultipleScenes: false,
+		UISceneConfigurations: {
+			UIWindowSceneSessionRoleApplication: [
+				{
+					UISceneConfigurationName: "Default Configuration",
+					UISceneDelegateClassName: "EXExpoAppSceneDelegate",
+				},
+			],
+		},
+	},
 	NSLocalNetworkUsageDescription:
 		"Connect to the relay running on your own computer when it is on the same Wi-Fi network. The app reaches only the address you enter, and does not scan your network.",
 	NSAppTransportSecurity: {
@@ -101,6 +115,35 @@ describe("checkIosInfoPlist", () => {
 	);
 	it("passes the configuration the app asks for", () => {
 		expect(checkIosInfoPlist(validPlist())).toEqual([]);
+	});
+
+	// An iOS 27 SDK build without the scene lifecycle aborts at launch in
+	// UIKitCore (hosted run 44460904362), so a missing or foreign manifest fails.
+	it.each([
+		["missing manifest", undefined],
+		["no configurations", { UIApplicationSupportsMultipleScenes: false }],
+		[
+			"another delegate",
+			{
+				UISceneConfigurations: {
+					UIWindowSceneSessionRoleApplication: [
+						{ UISceneDelegateClassName: "SceneDelegate" },
+					],
+				},
+			},
+		],
+		["not a dictionary", "EXExpoAppSceneDelegate"],
+	])("requires the Expo scene delegate manifest: %s", (_label, value) => {
+		const plist = validPlist();
+		if (value === undefined) delete plist.UIApplicationSceneManifest;
+		else plist.UIApplicationSceneManifest = value;
+		expect(fields(checkIosInfoPlist(plist))).toEqual([
+			"UIApplicationSceneManifest.UISceneConfigurations.UIWindowSceneSessionRoleApplication",
+		]);
+	});
+
+	it("pins the delegate class Expo SDK 57 ships", () => {
+		expect(IOS_SCENE_DELEGATE).toBe("EXExpoAppSceneDelegate");
 	});
 
 	it("pins the label the operator chose, not the app name", () => {
@@ -457,6 +500,7 @@ describe("summarize", () => {
 	it("names the concrete things checked, not a generic pass", () => {
 		expect(summarize("ios")).toContain("NSAllowsLocalNetworking");
 		expect(summarize("ios")).toContain('CFBundleDisplayName="Operator"');
+		expect(summarize("ios")).toContain("EXExpoAppSceneDelegate");
 		expect(summarize("android-badging")).toContain(
 			'application-label="Operator"',
 		);

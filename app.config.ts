@@ -422,6 +422,33 @@ const config: ExpoConfig = {
 		],
 		"expo-image",
 		[
+			"expo-build-properties",
+			{
+				ios: {
+					// UIKIT SCENE LIFECYCLE, required to LAUNCH on iOS 27. Apple's
+					// ITMS-90725 makes the iOS 27 SDK (Xcode 27) mandatory for App Store
+					// uploads from April 2027, and an app built with that SDK that still
+					// uses the application-based lifecycle aborts at launch in UIKitCore
+					// (`_UIApplicationEvaluateRuntimeIssueForNoSceneLifecycleAdoption`,
+					// measured on hosted run 44460904362). SDK 58's template adopts scenes
+					// itself; on SDK 57 this flag is the opt-in (needs expo >= 57.0.23):
+					// it rewrites the generated AppDelegate to provide its React Native
+					// factory and adds a UIApplicationSceneManifest naming Expo's
+					// `EXExpoAppSceneDelegate`, which creates the window and forwards
+					// URLs, universal links, quick actions and foreground/background
+					// transitions back to the AppDelegate and every
+					// ExpoAppDelegateSubscriber (expo-linking, expo-router,
+					// expo-notifications), and rebuilds the cold-start URL for
+					// `Linking.getInitialURL()`. Remote-notification, background-fetch
+					// and push-token callbacks are application-level and unaffected.
+					// `scripts/ci/native-config.ts` asserts the manifest is in the BUILT
+					// Info.plist. Remove when the app moves to SDK 58 (the plugin then
+					// warns that the flag is a no-op).
+					enableSceneSupport: true,
+				},
+			},
+		],
+		[
 			"expo-image-picker",
 			{
 				// CONFIGURED TO DECLARE NOTHING, and that is the point. The library

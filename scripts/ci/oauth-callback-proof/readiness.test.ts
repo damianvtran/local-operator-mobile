@@ -37,6 +37,24 @@ function beginIsSoleTrigger(source: string): boolean {
 		!source.includes("#selector(start)")
 	);
 }
+/** iOS 27 SDK builds abort at launch without the UIKit scene lifecycle (hosted
+ * run 44460904362), so the host must declare a manifest naming its scene
+ * delegate, and that delegate must build the window and never start the fixture. */
+function adoptsSceneLifecycle(source: string, spec: string): boolean {
+	const scene = source.slice(source.indexOf("class ProofSceneDelegate"));
+	return (
+		spec.includes("UIApplicationSceneManifest:") &&
+		spec.includes(
+			"UISceneDelegateClassName: $(PRODUCT_MODULE_NAME).ProofSceneDelegate",
+		) &&
+		source.includes(
+			"final class ProofSceneDelegate: UIResponder, UIWindowSceneDelegate",
+		) &&
+		scene.includes("UIWindow(windowScene: scene)") &&
+		!AUTOSTART.test(scene) &&
+		!source.includes("UIWindow(frame:")
+	);
+}
 function runnerOnlyBeginsFixture(source: string): boolean {
 	const targets = [...source.matchAll(URL_TARGET)].map(
 		(match) => match[1] ?? "",
@@ -95,6 +113,34 @@ describe("native XCTest OAuth proof architecture", () => {
 		).toBe(false);
 		expect(main).toContain("label.accessibilityValue");
 		expect(main).not.toContain("UIButton");
+	});
+
+	it("adopts the UIKit scene lifecycle iOS 27 requires, rejecting app-delegate-window mutations", () => {
+		expect(adoptsSceneLifecycle(main, project)).toBe(true);
+		expect(
+			adoptsSceneLifecycle(
+				main,
+				project.replace("UIApplicationSceneManifest:", "UIUnusedManifest:"),
+			),
+		).toBe(false);
+		expect(
+			adoptsSceneLifecycle(
+				main.replace(
+					"UIWindow(windowScene: scene)",
+					"UIWindow(frame: UIScreen.main.bounds)",
+				),
+				project,
+			),
+		).toBe(false);
+		expect(
+			adoptsSceneLifecycle(
+				main.replace(
+					"    proof.window = window\n",
+					"    proof.window = window\n    proof.start()\n",
+				),
+				project,
+			),
+		).toBe(false);
 	});
 
 	it("allows test-runner HTTP only to the fixture begin port, never the production listener", () => {

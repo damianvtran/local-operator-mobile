@@ -109,6 +109,15 @@ export const ANDROID_LOCAL_NETWORK_PERMISSION =
  */
 export const IOS_BACKGROUND_MODES = ["remote-notification", "fetch"] as const;
 
+/**
+ * The scene delegate class `expo-build-properties` (`ios.enableSceneSupport`,
+ * app.config.ts) names in the built `UIApplicationSceneManifest`. An app built
+ * with the iOS 27 SDK and no scene manifest aborts at launch in UIKitCore, so a
+ * plugin that silently stops applying (a renamed option, a dropped plugin entry,
+ * an SDK bump that changes the template) would ship a binary that never opens.
+ */
+export const IOS_SCENE_DELEGATE = "EXExpoAppSceneDelegate";
+
 export const IOS_FORBIDDEN_KEYS = [
 	"NSPhotoLibraryUsageDescription",
 	"NSCameraUsageDescription",
@@ -177,6 +186,25 @@ export function checkIosInfoPlist(plist: unknown): Finding[] {
 					"present — attachments go through the system photo picker, which needs no permission, so this usage string is over-declaration (checklist B10)",
 			});
 		}
+	}
+
+	const scenes = isRecord(plist.UIApplicationSceneManifest)
+		? plist.UIApplicationSceneManifest.UISceneConfigurations
+		: undefined;
+	const roles = isRecord(scenes)
+		? scenes.UIWindowSceneSessionRoleApplication
+		: undefined;
+	const delegates = Array.isArray(roles)
+		? roles.map((role) =>
+				isRecord(role) ? role.UISceneDelegateClassName : undefined,
+			)
+		: [];
+	if (!delegates.includes(IOS_SCENE_DELEGATE)) {
+		findings.push({
+			field:
+				"UIApplicationSceneManifest.UISceneConfigurations.UIWindowSceneSessionRoleApplication",
+			problem: `expected a configuration with UISceneDelegateClassName ${JSON.stringify(IOS_SCENE_DELEGATE)}, found ${JSON.stringify(delegates)} — an iOS 27 SDK build without the scene lifecycle aborts at launch`,
+		});
 	}
 
 	// Check the built product, not only app.config.ts: a config/plugin omission
@@ -451,7 +479,7 @@ export const summarize = (platform: Platform): string =>
 	platform === "android-badging"
 		? `built APK carries application-label=${JSON.stringify(LAUNCHER_LABEL)} with no locale override that differs`
 		: platform === "ios"
-			? `built Info.plist carries CFBundleDisplayName=${JSON.stringify(LAUNCHER_LABEL)}, ITSAppUsesNonExemptEncryption=false, UIBackgroundModes exactly ${JSON.stringify(IOS_BACKGROUND_MODES)}, NSLocalNetworkUsageDescription and the ATS local-networking configuration (NSAllowsLocalNetworking + ${IOS_EXCEPTION_DOMAINS.length} CIDR exceptions) and none of the ${IOS_FORBIDDEN_KEYS.length} photo/camera permission keys`
+			? `built Info.plist carries the ${IOS_SCENE_DELEGATE} scene manifest, CFBundleDisplayName=${JSON.stringify(LAUNCHER_LABEL)}, ITSAppUsesNonExemptEncryption=false, UIBackgroundModes exactly ${JSON.stringify(IOS_BACKGROUND_MODES)}, NSLocalNetworkUsageDescription and the ATS local-networking configuration (NSAllowsLocalNetworking + ${IOS_EXCEPTION_DOMAINS.length} CIDR exceptions) and none of the ${IOS_FORBIDDEN_KEYS.length} photo/camera permission keys`
 			: `release merged manifest carries android:usesCleartextTraffic="true", ${ANDROID_LOCAL_NETWORK_PERMISSION} and the Team Bridge notification receiver (not Expo's), and none of the ${ANDROID_FORBIDDEN_PERMISSIONS.length} camera/media-library permissions`;
 
 // ---------------------------------------------------------------------------

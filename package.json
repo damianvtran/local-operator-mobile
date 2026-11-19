@@ -46,6 +46,7 @@
 		"eventsource-parser": "4.1.1",
 		"expo": "57.0.26",
 		"expo-audio": "~57.0.5",
+		"expo-build-properties": "~57.0.23",
 		"expo-clipboard": "~57.0.2",
 		"expo-constants": "~57.0.20",
 		"expo-crypto": "~57.0.3",

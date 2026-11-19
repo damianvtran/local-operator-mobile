@@ -28,18 +28,11 @@ final class ProofDelegate: UIResponder, UIApplicationDelegate, ASWebAuthenticati
   var nativePreparedAt: Date?
 
   func application(_ application: UIApplication, didFinishLaunchingWithOptions options: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-    let window = UIWindow(frame: UIScreen.main.bounds)
-    let controller = UIViewController()
-    controller.view.backgroundColor = .systemBackground
-    label.frame = CGRect(x: 20, y: 150, width: 350, height: 160)
     label.numberOfLines = 0
     label.text = "Preparing fixture \(mode)"
     label.accessibilityIdentifier = "proof.status"
-    controller.view.addSubview(label)
-    window.rootViewController = controller
-    window.makeKeyAndVisible()
-    self.window = window
-    // Launch is inert: the already-running native test sends fixture /begin
+    // The window is built by ProofSceneDelegate (below): iOS 27 SDK builds
+    // abort at launch without the scene lifecycle. Launch is inert: the already-running native test sends fixture /begin
     // only after observing Ready. Driver startup never enters the auth deadline.
     transport.onRejectedRequest = { self.rejected += 1 }
     persist()
@@ -246,6 +239,33 @@ final class ProofDelegate: UIResponder, UIApplicationDelegate, ASWebAuthenticati
   }
 
   func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor { window! }
+}
+
+// UIKIT SCENE LIFECYCLE. An app built with the iOS 27 SDK (Xcode 27) that never
+// adopts scenes aborts at launch in UIKitCore
+// (`_UIApplicationEvaluateRuntimeIssueForNoSceneLifecycleAdoption`, hosted run
+// 44460904362), the same requirement the shipping app meets through
+// expo-build-properties' `ios.enableSceneSupport`. project.yml's
+// UIApplicationSceneManifest names this class. It only builds the window the
+// app delegate used to build; it never starts the fixture, so launch stays
+// inert and `/begin` remains the sole trigger (readiness.test.ts).
+final class ProofSceneDelegate: UIResponder, UIWindowSceneDelegate {
+  var window: UIWindow?
+
+  func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
+    guard let scene = scene as? UIWindowScene,
+          let proof = UIApplication.shared.delegate as? ProofDelegate else { return }
+    let window = UIWindow(windowScene: scene)
+    let controller = UIViewController()
+    controller.view.backgroundColor = .systemBackground
+    proof.label.frame = CGRect(x: 20, y: 150, width: 350, height: 160)
+    controller.view.addSubview(proof.label)
+    window.rootViewController = controller
+    window.makeKeyAndVisible()
+    self.window = window
+    // ASWebAuthenticationSession's presentation anchor reads the app delegate's window.
+    proof.window = window
+  }
 }
 
 UIApplicationMain(CommandLine.argc, CommandLine.unsafeArgv, nil, NSStringFromClass(ProofDelegate.self))
