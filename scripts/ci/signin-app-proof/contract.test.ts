@@ -53,9 +53,16 @@ describe("real Expo application OAuth proof boundary", () => {
 		);
 		expect(consent).toContain("button.tap()");
 		expect(consent).not.toContain("if button.waitForExistence");
+		// Both held exchanges release on the provider receipt, never on an
+		// accessibility wait: a post-browser AX snapshot stalled 31-70 s, past the
+		// app's 20 s exchange deadline (PR #341, runs 44505768707/44524064527).
 		expect(
-			test.match(/try consent\(\)\n {4}try text\("Signing in…"\)/g),
+			test.match(
+				/try consent\(\)\n {4}try heldExchange\("(negative|positive)-exchanging", pkceVerified: [12]\)\n/g,
+			),
 		).toHaveLength(2);
+		expect(test).not.toMatch(/try consent\(\)\n {4}try (text|visible)\(/);
+		expect(test).toContain('control("/receipt")["pkce_verified"]');
 		expect(read("./run.sh")).toContain('prepare-entry.ts "$OUT"');
 		expect(project).toContain("'TEST_TARGET_NAME' => app.name");
 		expect(project).toContain("'PRODUCT_NAME' => '$(TARGET_NAME)'");
@@ -66,7 +73,6 @@ describe("real Expo application OAuth proof boundary", () => {
 			"EXPO_PUBLIC_SIGNIN_PROOF_ORIGIN: http://127.0.0.1:54831",
 		);
 		expect(test).toContain("/control?mode=failure&hold=true&reset=true");
-		expect(test).toContain('try text("Signing in…")');
 		expect(test).toContain('app.buttons["sign-in-try-again"].tap()');
 		expect(test).toContain('XCTAssertEqual(positive["pkce_verified"], 2)');
 		expect(test).toContain('XCTAssertEqual(restored["authorize"], 2)');

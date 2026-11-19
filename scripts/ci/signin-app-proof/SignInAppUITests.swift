@@ -29,8 +29,7 @@ final class SignInAppUITests: XCTestCase {
       app.buttons["welcome-connect"].tap()
     }
     try consent()
-    try text("Signing in…")
-    attach("negative-exchanging")
+    try heldExchange("negative-exchanging", pkceVerified: 1)
     _ = try control("/release-token")
     try visible("sign-in-try-again")
     attach("token-500-error-and-retry-collapsed")
@@ -52,8 +51,7 @@ final class SignInAppUITests: XCTestCase {
     _ = try control("/control?mode=success&hold=true")
     app.buttons["sign-in-try-again"].tap()
     try consent()
-    try text("Signing in…")
-    attach("positive-exchanging")
+    try heldExchange("positive-exchanging", pkceVerified: 2)
     try releaseAndCaptureTransition()
     try visible("computers-screen")
     try pickerRow()
@@ -154,11 +152,38 @@ final class SignInAppUITests: XCTestCase {
     let button = springboard.buttons["Continue"].firstMatch
     try require(button.waitForExistence(timeout: 60), "Missing system sign-in consent Continue")
     button.tap()
-    // Both callers then require the held exchange stage before releasing tokens.
+    // Both callers then wait for the held exchange (`heldExchange`) before releasing tokens.
   }
   @MainActor private func visible(_ id: String) throws {
     let element = app.descendants(matching: .any).matching(identifier: id).firstMatch
     try require(element.waitForExistence(timeout: 90), "Missing app surface: \(id)")
+  }
+  /// Waits until the app's REAL token request is parked at the provider, then
+  /// captures the exchanging frame. The provider counts `pkce_verified` and saves
+  /// the receipt BEFORE it holds the response, so the count reaching `pkceVerified`
+  /// means the app sent its verified exchange and is now in the exchanging stage
+  /// (`onCallbackReceived` reports it before the request starts).
+  ///
+  /// WHY NOT `text("Signing in…")` (PR #341 diagnosis). The release must happen
+  /// inside the app's 20 s exchange deadline (`RADIENT_OAUTH.requestTimeoutMs`,
+  /// 6610ef81), but the accessibility snapshot taken right after the system
+  /// browser dismisses stalls on SafariViewService's invalid remote element
+  /// (`kAXErrorInvalidUIElement`): one existence check measured 8.3 s and 31.5 s
+  /// on the last green proof (41868425996, Nov 4, before that deadline existed),
+  /// 31.2 s on 44524064527 (macos-26) and 70.4 s on 44505768707 (xcode-27). Past
+  /// 20 s the app correctly ends the held exchange as "We could not finish
+  /// signing in." and the proof fails on its own synchronization. The receipt is
+  /// read over loopback HTTP, never through accessibility, so it cannot stall.
+  /// The stage copy remains visible in the attached frame.
+  @MainActor private func heldExchange(_ name: String, pkceVerified: Int) throws {
+    let deadline = Date().addingTimeInterval(60)
+    var held = false
+    while Date() < deadline {
+      if (try control("/receipt")["pkce_verified"] ?? 0) >= pkceVerified { held = true; break }
+      Thread.sleep(forTimeInterval: 0.25)
+    }
+    try require(held, "Token exchange never reached the provider (pkce_verified < \(pkceVerified))")
+    attach(name)
   }
   @MainActor private func text(_ label: String) throws {
     try require(app.staticTexts[label].firstMatch.waitForExistence(timeout: 90), "Missing sign-in stage/picker text")
