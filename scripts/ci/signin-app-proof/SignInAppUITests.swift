@@ -53,37 +53,62 @@ final class SignInAppUITests: XCTestCase {
     try consent()
     try heldExchange("positive-exchanging", pkceVerified: 2)
     try releaseAndCaptureTransition()
-    try visible("computers-screen")
-    try pickerRow()
-    attach("positive-tunnel-picker")
+    // 2026-11-19: baseline 84621b99e auto-opens the sole usable computer.
+    // Run 44537393006 reached Home, not the obsolete pre-Nov-12 picker.
+    try visible("home-screen")
+    try visible("notification-primer-not-now")
+    app.buttons["notification-primer-not-now"].tap()
+    try connectedHome()
+    attach("positive-auto-open-home")
     let positive = try control("/receipt")
     XCTAssertEqual(positive["authorize"], 2)
     XCTAssertEqual(positive["pkce_verified"], 2)
     XCTAssertGreaterThanOrEqual(positive["discovery"] ?? 0, 1)
+    // Replaces the obsolete picker's "Sign-in protected" badge assertion with
+    // proof of that property: authenticated code mint, verified tunnel PKCE,
+    // and grant-cookie-only relay traffic, not just a transport label.
+    XCTAssertEqual(positive["session_code"], 1)
+    XCTAssertEqual(positive["session_token"], 1)
+    XCTAssertEqual(positive["session_pkce_verified"], 1)
+    XCTAssertGreaterThan(positive["relay_requests"] ?? 0, 0)
     // A fresh JS process must restore the Keychain grant without opening OAuth.
     // Merely inspecting a mocked write would not prove native persistence.
     app.terminate()
     app.launch()
-    try visible("computers-screen")
-    try pickerRow()
+    try connectedHome()
     let restored = try control("/receipt")
     XCTAssertEqual(restored["authorize"], 2)
     XCTAssertGreaterThan(restored["discovery"] ?? 0, positive["discovery"] ?? 0)
-    attach("persisted-grant-restored-picker")
-    // Persisted OAuth is not a connected relay. Drive the owner's actual pick,
-    // a bad server contract, in-app Retry, then a grant-authenticated list.
-    let computer = app.buttons["computer-row-" + String(repeating: "0", count: 32) + "-lop.radienthq.com"]
-    XCTAssertTrue(computer.label.contains("Sign-in protected"))
-    // A real 403 is disabled OR not-yet-active, never proof of an off toggle.
+    // A named Home alone could be cached: require a NEW authenticated tunnel
+    // exchange and relay traffic after restart, without another OAuth grant.
+    XCTAssertEqual(restored["session_code"], 2)
+    XCTAssertEqual(restored["session_token"], 2)
+    XCTAssertEqual(restored["session_pkce_verified"], 2)
+    XCTAssertGreaterThan(restored["relay_requests"] ?? 0, positive["relay_requests"] ?? 0)
+    attach("persisted-grant-reconnected-home")
+    // The old picker tap initiated a fresh route. With auto-open, a second cold
+    // start does that honestly; changing the fixture cannot break an ALREADY
+    // authenticated relay. Keep the 403 -> malformed -> successful Retry rows.
+    app.terminate()
     _ = try control("/control?session=inactive")
-    computer.tap()
+    app.launch()
+    try visible("home-screen")
     try visible("connection-error-console-link")
     // The mock lists this computer with no billing and status active, so the
     // 403 cannot be split by cause: the neutral copy, still no command.
     try text("Radient didn't allow phone access to OAuth proof computer right now.")
     attach("tunnel-inactive-status-guidance")
+    let inactive = try control("/receipt")
+    XCTAssertEqual(inactive["authorize"], 2)
+    XCTAssertEqual(inactive["session_code"], 3)
+    XCTAssertEqual(inactive["session_token"], 2)
+    // A 403 console remedy deliberately has no Retry button. The old picker
+    // row was a NEW admission attempt; restart likewise reopens the saved
+    // computer without pretending that the console remedy is a retry action.
+    app.terminate()
     _ = try control("/control?session=malformed")
-    computer.tap()
+    app.launch()
+    try visible("home-screen")
     try visible("connection-details-toggle")
     XCTAssertFalse(app.buttons["connection-error-console-link"].exists)
     XCTAssertFalse(app.descendants(matching: .any).matching(identifier: "connection-error-machine-remedy").firstMatch.exists)
@@ -94,6 +119,9 @@ final class SignInAppUITests: XCTestCase {
     XCTAssertTrue(details.contains("TunnelSessionError"))
     XCTAssertFalse(details.contains("fixture-session-code"))
     attach("tunnel-contract-details")
+    let malformed = try control("/receipt")
+    XCTAssertEqual(malformed["session_code"], 4)
+    XCTAssertEqual(malformed["session_token"], 2)
     _ = try control("/control?session=success")
     app.buttons["refusal-sign-in"].tap()
     try visible("home-screen")
@@ -102,10 +130,11 @@ final class SignInAppUITests: XCTestCase {
     try visible("session-row-b3535011f562")
     attach("connected-session-list")
     let connected = try control("/receipt")
-    XCTAssertEqual(connected["session_code"], 3)
-    XCTAssertEqual(connected["session_token"], 1)
-    XCTAssertEqual(connected["session_pkce_verified"], 1)
-    XCTAssertGreaterThan(connected["relay_requests"] ?? 0, 0)
+    XCTAssertEqual(connected["authorize"], 2)
+    XCTAssertEqual(connected["session_code"], 5)
+    XCTAssertEqual(connected["session_token"], 3)
+    XCTAssertEqual(connected["session_pkce_verified"], 3)
+    XCTAssertGreaterThan(connected["relay_requests"] ?? 0, restored["relay_requests"] ?? 0)
 
   }
 
@@ -118,12 +147,16 @@ final class SignInAppUITests: XCTestCase {
     app.terminate()
   }
 
-  @MainActor private func pickerRow() throws {
-    // The native row intentionally groups name/status into ONE accessible
-    // button. Looking for a standalone StaticText is not a product assertion.
-    let id = "computer-row-" + String(repeating: "0", count: 32) + "-lop.radienthq.com"
-    try visible(id)
-    XCTAssertTrue(app.buttons[id].label.contains("OAuth proof computer"))
+  @MainActor private func connectedHome() throws {
+    try visible("home-screen")
+    // The chip carries computer identity on Home; the actual populated list and
+    // provider receipts distinguish a live route from a merely mounted screen.
+    try visible("computers-button")
+    XCTAssertTrue(app.buttons["computers-button"].label.contains("OAuth proof computer"))
+    app.buttons["home-sidebar"].tap()
+    try visible("conversations-list")
+    try visible("session-row-b3535011f562")
+    app.buttons["sidebar-close"].tap()
   }
 
   @MainActor private func releaseAndCaptureTransition() throws {

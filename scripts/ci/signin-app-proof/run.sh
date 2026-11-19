@@ -89,7 +89,8 @@ for theme in light dark; do
 import json, sys
 v = json.load(open(sys.argv[1]))
 assert v['authorize'] == 2 and v['token'] == 2 and v['pkce_verified'] == 2 and v['discovery'] >= 2, 'Real-app flow/persistence receipts incomplete (including zero-tests execution)'
-assert v['session_code'] == 3 and v['session_token'] == 1 and v['session_pkce_verified'] == 1 and v['relay_requests'] > 0, 'Enveloped session mint, bad-contract Retry or connected relay proof incomplete'
+# 2026-11-19 / 84621b99e auto-open: initial + restored + 403 + malformed + retry.
+assert v['session_code'] == 5 and v['session_token'] == 3 and v['session_pkce_verified'] == 3 and v['relay_requests'] > 0, 'Auto-open, restored relay, enveloped session mint or bad-contract Retry proof incomplete'
 PY
 done
 # The largest size is listed by this runner's captured simctl help. Reuse the
