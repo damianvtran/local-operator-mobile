@@ -114,7 +114,7 @@ long-lead items start first.
 
 | # | Item | Blocking | Source |
 | --- | --- | --- | --- |
-| F1 | **macOS runner pinned** to a hosted image carrying Xcode ≥ 26 (`macos-26-arm64` ships Xcode 26.6 by default). Never rely on `macos-latest` resolving to an image with a qualifying SDK | yes | `apple-app-store.md` § 2 |
+| F1 | **macOS runner pinned** to a hosted image carrying Xcode ≥ 27 (`xcode-27`; Xcode 27.1 default on image 20261104.0337.1), and `scripts/ci/ios-sdk-floor.ts --min 27` passing in the signed job's log — Apple requires the iOS 27 SDK from April 2027 (ITMS-90725 on build 1264). Never rely on `macos-latest` resolving to an image with a qualifying SDK | yes | `apple-app-store.md` § 2 |
 | F2 | **iOS signing assets as secrets**: distribution certificate (`.p12`), provisioning profile, App Store Connect API key for uploads. Never in the repository | yes | `apple-app-store.md` § 9.3 |
 | F3 | **Android upload keystore as a secret**, RSA ≥ 2048 bits, plus its passwords; Play App Signing enabled so the app signing key is Google's and the upload key is resettable | yes | `google-play.md` § 3 |
 | F4 | **Same upload key used for Play, GitHub Releases and any F-Droid entry** so sideloaded installs keep updating | yes | `other-channels.md` § 8 |
