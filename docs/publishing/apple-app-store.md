@@ -75,6 +75,22 @@ explicitly (`sudo xcode-select -s /Applications/Xcode_26.6.app`). Plan for the
 April 2027 floor by tracking the `macos-27` image rather than pinning to 26.x
 forever.
 
+**Update 2026-11-18 — the April 2027 floor is now enforced in CI.** TestFlight
+build 1264 drew ITMS-90725 ("built with the iOS 26.5 SDK … must be built with
+the iOS 27 SDK or later, included in Xcode 27 or later") because the signed job
+ran on `macos-26` with Xcode 26.6. GitHub did not ship a `macos-27` image with
+Xcode 27; it moved to one image per Xcode major, and the label is `xcode-27`
+(generally available 2026-10-15,
+<https://github.blog/changelog/2026-10-15-xcode-27-runner-image-generally-available/>;
+image 20261104.0337.1 defaults to Xcode 27.1 and carries the iOS 27.0-27.2
+SDKs, <https://github.com/actions/runner-images/blob/main/images/macos/xcode-27-arm64-Readme.md>,
+read 2026-11-18). The simulator gate, the signed `internal` job and
+`release.yml`'s iOS job all run there, and each fails before building if the
+active SDK major is below 27 (`scripts/ci/ios-sdk-floor.ts`; see
+[docs/ci.md § iOS SDK floor](../ci.md#ios-sdk-floor)). The `xcode-select`
+advice above applied to multi-Xcode images; on `xcode-27` the image default is
+used and the floor check is what pins the major.
+
 **Minimum deployment target.** Set it to what the toolchain and the app's own
 APIs require, not to iOS 13. The iOS 13 floor is Apple's *upload* requirement;
 the app's own floor is a product decision, and a 2026-era SwiftUI client has no

@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { stripTypeScriptTypes } from "node:module";
 import { describe, expect, it } from "vitest";
 import {
+	APP_ENTRY_REQUIRE,
 	embeddedEntry,
 	embeddedHost,
 	embeddedOverride,
@@ -13,8 +14,13 @@ const template = `class MainApplication { val reactHost = ExpoReactHostFactory.g
 ) }`;
 
 describe("hosted embedded Android proof host", () => {
+	it("anchors on the require of the app's real package.json main", () => {
+		const pkg = JSON.parse(readFileSync("package.json", "utf8"));
+		expect(APP_ENTRY_REQUIRE).toBe(`require(${JSON.stringify(pkg.main)});`);
+	});
+
 	it("proves the runtime asset URL and rejects a Metro loader before routing", () => {
-		const source = embeddedEntry('require("expo-router/entry");');
+		const source = embeddedEntry(APP_ENTRY_REQUIRE);
 		const run = new Function(
 			"__DEV__",
 			"process",

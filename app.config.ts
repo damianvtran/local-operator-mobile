@@ -422,6 +422,43 @@ const config: ExpoConfig = {
 		],
 		"expo-image",
 		[
+			"expo-build-properties",
+			{
+				ios: {
+					// UIKIT SCENE LIFECYCLE, required to LAUNCH on iOS 27. Apple's
+					// ITMS-90725 makes the iOS 27 SDK (Xcode 27) mandatory for App Store
+					// uploads from April 2027, and an app built with that SDK that still
+					// uses the application-based lifecycle aborts at launch in UIKitCore
+					// (`_UIApplicationEvaluateRuntimeIssueForNoSceneLifecycleAdoption`,
+					// measured on hosted run 44460904362). SDK 58's template adopts scenes
+					// itself; on SDK 57 this flag is the opt-in (needs expo >= 57.0.23):
+					// it rewrites the generated AppDelegate to provide its React Native
+					// factory and adds a UIApplicationSceneManifest naming Expo's
+					// `EXExpoAppSceneDelegate`, which creates the window, STARTS REACT
+					// NATIVE, forwards URLs, universal links, quick actions and
+					// foreground/background transitions back to the AppDelegate and every
+					// ExpoAppDelegateSubscriber (expo-linking, expo-router,
+					// expo-notifications), and rebuilds the cold-start URL for
+					// `Linking.getInitialURL()`. Remote-notification, background-fetch
+					// and push-token callbacks stay application-level, so they still
+					// ARRIVE. NOT everything is covered, though: React Native now starts
+					// only when a scene connects, and a terminated app relaunched in the
+					// background by a silent push connects none, so no JS runs and the
+					// push's completion handler is never called (expo/expo#52878, agent
+					// review R1 M1). `modules/lop-background-launch` starts React Native
+					// without a view for that case, `index.ts` defines the task outside
+					// any route so a viewless start still has it, and
+					// `plugins/with-ios-background-fetch-deadline.js` (below) guarantees
+					// the completion. `scripts/ci/native-config.ts` asserts the manifest
+					// in the BUILT Info.plist and both workarounds in the generated
+					// project. Remove this flag when the app moves to SDK 58 (the plugin
+					// then warns that it is a no-op), and the workarounds once Expo
+					// starts React Native for scene-less launches itself.
+					enableSceneSupport: true,
+				},
+			},
+		],
+		[
 			"expo-image-picker",
 			{
 				// CONFIGURED TO DECLARE NOTHING, and that is the point. The library
@@ -489,6 +526,11 @@ const config: ExpoConfig = {
 		// sender on a private lock screen, shows the foreground banner Expo drops,
 		// and routes session pushes to the HIGH `alert.*` channels.
 		"./plugins/with-android-team-bridge-push.js",
+		// The iOS silent-push completion backstop for the scene lifecycle
+		// (`enableSceneSupport` above, expo/expo#52878): the AppDelegate calls
+		// iOS's fetch completion handler within 28 s even if the JS task never
+		// reports. Its comment has the why of the deadline.
+		"./plugins/with-ios-background-fetch-deadline.js",
 	],
 	experiments: {
 		typedRoutes: true,

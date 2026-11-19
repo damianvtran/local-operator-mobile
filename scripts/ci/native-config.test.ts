@@ -1,5 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -10,10 +11,13 @@ import {
 	ANDROID_LOCAL_NETWORK_PERMISSION,
 	checkAndroidBadging,
 	checkAndroidManifest,
+	checkIosAppDelegate,
 	checkIosInfoPlist,
+	checkIosModulesProvider,
 	EXPO_NOTIFICATIONS_RECEIVER,
 	IOS_EXCEPTION_DOMAINS,
 	IOS_FORBIDDEN_KEYS,
+	IOS_SCENE_DELEGATE,
 	LAUNCHER_LABEL,
 	summarize,
 	TEAM_BRIDGE_RECEIVER,
@@ -54,6 +58,19 @@ const validPlist = (): Record<string, unknown> => ({
 	CFBundleDisplayName: "Operator",
 	CFBundleName: "LocalOperator",
 	UIBackgroundModes: ["remote-notification", "fetch"],
+	// What expo-build-properties' `ios.enableSceneSupport` writes (57.0.23,
+	// `build/iosSceneSupport.js` SCENE_MANIFEST).
+	UIApplicationSceneManifest: {
+		UIApplicationSupportsMultipleScenes: false,
+		UISceneConfigurations: {
+			UIWindowSceneSessionRoleApplication: [
+				{
+					UISceneConfigurationName: "Default Configuration",
+					UISceneDelegateClassName: "EXExpoAppSceneDelegate",
+				},
+			],
+		},
+	},
 	NSLocalNetworkUsageDescription:
 		"Connect to the relay running on your own computer when it is on the same Wi-Fi network. The app reaches only the address you enter, and does not scan your network.",
 	NSAppTransportSecurity: {
@@ -101,6 +118,35 @@ describe("checkIosInfoPlist", () => {
 	);
 	it("passes the configuration the app asks for", () => {
 		expect(checkIosInfoPlist(validPlist())).toEqual([]);
+	});
+
+	// An iOS 27 SDK build without the scene lifecycle aborts at launch in
+	// UIKitCore (hosted run 44460904362), so a missing or foreign manifest fails.
+	it.each([
+		["missing manifest", undefined],
+		["no configurations", { UIApplicationSupportsMultipleScenes: false }],
+		[
+			"another delegate",
+			{
+				UISceneConfigurations: {
+					UIWindowSceneSessionRoleApplication: [
+						{ UISceneDelegateClassName: "SceneDelegate" },
+					],
+				},
+			},
+		],
+		["not a dictionary", "EXExpoAppSceneDelegate"],
+	])("requires the Expo scene delegate manifest: %s", (_label, value) => {
+		const plist = validPlist();
+		if (value === undefined) delete plist.UIApplicationSceneManifest;
+		else plist.UIApplicationSceneManifest = value;
+		expect(fields(checkIosInfoPlist(plist))).toEqual([
+			"UIApplicationSceneManifest.UISceneConfigurations.UIWindowSceneSessionRoleApplication",
+		]);
+	});
+
+	it("pins the delegate class Expo SDK 57 ships", () => {
+		expect(IOS_SCENE_DELEGATE).toBe("EXExpoAppSceneDelegate");
 	});
 
 	it("pins the label the operator chose, not the app name", () => {
@@ -457,6 +503,7 @@ describe("summarize", () => {
 	it("names the concrete things checked, not a generic pass", () => {
 		expect(summarize("ios")).toContain("NSAllowsLocalNetworking");
 		expect(summarize("ios")).toContain('CFBundleDisplayName="Operator"');
+		expect(summarize("ios")).toContain("EXExpoAppSceneDelegate");
 		expect(summarize("android-badging")).toContain(
 			'application-label="Operator"',
 		);
@@ -527,5 +574,139 @@ describe("CLI", () => {
 
 	it("exits 1 when the file does not exist", () => {
 		expect(run(["ios", join(ROOT, "does-not-exist.json")]).status).toBe(1);
+	});
+});
+
+/**
+ * The scene-lifecycle background-launch workaround (expo/expo#52878, agent
+ * review R1 M1), checked in the generated project. The provider fixture is
+ * the shape `expo-modules-autolinking` 57.0.13 writes
+ * (`build/platforms/apple/apple.js`, `generatePackageListFileContentAsync`);
+ * the AppDelegate is the published SDK 57 template after
+ * `ios.enableSceneSupport`, put through the real plugin transform, so the
+ * plugin and this gate cannot drift apart unnoticed.
+ */
+describe("background-launch workaround in the generated project", () => {
+	const provider = (
+		subscribers: string[],
+	): string => `internal import ExpoModulesCore
+internal import ExpoTaskManager
+internal import LopBackgroundLaunch
+
+@objc(ExpoModulesProvider)
+internal class ExpoModulesProvider: ModulesProvider {
+  public override func getModuleClasses() -> [ExpoModuleTupleType] {
+    return [
+      (module: TaskManagerModule.self, name: nil)
+    ]
+  }
+
+  public override func getAppDelegateSubscribers() -> [ExpoAppDelegateSubscriber.Type] {
+    return [${subscribers.map((name) => `\n      ${name}.self`).join(",")}
+    ]
+  }
+
+  public override func getReactDelegateHandlers() -> [ExpoReactDelegateHandlerTupleType] {
+    return [
+      (packageName: "expo-updates", handler: UpdatesReactDelegateHandler.self)
+    ]
+  }
+}
+`;
+	const SCENE_TEMPLATE = `internal import Expo
+import React
+import ReactAppDependencyProvider
+
+@main
+class AppDelegate: ExpoAppDelegate, ExpoReactNativeFactoryProvider {
+  var window: UIWindow?
+
+  var reactNativeDelegate: ExpoReactNativeFactoryDelegate?
+  var reactNativeFactory: RCTReactNativeFactory?
+
+  public override func application(
+    _ application: UIApplication,
+    didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
+  ) -> Bool {
+    let delegate = ReactNativeDelegate()
+    let factory = ExpoReactNativeFactory(delegate: delegate)
+    delegate.dependencyProvider = RCTAppDependencyProvider()
+
+    reactNativeDelegate = delegate
+    reactNativeFactory = factory
+
+    return super.application(application, didFinishLaunchingWithOptions: launchOptions)
+  }
+}
+`;
+	const applyFetchDeadline = (
+		createRequire(import.meta.url)(
+			"../../plugins/with-ios-background-fetch-deadline.js",
+		) as { applyFetchDeadline: (source: string) => string }
+	).applyFetchDeadline;
+
+	it("passes a provider that lists the subscriber beside Expo's own", () => {
+		expect(
+			checkIosModulesProvider(
+				provider([
+					"TaskManagerAppDelegateSubscriber",
+					"LopBackgroundLaunchAppDelegateSubscriber",
+				]),
+			),
+		).toEqual([]);
+	});
+
+	it("fails a provider without the subscriber, or with no subscriber list", () => {
+		const missing = checkIosModulesProvider(
+			provider(["TaskManagerAppDelegateSubscriber"]),
+		);
+		expect(missing).toHaveLength(1);
+		expect(missing[0]?.problem).toContain(
+			"LopBackgroundLaunchAppDelegateSubscriber",
+		);
+		// The class name in an import or a comment is not registration.
+		expect(
+			checkIosModulesProvider(
+				"internal import LopBackgroundLaunch // LopBackgroundLaunchAppDelegateSubscriber.self",
+			),
+		).toHaveLength(1);
+	});
+
+	it("passes the template once the plugin has run, and fails it before", () => {
+		expect(checkIosAppDelegate(SCENE_TEMPLATE)).toHaveLength(1);
+		expect(checkIosAppDelegate(applyFetchDeadline(SCENE_TEMPLATE))).toEqual([]);
+	});
+
+	const runStatus = (args: string[]): number => {
+		try {
+			execFileSync(process.execPath, [SCRIPT, ...args], { stdio: "pipe" });
+			return 0;
+		} catch (error) {
+			return (error as { status?: number }).status ?? -1;
+		}
+	};
+
+	// One subprocess pair per test: each Node start costs ~1 s here, and four
+	// in one test crossed vitest's 5 s default.
+	it("runs ios-modules-provider from the CLI with the documented exit codes", () => {
+		const run = runStatus;
+		const good = writeFixture(
+			"ExpoModulesProvider.swift",
+			provider(["LopBackgroundLaunchAppDelegateSubscriber"]),
+		);
+		const bad = writeFixture("ExpoModulesProvider-bad.swift", provider([]));
+		expect(run(["ios-modules-provider", good])).toBe(0);
+		expect(run(["ios-modules-provider", bad])).toBe(1);
+	});
+
+	it("runs ios-app-delegate from the CLI with the documented exit codes", () => {
+		const run = runStatus;
+		const patched = writeFixture(
+			"AppDelegate.swift",
+			applyFetchDeadline(SCENE_TEMPLATE),
+		);
+		const stock = writeFixture("AppDelegate-stock.swift", SCENE_TEMPLATE);
+		expect(run(["ios-app-delegate", patched])).toBe(0);
+		expect(run(["ios-app-delegate", stock])).toBe(1);
 	});
 });

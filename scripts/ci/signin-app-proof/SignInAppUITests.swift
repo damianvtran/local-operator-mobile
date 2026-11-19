@@ -29,8 +29,7 @@ final class SignInAppUITests: XCTestCase {
       app.buttons["welcome-connect"].tap()
     }
     try consent()
-    try text("Signing in…")
-    attach("negative-exchanging")
+    try heldExchange("negative-exchanging", pkceVerified: 1)
     _ = try control("/release-token")
     try visible("sign-in-try-again")
     attach("token-500-error-and-retry-collapsed")
@@ -52,40 +51,64 @@ final class SignInAppUITests: XCTestCase {
     _ = try control("/control?mode=success&hold=true")
     app.buttons["sign-in-try-again"].tap()
     try consent()
-    try text("Signing in…")
-    attach("positive-exchanging")
+    try heldExchange("positive-exchanging", pkceVerified: 2)
     try releaseAndCaptureTransition()
-    try visible("computers-screen")
-    try pickerRow()
-    attach("positive-tunnel-picker")
+    // 2026-11-19: baseline 84621b99e auto-opens the sole usable computer.
+    // Run 44537393006 reached Home, not the obsolete pre-Nov-12 picker.
+    try visible("home-screen")
+    try visible("notification-primer-not-now")
+    app.buttons["notification-primer-not-now"].tap()
+    try connectedHome()
+    attach("positive-auto-open-home")
     let positive = try control("/receipt")
     XCTAssertEqual(positive["authorize"], 2)
     XCTAssertEqual(positive["pkce_verified"], 2)
     XCTAssertGreaterThanOrEqual(positive["discovery"] ?? 0, 1)
+    // Replaces the obsolete picker's "Sign-in protected" badge assertion with
+    // proof of that property: authenticated code mint, verified tunnel PKCE,
+    // and grant-cookie-only relay traffic, not just a transport label.
+    XCTAssertEqual(positive["session_code"], 1)
+    XCTAssertEqual(positive["session_token"], 1)
+    XCTAssertEqual(positive["session_pkce_verified"], 1)
+    XCTAssertGreaterThan(positive["relay_requests"] ?? 0, 0)
     // A fresh JS process must restore the Keychain grant without opening OAuth.
     // Merely inspecting a mocked write would not prove native persistence.
     app.terminate()
     app.launch()
-    try visible("computers-screen")
-    try pickerRow()
+    try connectedHome()
     let restored = try control("/receipt")
     XCTAssertEqual(restored["authorize"], 2)
     XCTAssertGreaterThan(restored["discovery"] ?? 0, positive["discovery"] ?? 0)
-    attach("persisted-grant-restored-picker")
-    // Persisted OAuth is not a connected relay. Drive the owner's actual pick,
-    // a bad server contract, in-app Retry, then a grant-authenticated list.
-    let computer = app.buttons["computer-row-" + String(repeating: "0", count: 32) + "-lop.radienthq.com"]
-    XCTAssertTrue(computer.label.contains("Sign-in protected"))
-    // A real 403 is disabled OR not-yet-active, never proof of an off toggle.
+    // A named Home alone could be cached: require a NEW authenticated tunnel
+    // exchange and relay traffic after restart, without another OAuth grant.
+    XCTAssertEqual(restored["session_code"], 2)
+    XCTAssertEqual(restored["session_token"], 2)
+    XCTAssertEqual(restored["session_pkce_verified"], 2)
+    XCTAssertGreaterThan(restored["relay_requests"] ?? 0, positive["relay_requests"] ?? 0)
+    attach("persisted-grant-reconnected-home")
+    // The old picker tap initiated a fresh route. With auto-open, a second cold
+    // start does that honestly; changing the fixture cannot break an ALREADY
+    // authenticated relay. Keep the 403 -> malformed -> successful Retry rows.
+    app.terminate()
     _ = try control("/control?session=inactive")
-    computer.tap()
+    app.launch()
+    try visible("home-screen")
     try visible("connection-error-console-link")
     // The mock lists this computer with no billing and status active, so the
     // 403 cannot be split by cause: the neutral copy, still no command.
     try text("Radient didn't allow phone access to OAuth proof computer right now.")
     attach("tunnel-inactive-status-guidance")
+    let inactive = try control("/receipt")
+    XCTAssertEqual(inactive["authorize"], 2)
+    XCTAssertEqual(inactive["session_code"], 3)
+    XCTAssertEqual(inactive["session_token"], 2)
+    // A 403 console remedy deliberately has no Retry button. The old picker
+    // row was a NEW admission attempt; restart likewise reopens the saved
+    // computer without pretending that the console remedy is a retry action.
+    app.terminate()
     _ = try control("/control?session=malformed")
-    computer.tap()
+    app.launch()
+    try visible("home-screen")
     try visible("connection-details-toggle")
     XCTAssertFalse(app.buttons["connection-error-console-link"].exists)
     XCTAssertFalse(app.descendants(matching: .any).matching(identifier: "connection-error-machine-remedy").firstMatch.exists)
@@ -96,6 +119,9 @@ final class SignInAppUITests: XCTestCase {
     XCTAssertTrue(details.contains("TunnelSessionError"))
     XCTAssertFalse(details.contains("fixture-session-code"))
     attach("tunnel-contract-details")
+    let malformed = try control("/receipt")
+    XCTAssertEqual(malformed["session_code"], 4)
+    XCTAssertEqual(malformed["session_token"], 2)
     _ = try control("/control?session=success")
     app.buttons["refusal-sign-in"].tap()
     try visible("home-screen")
@@ -104,10 +130,11 @@ final class SignInAppUITests: XCTestCase {
     try visible("session-row-b3535011f562")
     attach("connected-session-list")
     let connected = try control("/receipt")
-    XCTAssertEqual(connected["session_code"], 3)
-    XCTAssertEqual(connected["session_token"], 1)
-    XCTAssertEqual(connected["session_pkce_verified"], 1)
-    XCTAssertGreaterThan(connected["relay_requests"] ?? 0, 0)
+    XCTAssertEqual(connected["authorize"], 2)
+    XCTAssertEqual(connected["session_code"], 5)
+    XCTAssertEqual(connected["session_token"], 3)
+    XCTAssertEqual(connected["session_pkce_verified"], 3)
+    XCTAssertGreaterThan(connected["relay_requests"] ?? 0, restored["relay_requests"] ?? 0)
 
   }
 
@@ -120,12 +147,16 @@ final class SignInAppUITests: XCTestCase {
     app.terminate()
   }
 
-  @MainActor private func pickerRow() throws {
-    // The native row intentionally groups name/status into ONE accessible
-    // button. Looking for a standalone StaticText is not a product assertion.
-    let id = "computer-row-" + String(repeating: "0", count: 32) + "-lop.radienthq.com"
-    try visible(id)
-    XCTAssertTrue(app.buttons[id].label.contains("OAuth proof computer"))
+  @MainActor private func connectedHome() throws {
+    try visible("home-screen")
+    // The chip carries computer identity on Home; the actual populated list and
+    // provider receipts distinguish a live route from a merely mounted screen.
+    try visible("computers-button")
+    XCTAssertTrue(app.buttons["computers-button"].label.contains("OAuth proof computer"))
+    app.buttons["home-sidebar"].tap()
+    try visible("conversations-list")
+    try visible("session-row-b3535011f562")
+    app.buttons["sidebar-close"].tap()
   }
 
   @MainActor private func releaseAndCaptureTransition() throws {
@@ -154,11 +185,38 @@ final class SignInAppUITests: XCTestCase {
     let button = springboard.buttons["Continue"].firstMatch
     try require(button.waitForExistence(timeout: 60), "Missing system sign-in consent Continue")
     button.tap()
-    // Both callers then require the held exchange stage before releasing tokens.
+    // Both callers then wait for the held exchange (`heldExchange`) before releasing tokens.
   }
   @MainActor private func visible(_ id: String) throws {
     let element = app.descendants(matching: .any).matching(identifier: id).firstMatch
     try require(element.waitForExistence(timeout: 90), "Missing app surface: \(id)")
+  }
+  /// Waits until the app's REAL token request is parked at the provider, then
+  /// captures the exchanging frame. The provider counts `pkce_verified` and saves
+  /// the receipt BEFORE it holds the response, so the count reaching `pkceVerified`
+  /// means the app sent its verified exchange and is now in the exchanging stage
+  /// (`onCallbackReceived` reports it before the request starts).
+  ///
+  /// WHY NOT `text("Signing in…")` (PR #341 diagnosis). The release must happen
+  /// inside the app's 20 s exchange deadline (`RADIENT_OAUTH.requestTimeoutMs`,
+  /// 6610ef81), but the accessibility snapshot taken right after the system
+  /// browser dismisses stalls on SafariViewService's invalid remote element
+  /// (`kAXErrorInvalidUIElement`): one existence check measured 8.3 s and 31.5 s
+  /// on the last green proof (41868425996, Nov 4, before that deadline existed),
+  /// 31.2 s on 44524064527 (macos-26) and 70.4 s on 44505768707 (xcode-27). Past
+  /// 20 s the app correctly ends the held exchange as "We could not finish
+  /// signing in." and the proof fails on its own synchronization. The receipt is
+  /// read over loopback HTTP, never through accessibility, so it cannot stall.
+  /// The stage copy remains visible in the attached frame.
+  @MainActor private func heldExchange(_ name: String, pkceVerified: Int) throws {
+    let deadline = Date().addingTimeInterval(60)
+    var held = false
+    while Date() < deadline {
+      if (try control("/receipt")["pkce_verified"] ?? 0) >= pkceVerified { held = true; break }
+      Thread.sleep(forTimeInterval: 0.25)
+    }
+    try require(held, "Token exchange never reached the provider (pkce_verified < \(pkceVerified))")
+    attach(name)
   }
   @MainActor private func text(_ label: String) throws {
     try require(app.staticTexts[label].firstMatch.waitForExistence(timeout: 90), "Missing sign-in stage/picker text")
@@ -166,12 +224,41 @@ final class SignInAppUITests: XCTestCase {
   @MainActor private func require(_ condition: Bool, _ message: String) throws {
     if !condition {
       attach("failed-app-frame")
+      attachSignInDiagnostics()
       for (name, application) in [("app", app), ("springboard", springboard), ("SafariViewService", XCUIApplication(bundleIdentifier: "com.apple.SafariViewService"))] {
         let value = XCTAttachment(string: application.debugDescription); value.name = name; value.lifetime = .keepAlways; add(value)
       }
       XCTFail(message)
       throw NSError(domain: "SignInProof", code: 1)
     }
+  }
+  /// SELF-DIAGNOSIS on failure (PR #341, run 44505768707). A failed proof used to
+  /// end on "We could not finish signing in." with no cause: the panel's stage
+  /// trail (`sign-in-diagnostics.ts`) already records each stage and an allowlisted
+  /// error CLASS, never a message, URL or token, so it is safe to publish. Open
+  /// the disclosure the reader would open and attach its text, plus the provider's
+  /// count receipt, so the next failure names the stage that failed and its class.
+  /// Never throws: this runs inside `require`'s failure path.
+  @MainActor private func attachSignInDiagnostics() {
+    let toggle = app.buttons["sign-in-diagnostics-toggle"].firstMatch
+    var lines = ["toggle exists: \(toggle.exists)"]
+    if toggle.exists {
+      if toggle.label == "Show sign-in details" { toggle.tap() }
+      let region = app.descendants(matching: .any).matching(identifier: "sign-in-diagnostics").firstMatch
+      if region.waitForExistence(timeout: 10) {
+        lines.append("trail:\n" + region.label)
+      } else {
+        lines.append("trail: disclosure did not open")
+      }
+      attach("failed-sign-in-details")
+    }
+    if let receipt = try? control("/receipt") {
+      lines.append("receipt: " + receipt.sorted { $0.key < $1.key }.map { "\($0.key)=\($0.value)" }.joined(separator: " "))
+    }
+    let text = lines.joined(separator: "\n")
+    // Also on stdout, so the job log carries the cause without opening the xcresult.
+    print("[signin-proof-diagnostics]\n" + text)
+    let value = XCTAttachment(string: text); value.name = "sign-in-diagnostics"; value.lifetime = .keepAlways; add(value)
   }
   @MainActor private func attach(_ name: String) {
     let value = XCTAttachment(screenshot: XCUIScreen.main.screenshot()); value.name = name; value.lifetime = .keepAlways; add(value)

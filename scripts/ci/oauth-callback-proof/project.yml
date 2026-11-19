@@ -30,6 +30,15 @@ targets:
         CFBundleVersion: "1"
         LSRequiresIPhoneOS: true
         UILaunchScreen: {}
+        # iOS 27 SDK builds abort at launch without the scene lifecycle; main.swift's
+        # ProofSceneDelegate builds the window. The module-qualified name is required
+        # because the Swift class carries no @objc name.
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+          UISceneConfigurations:
+            UIWindowSceneSessionRoleApplication:
+              - UISceneConfigurationName: Default Configuration
+                UISceneDelegateClassName: $(PRODUCT_MODULE_NAME).ProofSceneDelegate
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
   CallbackProofUITests:

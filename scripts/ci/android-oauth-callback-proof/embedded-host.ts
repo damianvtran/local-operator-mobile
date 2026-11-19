@@ -21,8 +21,14 @@ export function embeddedHost(source: string): string {
 
 /** Job-generated JS only: record the actual native bundle URL, not an inference
  * from an asset's presence. Fail before OAuth if this proof selects Metro. */
+/** The line `signin-app-proof/prepare-entry.ts` ends the proof entry with:
+ * a require of the app's `package.json` `main` (`index.ts`, which loads
+ * `expo-router/entry` and defines the background task for headless launches).
+ * The test pins it to the real `main`, so moving the entry fails there. */
+export const APP_ENTRY_REQUIRE = 'require("./index.ts");';
+
 export function embeddedEntry(source: string): string {
-	const entry = 'require("expo-router/entry");';
+	const entry = APP_ENTRY_REQUIRE;
 	if (
 		source.split(entry).length !== 2 ||
 		source.includes("ANDROID_PROOF_ENTRY_LOADED")

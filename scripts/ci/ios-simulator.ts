@@ -4,6 +4,7 @@
  *
  *     node scripts/ci/ios-simulator.ts --prefer "iPhone 17"
  *     node scripts/ci/ios-simulator.ts --prefer "iPhone 17" --json-file fixture.json
+ *     node scripts/ci/ios-simulator.ts --prefer "iPhone 17" --min-os 27
  *
  * Why a script and not a literal `-destination` string. The ADR pins the runner
  * image and the device *by name* and calls a missing simulator a CI
@@ -15,6 +16,16 @@
  * the runtime and the destination it chose. If the preferred device is absent it
  * falls back to the newest available iPhone and SAYS SO in the log, rather than
  * failing or, worse, silently building for something else.
+ *
+ * `--min-os <major>` drops every runtime older than that major BEFORE the
+ * preferred name is looked up, and fails if none is left. Without it, an image
+ * that carries both an iOS 26 and an iOS 27 runtime would resolve "iPhone 17" to
+ * whichever runtime lists that name first by version — fine while the newest
+ * runtime has it, but if the iOS 27 set only names newer devices the fallback
+ * would quietly pick the iOS 26 runtime and the gate would stop exercising the
+ * OS the app is built for. The jobs on the `xcode-27` image pass `--min-os 27`
+ * (ITMS-90725, docs/ci.md); jobs still on `macos-26` omit it and behave as
+ * before.
  *
  * `simctl`'s payload is a boundary: it is parsed and narrowed field by field,
  * never asserted, because a shape change in a future Xcode would otherwise
@@ -66,6 +77,12 @@ const message = (error: unknown): string =>
 
 const prefer = arg("prefer", "iPhone 17");
 const jsonFile = arg("json-file", "");
+const minOsArg = arg("min-os", "");
+const minOs = minOsArg === "" ? 0 : Number(minOsArg);
+if (!Number.isInteger(minOs) || minOs < 0) {
+	console.error(`::error::--min-os must be an iOS major, got ${minOsArg}`);
+	process.exit(2);
+}
 
 let payload: string;
 try {
@@ -110,6 +127,7 @@ const runtimes: SimRuntimeEntry[] = Object.entries(devicesByRuntime)
 		const version = (groups.version ?? "")
 			.split("-")
 			.map((part) => Number(part));
+		if ((version[0] ?? 0) < minOs) return null;
 		const available = devices.filter((device) => device.isAvailable);
 		return available.length > 0 ? { key, version, devices: available } : null;
 	})
@@ -124,7 +142,7 @@ const runtimes: SimRuntimeEntry[] = Object.entries(devicesByRuntime)
 
 if (runtimes.length === 0) {
 	console.error(
-		"::error::no available iOS simulator on this runner. That is a CI " +
+		`::error::no available iOS${minOs ? ` ${minOs}+` : ""} simulator on this runner. That is a CI ` +
 			"configuration problem, not a test failure — check the runner image label " +
 			"and install the runtime (ADR 0004, open risks).",
 	);
