@@ -1,0 +1,154 @@
+{
+ "mids": [
+  "bcmsg_r2newa82318",
+  "bcmsg_r2newb82318"
+ ],
+ "entries": {
+  "bcmsg_r2newa82318": "peer-eae351d815b24a3caf847af545c06152",
+  "bcmsg_r2newb82318": "peer-859a787c616e4ef49bfc0cde799e1ac6"
+ },
+ "events": [
+  {
+   "t_ms": 47.7,
+   "wall": 1795082318.879,
+   "kind": "login",
+   "status": 303
+  },
+  {
+   "t_ms": 3287.8,
+   "wall": 1795082322.119,
+   "kind": "warm",
+   "outcome": "EngageOutcome(session_id='abcdef012345', detail='runtime ready', spawned=True, duplicate=False)"
+  },
+  {
+   "t_ms": 6292.1,
+   "wall": 1795082325.123,
+   "kind": "sse_open",
+   "status": 200
+  },
+  {
+   "t_ms": 8304.5,
+   "wall": 1795082327.135,
+   "kind": "display_body_recorded",
+   "mid": "bcmsg_r2newa82318",
+   "ok": true
+  },
+  {
+   "t_ms": 8304.5,
+   "wall": 1795082327.136,
+   "kind": "deliver_start",
+   "mid": "bcmsg_r2newa82318"
+  },
+  {
+   "t_ms": 8347.0,
+   "wall": 1795082327.178,
+   "kind": "deliver_done",
+   "mid": "bcmsg_r2newa82318",
+   "result": "delivered and woke the session"
+  },
+  {
+   "t_ms": 8429.5,
+   "wall": 1795082327.26,
+   "kind": "sse_row_seen",
+   "mid": "bcmsg_r2newa82318",
+   "rows": [
+    {
+     "id": "peer-eae351d815b24a3caf847af545c06152",
+     "kind": "peer_message",
+     "custom_type": null,
+     "custom_kind": null,
+     "sender_source": "team_bridge_message",
+     "sender_has_receipt": true,
+     "row_has_receipt": false,
+     "text_head": "<team-bridge>\nDirect message \u00b7 from Ola (human, same tenant)"
+    }
+   ]
+  },
+  {
+   "t_ms": 8443.4,
+   "wall": 1795082327.274,
+   "kind": "body_on_mount",
+   "mid": "bcmsg_r2newa82318",
+   "entry_id": "peer-eae351d815b24a3caf847af545c06152",
+   "status": 200,
+   "body": "{\"v\":1,\"items\":[{\"message_id\":\"bcmsg_r2newa82318\",\"conversation_id\":\"bcv_abcdefgh\",\"state\":\"admitted\",\"body\":\"**Live A** \u2014 first card from Ola, delivered while the session was idle.\",\"source\":\"local\"}"
+  },
+  {
+   "t_ms": 8530.6,
+   "wall": 1795082327.362,
+   "kind": "sse_peer_cycles",
+   "values": [
+    1
+   ]
+  },
+  {
+   "t_ms": 9445.0,
+   "wall": 1795082328.276,
+   "kind": "body_after_1s",
+   "mid": "bcmsg_r2newa82318",
+   "status": 200,
+   "body": "{\"v\":1,\"items\":[{\"message_id\":\"bcmsg_r2newa82318\",\"conversation_id\":\"bcv_abcdefgh\",\"state\":\"admitted\",\"body\":\"**Live A** \u2014 first card from Ola, delivered while the session was idle.\",\"source\":\"local\"}"
+  },
+  {
+   "t_ms": 9445.0,
+   "wall": 1795082328.276,
+   "kind": "settle_wait",
+   "seconds": 20.0
+  },
+  {
+   "t_ms": 29454.3,
+   "wall": 1795082348.285,
+   "kind": "display_body_recorded",
+   "mid": "bcmsg_r2newb82318",
+   "ok": true
+  },
+  {
+   "t_ms": 29454.3,
+   "wall": 1795082348.285,
+   "kind": "deliver_start",
+   "mid": "bcmsg_r2newb82318"
+  },
+  {
+   "t_ms": 29465.9,
+   "wall": 1795082348.297,
+   "kind": "deliver_done",
+   "mid": "bcmsg_r2newb82318",
+   "result": "delivered and woke the session"
+  },
+  {
+   "t_ms": 29561.6,
+   "wall": 1795082348.393,
+   "kind": "sse_row_seen",
+   "mid": "bcmsg_r2newb82318",
+   "rows": [
+    {
+     "id": "peer-859a787c616e4ef49bfc0cde799e1ac6",
+     "kind": "notice",
+     "custom_type": "team_bridge_message",
+     "custom_kind": "team_bridge_message",
+     "sender_source": "team_bridge_message",
+     "sender_has_receipt": false,
+     "row_has_receipt": true,
+     "text_head": "Ola \u00b7 a DM"
+    }
+   ]
+  },
+  {
+   "t_ms": 29576.3,
+   "wall": 1795082348.407,
+   "kind": "body_on_mount",
+   "mid": "bcmsg_r2newb82318",
+   "entry_id": "peer-859a787c616e4ef49bfc0cde799e1ac6",
+   "status": 200,
+   "body": "{\"v\":1,\"items\":[{\"message_id\":\"bcmsg_r2newb82318\",\"conversation_id\":\"bcv_abcdefgh\",\"state\":\"admitted\",\"body\":\"**Live B** \u2014 second card from Ola, after the woken turn settled.\",\"source\":\"local\"}],\"more"
+  },
+  {
+   "t_ms": 30578.1,
+   "wall": 1795082349.409,
+   "kind": "body_after_1s",
+   "mid": "bcmsg_r2newb82318",
+   "status": 200,
+   "body": "{\"v\":1,\"items\":[{\"message_id\":\"bcmsg_r2newb82318\",\"conversation_id\":\"bcv_abcdefgh\",\"state\":\"admitted\",\"body\":\"**Live B** \u2014 second card from Ola, after the woken turn settled.\",\"source\":\"local\"}],\"more"
+  }
+ ]
+}

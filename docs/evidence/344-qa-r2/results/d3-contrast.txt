@@ -1,0 +1,4 @@
+r2 b196798e light (border-border-control): bg=(242, 237, 227) rail=(133, 127, 112) cols=120..125 (6 device px) contrast=3.42:1
+r2 b196798e dark (border-border-control): bg=(29, 27, 23) rail=(131, 124, 109) cols=120..125 (6 device px) contrast=4.15:1
+r1 7977ce18 light (border-hairline): bg=(242, 237, 227) rail=(218, 213, 203) cols=120..125 (6 device px) contrast=1.25:1
+r1 7977ce18 dark (border-hairline): bg=(29, 27, 23) rail=(59, 54, 39) cols=120..125 (6 device px) contrast=1.43:1

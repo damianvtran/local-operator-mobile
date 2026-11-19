@@ -1,0 +1,550 @@
+{
+ "label": "new",
+ "relay": "http://127.0.0.1:4398",
+ "runs": [
+  {
+   "pass": "d2",
+   "theme": "light",
+   "ready": true,
+   "frames": [
+    "new-d2-light-fold-collapsed.png",
+    "new-d2-light-d2-a-collapsed.png",
+    "new-d2-light-d2-rail.png",
+    "new-d2-light-d2-b-expanded-end.png",
+    "new-d2-light-d2-c-after-less-1.png",
+    "new-d2-light-d2-d-after-less-2.png"
+   ],
+   "probes": {
+    "find": {
+     "present": true,
+     "text": "↔\nOla · DM\nExternal message · untrusted content\nRelease checklist\n1.\nLine 1: the quick brown fox jumps over the lazy dog, then checks item 1.\n2.\nLine 2: the quick brown fox jumps over the lazy dog, then checks item 2.\n3.\nLine 3: the quick brown fox jumps over the lazy dog, then checks item 3.\n4.\nLine 4: the quick brown fox jumps over the lazy dog, then checks item 4.\n5.\nLine 5: the quick brown fox",
+     "hasBodyRegion": true,
+     "bodyText": "External message · untrusted content\nRelease checklist\n1.\nLine 1: the quick brown fox jumps over the lazy dog, then checks item 1.\n2.\nLine 2: the quick brown fox jumps over the lazy dog, then checks i",
+     "genericPeer": false,
+     "envelopeLeak": false
+    },
+    "collapsed": {
+     "tag": "collapsed",
+     "at": 1795082195.65,
+     "scrollTop": 150,
+     "scrollHeight": 1619,
+     "clientHeight": 648,
+     "vh": 844,
+     "row": {
+      "top": 244,
+      "bottom": 531,
+      "h": 287
+     },
+     "toggle": {
+      "text": "Show more",
+      "ariaExpanded": "false",
+      "top": 471,
+      "bottom": 519
+     },
+     "rowInView": true,
+     "toggleInView": true
+    },
+    "rail": {
+     "left": 40,
+     "top": 297.625,
+     "width": 334,
+     "height": 221.59375,
+     "dir": "ltr",
+     "borderLeft": "2px rgb(133, 127, 112)",
+     "borderRight": "0px rgb(133, 127, 112)",
+     "cls": "css-g5y9jx border-s-2 border-border-control ps-3",
+     "bg": "rgb(242, 237, 227)",
+     "bodyBg": "rgba(0, 0, 0, 0)"
+    },
+    "taps": [
+     {
+      "x": 84,
+      "y": 495.21875
+     },
+     {
+      "x": 84,
+      "y": 687.84375
+     }
+    ],
+    "expanded": {
+     "tag": "expanded",
+     "at": 1795082196.813,
+     "scrollTop": 150,
+     "scrollHeight": 2898,
+     "clientHeight": 648,
+     "vh": 844,
+     "row": {
+      "top": 244,
+      "bottom": 1810,
+      "h": 1566
+     },
+     "toggle": {
+      "text": "Show less",
+      "ariaExpanded": "true",
+      "top": 1750,
+      "bottom": 1798
+     },
+     "rowInView": true,
+     "toggleInView": false
+    },
+    "expandedEnd": {
+     "tag": "expanded-end",
+     "at": 1795082197.616,
+     "scrollTop": 1236,
+     "scrollHeight": 2898,
+     "clientHeight": 648,
+     "vh": 844,
+     "row": {
+      "top": -842,
+      "bottom": 724,
+      "h": 1566
+     },
+     "toggle": {
+      "text": "Show less",
+      "ariaExpanded": "true",
+      "top": 664,
+      "bottom": 712
+     },
+     "rowInView": true,
+     "toggleInView": true
+    },
+    "preLess": {
+     "scrollerTop": 64,
+     "scrollTop": 1236,
+     "clampTop": -788,
+     "clampH": 1452,
+     "bodyTop": -809,
+     "rowTop": -842
+    },
+    "less1": {
+     "tag": "after-less-2raf",
+     "at": 1795082197.792,
+     "scrollTop": 374,
+     "scrollHeight": 1619,
+     "clientHeight": 648,
+     "vh": 844,
+     "row": {
+      "top": 20,
+      "bottom": 307,
+      "h": 287
+     },
+     "toggle": {
+      "text": "Show more",
+      "ariaExpanded": "false",
+      "top": 247,
+      "bottom": 295
+     },
+     "rowInView": true,
+     "toggleInView": true
+    },
+    "less2": {
+     "tag": "after-less-+700ms",
+     "at": 1795082198.609,
+     "scrollTop": 374,
+     "scrollHeight": 1619,
+     "clientHeight": 648,
+     "vh": 844,
+     "row": {
+      "top": 20,
+      "bottom": 307,
+      "h": 287
+     },
+     "toggle": {
+      "text": "Show more",
+      "ariaExpanded": "false",
+      "top": 247,
+      "bottom": 295
+     },
+     "rowInView": true,
+     "toggleInView": true
+    },
+    "less3": {
+     "tag": "after-less-+2.2s",
+     "at": 1795082200.206,
+     "scrollTop": 374,
+     "scrollHeight": 1619,
+     "clientHeight": 648,
+     "vh": 844,
+     "row": {
+      "top": 20,
+      "bottom": 307,
+      "h": 287
+     },
+     "toggle": {
+      "text": "Show more",
+      "ariaExpanded": "false",
+      "top": 247,
+      "bottom": 295
+     },
+     "rowInView": true,
+     "toggleInView": true
+    },
+    "scrollLog": [
+     [
+      24,
+      971
+     ],
+     [
+      41,
+      374
+     ]
+    ],
+    "scrollerTopAfter": 64
+   },
+   "net": [
+    {
+     "wall": 1795082191.158,
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_admit/body",
+     "status": 200,
+     "cache": "private, no-store"
+    },
+    {
+     "wall": 1795082191.164,
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_long/body",
+     "status": 200,
+     "cache": "private, no-store"
+    },
+    {
+     "wall": 1795082191.164,
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_held/body",
+     "status": 200,
+     "cache": "private, no-store"
+    },
+    {
+     "wall": 1795082191.18,
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_heldt/body",
+     "status": 200,
+     "cache": "private, no-store"
+    },
+    {
+     "wall": 1795082191.187,
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_refused/body",
+     "status": 200,
+     "cache": "private, no-store"
+    },
+    {
+     "wall": 1795082191.192,
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_deleted/body",
+     "status": 200,
+     "cache": "private, no-store"
+    },
+    {
+     "wall": 1795082191.202,
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_offline/body",
+     "status": 200,
+     "cache": "private, no-store"
+    },
+    {
+     "wall": 1795082191.202,
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_coal/body",
+     "status": 200,
+     "cache": "private, no-store"
+    }
+   ],
+   "api": [
+    "200 /session/abcdef012345?lo-relay=http%3A%2F%2F127.0.0.1%3A8344&lo-relay-password=<redacted>&lo-relay-insecur",
+    "FAILED net::ERR_ABORTED /",
+    "200 /api/models",
+    "200 /api/commands",
+    "200 /api/config/events",
+    "200 /api/sessions/events?include_peers=true",
+    "200 /api/sessions/abcdef012345/events",
+    "200 /api/models",
+    "200 /api/sessions/abcdef012345/history",
+    "200 /api/sessions/abcdef012345/checkpoints",
+    "200 /api/sessions/abcdef012345/bridge-cards/e_admit/body",
+    "200 /api/sessions/abcdef012345/bridge-cards/e_long/body",
+    "200 /api/sessions/abcdef012345/bridge-cards/e_held/body",
+    "200 /api/sessions/abcdef012345/bridge-cards/e_heldt/body",
+    "200 /api/sessions/abcdef012345/bridge-cards/e_refused/body",
+    "200 /api/sessions/abcdef012345/bridge-cards/e_deleted/body",
+    "200 /api/sessions/abcdef012345/bridge-cards/e_offline/body",
+    "200 /api/sessions/abcdef012345/bridge-cards/e_coal/body"
+   ],
+   "netBeforeFold": 0,
+   "foldClick": "Peer messages · 8\n▸",
+   "rowsAfterFold": [
+    "transcript-row-e_admit",
+    "transcript-row-e_long",
+    "transcript-row-e_held",
+    "transcript-row-e_heldt",
+    "transcript-row-e_refused",
+    "transcript-row-e_deleted",
+    "transcript-row-e_offline",
+    "transcript-row-e_coal"
+   ]
+  },
+  {
+   "pass": "d2",
+   "theme": "dark",
+   "ready": true,
+   "frames": [
+    "new-d2-dark-fold-collapsed.png",
+    "new-d2-dark-d2-a-collapsed.png",
+    "new-d2-dark-d2-rail.png",
+    "new-d2-dark-d2-b-expanded-end.png",
+    "new-d2-dark-d2-c-after-less-1.png",
+    "new-d2-dark-d2-d-after-less-2.png"
+   ],
+   "probes": {
+    "find": {
+     "present": true,
+     "text": "↔\nOla · DM\nExternal message · untrusted content\nRelease checklist\n1.\nLine 1: the quick brown fox jumps over the lazy dog, then checks item 1.\n2.\nLine 2: the quick brown fox jumps over the lazy dog, then checks item 2.\n3.\nLine 3: the quick brown fox jumps over the lazy dog, then checks item 3.\n4.\nLine 4: the quick brown fox jumps over the lazy dog, then checks item 4.\n5.\nLine 5: the quick brown fox",
+     "hasBodyRegion": true,
+     "bodyText": "External message · untrusted content\nRelease checklist\n1.\nLine 1: the quick brown fox jumps over the lazy dog, then checks item 1.\n2.\nLine 2: the quick brown fox jumps over the lazy dog, then checks i",
+     "genericPeer": false,
+     "envelopeLeak": false
+    },
+    "collapsed": {
+     "tag": "collapsed",
+     "at": 1795082207.496,
+     "scrollTop": 150,
+     "scrollHeight": 1619,
+     "clientHeight": 648,
+     "vh": 844,
+     "row": {
+      "top": 244,
+      "bottom": 531,
+      "h": 287
+     },
+     "toggle": {
+      "text": "Show more",
+      "ariaExpanded": "false",
+      "top": 471,
+      "bottom": 519
+     },
+     "rowInView": true,
+     "toggleInView": true
+    },
+    "rail": {
+     "left": 40,
+     "top": 297.625,
+     "width": 334,
+     "height": 221.59375,
+     "dir": "ltr",
+     "borderLeft": "2px rgb(131, 124, 109)",
+     "borderRight": "0px rgb(131, 124, 109)",
+     "cls": "css-g5y9jx border-s-2 border-border-control ps-3",
+     "bg": "rgb(29, 27, 23)",
+     "bodyBg": "rgba(0, 0, 0, 0)"
+    },
+    "taps": [
+     {
+      "x": 84,
+      "y": 495.21875
+     },
+     {
+      "x": 84,
+      "y": 687.84375
+     }
+    ],
+    "expanded": {
+     "tag": "expanded",
+     "at": 1795082208.68,
+     "scrollTop": 150,
+     "scrollHeight": 2898,
+     "clientHeight": 648,
+     "vh": 844,
+     "row": {
+      "top": 244,
+      "bottom": 1810,
+      "h": 1566
+     },
+     "toggle": {
+      "text": "Show less",
+      "ariaExpanded": "true",
+      "top": 1750,
+      "bottom": 1798
+     },
+     "rowInView": true,
+     "toggleInView": false
+    },
+    "expandedEnd": {
+     "tag": "expanded-end",
+     "at": 1795082209.485,
+     "scrollTop": 1236,
+     "scrollHeight": 2898,
+     "clientHeight": 648,
+     "vh": 844,
+     "row": {
+      "top": -842,
+      "bottom": 724,
+      "h": 1566
+     },
+     "toggle": {
+      "text": "Show less",
+      "ariaExpanded": "true",
+      "top": 664,
+      "bottom": 712
+     },
+     "rowInView": true,
+     "toggleInView": true
+    },
+    "preLess": {
+     "scrollerTop": 64,
+     "scrollTop": 1236,
+     "clampTop": -788,
+     "clampH": 1452,
+     "bodyTop": -809,
+     "rowTop": -842
+    },
+    "less1": {
+     "tag": "after-less-2raf",
+     "at": 1795082209.658,
+     "scrollTop": 374,
+     "scrollHeight": 1619,
+     "clientHeight": 648,
+     "vh": 844,
+     "row": {
+      "top": 20,
+      "bottom": 307,
+      "h": 287
+     },
+     "toggle": {
+      "text": "Show more",
+      "ariaExpanded": "false",
+      "top": 247,
+      "bottom": 295
+     },
+     "rowInView": true,
+     "toggleInView": true
+    },
+    "less2": {
+     "tag": "after-less-+700ms",
+     "at": 1795082210.47,
+     "scrollTop": 374,
+     "scrollHeight": 1619,
+     "clientHeight": 648,
+     "vh": 844,
+     "row": {
+      "top": 20,
+      "bottom": 307,
+      "h": 287
+     },
+     "toggle": {
+      "text": "Show more",
+      "ariaExpanded": "false",
+      "top": 247,
+      "bottom": 295
+     },
+     "rowInView": true,
+     "toggleInView": true
+    },
+    "less3": {
+     "tag": "after-less-+2.2s",
+     "at": 1795082212.069,
+     "scrollTop": 374,
+     "scrollHeight": 1619,
+     "clientHeight": 648,
+     "vh": 844,
+     "row": {
+      "top": 20,
+      "bottom": 307,
+      "h": 287
+     },
+     "toggle": {
+      "text": "Show more",
+      "ariaExpanded": "false",
+      "top": 247,
+      "bottom": 295
+     },
+     "rowInView": true,
+     "toggleInView": true
+    },
+    "scrollLog": [
+     [
+      21,
+      971
+     ],
+     [
+      38,
+      374
+     ]
+    ],
+    "scrollerTopAfter": 64
+   },
+   "net": [
+    {
+     "wall": 1795082203.004,
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_admit/body",
+     "status": 200,
+     "cache": "private, no-store"
+    },
+    {
+     "wall": 1795082203.01,
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_long/body",
+     "status": 200,
+     "cache": "private, no-store"
+    },
+    {
+     "wall": 1795082203.012,
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_held/body",
+     "status": 200,
+     "cache": "private, no-store"
+    },
+    {
+     "wall": 1795082203.027,
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_heldt/body",
+     "status": 200,
+     "cache": "private, no-store"
+    },
+    {
+     "wall": 1795082203.03,
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_refused/body",
+     "status": 200,
+     "cache": "private, no-store"
+    },
+    {
+     "wall": 1795082203.037,
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_deleted/body",
+     "status": 200,
+     "cache": "private, no-store"
+    },
+    {
+     "wall": 1795082203.053,
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_coal/body",
+     "status": 200,
+     "cache": "private, no-store"
+    },
+    {
+     "wall": 1795082203.074,
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_offline/body",
+     "status": 200,
+     "cache": "private, no-store"
+    }
+   ],
+   "api": [
+    "200 /session/abcdef012345?lo-relay=http%3A%2F%2F127.0.0.1%3A8344&lo-relay-password=<redacted>&lo-relay-insecur",
+    "FAILED net::ERR_ABORTED /",
+    "200 /api/models",
+    "200 /api/config/events",
+    "200 /api/commands",
+    "200 /api/models",
+    "200 /api/sessions/abcdef012345/events",
+    "200 /api/sessions/abcdef012345/checkpoints",
+    "200 /api/sessions/abcdef012345/history",
+    "200 /api/sessions/events?include_peers=true",
+    "200 /api/sessions/abcdef012345/bridge-cards/e_admit/body",
+    "200 /api/sessions/abcdef012345/bridge-cards/e_long/body",
+    "200 /api/sessions/abcdef012345/bridge-cards/e_held/body",
+    "200 /api/sessions/abcdef012345/bridge-cards/e_heldt/body",
+    "200 /api/sessions/abcdef012345/bridge-cards/e_refused/body",
+    "200 /api/sessions/abcdef012345/bridge-cards/e_deleted/body",
+    "200 /api/sessions/abcdef012345/bridge-cards/e_coal/body",
+    "200 /api/sessions/abcdef012345/bridge-cards/e_offline/body"
+   ],
+   "netBeforeFold": 0,
+   "foldClick": "Peer messages · 8\n▸",
+   "rowsAfterFold": [
+    "transcript-row-e_admit",
+    "transcript-row-e_long",
+    "transcript-row-e_held",
+    "transcript-row-e_heldt",
+    "transcript-row-e_refused",
+    "transcript-row-e_deleted",
+    "transcript-row-e_offline",
+    "transcript-row-e_coal"
+   ]
+  }
+ ]
+}

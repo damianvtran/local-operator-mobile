@@ -1,0 +1,92 @@
+{
+ "label": "old-m1",
+ "relay": "http://127.0.0.1:4395",
+ "runs": [
+  {
+   "pass": "live",
+   "theme": "light",
+   "ready": true,
+   "frames": [
+    "old-m1-live-light-fold-collapsed.png",
+    "old-m1-live-light-live-before.png",
+    "old-m1-live-light-live-bottom.png",
+    "old-m1-live-light-live-peer-c3b93a3e475746c887a92eb9a192780d.png",
+    "old-m1-live-light-live-peer-ec1a1cb83a264c1997ab357ca5cb854a.png"
+   ],
+   "probes": {},
+   "net": [],
+   "api": [
+    "200 /session/abcdef012345?lo-relay=http%3A%2F%2F127.0.0.1%3A8347&lo-relay-password=<redacted>&lo-relay-insecur",
+    "FAILED net::ERR_ABORTED /",
+    "200 /api/models",
+    "200 /api/commands",
+    "200 /api/config/events",
+    "200 /api/models",
+    "200 /api/sessions/events?include_peers=true",
+    "200 /api/sessions/abcdef012345/history",
+    "200 /api/sessions/abcdef012345/events",
+    "200 /api/sessions/abcdef012345/checkpoints",
+    "200 /api/sessions/abcdef012345/seen",
+    "200 /api/sessions/abcdef012345/seen"
+   ],
+   "netBeforeFold": 0,
+   "rowsAfterFold": [],
+   "liveT0": 1795082400.38,
+   "liveDriver": {
+    "status": 0,
+    "out": [
+     "{\"t_ms\": 44.6, \"wall\": 1795082400.86, \"kind\": \"login\", \"status\": 303}",
+     "{\"t_ms\": 1836.5, \"wall\": 1795082402.652, \"kind\": \"warm\", \"outcome\": \"EngageOutcome(session_id='abcdef012345', detail='runtime ready', spawned=True, duplicate=False)\"}",
+     "{\"t_ms\": 4842.3, \"wall\": 1795082405.658, \"kind\": \"sse_open\", \"status\": 200}",
+     "{\"t_ms\": 6849.7, \"wall\": 1795082407.665, \"kind\": \"display_body_recorded\", \"mid\": \"bcmsg_r2olda82400\", \"ok\": true}",
+     "{\"t_ms\": 6849.8, \"wall\": 1795082407.665, \"kind\": \"deliver_start\", \"mid\": \"bcmsg_r2olda82400\"}",
+     "{\"t_ms\": 6877.5, \"wall\": 1795082407.693, \"kind\": \"deliver_done\", \"mid\": \"bcmsg_r2olda82400\", \"result\": \"delivered and woke the session\"}",
+     "{\"t_ms\": 6965.3, \"wall\": 1795082407.781, \"kind\": \"sse_row_seen\", \"mid\": \"bcmsg_r2olda82400\", \"rows\": [{\"id\": \"peer-c3b93a3e475746c887a92eb9a192780d\", \"kind\": \"peer_message\", \"custom_type\": null, \"custom_kind\": null, \"sender_source\": \"team_bridge_message\", \"sender_has_receipt\": true, \"row_has_receipt\": false, \"text_head\": \"<team-bridge>\\nDirect message \\u00b7 from Ola (human, same tenant)\"}]}",
+     "{\"t_ms\": 6968.1, \"wall\": 1795082407.783, \"kind\": \"body_on_mount\", \"mid\": \"bcmsg_r2olda82400\", \"entry_id\": \"peer-c3b93a3e475746c887a92eb9a192780d\", \"status\": 404, \"body\": \"Not Found\"}",
+     "{\"t_ms\": 7065.8, \"wall\": 1795082407.881, \"kind\": \"sse_peer_cycles\", \"values\": [1]}",
+     "{\"t_ms\": 7969.2, \"wall\": 1795082408.784, \"kind\": \"body_after_1s\", \"mid\": \"bcmsg_r2olda82400\", \"status\": 404, \"body\": \"Not Found\"}",
+     "{\"t_ms\": 7969.3, \"wall\": 1795082408.784, \"kind\": \"settle_wait\", \"seconds\": 20.0}",
+     "{\"t_ms\": 27989.7, \"wall\": 1795082428.805, \"kind\": \"display_body_recorded\", \"mid\": \"bcmsg_r2oldb82400\", \"ok\": true}",
+     "{\"t_ms\": 27989.8, \"wall\": 1795082428.805, \"kind\": \"deliver_start\", \"mid\": \"bcmsg_r2oldb82400\"}",
+     "{\"t_ms\": 28000.9, \"wall\": 1795082428.816, \"kind\": \"deliver_done\", \"mid\": \"bcmsg_r2oldb82400\", \"result\": \"delivered and woke the session\"}",
+     "{\"t_ms\": 28096.6, \"wall\": 1795082428.912, \"kind\": \"sse_row_seen\", \"mid\": \"bcmsg_r2oldb82400\", \"rows\": [{\"id\": \"peer-ec1a1cb83a264c1997ab357ca5cb854a\", \"kind\": \"notice\", \"custom_type\": \"team_bridge_message\", \"custom_kind\": \"team_bridge_message\", \"sender_source\": \"team_bridge_message\", \"sender_has_receipt\": false, \"row_has_receipt\": true, \"text_head\": \"Ola \\u00b7 a DM\"}]}",
+     "{\"t_ms\": 28099.5, \"wall\": 1795082428.915, \"kind\": \"body_on_mount\", \"mid\": \"bcmsg_r2oldb82400\", \"entry_id\": \"peer-ec1a1cb83a264c1997ab357ca5cb854a\", \"status\": 404, \"body\": \"Not Found\"}",
+     "{\"t_ms\": 29100.8, \"wall\": 1795082429.916, \"kind\": \"body_after_1s\", \"mid\": \"bcmsg_r2oldb82400\", \"status\": 404, \"body\": \"Not Found\"}"
+    ]
+   },
+   "liveEntries": {
+    "peer-c3b93a3e475746c887a92eb9a192780d": {
+     "present": true,
+     "text": "↔\nanother session\n<team-bridge>\n▸",
+     "hasBodyRegion": false,
+     "bodyText": null,
+     "genericPeer": true,
+     "envelopeLeak": true
+    },
+    "peer-ec1a1cb83a264c1997ab357ca5cb854a": {
+     "present": true,
+     "text": "↔\nOla · DM\nOla · a DM",
+     "hasBodyRegion": false,
+     "bodyText": null,
+     "genericPeer": false,
+     "envelopeLeak": false
+    }
+   },
+   "liveNet": [],
+   "allRowIds": [
+    "transcript-row-peer-918a4c3fa3c04fb3b951fe44bad97a18",
+    "transcript-row-f896c551914c44f08f675a73904eebf3:stop",
+    "transcript-row-ab7b3ec77f07451d88fcc07ae519f349",
+    "transcript-row-peer-c3b93a3e475746c887a92eb9a192780d",
+    "transcript-row-1e7c0feb4d164770a96cec9bdfeae19c",
+    "transcript-row-err-1795082407791366791",
+    "transcript-row-peer-ec1a1cb83a264c1997ab357ca5cb854a",
+    "transcript-row-5a434b5b28904c27a068c2fe443936ea",
+    "transcript-row-err-1795082428862091108",
+    "transcript-row-completion-b3984536-00f2-4443-bc77-68ff63ac2e1b",
+    "transcript-row-completion-79c50801-9087-47a2-a557-2655cb2d38d0",
+    "transcript-row-completion-cbcb61d0-c754-4618-a5fc-9354930cb85c"
+   ]
+  }
+ ]
+}
