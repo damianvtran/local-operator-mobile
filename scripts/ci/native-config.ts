@@ -471,16 +471,96 @@ export function checkAndroidBadging(badging: string): Finding[] {
 	return findings;
 }
 
-/** One line for the CI step summary, naming what was asserted. */
-/** The artefact kinds the CLI checks. */
-export type Platform = "ios" | "android" | "android-badging";
+/**
+ * The scene-lifecycle background-launch workaround (expo/expo#52878, agent
+ * review R1 M1), asserted in the GENERATED iOS project rather than trusted from
+ * source: both halves reach the binary through Expo machinery a dependency bump
+ * can change (autolinking of a local module, a config plugin's AppDelegate
+ * edit), and both fail silently — the app launches, and only a terminated-app
+ * silent push on a device would show the loss.
+ *
+ * `ios-modules-provider` reads the `ExpoModulesProvider.swift` autolinking
+ * generates during the build; it must list the subscriber that starts React
+ * Native without a view (`modules/lop-background-launch`).
+ * `ios-app-delegate` reads the generated `AppDelegate.swift`; it must carry the
+ * fetch-completion deadline (`plugins/with-ios-background-fetch-deadline.js`).
+ * Duplicated rather than imported, for the reason `IOS_EXCEPTION_DOMAINS` is.
+ * Remove both with the workaround once Expo starts React Native for scene-less
+ * launches itself.
+ */
+export const IOS_APP_DELEGATE_SUBSCRIBERS = [
+	"LopBackgroundLaunchAppDelegateSubscriber",
+] as const;
+export const IOS_FETCH_DEADLINE_MARKER = "lop-background-fetch-deadline";
 
+const SUBSCRIBERS_BODY =
+	/func getAppDelegateSubscribers\(\)[^{]*\{([\s\S]*?)\n {2}\}/;
+const CLASS_REFERENCE = /(\w+)\.self/g;
+const DEADLINE_CALL_THROUGH = /fetchCompletionHandler: completeOnce\)/;
+
+/** The class list inside `getAppDelegateSubscribers()`, `.self` suffixes off. */
+const subscriberClasses = (provider: string): string[] | undefined => {
+	const body = provider.match(SUBSCRIBERS_BODY)?.[1];
+	return body === undefined
+		? undefined
+		: [...body.matchAll(CLASS_REFERENCE)].map((match) => match[1] as string);
+};
+
+export function checkIosModulesProvider(provider: string): Finding[] {
+	const classes = subscriberClasses(provider);
+	if (classes === undefined) {
+		return [
+			{
+				field: "getAppDelegateSubscribers",
+				problem:
+					"not found — pass the ExpoModulesProvider.swift that expo-modules-autolinking generated for the app target",
+			},
+		];
+	}
+	return IOS_APP_DELEGATE_SUBSCRIBERS.filter(
+		(name) => !classes.includes(name),
+	).map((name) => ({
+		field: "getAppDelegateSubscribers",
+		problem: `expected ${name} (modules/lop-background-launch), found ${JSON.stringify(classes)} — without it a terminated app woken by a silent push runs no JS under the scene lifecycle`,
+	}));
+}
+
+export function checkIosAppDelegate(source: string): Finding[] {
+	const marker = source.indexOf(`// ${IOS_FETCH_DEADLINE_MARKER}:`);
+	const override = source.indexOf(
+		"didReceiveRemoteNotification userInfo",
+		marker,
+	);
+	return marker !== -1 && override !== -1 && DEADLINE_CALL_THROUGH.test(source)
+		? []
+		: [
+				{
+					field:
+						"AppDelegate.application(_:didReceiveRemoteNotification:fetchCompletionHandler:)",
+					problem: `expected the ${IOS_FETCH_DEADLINE_MARKER} override (plugins/with-ios-background-fetch-deadline.js) — without it iOS's silent-push completion handler can go uncalled`,
+				},
+			];
+}
+
+/** The artefact kinds the CLI checks. */
+export type Platform =
+	| "ios"
+	| "ios-modules-provider"
+	| "ios-app-delegate"
+	| "android"
+	| "android-badging";
+
+/** One line for the CI step summary, naming what was asserted. */
 export const summarize = (platform: Platform): string =>
-	platform === "android-badging"
-		? `built APK carries application-label=${JSON.stringify(LAUNCHER_LABEL)} with no locale override that differs`
-		: platform === "ios"
-			? `built Info.plist carries the ${IOS_SCENE_DELEGATE} scene manifest, CFBundleDisplayName=${JSON.stringify(LAUNCHER_LABEL)}, ITSAppUsesNonExemptEncryption=false, UIBackgroundModes exactly ${JSON.stringify(IOS_BACKGROUND_MODES)}, NSLocalNetworkUsageDescription and the ATS local-networking configuration (NSAllowsLocalNetworking + ${IOS_EXCEPTION_DOMAINS.length} CIDR exceptions) and none of the ${IOS_FORBIDDEN_KEYS.length} photo/camera permission keys`
-			: `release merged manifest carries android:usesCleartextTraffic="true", ${ANDROID_LOCAL_NETWORK_PERMISSION} and the Team Bridge notification receiver (not Expo's), and none of the ${ANDROID_FORBIDDEN_PERMISSIONS.length} camera/media-library permissions`;
+	platform === "ios-modules-provider"
+		? `generated ExpoModulesProvider lists ${IOS_APP_DELEGATE_SUBSCRIBERS.join(", ")} as an AppDelegate subscriber`
+		: platform === "ios-app-delegate"
+			? `generated AppDelegate carries the ${IOS_FETCH_DEADLINE_MARKER} silent-push completion override`
+			: platform === "android-badging"
+				? `built APK carries application-label=${JSON.stringify(LAUNCHER_LABEL)} with no locale override that differs`
+				: platform === "ios"
+					? `built Info.plist carries the ${IOS_SCENE_DELEGATE} scene manifest, CFBundleDisplayName=${JSON.stringify(LAUNCHER_LABEL)}, ITSAppUsesNonExemptEncryption=false, UIBackgroundModes exactly ${JSON.stringify(IOS_BACKGROUND_MODES)}, NSLocalNetworkUsageDescription and the ATS local-networking configuration (NSAllowsLocalNetworking + ${IOS_EXCEPTION_DOMAINS.length} CIDR exceptions) and none of the ${IOS_FORBIDDEN_KEYS.length} photo/camera permission keys`
+					: `release merged manifest carries android:usesCleartextTraffic="true", ${ANDROID_LOCAL_NETWORK_PERMISSION} and the Team Bridge notification receiver (not Expo's), and none of the ${ANDROID_FORBIDDEN_PERMISSIONS.length} camera/media-library permissions`;
 
 // ---------------------------------------------------------------------------
 // CLI
@@ -490,14 +570,18 @@ const main = (): void => {
 	const [platform, path] = process.argv.slice(2);
 	if (
 		(platform !== "ios" &&
+			platform !== "ios-modules-provider" &&
+			platform !== "ios-app-delegate" &&
 			platform !== "android" &&
 			platform !== "android-badging") ||
 		typeof path !== "string" ||
 		path.length === 0
 	) {
 		console.error(
-			"usage: native-config.ts <ios|android|android-badging> <path>\n" +
+			"usage: native-config.ts <ios|ios-modules-provider|ios-app-delegate|android|android-badging> <path>\n" +
 				"  ios             path to the built Info.plist converted to JSON (plutil -convert json)\n" +
+				"  ios-modules-provider path to the generated ExpoModulesProvider.swift\n" +
+				"  ios-app-delegate     path to the generated AppDelegate.swift\n" +
 				"  android         path to the release merged AndroidManifest.xml\n" +
 				"  android-badging path to the full `aapt2 dump badging` output of the built APK",
 		);
@@ -526,6 +610,10 @@ const main = (): void => {
 			process.exit(1);
 		}
 		findings = checkIosInfoPlist(parsed);
+	} else if (platform === "ios-modules-provider") {
+		findings = checkIosModulesProvider(raw);
+	} else if (platform === "ios-app-delegate") {
+		findings = checkIosAppDelegate(raw);
 	} else if (platform === "android") {
 		findings = checkAndroidManifest(raw);
 	} else {

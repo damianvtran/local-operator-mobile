@@ -125,7 +125,7 @@ jobs:
           FULL: ${{ inputs.full && 'true' || 'false' }}
         run: |
           set -euo pipefail
-          # Keep `sound-ios` (macos-26) and `sound-android` path-scoped on pull
+          # Keep `sound-ios` (xcode-27) and `sound-android` path-scoped on pull
           # requests (even when `merge-gate.yml` passes `FULL=true` on a labeled
           # PR, where `EVENT` is still `pull_request`), while comparing three-dot
           # `FETCH_HEAD...HEAD` against the current base branch tip so a PR
@@ -766,6 +766,10 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
+      - name: Fail below the iOS 27 SDK
+        # --min-os below checks the simulator RUNTIME; this checks the SDK the
+        # XCTest compiles against (scripts/ci/ios-sdk-floor.ts, docs/ci.md).
+        run: node scripts/ci/ios-sdk-floor.ts --min 27
       - name: Resolve the existing simulator
         id: simulator
         # --min-os 27 keeps the XCTest on an iOS 27 runtime (see ios-simulator.ts).

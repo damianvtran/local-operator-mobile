@@ -818,8 +818,8 @@ still fails.
 | Runner | Used for | Notes |
 |---|---|---|
 | `ubuntu-latest` (24.04 at the time of writing) | `checks`, the Android build, the uploader jobs | Ships the Android SDK, Java 17/21/25, Google Chrome and fastlane. Timeouts are set on every job. |
-| `xcode-27` | everything that builds the app or its native code: `ios.yml` (simulator gate and signed IPA), `release.yml`'s iOS job, `android.yml`'s `sound-ios` XCTest, `oauth-callback-proof.yml` | One Xcode major per image (generally available since 2026-10-15). Image 20261104.0337.1: Xcode 27.1 (default), 27.2, 27.0; only iOS 27.x simulator runtimes; CocoaPods 1.17.0; Fastlane 2.241.2 ([readme](https://github.com/actions/runner-images/blob/main/images/macos/xcode-27-arm64-Readme.md), read 2026-11-18). The simulator is named in `env` in `ios.yml` and resolved by `scripts/ci/ios-simulator.ts --min-os 27`, which prints what it chose. |
-| `macos-26` | the design-kit asset gates, `signin-app-proof.yml` and the dispatch-only `e2e.yml` native proof lanes | Ships Xcode 26.x. Nothing built here is uploaded, so the iOS 27 SDK floor does not apply; move a job to `xcode-27` if it starts producing a shipped binary. |
+| `xcode-27` | everything that builds the app or its native code: `ios.yml` (simulator gate and signed IPA), `release.yml`'s iOS job, `android.yml`'s `sound-ios` XCTest, `oauth-callback-proof.yml`, and the dispatch-only real-app OAuth proof `signin-app-proof.yml` | One Xcode major per image (generally available since 2026-10-15). Image 20261104.0337.1: Xcode 27.1 (default), 27.2, 27.0; only iOS 27.x simulator runtimes; CocoaPods 1.17.0; Fastlane 2.241.2 ([readme](https://github.com/actions/runner-images/blob/main/images/macos/xcode-27-arm64-Readme.md), read 2026-11-18). The simulator is named in `env` in `ios.yml` and resolved by `scripts/ci/ios-simulator.ts --min-os 27`, which prints what it chose. |
+| `macos-26` | the design-kit asset gates and the dispatch-only `e2e.yml` native proof lanes | Ships Xcode 26.x. The design kit builds nothing for iOS, and the `e2e.yml` lanes only install artefacts built elsewhere, so the iOS 27 SDK floor does not apply; move a job to `xcode-27` if it starts compiling the app. |
 
 `fastlane` is used as the runner image provides it (2.241.2 on `xcode-27`, read
 2026-11-18; 2.240.1 on `ubuntu-latest`, read 2026-09-29), so upgrading it
@@ -835,7 +835,8 @@ SDK in a binary is the runner image's default Xcode, which the workflow never
 names, so it regresses silently: build 1264 came from `macos-26`
 (`DEVELOPER_DIR=/Applications/Xcode_26.6.app`) and nothing failed.
 
-**What enforces it.** Every job that builds the app runs on `xcode-27` and runs
+**What enforces it.** Every job that compiles the app or its native code (the
+`xcode-27` row of the runner table) runs on `xcode-27` and runs
 `node scripts/ci/ios-sdk-floor.ts --min 27` before building: it prints
 `xcodebuild -version` and fails when either the `iphoneos` or the
 `iphonesimulator` SDK major is below 27. The number lives once per workflow as
@@ -846,6 +847,29 @@ older one that happens to list the preferred device.
 **Deadline.** April 2027 (Apple, <https://developer.apple.com/app-store/submitting/>).
 Until then an older-SDK upload is accepted with the warning; after it, refused.
 When Xcode 28 becomes the floor, move the label and the number together.
+
+**Fallback if `xcode-27` stalls or regresses, until April 2027 only.** The
+release and `internal` jobs fail below 27 by design, so an emergency release on
+the old toolchain is two edits per workflow (`ios.yml`, `release.yml`): set
+`runs-on` back to `macos-26` and `IOS_SDK_MIN_MAJOR: "26"`. Expect ITMS-90725
+on the upload again, and revert both once the image recovers. That build still
+carries the scene manifest, which the iOS 26 SDK accepts. After the deadline
+there is no fallback: App Store Connect refuses the upload.
+
+**The scene lifecycle, and what CI cannot prove about it.** Launching on the
+iOS 27 SDK needs `ios.enableSceneSupport` (`app.config.ts`), and under scenes
+React Native starts only when a scene connects. A terminated app relaunched in
+the background by a silent push connects none (expo/expo#52878), so the app
+carries a workaround: `modules/lop-background-launch` starts React Native
+without a view, `index.ts` defines the background task outside any route, and
+`plugins/with-ios-background-fetch-deadline.js` calls iOS's completion handler
+within 28 s whatever JS does. `ios.yml` asserts both native halves are in the
+project it just compiled (`native-config.ts ios-modules-provider` /
+`ios-app-delegate`) and the plugin's unit test pins the override. The PATH
+itself is device-only: the simulator does not relaunch a terminated app for a
+`simctl push` with `content-available` (the upstream reporter tried after both
+`simctl terminate` and `kill -9`), so no hosted job can exercise it. The device
+check is checklist row F9.
 
 Every job sets `timeout-minutes`. A wedged step failing in 30 minutes rather than
 GitHub's 360-minute default is the difference between a retry and a lost

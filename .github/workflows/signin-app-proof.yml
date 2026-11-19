@@ -5,7 +5,10 @@ permissions:
   contents: read
 jobs:
   signin:
-    runs-on: macos-26
+    # The only proof that drives the REAL app's OAuth, so it runs the toolchain
+    # and runtime the app ships with: `xcode-27`, the iOS 27 SDK floor and an
+    # iOS 27 simulator (ITMS-90725; docs/ci.md, "iOS SDK floor").
+    runs-on: xcode-27
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v7
@@ -15,6 +18,10 @@ jobs:
           node-version: "24"
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Fail below the iOS 27 SDK
+        run: |
+          xcodebuild -version
+          node scripts/ci/ios-sdk-floor.ts --min 27
       - name: Prove adversarial debug override is absent from Release JavaScript
         env:
           EXPO_PUBLIC_SIGNIN_PROOF_ORIGIN: http://127.0.0.1:54831
@@ -38,7 +45,7 @@ jobs:
           ruby scripts/ci/signin-app-proof/attach-tests.rb
       - name: Resolve the simulator
         id: simulator
-        run: node scripts/ci/ios-simulator.ts --prefer 'iPhone 17'
+        run: node scripts/ci/ios-simulator.ts --prefer 'iPhone 17' --min-os 27
       - name: Build and exercise actual app, native browser, token exchange and Keychain
         env:
           UDID: ${{ steps.simulator.outputs.udid }}

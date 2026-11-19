@@ -5,7 +5,7 @@
 	"description": "Native iOS and Android client for the Local Operator mobile relay",
 	"license": "MIT",
 	"packageManager": "pnpm@12.6.0",
-	"main": "expo-router/entry",
+	"main": "./index.ts",
 	"scripts": {
 		"dev": "expo start",
 		"dev:web": "expo start --web",

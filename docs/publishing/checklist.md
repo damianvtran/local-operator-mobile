@@ -129,6 +129,7 @@ long-lead items start first.
 
 | # | Step | Blocking |
 | --- | --- | --- |
+| F9 | **Terminated-app silent push on an iOS 27 device** (scene lifecycle, expo/expo#52878; `docs/ci.md` § iOS SDK floor). On a TestFlight build from the iOS 27 SDK: sign in, let the app register for push, terminate it from the app switcher **without** force-quit being the only option (stop it from Xcode, or let iOS evict it), then send an attention push to a conversation with unread messages. Pass: the device log (Console, process `LocalOperator`) shows `[LopBackgroundLaunch] silent push with no scene … starting the React host without a view`, and iOS does not report the process killed for exceeding its background time; a `[lop-background-fetch-deadline] no task result after 28 s` line is acceptable (a cold wake reports NoData by design, so the badge is unchanged). Fail: `EXTaskService` logs the push and no `[LopBackgroundLaunch]` line follows, or iOS kills the process at its deadline. The simulator cannot run this (`docs/ci.md`) | no — gates background push reliability, not a submission | `docs/ci.md` § iOS SDK floor |
 | G1 | Submission to **TestFlight external**; a person who has never run `lop` opens it cold and completes the demo-mode walkthrough from E2 | yes |
 | G2 | Play **internal test**; run the **pre-launch report**, fix what it finds, re-run | yes |
 | G3 | Play **closed test** only if the account is personal (12 testers × 14 days, `google-play.md` § 2) | conditional |

@@ -30,16 +30,23 @@ jobs:
     # no product assertion is retried and no production timeout is shortened.
     timeout-minutes: 35
     env:
+      # The same floor, under the same name, as ios.yml and release.yml.
+      IOS_SDK_MIN_MAJOR: "27"
       XCODEGEN_VERSION: "2.46.0"
       # Computed from the 2.46.0 xcodegen.zip release asset, not an unpinned latest.
       XCODEGEN_SHA256: 4d9e34b62172d645eed6457cac13fc222569974098ef4ee9c3368bedf0196806
     steps:
       - uses: actions/checkout@v6
+      # Pinned rather than inherited from the image: the floor script needs
+      # Node >= 24.2 (`import.meta.main`), as in every other workflow.
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
       - name: Record actual hosted native toolchain
         run: |
           xcodebuild -version
           xcrun --sdk iphonesimulator --show-sdk-version
-          node scripts/ci/ios-sdk-floor.ts --min 27
+          node scripts/ci/ios-sdk-floor.ts --min "$IOS_SDK_MIN_MAJOR"
       - name: Install verified pinned XcodeGen
         run: |
           set -euo pipefail

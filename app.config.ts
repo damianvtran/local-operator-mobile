@@ -434,16 +434,26 @@ const config: ExpoConfig = {
 					// itself; on SDK 57 this flag is the opt-in (needs expo >= 57.0.23):
 					// it rewrites the generated AppDelegate to provide its React Native
 					// factory and adds a UIApplicationSceneManifest naming Expo's
-					// `EXExpoAppSceneDelegate`, which creates the window and forwards
-					// URLs, universal links, quick actions and foreground/background
-					// transitions back to the AppDelegate and every
+					// `EXExpoAppSceneDelegate`, which creates the window, STARTS REACT
+					// NATIVE, forwards URLs, universal links, quick actions and
+					// foreground/background transitions back to the AppDelegate and every
 					// ExpoAppDelegateSubscriber (expo-linking, expo-router,
 					// expo-notifications), and rebuilds the cold-start URL for
 					// `Linking.getInitialURL()`. Remote-notification, background-fetch
-					// and push-token callbacks are application-level and unaffected.
-					// `scripts/ci/native-config.ts` asserts the manifest is in the BUILT
-					// Info.plist. Remove when the app moves to SDK 58 (the plugin then
-					// warns that the flag is a no-op).
+					// and push-token callbacks stay application-level, so they still
+					// ARRIVE. NOT everything is covered, though: React Native now starts
+					// only when a scene connects, and a terminated app relaunched in the
+					// background by a silent push connects none, so no JS runs and the
+					// push's completion handler is never called (expo/expo#52878, agent
+					// review R1 M1). `modules/lop-background-launch` starts React Native
+					// without a view for that case, `index.ts` defines the task outside
+					// any route so a viewless start still has it, and
+					// `plugins/with-ios-background-fetch-deadline.js` (below) guarantees
+					// the completion. `scripts/ci/native-config.ts` asserts the manifest
+					// in the BUILT Info.plist and both workarounds in the generated
+					// project. Remove this flag when the app moves to SDK 58 (the plugin
+					// then warns that it is a no-op), and the workarounds once Expo
+					// starts React Native for scene-less launches itself.
 					enableSceneSupport: true,
 				},
 			},
@@ -516,6 +526,11 @@ const config: ExpoConfig = {
 		// sender on a private lock screen, shows the foreground banner Expo drops,
 		// and routes session pushes to the HIGH `alert.*` channels.
 		"./plugins/with-android-team-bridge-push.js",
+		// The iOS silent-push completion backstop for the scene lifecycle
+		// (`enableSceneSupport` above, expo/expo#52878): the AppDelegate calls
+		// iOS's fetch completion handler within 28 s even if the JS task never
+		// reports. Its comment has the why of the deadline.
+		"./plugins/with-ios-background-fetch-deadline.js",
 	],
 	experiments: {
 		typedRoutes: true,

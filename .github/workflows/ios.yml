@@ -306,6 +306,23 @@ jobs:
           plutil -convert json -o "$RUNNER_TEMP/Info.json" "$app/Info.plist"
           node scripts/ci/native-config.ts ios "$RUNNER_TEMP/Info.json"
 
+      - name: Assert the scene-less background-launch workaround is in the built project
+        # expo/expo#52878: under the scene lifecycle a terminated app woken by a
+        # silent push starts no React Native. The fix is a local module's
+        # AppDelegate subscriber (autolinked into ExpoModulesProvider.swift, which
+        # autolinking generates during THIS build) and a config plugin's
+        # AppDelegate override. Both fail silently if they drop out, so assert
+        # them in what was just compiled. The simulator cannot exercise the path
+        # itself (docs/ci.md, "iOS SDK floor"); this is the build-time half.
+        run: |
+          set -euo pipefail
+          provider=$(find ios/Pods "$RUNNER_TEMP/DerivedData" -name ExpoModulesProvider.swift -path "*Pods-*" 2>/dev/null | head -1)
+          echo "provider: $provider"
+          node scripts/ci/native-config.ts ios-modules-provider "$provider"
+          delegate=$(find ios -maxdepth 2 -name AppDelegate.swift -not -path "ios/Pods/*" | head -1)
+          echo "delegate: $delegate"
+          node scripts/ci/native-config.ts ios-app-delegate "$delegate"
+
       - name: Boot the simulator
         id: boot
         run: |

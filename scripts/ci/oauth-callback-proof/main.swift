@@ -32,7 +32,8 @@ final class ProofDelegate: UIResponder, UIApplicationDelegate, ASWebAuthenticati
     label.text = "Preparing fixture \(mode)"
     label.accessibilityIdentifier = "proof.status"
     // The window is built by ProofSceneDelegate (below): iOS 27 SDK builds
-    // abort at launch without the scene lifecycle. Launch is inert: the already-running native test sends fixture /begin
+    // abort at launch without the scene lifecycle.
+    // Launch is inert: the already-running native test sends fixture /begin
     // only after observing Ready. Driver startup never enters the auth deadline.
     transport.onRejectedRequest = { self.rejected += 1 }
     persist()
