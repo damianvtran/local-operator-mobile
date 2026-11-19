@@ -3,8 +3,9 @@
  * a different rasterizer warmup history. No baselines or tolerances are changed.
  */
 import { execFileSync } from "node:child_process";
-import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { basename, dirname, join } from "node:path";
+import { appendFileSync, copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { basename, dirname, join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 
 export const PAIR = [
 	"appstore-ipad-13/01-session-transcript.png",
@@ -53,8 +54,8 @@ export function retainRaw(dir, path, png) {
 }
 
 export function retainComparison(dir, fresh, baseline, fuzz, bin) {
-	copyFileSync(fresh, join(dir, "fresh.png"));
-	copyFileSync(baseline, join(dir, "baseline.png"));
+	if (resolve(fresh) !== resolve(dir, "fresh.png")) copyFileSync(fresh, join(dir, "fresh.png"));
+	if (resolve(baseline) !== resolve(dir, "baseline.png")) copyFileSync(baseline, join(dir, "baseline.png"));
 	// Decode the exact compared RGB8 files, not a metric's rounded text. The
 	// original raw screenshot is retained separately before alpha stripping.
 	const dimensions = (path) => {
@@ -72,4 +73,50 @@ export function retainComparison(dir, fresh, baseline, fuzz, bin) {
 	writeFileSync(join(dir, "bounds.json"), `${JSON.stringify(result.summary, null, 2)}\n`);
 	execFileSync(bin, [fresh, baseline, "-compose", "difference", "-composite", join(dir, "diff.png")]);
 	return result.summary;
+}
+
+/** Copy-only observer hook. Failure reporting itself must not throw into save().
+ * Missing evidence is an observer failure, never a substitute subject verdict.
+ * File I/O is still a timing perturbation; this cannot prove a rasterizer cause.
+ */
+export function retainSafely(dir, path, raw, fresh, fuzz, retain = retainRaw) {
+	if (!selected(path)) return;
+	try {
+		const frame = retain(dir, path, raw);
+		copyFileSync(fresh, join(frame, "fresh.png"));
+		copyFileSync(path, join(frame, "baseline.png"));
+		writeFileSync(join(frame, "fuzz.json"), JSON.stringify(fuzz));
+	} catch (error) {
+		const message = `observer retention failed: ${path}: ${error.stack ?? error}\n`;
+		console.error(message);
+		try { appendFileSync(join(dir, "observer-errors.log"), message); }
+		catch (reportError) { console.error(`observer error recording failed: ${reportError}`); }
+	}
+}
+
+/** Called by CI only AFTER both original invocations, probes, and teardown.
+ * Continue over missing/bad files so one decoder error cannot hide the other
+ * history. Any missing representative or failed analysis makes this step red.
+ */
+export function analyzeHistories(root, bin = "magick", analyze = retainComparison) {
+	let failed = false;
+	for (const history of ["all", "frames"]) {
+		const dir = join(root, history);
+		if (existsSync(join(dir, "observer-errors.log"))) failed = true;
+		for (const path of PAIR) {
+			const frame = join(dir, dirname(path), basename(path, ".png"));
+			try {
+				analyze(frame, join(frame, "fresh.png"), join(frame, "baseline.png"),
+					JSON.parse(readFileSync(join(frame, "fuzz.json"), "utf8")), bin);
+			} catch (error) {
+				failed = true;
+				mkdirSync(dir, { recursive: true });
+				appendFileSync(join(dir, "analysis-errors.log"), `${path}: ${error.stack ?? error}\n`);
+			}
+		}
+	}
+	return failed ? 1 : 0;
+}
+if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
+	process.exitCode = analyzeHistories(process.argv[2]);
 }

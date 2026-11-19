@@ -35,6 +35,11 @@ on:
       - main
   pull_request:
   workflow_dispatch:
+    inputs:
+      capture_diagnostic:
+        description: 'Observe frozen PR313 capture histories (no product validation claim)'
+        type: boolean
+        default: false
   # Callable, so release.yml can run the SAME gate a pull request runs rather
   # than a second copy of it. "What shipped == what CI ran" is a property worth
   # having structurally instead of by diligence.
@@ -465,6 +470,32 @@ jobs:
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v7
+        with:
+          # Only the explicit manual diagnostic changes the subject revision.
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.capture_diagnostic && '175e67064cfba95f127fc89cc46a032a1894b630' || github.sha }}
+      - name: Checkout the enumerated observer overlay
+        if: github.event_name == 'workflow_dispatch' && inputs.capture_diagnostic
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          path: .capture-observer
+          persist-credentials: false
+      - name: Prepare copy-only observation and source provenance
+        if: github.event_name == 'workflow_dispatch' && inputs.capture_diagnostic
+        run: |
+          set -euo pipefail
+          out="$RUNNER_TEMP/capture-history-diagnostic"
+          mkdir -p "$out/all" "$out/frames"
+          echo "CAPTURE_DIAGNOSTIC_DIR=$out" >> "$GITHUB_ENV"
+          {
+            git rev-parse HEAD
+            git -C .capture-observer rev-parse HEAD
+            echo 'overlay: design/preview/capture.mjs design/preview/capture-diagnostic.mjs'
+            shasum -a 256 design/preview/capture.mjs .capture-observer/design/preview/capture{,-diagnostic}.mjs
+          } > "$out/provenance.txt"
+          cp .capture-observer/design/preview/capture{,-diagnostic}.mjs design/preview/
+          git diff -- design/preview/capture.mjs > "$out/observer.patch"
+          git status --short >> "$out/provenance.txt"
 
       # pnpm is here to RUN package scripts, not to install anything: the design
       # gates are plain `node` programs with no dependencies, which is why this
@@ -558,14 +589,28 @@ jobs:
         # in place too.
         run: |
           set -euo pipefail
+          capture_all() {
+            if [ -z "${CAPTURE_DIAGNOSTIC_DIR:-}" ]; then
+              node design/preview/capture.mjs --check
+              return
+            fi
+            local status
+            if node design/preview/capture.mjs --check --diagnostic-dir "$CAPTURE_DIAGNOSTIC_DIR/all" 2>&1 | tee "$CAPTURE_DIAGNOSTIC_DIR/all/capture.log"; then
+              status=0
+            else
+              status=${PIPESTATUS[0]}
+            fi
+            echo "$status" > "$CAPTURE_DIAGNOSTIC_DIR/all/exit-code.txt"
+            return "$status"
+          }
           reference_fonts=false
           for dir in "$HOME/local-operator-site/public/fonts" "$HOME/local-operator-ui/public/fonts"; do
             if [ -d "$dir" ]; then reference_fonts=true; fi
           done
           if [ "$reference_fonts" = true ]; then
             echo "reference faces present — this is a hard gate on this run"
-            node design/preview/capture.mjs --check
-          elif node design/preview/capture.mjs --check; then
+            capture_all
+          elif capture_all; then
             echo "preview capture: every committed capture re-rendered identically"
           else
             echo "::warning::the preview capture gate could not make its claim on this run: the shipped typefaces (Figtree, JetBrains Mono) are not available to the capture harness, so the sheet renders in the platform fallback face and every committed capture differs. Reported, not failed — see docs/ci.md, \"When a run goes red\"."
@@ -585,6 +630,8 @@ jobs:
           fi
 
       - name: The frame-difference arithmetic, on this runner's ImageMagick
+        # Diagnostic collection continues after a red subject without changing it.
+        if: ${{ !cancelled() && (success() || (github.event_name == 'workflow_dispatch' && inputs.capture_diagnostic)) }}
         # `Checks` runs on ubuntu-latest with no ImageMagick, so the decoder cases in
         # scripts/design/frame-difference.test.ts skip there. Here the decoder exists,
         # and these are the sizes that matter: 1,080,000 pixels is past the point
@@ -593,6 +640,8 @@ jobs:
         run: node design/preview/frame-difference.probe.mjs
 
       - name: The frame gate fails a stale frame with its summary, not an uncaught throw
+        # Diagnostic collection continues after a red subject without changing it.
+        if: ${{ !cancelled() && (success() || (github.event_name == 'workflow_dispatch' && inputs.capture_diagnostic)) }}
         # Round 3: `capture.mjs --check` lost its `failures` declaration, so the first
         # stale frame threw ReferenceError after printing that frame's own line — the
         # summary never printed, the rest of the set went unchecked, and the browser
@@ -602,6 +651,8 @@ jobs:
         run: node design/preview/capture-stale.probe.mjs
 
       - name: The committed listing frames re-render identically
+        # Diagnostic collection continues after a red subject without changing it.
+        if: ${{ !cancelled() && (success() || (github.event_name == 'workflow_dispatch' && inputs.capture_diagnostic)) }}
         # A HARD gate, and separate from the step above on purpose. That step has
         # to tolerate failure while the preview sheet's shipped faces live in a
         # sibling checkout (docs/ci.md, "When a run goes red"), so a stale LISTING
@@ -618,9 +669,22 @@ jobs:
         # resampled). `capture.mjs` prints which comparison it made, how many pixels
         # the tolerance had to absorb at zero tolerance, and the largest channel
         # difference, so the values can be re-derived from the log.
-        run: node design/preview/capture.mjs --target frames --check
+        run: |
+          if [ -z "${CAPTURE_DIAGNOSTIC_DIR:-}" ]; then
+            node design/preview/capture.mjs --target frames --check
+          else
+            if node design/preview/capture.mjs --target frames --check --diagnostic-dir "$CAPTURE_DIAGNOSTIC_DIR/frames" 2>&1 | tee "$CAPTURE_DIAGNOSTIC_DIR/frames/capture.log"; then
+              status=0
+            else
+              status=${PIPESTATUS[0]}
+            fi
+            echo "$status" > "$CAPTURE_DIAGNOSTIC_DIR/frames/exit-code.txt"
+            exit "$status"
+          fi
 
       - name: Render the preview sheet for the review rounds
+        # Diagnostic collection continues after a red subject without changing it.
+        if: ${{ !cancelled() && (success() || (github.event_name == 'workflow_dispatch' && inputs.capture_diagnostic)) }}
         # These are the frames a designer or UX round looks at. They are written
         # into the tree by the generator and uploaded as an artefact, never
         # committed from CI — a frame is evidence about a revision, not a file
@@ -635,6 +699,46 @@ jobs:
             docs/design/preview/*.png
             design/app-icon/store/play-feature-graphic-1024x500.png
           retention-days: 30
+
+      # Both check histories, the intervening probes, the original review render,
+      # and their browser teardown finish before ANY observer decoder is invoked.
+      # Copy-only retention still perturbs I/O timing: correlation is not causation.
+      - name: Analyze retained history pixels after browser teardown
+        if: always() && github.event_name == 'workflow_dispatch' && inputs.capture_diagnostic
+        run: |
+          # An original crash may return before cleanup. Do not decode while a
+          # subject browser could still be alive; keep copies/logs for inspection.
+          for history in all frames; do
+            if ! grep -Fq 'teardown: 0 processes left, profile removed' "$CAPTURE_DIAGNOSTIC_DIR/$history/capture.log"; then
+              echo "observer analysis withheld: $history teardown not confirmed" | tee -a "$CAPTURE_DIAGNOSTIC_DIR/analysis-errors.log"
+              exit 1
+            fi
+          done
+          {
+            node --version
+            magick --version
+            /Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome --version
+          } >> "$CAPTURE_DIAGNOSTIC_DIR/provenance.txt"
+          node design/preview/capture-diagnostic.mjs "$CAPTURE_DIAGNOSTIC_DIR"
+
+      - name: Publish representative evidence even on subject or observer failure
+        if: always() && github.event_name == 'workflow_dispatch' && inputs.capture_diagnostic
+        uses: actions/upload-artifact@v7
+        with:
+          name: capture-history-diagnostic
+          path: ${{ runner.temp }}/capture-history-diagnostic/
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Retain both original capture verdicts independently of observation
+        if: always() && github.event_name == 'workflow_dispatch' && inputs.capture_diagnostic
+        run: |
+          set -euo pipefail
+          for history in all frames; do
+            status=$(cat "$CAPTURE_DIAGNOSTIC_DIR/$history/exit-code.txt")
+            echo "$history original exit code: $status"
+            if [ "$status" != 0 ]; then exit 1; fi
+          done
 
   # ONE stable check name (`CI Gate`) to require on every pull request and read
   # before arming the merge gate (`pnpm merge-gate <pr>`). Requiring individual

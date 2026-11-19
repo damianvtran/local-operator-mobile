@@ -1,13 +1,16 @@
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, expect, it } from "vitest";
 import {
+	analyzeHistories,
 	PAIR,
 	pixelBounds,
 	retainComparison,
 	retainRaw,
+	retainSafely,
 	selected,
 } from "../../design/preview/capture-diagnostic.mjs";
 
@@ -123,30 +126,193 @@ it("records signed RGB deltas, inclusive coordinate bounds, and the unchanged 1%
 	);
 });
 
-it("keeps the observer out of navigation and verdict logic; hosted evidence survives red", () => {
-	const source = readFileSync(
-		new URL("../../design/preview/capture.mjs", import.meta.url),
-		"utf8",
+const observerHook =
+	/\t\/\/ Publication is selective;[\s\S]*?\tif \(diagnostic\) diagnostic.retainSafely[^\n]*\n/;
+const source = readFileSync(
+	new URL("../../design/preview/capture.mjs", import.meta.url),
+	"utf8",
+);
+const workflow = readFileSync(
+	new URL("../../.github/workflows/ci.yml", import.meta.url),
+	"utf8",
+);
+const step = (name: string) => {
+	const result = workflow
+		.split(`      - name: ${name}\n`)[1]
+		?.split("\n      - name:")[0];
+	if (!result) throw new Error(`missing step ${name}`);
+	return result;
+};
+const stepRun = (name: string) =>
+	step(name)
+		.split("        run: |\n")[1]
+		.split("\n")
+		.filter((line) => line.startsWith("          "))
+		.map((line) => line.slice(10))
+		.join("\n");
+
+it("preserves every original reencode, comparison and verdict in exactly the original order", () => {
+	// Fingerprint derived from the complete save-through-scratch-setup block at
+	// frozen 175e67064cfba95f127fc89cc46a032a1894b630, not a reconstructed model.
+	// A hash keeps this comparison available in Actions' shallow checkout too.
+	const save = (text: string) =>
+		text.slice(
+			text.indexOf("const save ="),
+			text.indexOf("const scratchVerify ="),
+		);
+	const withoutObserver = save(source).replace(observerHook, "");
+	expect(createHash("sha256").update(withoutObserver).digest("hex")).toBe(
+		"a4e49dc2d3fdca32f9f33240b4da1af686172ea3fab62be1082c3ab4d14005b7",
 	);
-	expect(source).toContain(
-		'const target = explicitTarget ?? (check ? "all" : "preview")',
-	);
-	expect(source).toContain(
-		'const diagnostic = diagnosticDir ? await import("./capture-diagnostic.mjs") : null',
-	);
+	expect(source).not.toContain("diagnostic.retainComparison");
+	expect(source).not.toContain("diagnostic.selected");
+});
+
+it("contains retention throws without skipping subsequent collection", () => {
+	const dir = mkdtempSync(join(tmpdir(), "observer-throw-"));
+	dirs.push(dir);
+	const raw = Buffer.from([1]);
+	expect(() =>
+		retainSafely(dir, `/tree/${PAIR[0]}`, raw, "/missing", 1, () => {
+			throw new Error("injected retention failure");
+		}),
+	).not.toThrow();
+	const input = join(dir, "input.png");
+	writeFileSync(input, raw);
+	retainSafely(dir, input.replace("input.png", PAIR[1]), raw, input, 1);
+	// The next representative is collected before a missing baseline is reported.
 	expect(
-		source.indexOf("if (diagnostic && !diagnostic.selected(outPath)) return"),
-	).toBeGreaterThan(source.indexOf("const save ="));
-	expect(source).toContain(
-		"const differing = fuzz === 0 ? strict : pixelDifference(fresh, outPath, fuzz)",
+		readFileSync(join(dir, "play-phone/01-session-transcript/raw.png")),
+	).toEqual(raw);
+	expect(readFileSync(join(dir, "observer-errors.log"), "utf8")).toContain(
+		"injected retention failure",
 	);
-	const workflow = readFileSync(
-		new URL("../../.github/workflows/capture-diagnostic.yml", import.meta.url),
-		"utf8",
+});
+
+it("continues post-history analysis across observer errors and reports them separately", () => {
+	const dir = mkdtempSync(join(tmpdir(), "analysis-throw-"));
+	dirs.push(dir);
+	for (const history of ["all", "frames"]) {
+		for (const path of PAIR) {
+			const frame = retainRaw(
+				join(dir, history),
+				`/tree/${path}`,
+				Buffer.from([1]),
+			);
+			writeFileSync(join(frame, "fuzz.json"), "1");
+		}
+	}
+	let calls = 0;
+	expect(
+		analyzeHistories(dir, "unused", () => {
+			calls++;
+			throw new Error("injected decoder failure");
+		}),
+	).toBe(1);
+	expect(calls).toBe(4);
+	for (const history of ["all", "frames"])
+		expect(
+			readFileSync(join(dir, history, "analysis-errors.log"), "utf8"),
+		).toContain("injected decoder failure");
+});
+
+it("retains raw, fresh and baseline in independent history paths without decoding", () => {
+	const dir = mkdtempSync(join(tmpdir(), "retention-history-"));
+	dirs.push(dir);
+	const baseline = join(dir, PAIR[0]);
+	const frame = retainRaw(dir, `/tree/${PAIR[0]}`, Buffer.from([0]));
+	// retainRaw creates the surface directory; the baseline need not be a PNG:
+	// copy-only observation must never try to decode this negative control.
+	writeFileSync(baseline, Buffer.from([11]));
+	const fresh = join(frame, "input");
+	writeFileSync(fresh, Buffer.from([12]));
+	for (const [i, history] of ["all", "frames"].entries()) {
+		retainSafely(join(dir, history), baseline, Buffer.from([i]), fresh, 1);
+		const out = join(dir, history, "appstore-ipad-13/01-session-transcript");
+		expect(readFileSync(join(out, "raw.png"))).toEqual(Buffer.from([i]));
+		expect(readFileSync(join(out, "fresh.png"))).toEqual(Buffer.from([12]));
+		expect(readFileSync(join(out, "baseline.png"))).toEqual(Buffer.from([11]));
+	}
+});
+
+it("runs the second history after the first fails and preserves the original red verdict", () => {
+	const dir = mkdtempSync(join(tmpdir(), "workflow-history-"));
+	dirs.push(dir);
+	const first = stepRun(
+		"Preview sheet and feature graphic re-render identically",
 	);
-	expect(workflow).toContain("for history in all frames; do");
-	expect(workflow).toContain("status=" + "$" + "{PIPESTATUS[0]}");
-	expect(workflow).toContain('exit "$verdict"');
-	expect(workflow).toContain("if: always()");
+	const second = stepRun("The committed listing frames re-render identically");
+	// Execute the actual workflow shell, substituting only the subject command.
+	// No browser is launched. Actions executes each step in a separate shell.
+	const prelude = `node() { echo "subject:$*"; case "$*" in *--target*) return 0;; *) return 7;; esac; }; export -f node;`;
+	expect(
+		spawnSync("mkdir", ["-p", join(dir, "all"), join(dir, "frames")]).status,
+	).toBe(0);
+	const env = {
+		...process.env,
+		CAPTURE_DIAGNOSTIC_DIR: dir,
+		HOME: dir,
+		GITHUB_STEP_SUMMARY: join(dir, "summary"),
+	};
+	const all = spawnSync("bash", ["-c", `${prelude}\n${first}`], {
+		env,
+		encoding: "utf8",
+	});
+	expect(all.status, all.stderr).toBe(0); // original missing-font warning policy
+	expect(readFileSync(join(dir, "all/exit-code.txt"), "utf8").trim()).toBe("7");
+	const frames = spawnSync(
+		"bash",
+		["-c", `set -euo pipefail; ${prelude}\n${second}`],
+		{ env, encoding: "utf8" },
+	);
+	expect(frames.status, frames.stderr).toBe(0);
+	expect(readFileSync(join(dir, "frames/exit-code.txt"), "utf8").trim()).toBe(
+		"0",
+	);
+	const final = spawnSync(
+		"bash",
+		[
+			"-c",
+			stepRun(
+				"Retain both original capture verdicts independently of observation",
+			),
+		],
+		{ env, encoding: "utf8" },
+	);
+	expect(final.status).toBe(1);
+	const names = [
+		"Preview sheet and feature graphic re-render identically",
+		"The frame-difference arithmetic, on this runner's ImageMagick",
+		"The frame gate fails a stale frame with its summary, not an uncaught throw",
+		"The committed listing frames re-render identically",
+		"Render the preview sheet for the review rounds",
+		"Analyze retained history pixels after browser teardown",
+		"Publish representative evidence even on subject or observer failure",
+	];
+	for (let i = 1; i < names.length; i++)
+		expect(workflow.indexOf(`name: ${names[i]}`)).toBeGreaterThan(
+			workflow.indexOf(`name: ${names[i - 1]}`),
+		);
+	for (const name of names.slice(1, 5))
+		expect(step(name)).toContain(
+			"success() || (github.event_name == 'workflow_dispatch' && inputs.capture_diagnostic)",
+		);
+	for (const name of names.slice(5))
+		expect(step(name)).toContain(
+			"if: always() && github.event_name == 'workflow_dispatch' && inputs.capture_diagnostic",
+		);
+	expect(workflow).toContain("default: false");
 	expect(workflow).not.toContain("continue-on-error");
+	expect(source.indexOf("ws.close()")).toBeLessThan(
+		source.indexOf("/* ---- report"),
+	);
+	const analysis = stepRun(
+		"Analyze retained history pixels after browser teardown",
+	);
+	const guard = analysis.indexOf("teardown: 0 processes left, profile removed");
+	expect(guard).toBeGreaterThan(-1);
+	expect(guard).toBeLessThan(
+		analysis.indexOf("node design/preview/capture-diagnostic.mjs"),
+	);
+	expect(source).not.toContain("analyzeHistories");
 });
