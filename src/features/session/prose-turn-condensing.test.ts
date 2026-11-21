@@ -19,9 +19,9 @@ import {
  *
  * Widened by the TestFlight 1411 report ("final responses are being tucked into
  * condensed messages"): a turn that did tool work keeps its handover messages
- * on screen too — the bar stands for the tool rows and the narration that
- * declared calls, never for what the agent handed over (relay `partitionRun`
- * V5). See `turn-condensing.ts`, "THE BAR STANDS FOR WORK".
+ * on screen too — the bar stands for the tool rows and the finished reasoning,
+ * never for anything the agent said (relay `partitionRun` V5). See
+ * `turn-condensing.ts`, "THE BAR STANDS FOR WORK".
  */
 
 const row = (
@@ -194,10 +194,10 @@ describe("a tool turn condenses its work and keeps its handovers", () => {
 		prose("a9", "All fixed."),
 	];
 
-	it("hides the work, keeps the mid-turn answer, and states the same counts", () => {
+	it("hides the work, keeps the mid-turn answer and the narration, and states the same counts", () => {
 		const turn = first(settled(toolTurn));
 		expect(turn.condensed).toBe(true);
-		expect(turn.hiddenIds).toEqual(["t1", "t2", "t3", "t4", "n1"]);
+		expect(turn.hiddenIds).toEqual(["t1", "t2", "t3", "t4"]);
 		expect(turn.bar).toEqual({ steps: 4, durationS: 8 });
 		expect(barPhrases(turn.bar ?? { steps: 0, durationS: 0 })).toEqual([
 			"Took 8s",
@@ -206,6 +206,7 @@ describe("a tool turn condenses its work and keeps its handovers", () => {
 		expect(entryIds(settled(toolTurn).items)).toEqual([
 			"u1",
 			"mid",
+			"n1",
 			"a9",
 			"next",
 		]);
@@ -239,5 +240,98 @@ describe("a tool turn condenses its work and keeps its handovers", () => {
 			"a9",
 			"next",
 		]);
+	});
+});
+
+/*
+ * The `calls_tools` half of "final responses are being tucked into condensed
+ * messages". The relay stamps `calls_tools` from `bool(message.tool_calls)`, and
+ * a model message can answer AND call tools in one step, so an answer row can
+ * arrive declaring calls. Classifying that as narration folded the answer into
+ * the bar with the work it introduced: the operator's 2026-11-21 report (build
+ * unknown) shows the answer and its table inside the collapsed
+ * `Took 5s · 4 actions` group, with tool rows after them.
+ */
+describe("assistant prose stays outside the bar whatever the row declares", () => {
+	const blank = (id: string) =>
+		row({
+			id,
+			kind: "assistant",
+			text: "",
+			calls_tools: true,
+		} as Partial<TranscriptEntry> & Pick<TranscriptEntry, "id" | "kind">);
+
+	it("keeps a text-only answer above the tool rows that follow it", () => {
+		// Already true on main since #356; pinned so a later classification change
+		// cannot silently fold a plain answer again.
+		const entries = [
+			user("u1"),
+			tool("t1"),
+			tool("t2"),
+			tool("t3"),
+			tool("t4"),
+			prose("a1", "Partly. The nightly billing check is clean."),
+			prose("a2", "Closing line."),
+		];
+		const plan = settled(entries);
+		const turn = first(plan);
+		expect(turn.condensed).toBe(true);
+		expect(turn.hiddenIds).toEqual(["t1", "t2", "t3", "t4"]);
+		expect(entryIds(plan.items)).toEqual(["u1", "a1", "a2", "next"]);
+	});
+
+	it("keeps an answer that also declares calls_tools, with more work after it", () => {
+		// The operator's screenshot shape: tools, then the answer stamped
+		// `calls_tools`, then the tool rows it requested, then the closing line.
+		const entries = [
+			user("u1"),
+			tool("t1"),
+			tool("t2"),
+			narration("a1", "Partly. The nightly billing check is clean."),
+			tool("t3"),
+			tool("t4"),
+			prose("a2", "Closing line."),
+		];
+		const plan = settled(entries);
+		const turn = first(plan);
+		expect(turn.condensed).toBe(true);
+		expect(turn.hiddenIds).toEqual(["t1", "t2", "t3", "t4"]);
+		expect(turn.hiddenIds).not.toContain("a1");
+		expect(turn.bar).toEqual({ steps: 4, durationS: 8 });
+		expect(entryIds(plan.items)).toEqual(["u1", "a1", "a2", "next"]);
+	});
+
+	it("keeps several prose messages interleaved between tool calls", () => {
+		const entries = [
+			user("u1"),
+			tool("t1"),
+			prose("a1", "First finding."),
+			tool("t2"),
+			narration("a2", "Second finding, still working."),
+			tool("t3"),
+			prose("a3", "Closing line."),
+		];
+		const plan = settled(entries);
+		const turn = first(plan);
+		expect(turn.condensed).toBe(true);
+		expect(turn.hiddenIds).toEqual(["t1", "t2", "t3"]);
+		expect(entryIds(plan.items)).toEqual(["u1", "a1", "a2", "a3", "next"]);
+	});
+
+	it("still folds an empty-text row that declares calls_tools", () => {
+		// A tool-only model message carries no text (the relay appends a blank
+		// assistant row per tool batch); the bar stands for its calls.
+		const entries = [
+			user("u1"),
+			tool("t1"),
+			blank("e1"),
+			tool("t2"),
+			tool("t3"),
+			prose("a1", "Done."),
+		];
+		const turn = first(settled(entries));
+		expect(turn.condensed).toBe(true);
+		expect(turn.hiddenIds).toEqual(["t1", "e1", "t2", "t3"]);
+		expect(turn.bar).toEqual({ steps: 3, durationS: 6 });
 	});
 });
