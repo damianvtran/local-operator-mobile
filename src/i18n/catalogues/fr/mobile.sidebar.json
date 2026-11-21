@@ -41,6 +41,7 @@
 	"mobile.sidebar.row.asks_not_blocker": "{asks}, sans blocage",
 	"mobile.sidebar.row.agents": "{count, plural, one {# agent} many {# d’agents} other {# agents}}",
 	"mobile.sidebar.row.todos": "{count, plural, one {# tâche} many {# de tâches} other {# tâches}}",
+	"mobile.sidebar.row.on_device": "Sur {device}",
 	"mobile.sidebar.row_status.approval": "approbation",
 	"mobile.sidebar.row_status.question": "question",
 	"mobile.sidebar.row_status.not_reachable": "injoignable",
@@ -49,5 +50,6 @@
 	"mobile.sidebar.row_label.waiting": "{kind, select, approval {approbation en attente} other {question en attente}}",
 	"mobile.sidebar.row_label.working": "en cours",
 	"mobile.sidebar.row_label.on_device": "sur {device}",
-	"mobile.sidebar.row_label.open": "ouverte"
+	"mobile.sidebar.row_label.open": "ouverte",
+	"mobile.sidebar.row_label.join": "{first}, {second}"
 }

@@ -1,0 +1,114 @@
+{
+ "record_kind": "i18n-audit",
+ "audit_id": "ondev-ur-5a0f53",
+ "slice": "on-device",
+ "locale": "ur",
+ "namespace": "mobile.sidebar",
+ "audit_date": "2026-11-21",
+ "key_count": 2,
+ "keys_audited": [
+  "mobile.sidebar.row.on_device",
+  "mobile.sidebar.row_label.join"
+ ],
+ "translator_session": "a74b1eaff17c",
+ "auditor": {
+  "agent": "translation-auditor (team lopdev)",
+  "session": "5a0f53e88def",
+  "model": "anthropic/claude-opus-5-5",
+  "actual_model_source": "harness system prompt 'Model:' line for this session; no fallback observed",
+  "independent_from_translator_session": true
+ },
+ "draft": {
+  "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/on-device/draft-ur.json",
+  "sha256": "1f670ee1ffae1456fa0be14ce16cb7351f7f13dc1c62b78c43aedc436cf21fdf",
+  "sha256_verified": true
+ },
+ "brief": {
+  "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/on-device-brief.json",
+  "sha256": "8ca29c50fb6cca5f329510b0ae209e2dd1372562b9ecb330307dc1de22df2bc2",
+  "sha256_verified": true
+ },
+ "brief_sha256": "8ca29c50fb6cca5f329510b0ae209e2dd1372562b9ecb330307dc1de22df2bc2",
+ "source_commit": "d1ed0e2a82615f53ee18fd3ea2ad6d51a8308a35",
+ "source_branch": "feat/i18n-on-device-label",
+ "read_route": "Ordinary git and worktree file reads (shell cat, python json.load, and node importing the repo's src/i18n/messages.ts read-only) of the draft, the brief and the worktree catalogues and context. The core read_public_copy route refuses mobile src/i18n/** paths, and the context sidecars are nested JSON and not routable, so no receipt is claimed. Worktree not modified (git status: 0 dirty paths at d1ed0e2a).",
+ "input_hashes": {
+  "en": {
+   "path": "src/i18n/catalogues/en/mobile.sidebar.json",
+   "sha256": "fa75c73f7477ebedc0b22f8aa05b9470d874c5284d558f3864a0464e531734b9"
+  },
+  "context": {
+   "path": "src/i18n/catalogues/en/mobile.sidebar.context.json",
+   "sha256": "71e6533736c8accd336298da920d83f777933b1d4b5cc30dacf9fa11818e01e1"
+  },
+  "ur_shipped": {
+   "path": "local-operator-mobile@d1ed0e2a:src/i18n/catalogues/ur/mobile.sidebar.json",
+   "sha256": "3aa656af43163cf68e8a2c63bb997d9c8cc4ca92ba808cd4916bb0cee4aed657"
+  },
+  "ur_shipped_reference": {
+   "path": "local-operator-mobile@d1ed0e2a:src/i18n/catalogues/ur/mobile.session.json",
+   "sha256": "5fe972d199b0e30fa312880a81d5b5a35c043e469f3317027b133bfbb43e7935"
+  }
+ },
+ "checks": {
+  "keys_missing": 0,
+  "keys_extra": 0,
+  "brief_vs_en_mismatches": 0,
+  "parse_message": "2/2 parse with repo parseMessage (src/i18n/messages.ts). Params identical to en (device: text; first, second: text) in the same order.",
+  "negative_controls": "parseMessage rejected unterminated 'On {device'. The renamed 'On {devise}' parses but yields args ['devise'], which the brace-set comparator flags.",
+  "placeholder_brace_set": "exact match to en for both keys",
+  "nfc": "pass",
+  "bidi_controls": "0 in both values",
+  "zero_width_or_nbsp": "0",
+  "edge_whitespace": "none",
+  "final_stop": "none",
+  "consistency": {
+   "row.on_device_vs_existing_row_label.on_device": "byte-identical",
+   "row_label.join_vs_withheld_reasons_join": "byte-identical"
+  },
+  "separator": "U+060C ARABIC COMMA + U+0020",
+  "width_over_hint": [
+   "mobile.sidebar.row.on_device: 10 chars of words vs 3 in en (A-ur-1)"
+  ],
+  "repo_validator": "not run (draft not applied to the repo; repo read-only for this audit)"
+ },
+ "redaction_marker_hits": {
+  "draft": 0,
+  "english_sources": 0,
+  "brief_excluding_redaction_scan_pattern": 0
+ },
+ "verdict": "passed",
+ "current_report_verdict": {
+  "status": "passed",
+  "unresolved_blocker_major_count": 0,
+  "finding_ids": [
+   "A-ur-1"
+  ],
+  "verdict_reason": "0 blocker/major. Both keys are accurate, match the existing fragment and join byte for byte, keep the exact placeholder set, contain no bidi controls and parse with the repo parseMessage. One MINOR (width, keep text; rendered check advised). The trailing-neutral bidi flag is a renderer issue (R-ur-1), not a translation defect."
+ },
+ "findings": [
+  {
+   "id": "A-ur-1",
+   "severity": "MINOR",
+   "key": "mobile.sidebar.row.on_device",
+   "current": "ڈیوائس {device} پر",
+   "proposed": "Keep the text. Flag the row for a rendered RTL check on a ~200 dp row with a long Latin name.",
+   "reason": "10 characters of words around the name versus 3 in English. The leading ڈیوائس (6 letters plus a space) costs visible name width. It is still the right choice: list-row.tsx gives this Text no writingDirection, so iOS (NSWritingDirectionNatural) and Android (FIRSTSTRONG_LTR) both take the paragraph base from the first strong character (src/ui/direction.tsx:177-200). The shorter '{device} پر' would start with a Latin name, lay out with an LTR base and put پر on the wrong reading side. Not gating."
+  }
+ ],
+ "artifacts": {
+  "report": "report.md",
+  "audit_log": "audit.log"
+ },
+ "audit_notes_not_execution_log": "report.md holds the auditor's notes; audit.log holds the commands and their printed output.",
+ "ledger_appended": false,
+ "observations_not_findings": [
+  {
+   "id": "R-ur-1",
+   "kind": "renderer (out of translation scope)",
+   "key": "mobile.sidebar.row.on_device",
+   "detail": "A device name ending in a neutral ('Pixel!', 'Mac (2)') has that neutral resolved to the RTL embedding direction and drawn on the wrong side of the name. Any catalogue placement has this problem, and policy forbids catalogue bidi controls. Fix at format time by isolating {device} (FSI/PDI or a nested Text). The device-line Text also carries no writingDirection style."
+  }
+ ],
+ "bundle_location_note": "Written to the auditor's own scratchpad. The guardrail refused writes into session d5aaf8ba6ba5's scratchpad (dangerous-delete review: another session's files; delegated instruction is not consent)."
+}

@@ -1,0 +1,93 @@
+{
+ "record_kind": "i18n-audit",
+ "audit_id": "ondev-vi-5a0f53",
+ "slice": "on-device",
+ "locale": "vi",
+ "namespace": "mobile.sidebar",
+ "audit_date": "2026-11-21",
+ "key_count": 2,
+ "keys_audited": [
+  "mobile.sidebar.row.on_device",
+  "mobile.sidebar.row_label.join"
+ ],
+ "translator_session": "a74b1eaff17c",
+ "auditor": {
+  "agent": "translation-auditor (team lopdev)",
+  "session": "5a0f53e88def",
+  "model": "anthropic/claude-opus-5-5",
+  "actual_model_source": "harness system prompt 'Model:' line for this session; no fallback observed",
+  "independent_from_translator_session": true
+ },
+ "draft": {
+  "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/on-device/draft-vi.json",
+  "sha256": "d2fdfbf02a71715c7756a8d4ef5a5db1e094d668e7bbf650d508c0549abc27d5",
+  "sha256_verified": true
+ },
+ "brief": {
+  "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/on-device-brief.json",
+  "sha256": "8ca29c50fb6cca5f329510b0ae209e2dd1372562b9ecb330307dc1de22df2bc2",
+  "sha256_verified": true
+ },
+ "brief_sha256": "8ca29c50fb6cca5f329510b0ae209e2dd1372562b9ecb330307dc1de22df2bc2",
+ "source_commit": "d1ed0e2a82615f53ee18fd3ea2ad6d51a8308a35",
+ "source_branch": "feat/i18n-on-device-label",
+ "read_route": "Ordinary git and worktree file reads (shell cat, python json.load, and node importing the repo's src/i18n/messages.ts read-only) of the draft, the brief and the worktree catalogues and context. The core read_public_copy route refuses mobile src/i18n/** paths, and the context sidecars are nested JSON and not routable, so no receipt is claimed. Worktree not modified (git status: 0 dirty paths at d1ed0e2a).",
+ "input_hashes": {
+  "en": {
+   "path": "src/i18n/catalogues/en/mobile.sidebar.json",
+   "sha256": "fa75c73f7477ebedc0b22f8aa05b9470d874c5284d558f3864a0464e531734b9"
+  },
+  "context": {
+   "path": "src/i18n/catalogues/en/mobile.sidebar.context.json",
+   "sha256": "71e6533736c8accd336298da920d83f777933b1d4b5cc30dacf9fa11818e01e1"
+  },
+  "vi_shipped": {
+   "path": "local-operator-mobile@d1ed0e2a:src/i18n/catalogues/vi/mobile.sidebar.json",
+   "sha256": "e9e22bd69bdc0ac6ff90fe78a452da5c021a460d9919c681b697316d8a54e048"
+  },
+  "vi_shipped_reference": {
+   "path": "local-operator-mobile@d1ed0e2a:src/i18n/catalogues/vi/mobile.session.json",
+   "sha256": "d60fc65c0ba7bf4482dd7ba565064755e5ed776177fe89dcf7060183cf1172db"
+  }
+ },
+ "checks": {
+  "keys_missing": 0,
+  "keys_extra": 0,
+  "brief_vs_en_mismatches": 0,
+  "parse_message": "2/2 parse with repo parseMessage (src/i18n/messages.ts). Params identical to en (device: text; first, second: text) in the same order.",
+  "negative_controls": "parseMessage rejected unterminated 'On {device'. The renamed 'On {devise}' parses but yields args ['devise'], which the brace-set comparator flags.",
+  "placeholder_brace_set": "exact match to en for both keys",
+  "nfc": "pass",
+  "bidi_controls": "0 in both values",
+  "zero_width_or_nbsp": "0",
+  "edge_whitespace": "none",
+  "final_stop": "none",
+  "consistency": {
+   "row.on_device_vs_existing_row_label.on_device": "equal after sentence-case capital",
+   "row_label.join_vs_withheld_reasons_join": "byte-identical"
+  },
+  "separator": "U+002C COMMA + U+0020",
+  "width_over_hint": [],
+  "repo_validator": "not run (draft not applied to the repo; repo read-only for this audit)"
+ },
+ "redaction_marker_hits": {
+  "draft": 0,
+  "english_sources": 0,
+  "brief_excluding_redaction_scan_pattern": 0
+ },
+ "verdict": "passed",
+ "current_report_verdict": {
+  "status": "passed",
+  "unresolved_blocker_major_count": 0,
+  "finding_ids": [],
+  "verdict_reason": "0 blocker/major. Both keys are accurate, match the existing fragment and join byte for byte, keep the exact placeholder set, contain no bidi controls and parse with the repo parseMessage."
+ },
+ "findings": [],
+ "artifacts": {
+  "report": "report.md",
+  "audit_log": "audit.log"
+ },
+ "audit_notes_not_execution_log": "report.md holds the auditor's notes; audit.log holds the commands and their printed output.",
+ "ledger_appended": false,
+ "bundle_location_note": "Written to the auditor's own scratchpad. The guardrail refused writes into session d5aaf8ba6ba5's scratchpad (dangerous-delete review: another session's files; delegated instruction is not consent)."
+}

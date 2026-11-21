@@ -289,7 +289,7 @@ const NAMESPACES = [
 		name: "mobile.sidebar",
 		messages: sidebar,
 		context: sidebarContext,
-		expected: 51, // O3-c +9: the row's five status words (row_status.*) and four screen-reader label fragments (row_label.*) (42 + 9 = 51, counted over the en JSON). O3-b +15: the Tags sheet and row tag announcement (10) and the row's new marker and plural counts (5) (27 + 15 = 42, counted over the en JSON). PR #275 +2: the conversation row's outbox lines, sending and stopped (25 + 2 = 27)
+		expected: 53, // On-device slice +2: the remote row's device line (row.on_device) and the screen-reader label separator (row_label.join) (51 + 2 = 53, counted over the en JSON). O3-c +9: the row's five status words (row_status.*) and four screen-reader label fragments (row_label.*) (42 + 9 = 51, counted over the en JSON). O3-b +15: the Tags sheet and row tag announcement (10) and the row's new marker and plural counts (5) (27 + 15 = 42, counted over the en JSON). PR #275 +2: the conversation row's outbox lines, sending and stopped (25 + 2 = 27)
 	},
 	{
 		/* This app's own short chrome words the relay has no key for: the sidebar
@@ -623,7 +623,12 @@ describe("the English catalogues", () => {
 		 * derived by summing the keys of all 26 merged en catalogue files
 		 * (mobile.sidebar 51, mobile.team_bridge 220); every shipped locale also
 		 * sums to 1344. */
-		expect(total).toBe(1344);
+		/* On-device slice (English-first): +2 mobile.sidebar (row.on_device,
+		 * row_label.join): 1344 + 2 = 1346, derived by summing the keys of all
+		 * 26 en catalogue files (mobile.sidebar 53). With the translations
+		 * every shipped locale also sums to 1346 (counted over each locale's
+		 * 26 JSON files). */
+		expect(total).toBe(1346);
 	});
 
 	it("lists every catalogue file this suite checks", () => {

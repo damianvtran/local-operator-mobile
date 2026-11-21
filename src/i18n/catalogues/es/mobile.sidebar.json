@@ -41,6 +41,7 @@
 	"mobile.sidebar.row.asks_not_blocker": "{asks}, sin bloqueo",
 	"mobile.sidebar.row.agents": "{count, plural, one {# agente} many {# de agentes} other {# agentes}}",
 	"mobile.sidebar.row.todos": "{count, plural, one {# tarea} many {# de tareas} other {# tareas}}",
+	"mobile.sidebar.row.on_device": "En {device}",
 	"mobile.sidebar.row_status.approval": "aprobación",
 	"mobile.sidebar.row_status.question": "pregunta",
 	"mobile.sidebar.row_status.not_reachable": "sin conexión",
@@ -49,5 +50,6 @@
 	"mobile.sidebar.row_label.waiting": "{kind, select, approval {aprobación pendiente} other {pregunta pendiente}}",
 	"mobile.sidebar.row_label.working": "trabajando",
 	"mobile.sidebar.row_label.on_device": "en {device}",
-	"mobile.sidebar.row_label.open": "abierta"
+	"mobile.sidebar.row_label.open": "abierta",
+	"mobile.sidebar.row_label.join": "{first}, {second}"
 }

@@ -41,6 +41,7 @@
 	"mobile.sidebar.row.asks_not_blocker": "{asks}, एजेंट रुका नहीं है",
 	"mobile.sidebar.row.agents": "{count, plural, one {# एजेंट} other {# एजेंट}}",
 	"mobile.sidebar.row.todos": "{count, plural, one {# कार्य} other {# कार्य}}",
+	"mobile.sidebar.row.on_device": "{device} पर",
 	"mobile.sidebar.row_status.approval": "स्वीकृति",
 	"mobile.sidebar.row_status.question": "सवाल",
 	"mobile.sidebar.row_status.not_reachable": "पहुँच से बाहर",
@@ -49,5 +50,6 @@
 	"mobile.sidebar.row_label.waiting": "{kind, select, approval {स्वीकृति का इंतज़ार} other {सवाल के जवाब का इंतज़ार}}",
 	"mobile.sidebar.row_label.working": "कार्यरत",
 	"mobile.sidebar.row_label.on_device": "{device} पर",
-	"mobile.sidebar.row_label.open": "खुली"
+	"mobile.sidebar.row_label.open": "खुली",
+	"mobile.sidebar.row_label.join": "{first}, {second}"
 }

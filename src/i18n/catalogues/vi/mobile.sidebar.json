@@ -41,6 +41,7 @@
 	"mobile.sidebar.row.asks_not_blocker": "{asks}, tác nhân vẫn chạy tiếp",
 	"mobile.sidebar.row.agents": "{count, plural, other {# tác nhân}}",
 	"mobile.sidebar.row.todos": "{count, plural, other {# tác vụ}}",
+	"mobile.sidebar.row.on_device": "Trên {device}",
 	"mobile.sidebar.row_status.approval": "phê duyệt",
 	"mobile.sidebar.row_status.question": "câu hỏi",
 	"mobile.sidebar.row_status.not_reachable": "mất kết nối",
@@ -49,5 +50,6 @@
 	"mobile.sidebar.row_label.waiting": "{kind, select, approval {đang chờ phê duyệt} other {đang chờ trả lời}}",
 	"mobile.sidebar.row_label.working": "đang làm việc",
 	"mobile.sidebar.row_label.on_device": "trên {device}",
-	"mobile.sidebar.row_label.open": "đang xem"
+	"mobile.sidebar.row_label.open": "đang xem",
+	"mobile.sidebar.row_label.join": "{first}, {second}"
 }

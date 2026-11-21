@@ -502,7 +502,18 @@ export const rowAccessibilityLabel = (options: {
 			parts.push(t(ROW_STATUS_KEY.not_reachable));
 	}
 	if (options.selected) parts.push(t("mobile.sidebar.row_label.open"));
-	return parts.join(", ");
+	/* The separator is keyed too: `", "` is English's list comma, and a zh-CN
+	 *  or ur reader's screen reader should hear the label punctuated as their
+	 *  own language punctuates a list (`，`, `، `). Folded pairwise, the same
+	 *  shape as `mobile.session.highlights.withheld_reasons_join`, so the
+	 *  catalogue holds one separator rather than one message per label length;
+	 *  `parts` always holds the title, so the seed is never empty. */
+	return parts
+		.slice(1)
+		.reduce(
+			(first, second) => t("mobile.sidebar.row_label.join", { first, second }),
+			parts[0] ?? "",
+		);
 };
 
 /**

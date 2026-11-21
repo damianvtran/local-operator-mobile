@@ -167,6 +167,10 @@
 		"role": "meta",
 		"note": "Count chip on a conversation row: open todo items in the conversation's task list. Monospace meta strip that yields at large text; keep each arm under ~10 characters. ICU plural with `#` for the number; keep the `one` and `other` arms and add the locale's own CLDR arms (few/many) where it has them."
 	},
+	"mobile.sidebar.row.on_device": {
+		"role": "meta",
+		"note": "Second line of a conversation row for a conversation running on ANOTHER of the reader's devices (paired over the mesh), in place of the folder/model line local rows show: it names the device the conversation lives on, e.g. \"On Studio Mac\". Plain, neutral statement of location in the muted row style, sentence case, no final full stop. Width: one line on narrow phone rows (as little as ~200 dp of text at default size), ellipsized at the tail, so keep the words around the name as short as your language allows; the name is what must stay visible. {device} is the device's NAME as the reader chose it (any script, often Latin even in RTL locales): never translate, transliterate, abbreviate or reorder anything inside it; you may move the placeholder within the sentence to suit your grammar (e.g. postposition languages put it first). Urdu (RTL): a Latin device name inside RTL text is bidirectional, so write no bidi control characters; the app lays out direction. Plain text, no ICU arms."
+	},
 	"mobile.sidebar.row_status.approval": {
 		"role": "status",
 		"note": "The one status word on a conversation row whose agent is waiting for the reader to approve an action. Painted in the danger colour in a crowded meta strip; one lowercase word, keep under ~10 characters. No placeholders."
@@ -189,18 +193,22 @@
 	},
 	"mobile.sidebar.row_label.waiting": {
 		"role": "status",
-		"note": "Fragment of a conversation row's screen-reader name, read after the title when the agent is waiting on the reader: an approval or an answer to a question. Fragments are joined with commas (\"Payments, approval waiting, open\"). Keep the select and both arms; translate each arm as a whole phrase, never by composing the status word."
+		"note": "Fragment of a conversation row's screen-reader name, read after the title when the agent is waiting on the reader: an approval or an answer to a question. Fragments are joined by mobile.sidebar.row_label.join (a comma in English) (\"Payments, approval waiting, open\"). Keep the select and both arms; translate each arm as a whole phrase, never by composing the status word."
 	},
 	"mobile.sidebar.row_label.working": {
 		"role": "status",
-		"note": "Fragment of a conversation row's screen-reader name, read after the title while the agent's turn is running. Fragments are joined with commas. Lowercase, no placeholders."
+		"note": "Fragment of a conversation row's screen-reader name, read after the title while the agent's turn is running. Fragments are joined by mobile.sidebar.row_label.join (a comma in English). Lowercase, no placeholders."
 	},
 	"mobile.sidebar.row_label.on_device": {
 		"role": "meta",
-		"note": "Fragment of a conversation row's screen-reader name for a conversation on another device: {device} is that device's name as the reader set it (e.g. \"on Studio Mac\"). Fragments are joined with commas. Keep the placeholder; never translate the name."
+		"note": "Fragment of a conversation row's screen-reader name for a conversation on another device: {device} is that device's name as the reader set it (e.g. \"on Studio Mac\"). Fragments are joined by mobile.sidebar.row_label.join (a comma in English). Keep the placeholder; never translate the name."
 	},
 	"mobile.sidebar.row_label.open": {
 		"role": "status",
-		"note": "Fragment of a conversation row's screen-reader name, read last when this conversation is the one currently open on screen. Fragments are joined with commas. Lowercase, no placeholders."
+		"note": "Fragment of a conversation row's screen-reader name, read last when this conversation is the one currently open on screen. Fragments are joined by mobile.sidebar.row_label.join (a comma in English). Lowercase, no placeholders."
+	},
+	"mobile.sidebar.row_label.join": {
+		"role": "meta",
+		"note": "Separator between two fragments of a conversation row's screen-reader name (never shown on screen; a screen reader speaks it as a pause). {first} is the title or the already-joined fragments so far, {second} is the next fragment, e.g. \"Payments, approval waiting, on Studio, open\" is built by joining one fragment at a time. A bare list separator: use your locale's enumeration comma and spacing (e.g. full-width or ideographic comma, Arabic-script comma), never a word for \"and\", no final full stop. Keep both placeholders, {first} before {second}."
 	}
 }
