@@ -1,20 +1,11 @@
 /**
- * The dictation flow, minus the platform and the screen: upload a stopped
- * recording and — always — discard it.
+ * Upload one completed recording, retaining failures for an explicit retry.
  *
- * The one rule this module exists to guarantee is the design's hard requirement:
- * **discard the local recording after upload.** The web composer replaces the blob
- * with the returned text; the phone must too, or the phone becomes the retention
- * point the daemon is not. So the discard happens exactly once, after the upload
- * has settled, on success AND on every failure — including the re-thrown `401`,
- * which would otherwise leak the file on its way to the sign-out handler.
- *
- * The second rule is the shared auth rule: a `401` is not this module's to
- * swallow. The relay transport classifies it as `relay-unauthorized` with
- * `envelope: "clear-all"` (the identity that owned the scoped storage is gone), so
- * it is re-thrown for the app's one 401 handler rather than rendered as a
- * transcription failure. Every OTHER transport failure means "no answer" and gets
- * the design's retry sentence.
+ * A failed upload is not consent to delete the reader's speech. The caller owns
+ * the retained handle and must discard it on explicit cancel or scope teardown;
+ * this module deletes only after a successful (including empty) transcription.
+ * Authentication failure keeps its privacy precedence: clear-all still discards
+ * before rethrowing to the shared 401 handler. Nothing here schedules a retry.
  *
  * No React, no network.
  */
@@ -46,10 +37,8 @@ export interface DictateDeps {
 }
 
 /**
- * Uploads one recording and returns the outcome, discarding the file either way.
- *
- * A `401` (`envelope: "clear-all"`) is re-thrown after the discard; every other
- * thrown failure is the retry sentence.
+ * Uploads once. Success releases the audio; an ordinary failure leaves the same
+ * file available to the caller. A `401` still releases it before rethrowing.
  */
 export async function dictate(
 	recording: MicrophoneRecording,
@@ -63,17 +52,18 @@ export async function dictate(
 	} catch (cause) {
 		failure = cause;
 	}
-	/* The hard requirement, in the one place no arm can skip: the file is gone
-	 * once the upload has settled, whatever it settled to. */
-	await deps.discard(recording);
 	if (failure !== null) {
-		if (isRelayError(failure) && failure.envelope === "clear-all")
+		if (isRelayError(failure) && failure.envelope === "clear-all") {
+			await deps.discard(recording);
 			throw failure;
+		}
 		return { kind: "failed", sentence: STT_COPY.retry };
 	}
 	/* Unreachable: the try assigns `wire` before it can throw and the catch is the
 	 * only path that leaves it null. Stated for the type checker, and answered with
 	 * the retry sentence rather than a non-null assertion. */
 	if (wire === null) return { kind: "failed", sentence: STT_COPY.retry };
-	return transcribeOutcome(wire.status, wire.text);
+	const outcome = transcribeOutcome(wire.status, wire.text);
+	if (outcome.kind !== "failed") await deps.discard(recording);
+	return outcome;
 }

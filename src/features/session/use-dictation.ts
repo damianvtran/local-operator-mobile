@@ -30,7 +30,19 @@
  * appends (never focuses) and notes the span.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+	useCallback,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+	useSyncExternalStore,
+} from "react";
+
+import {
+	getStartupAuthorization,
+	subscribeStartupAuthorization,
+} from "@/connection/startup-authorization";
 
 import type { Capabilities } from "@/contracts";
 import type { RelayEndpoints } from "@/relay";
@@ -56,6 +68,7 @@ import {
 import {
 	type ActiveRecording,
 	discardRecording,
+	type MicrophoneRecording,
 	readMicPermission,
 	recordingUploadPart,
 	requestMicPermission,
@@ -91,7 +104,7 @@ export interface DictationState {
 	 *  Read by the meter component alone (through `useSyncExternalStore`), never by
 	 *  React state, so a level change does not re-render the field. */
 	meter: MeterStore;
-	/** The one control: start when idle, stop-and-transcribe when recording. */
+	/** Start when idle, finish while recording, or explicitly retry a failed take. */
 	press: () => void;
 	/** The reader's own discard: stop and delete, send NO request, say nothing. */
 	cancel: () => void;
@@ -105,6 +118,8 @@ export interface DictationState {
 
 export interface DictationInput {
 	endpoints: RelayEndpoints | null;
+	/** The originating draft, independent of the relay (sessions share endpoints). */
+	scopeKey?: string;
 	capabilities: Capabilities | null | undefined;
 	/** A message is on the wire. Read by `mayStartDictation` and deliberately not
 	 *  allowed to gate the mic (defect 4). */
@@ -121,12 +136,33 @@ export interface DictationInput {
 export const useDictation = (input: DictationInput): DictationState => {
 	const {
 		endpoints,
+		scopeKey,
 		capabilities,
 		sending,
 		onTranscript,
 		onError,
 		onUnauthorized,
 	} = input;
+
+	const authorization = useSyncExternalStore(
+		subscribeStartupAuthorization,
+		getStartupAuthorization,
+		getStartupAuthorization,
+	);
+	/* Render-time identity blocks stale continuations even before effect cleanup.
+	 * The synchronous authorization getter also fences a revoke before React renders. */
+	const identity = useMemo(
+		() => ({ endpoints, scopeKey, authorization }),
+		[endpoints, scopeKey, authorization],
+	);
+	const identityRef = useRef(identity);
+	identityRef.current = identity;
+	const isCurrent = useCallback(
+		() =>
+			identityRef.current === identity &&
+			getStartupAuthorization() === identity.authorization,
+		[identity],
+	);
 
 	const micVisible = useMemo(
 		/* The gate's own default is `stt/recorder.ts`'s `canRecord()` — the
@@ -169,6 +205,12 @@ export const useDictation = (input: DictationInput): DictationState => {
 	 * callbacks that must see the CURRENT handle, and a re-render is not what makes
 	 * them valid. */
 	const activeRef = useRef<ActiveRecording | null>(null);
+	/* A stopped file is immutable: retries upload this exact take, never record
+	 * again. Ownership includes the draft and authorization, not merely the URI. */
+	const retainedRef = useRef<{
+		recording: MicrophoneRecording;
+		identity: typeof identity;
+	} | null>(null);
 	const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
 	const meterTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 	const capRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -221,79 +263,113 @@ export const useDictation = (input: DictationInput): DictationState => {
 		if (micVisible) dispatch({ type: "available" });
 	}, [micVisible, dispatch]);
 
+	/* Releasing the slot before awaiting deletion makes cancellation racing a
+	 * successful upload idempotent: both paths may release, only one deletes. */
+	const releaseRecording = useCallback(
+		async (recording: MicrophoneRecording) => {
+			if (retainedRef.current?.recording !== recording) return;
+			retainedRef.current = null;
+			await discardRecording(recording);
+		},
+		[],
+	);
+
+	const transcribeRetained = useCallback(
+		async (run: number) => {
+			const retained = retainedRef.current;
+			if (retained === null || retained.identity !== identity || !isCurrent())
+				return;
+			const recording = retained.recording;
+			const controller = new AbortController();
+			abortRef.current = controller;
+			try {
+				const outcome = await dictate(
+					recording,
+					{
+						transcribe: async (rec, options) => {
+							if (endpoints === null) throw new Error("no relay route");
+							/* The recording goes up as bytes: SDK 57's global `fetch` is `expo/fetch`,
+							 * which cannot encode React Native's `{ uri }` descriptor (see
+							 * `transcribeForm` and `recordingUploadPart`). The file is read inside
+							 * this call, not when the part is built. */
+							const audio = await recordingUploadPart(rec);
+							/* Resolving the native file adapter can cross a logout or route
+							 * change. Never begin an old upload under a newer identity. */
+							if (run !== runIdRef.current || !isCurrent())
+								throw new Error("superseded dictation");
+							return endpoints.transcribe({ audio }, options);
+						},
+						discard: releaseRecording,
+					},
+					{ signal: controller.signal },
+				);
+				/* A cancel or a send superseded this run: the result is dropped, and its
+				 * own line (if any) has already been set. */
+				if (run !== runIdRef.current || !isCurrent()) return;
+				if (outcome.kind === "transcript") {
+					onTranscriptRef.current(outcome.text, outcome.path);
+					/* U3: the completion announcement. It is the machine's outcome rather
+					 * than a second notice state, so it rides the same polite row the live
+					 * states use. */
+					dispatch({ type: "settle", outcome: "added" });
+				} else if (outcome.kind === "empty") {
+					dispatch({ type: "settle", outcome: "empty" });
+				} else {
+					dispatch({ type: "failed" });
+					onErrorRef.current(outcome.sentence);
+				}
+			} catch (cause) {
+				if (run !== runIdRef.current || !isCurrent()) return;
+				dispatch({ type: "settle", outcome: null });
+				/* Only the `clear-all` (401) arm reaches here; `dictate` turns every other
+				 * failure into a sentence. The caller's own handler owns the reload rule. */
+				onUnauthorizedRef.current?.(cause);
+			} finally {
+				if (abortRef.current === controller) abortRef.current = null;
+			}
+		},
+		[dispatch, endpoints, identity, isCurrent, releaseRecording],
+	);
+
 	const stopAndTranscribe = useCallback(async () => {
 		const active = activeRef.current;
-		if (active === null) return;
+		if (active === null || !isCurrent()) return;
 		const run = ++runIdRef.current;
 		clearTimers();
 		dispatch({ type: "stop" });
 		activeRef.current = null;
-		let recording = null;
+		let recording: MicrophoneRecording | null = null;
 		try {
 			recording = await active.stop();
 		} catch {
 			recording = null;
 		}
-		if (run !== runIdRef.current) return;
+		if (run !== runIdRef.current || !isCurrent()) {
+			/* Cancel may win while native stop is pending, before there is a retained
+			 * handle to release. The late file still belongs to that cancelled take. */
+			if (recording !== null) await discardRecording(recording);
+			return;
+		}
 		if (recording === null) {
-			/* Nothing was captured — a stop that produced no file is the same reader
-			 * outcome as an empty transcript (D2's sentence). */
 			dispatch({ type: "settle", outcome: "empty" });
 			return;
 		}
-		const controller = new AbortController();
-		abortRef.current = controller;
-		try {
-			const outcome = await dictate(
-				recording,
-				{
-					transcribe: async (rec, options) => {
-						if (endpoints === null) throw new Error("no relay route");
-						/* The recording goes up as bytes: SDK 57's global `fetch` is `expo/fetch`,
-						 * which cannot encode React Native's `{ uri }` descriptor (see
-						 * `transcribeForm` and `recordingUploadPart`). The file is read inside
-						 * this call, not when the part is built. */
-						return endpoints.transcribe(
-							{ audio: await recordingUploadPart(rec) },
-							options,
-						);
-					},
-					discard: discardRecording,
-				},
-				{ signal: controller.signal },
-			);
-			/* A cancel or a send superseded this run: the result is dropped, and its
-			 * own line (if any) has already been set. */
-			if (run !== runIdRef.current) return;
-			if (outcome.kind === "transcript") {
-				onTranscriptRef.current(outcome.text, outcome.path);
-				/* U3: the completion announcement. It is the machine's outcome rather
-				 * than a second notice state, so it rides the same polite row the live
-				 * states use. */
-				dispatch({ type: "settle", outcome: "added" });
-			} else if (outcome.kind === "empty") {
-				dispatch({ type: "settle", outcome: "empty" });
-			} else {
-				dispatch({ type: "settle", outcome: null });
-				onErrorRef.current(outcome.sentence);
-			}
-		} catch (cause) {
-			if (run !== runIdRef.current) return;
-			dispatch({ type: "settle", outcome: null });
-			/* Only the `clear-all` (401) arm reaches here; `dictate` turns every other
-			 * failure into a sentence. The caller's own handler owns the reload rule. */
-			onUnauthorizedRef.current?.(cause);
-		} finally {
-			if (abortRef.current === controller) abortRef.current = null;
-		}
-	}, [clearTimers, dispatch, endpoints]);
+		retainedRef.current = { recording, identity };
+		await transcribeRetained(run);
+	}, [clearTimers, dispatch, identity, isCurrent, transcribeRetained]);
 
 	const openMic = useCallback(async () => {
+		const run = runIdRef.current;
 		/* The permission is asked HERE, at the press — never at first launch. */
 		const permission = await requestMicPermission();
 		/* Cancelled (or superseded) while the prompt was up: never leave a recorder
 		 * hot. The machine has already moved off `starting` if so. */
-		if (snapshotRef.current.phase !== "starting") return;
+		if (
+			run !== runIdRef.current ||
+			!isCurrent() ||
+			snapshotRef.current.phase !== "starting"
+		)
+			return;
 		if (permission !== "granted") {
 			/* The refusal is the dictation row's outcome line, not the composer's
 			 * error line (D6/U6/Q4, see `DictationOutcome`). `undetermined` is "we
@@ -304,7 +380,11 @@ export const useDictation = (input: DictationInput): DictationState => {
 		/* `permission` is passed so the recorder does not read it from the OS a second
 		 * time — one of the awaited round-trips between the press and `record()`. */
 		const active = await startRecording({ permission });
-		if (snapshotRef.current.phase !== "starting") {
+		if (
+			run !== runIdRef.current ||
+			!isCurrent() ||
+			snapshotRef.current.phase !== "starting"
+		) {
 			if (active !== null) void active.cancel();
 			return;
 		}
@@ -313,13 +393,12 @@ export const useDictation = (input: DictationInput): DictationState => {
 			return;
 		}
 		activeRef.current = active;
-		const run = runIdRef.current;
 		dispatch({ type: "mic-opened" });
 		setSeconds(0);
 		meter.set([]);
 		tickRef.current = setInterval(() => setSeconds((s) => s + 1), 1000);
 		meterTimerRef.current = setInterval(() => {
-			if (run !== runIdRef.current) return;
+			if (run !== runIdRef.current || !isCurrent()) return;
 			const level = active.level();
 			if (level !== null) meter.push(level);
 		}, METER_INTERVAL_MS);
@@ -329,7 +408,7 @@ export const useDictation = (input: DictationInput): DictationState => {
 		capRef.current = setTimeout(() => {
 			void stopAndTranscribe();
 		}, MAX_RECORDING_MS);
-	}, [dispatch, meter, stopAndTranscribe]);
+	}, [dispatch, isCurrent, meter, stopAndTranscribe]);
 
 	/** Tear down whatever is live. Shared by the two ways a dictation ends without
 	 *  a transcript: the reader's own cancel, and a send taking the composer. */
@@ -343,12 +422,25 @@ export const useDictation = (input: DictationInput): DictationState => {
 		const active = activeRef.current;
 		activeRef.current = null;
 		if (active !== null) void active.cancel();
+		const retained = retainedRef.current;
+		if (retained !== null) void releaseRecording(retained.recording);
 		meter.set([]);
 		setSeconds(0);
-	}, [clearTimers, meter]);
+	}, [clearTimers, meter, releaseRecording]);
 
 	const press = useCallback(() => {
+		if (!isCurrent()) return;
 		const phase = snapshotRef.current.phase;
+		if (phase === "failed") {
+			if (retainedRef.current?.identity !== identity) return;
+			/* The transition happens before the first await: repeated taps cannot
+			 * upload twice or append the same result twice. No send is involved. */
+			const { effects } = dispatch({ type: "retry" });
+			onErrorRef.current("");
+			if (effects.includes("retry-transcription"))
+				void transcribeRetained(++runIdRef.current);
+			return;
+		}
 		/* `pressRoute` owns the order: a live take always finishes, and only a
 		 * resting press on a computer that cannot transcribe is answered with the
 		 * set-up line (and records nothing). */
@@ -371,19 +463,27 @@ export const useDictation = (input: DictationInput): DictationState => {
 		)
 			return;
 		const { effects } = dispatch({ type: "press", sending });
-		if (effects.includes("open-mic")) void openMic();
+		if (effects.includes("open-mic")) {
+			runIdRef.current += 1;
+			void openMic();
+		}
 	}, [
 		dispatch,
 		endpoints,
 		micSetup,
 		micVisible,
+		identity,
+		isCurrent,
+		transcribeRetained,
 		openMic,
 		sending,
 		stopAndTranscribe,
 	]);
 
 	const cancel = useCallback(() => {
+		const failed = snapshotRef.current.phase === "failed";
 		const { effects } = dispatch({ type: "cancel" });
+		if (failed) onErrorRef.current("");
 		if (
 			!effects.includes("abort-request") &&
 			!effects.includes("discard-recording")
@@ -412,8 +512,12 @@ export const useDictation = (input: DictationInput): DictationState => {
 	/* Navigating away must not leave the microphone hot: a recording in flight is
 	 * stopped and its file discarded, and a transcription on the wire is aborted
 	 * (its result would have nowhere to land). */
-	useEffect(
-		() => () => {
+	useEffect(() => {
+		/* A scope superseded before passive effects ran owns no new work. The
+		 * previous effect's cleanup still releases its audio on the boundary. */
+		if (!isCurrent()) return;
+		dispatch({ type: "cancel" });
+		return () => {
 			/* Supersede any in-flight run BEFORE aborting, exactly as `discardLive` does:
 			 * without the bump a late abort rejection (or a result that raced the abort)
 			 * still passed the epoch check and ran the "live failure" arm — `setError`
@@ -426,9 +530,10 @@ export const useDictation = (input: DictationInput): DictationState => {
 			const active = activeRef.current;
 			activeRef.current = null;
 			if (active !== null) void active.cancel();
-		},
-		[clearTimers],
-	);
+			const retained = retainedRef.current;
+			if (retained !== null) void releaseRecording(retained.recording);
+		};
+	}, [clearTimers, dispatch, isCurrent, releaseRecording]);
 
 	return {
 		micVisible,

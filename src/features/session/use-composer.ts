@@ -417,6 +417,9 @@ export const useComposer = (input: {
 	 * `stt/dictation-machine.ts`. */
 	const voice = useDictation({
 		endpoints,
+		/* Relay endpoints are shared by sessions; a late take must not join the
+		 * next session's draft when navigation reuses this composer instance. */
+		scopeKey: sessionId,
 		capabilities,
 		sending,
 		onTranscript: (text, path) => {
