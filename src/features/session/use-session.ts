@@ -77,13 +77,11 @@ import { warmCache } from "./warm-store";
  * Everything a session screen reads: the relay client, the projection stream, the
  * connection state, and the two catalogues the composer's sheets need.
  *
- * **The reconnect deadline is the only timer that changes a user-visible state.**
- * `C1` — the gateway's 60-second lease ending — must be invisible, so a clean EOF
- * starts no state at all; what this hook watches for is the case the contract
- * calls `C2`: a reconnect that OPENED but produced no snapshot, which becomes a
- * state only when the deadline passes. The alternative (marking any stream
- * transition as a loss) is the bug the flows exist to catch, because a one-minute
- * flicker teaches the reader to ignore the indicator that matters.
+ * **The reconnect deadline measures readiness, not merely transport.**
+ * `C1` — the gateway's 60-second lease ending — must be invisible. This hook
+ * watches for `C2`: a stream that takes too long to open or that opens without
+ * a projection. HTTP headers and keepalives are transport progress, not a
+ * conversation snapshot.
  *
  * **The snapshot age ticks locally**, once a second, because `C3` is an absence:
  * nothing arrives to tell the screen that nothing arrived, so the screen has to
@@ -269,9 +267,6 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 	 * count the time the phone was locked. Both report timers below go through it;
 	 * typed refusals never do (they reach `setError` directly). */
 	const resumeClock = useRef(createResumeClock());
-	/** Bumped on every return so the reconnect deadline re-arms for the fresh
-	 *  reopen even when the stream was already `connecting` before the lock. */
-	const [resumeEpoch, setResumeEpoch] = useState(0);
 	const dropGraceTimer = useRef<(() => void) | null>(null);
 	useEffect(() => {
 		if (!facts.droppedSinceFrame) {
@@ -349,14 +344,12 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 	/** `history: false` re-reads commands and models only: the resume gate
 	 * dedupes the history read, never the rest of a return (PR #217 R1-4). */
 	const rereadRef = useRef<(history?: boolean) => void>(() => undefined);
-	const streamRef = useRef<{ stop: () => void } | null>(null);
 	/** One gate for every resume signal (foreground, stream recovery). */
 	const resumeGate = useRef(createResumeGate());
 	/** Set when the stream reported a drop or stall; the next frame is the
 	 *  reconnect, and the moment to re-read the newest durable page. */
 	const recovering = useRef(false);
 	/** A pending reconnect after a transient drop; cleared whenever the stream is. */
-	const retryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const lastFrameAt = useRef<number | null>(null);
 	/** Which session the current `lastFrameAt` reading belongs to, so a reconnect for
 	 *  the SAME session keeps it and a session change does not inherit it. */
@@ -419,6 +412,24 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 		 * inactive" over a rate-limit blip, with both fine). One per stream
 		 * effect: a new owner starts with no health to vouch for it. */
 		const grace = createRefusalGrace();
+		let retireStream: (() => void) | null = null;
+		let retryTimer: ReturnType<typeof setTimeout> | null = null;
+		const scheduleRetry = (
+			missedProjection: boolean,
+			retryAfterMs?: number,
+		) => {
+			recovering.current = true;
+			setFacts((current) => ({
+				...current,
+				state: "connecting",
+				lastEnd: missedProjection ? undefined : "error",
+				overdue: current.overdue || missedProjection,
+				droppedSinceFrame: current.droppedSinceFrame || !missedProjection,
+			}));
+			const delay = reconnectDelay(retries.current, retryAfterMs);
+			retries.current += 1;
+			retryTimer = setTimeout(() => connect(), delay);
+		};
 		const connect = () => {
 			if (!active || !sameProjectionOwner(owner, currentIdentity.current))
 				return;
@@ -428,9 +439,9 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 			}
 			// A reload replaces the stream: leaving the old one open would put two
 			// subscribers on one projection and let a stale frame overtake a fresh one.
-			if (retryTimer.current !== null) clearTimeout(retryTimer.current);
-			retryTimer.current = null;
-			streamRef.current?.stop();
+			if (retryTimer !== null) clearTimeout(retryTimer);
+			retryTimer = null;
+			retireStream?.();
 			// The age is only reset for a session this screen has not shown before. It must
 			// NOT be reset per reconnect: `ageS` is "how long since anything arrived", and a
 			// stream that reconnects silently would otherwise reset the one reading `C3`
@@ -442,17 +453,25 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 			}
 			sessions.getState().beginStream(sessionId);
 			setError(null);
+			let retired = false;
+			let cancelDeadline: (() => void) | null = null;
+			const isCurrent = () =>
+				!retired &&
+				active &&
+				sameProjectionOwner(owner, currentIdentity.current);
 			const stream = endpoints.sessionStream(sessionId, {
 				// Read per connect, not per effect: a stream opened before the first
 				// live list frame declares on its next reconnect (`steer-journal-order.ts`).
 				steerJournalOrder: steerJournalOrderDeclared(listStore.getState()),
 				onFrame: (frame) => {
 					if (
-						!active ||
+						!isCurrent() ||
 						frame.kind !== "projection" ||
-						!sameProjectionOwner(owner, currentIdentity.current)
+						frame.data.session_id !== sessionId
 					)
 						return;
+					cancelDeadline?.();
+					cancelDeadline = null;
 					projectionOwner.current = owner;
 					lastFrameAt.current = Date.now();
 					grace.healthy(lastFrameAt.current);
@@ -505,8 +524,29 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 					}));
 				},
 				onState: (status) => {
-					if (!active || !sameProjectionOwner(owner, currentIdentity.current))
-						return;
+					if (!isCurrent()) return;
+					cancelDeadline?.();
+					cancelDeadline = null;
+					if (status.state === "connecting" || status.state === "open") {
+						const opened = status.state === "open";
+						// A body can send keepalives forever without a projection. Give it
+						// the existing snapshot window *after* headers, without shortening
+						// the HTTP open deadline or intercepting a typed refusal before headers.
+						cancelDeadline = heldTimer(
+							resumeClock.current,
+							RECONNECT_DEADLINE_MS,
+							() => {
+								if (!isCurrent()) return;
+								if (!opened) {
+									setFacts((current) => ({ ...current, overdue: true }));
+									return;
+								}
+								retireStream?.();
+								sessions.getState().endStream(sessionId);
+								scheduleRetry(true);
+							},
+						);
+					}
 					if (status.lastEnd === "error" || status.state === "stalled")
 						recovering.current = true;
 					setFacts((current) => ({
@@ -515,14 +555,12 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 						lastEnd: status.lastEnd,
 						droppedSinceFrame:
 							current.droppedSinceFrame || status.lastEnd === "error",
-						// A rotation is a clean EOF: the lease is over, nothing is wrong, and
-						// `overdue` is reset here so a previous loss cannot leak through it.
-						overdue: status.lastEnd === "error" ? current.overdue : false,
+						// A successful HTTP open is not recovery; only a projection is.
+						overdue: status.state === "rotating" ? false : current.overdue,
 					}));
 				},
 				onError: (rawError) => {
-					if (!active || !sameProjectionOwner(owner, currentIdentity.current))
-						return;
+					if (!isCurrent()) return;
 					const streamError = grace.decide(rawError);
 					/* `sse.ts` stops its loop on ANY error, by design: "a caller that
 					 * wants to retry a transient failure restarts the loop itself", so a
@@ -537,23 +575,7 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 					 * reconnect by hand. Only a failure the reader must resolve (a 401, a
 					 * typed gateway refusal, a client bug) stops and surfaces. */
 					if (isTransient(streamError)) {
-						recovering.current = true;
-						setFacts((current) => ({
-							...current,
-							state: "connecting",
-							lastEnd: "error",
-							overdue: false,
-							droppedSinceFrame: true,
-						}));
-						const delay = reconnectDelay(
-							retries.current,
-							streamError.retryAfterMs,
-						);
-						retries.current += 1;
-						retryTimer.current = setTimeout(
-							() => reconnectRef.current(),
-							delay,
-						);
+						scheduleRetry(false, streamError.retryAfterMs);
 						return;
 					}
 					sessions.getState().endStream(sessionId);
@@ -565,17 +587,22 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 					}));
 				},
 			});
-			streamRef.current = stream;
+			retireStream = () => {
+				// Stop emits `closed` synchronously, and the old body can finish late.
+				// Neither event belongs to the replacement stream.
+				retired = true;
+				cancelDeadline?.();
+				cancelDeadline = null;
+				stream.stop();
+			};
 			stream.connection.start();
 		};
 		reconnectRef.current = connect;
 		connect();
 		return () => {
 			active = false;
-			if (retryTimer.current !== null) clearTimeout(retryTimer.current);
-			retryTimer.current = null;
-			streamRef.current?.stop();
-			streamRef.current = null;
+			if (retryTimer !== null) clearTimeout(retryTimer);
+			retireStream?.();
 			sessions.getState().endStream(sessionId);
 		};
 	}, [
@@ -593,16 +620,6 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 	/** Consecutive failed reconnects, for the backoff. Reset by any delivered frame,
 	 *  so one blip does not leave the next one waiting fifteen seconds. */
 	const retries = useRef(0);
-
-	/* --------------------------------------------------- the reconnect deadline */
-	useEffect(() => {
-		if (facts.state !== "connecting") return;
-		// `resumeEpoch` is read so a return re-arms this for the new reopen.
-		void resumeEpoch;
-		return heldTimer(resumeClock.current, RECONNECT_DEADLINE_MS, () =>
-			setFacts((current) => ({ ...current, overdue: true })),
-		);
-	}, [facts.state, resumeEpoch, setFacts]);
 
 	/* ---------------------------------------------------------- the age ticker */
 	useEffect(() => {
@@ -658,7 +675,6 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 				droppedSinceFrame: false,
 				overdue: false,
 			}));
-			setResumeEpoch((epoch) => epoch + 1);
 			// Re-open the stream: its seed frame re-syncs the conversation. The
 			// newest history page is NOT read here any more — the seed carries the
 			// same rows, so the read is deferred to that first frame and runs only
