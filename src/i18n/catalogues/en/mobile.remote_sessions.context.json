@@ -1,4 +1,32 @@
 {
+	"mobile.remote_sessions.move_pick.right_now": {
+		"role": "heading",
+		"note": "Move/copy picker: compact section label above the current computer, not a command to act immediately. Narrow phone sheet; no final punctuation or placeholders. Urdu: natural RTL prose without inserted directional controls."
+	},
+	"mobile.remote_sessions.move_pick.cannot_reach": {
+		"role": "status",
+		"note": "Move/copy picker: calm, short status when the conversation's remote computer is unreachable, not a phone connection error. {device} is an arbitrary computer display name passed verbatim; preserve the exact placeholder, never translate its value. Allow wrapping on narrow phones. Urdu: natural RTL with a potentially mixed-direction name; do not add bidi controls or assume a Latin-only name."
+	},
+	"mobile.remote_sessions.move_pick.no_answer": {
+		"role": "status",
+		"note": "Client fallback only when server unreachable_reason is absent or blank; server reasons are not translated here. 'It' is the remote computer; 'this computer' is the connected relay computer, never the phone. Calm body text may wrap. No placeholders. Urdu: natural RTL prose without directional controls."
+	},
+	"mobile.remote_sessions.move_pick.on_this_computer": {
+		"role": "status",
+		"note": "Current location for a local conversation. 'This computer' is the connected relay computer, not the phone. Compact status, wrapping allowed; no placeholders or final punctuation. Remote locations reuse mobile.sidebar.row.on_device. Urdu: natural RTL prose without directional controls."
+	},
+	"mobile.remote_sessions.move_pick.no_devices": {
+		"role": "status",
+		"note": "Empty state: no other eligible destinations are visible in the session list. Do not claim devices are offline or absent from the network. Brief factual sentence, wrapping allowed on narrow phones. No placeholders. Urdu: natural RTL prose without directional controls."
+	},
+	"mobile.remote_sessions.move_pick.discovery_help": {
+		"role": "help",
+		"note": "Empty-state explanation: destinations come from visible sessions, not a complete network inventory. Preserve both instructions: open Local Operator on the other computer, then pull the session list to refresh. Local Operator is the product name, not a command; do not translate it. Multi-line phone body: preserve the visibility limitation, do not abbreviate away instructions. No placeholders. Urdu: natural RTL with the Latin product name; no inserted bidi controls."
+	},
+	"mobile.remote_sessions.move_pick.destination_heading": {
+		"role": "heading",
+		"note": "Compact section heading above destination radio buttons. Preserve both Move and Copy; not an action button or a promise that an operation has started. Allow wrapping on narrow phones. No placeholders or final punctuation. Urdu: natural RTL prose without directional controls."
+	},
 	"mobile.remote_sessions.title": {
 		"role": "heading",
 		"note": "Remote conversation support or per-operation relay failure; owner means the mesh computer that holds the conversation, not the phone. Never suggest signing out or recalling the session."
