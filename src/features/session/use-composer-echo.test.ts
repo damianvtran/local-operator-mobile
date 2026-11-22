@@ -21,7 +21,7 @@ import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createRelayClient } from "@/connection";
-import type { PromptImage } from "@/contracts";
+import type { PromptImage, SlashCommand } from "@/contracts";
 import * as attachmentSources from "@/features/session/attach";
 import { composerCopy, composerFeedback } from "@/features/session/composer";
 import { outbox } from "@/features/session/outbox";
@@ -628,8 +628,13 @@ describe("stored session model intent through the real composer", () => {
 		promptFails = false;
 		await act(async () => storedModel.pick(model, "high"));
 		calls.length = 0;
+		/* Retry is "try now": it replays an instruction the send already counted,
+		 *  so it sets `sending` and must not count again — the transcript would snap
+		 *  to the end on a retry otherwise (round 2, m1). */
+		const markBeforeRetry = c().sendMark;
 		await act(async () => c().retry());
 		await settle();
+		expect(c().sendMark).toBe(markBeforeRetry);
 		expect(calls).toEqual(["resume", "set_model", "set_effort"]);
 		expect(c().error).toBe(composerCopy().settingsNotApplied);
 		expect(c().retained).not.toBeNull();
@@ -1207,3 +1212,62 @@ it.each([false, true])(
 		expect(rows[0]).toMatchObject({ commandId, accepted: true });
 	},
 );
+
+describe("the send mark (code review round 2, m1)", () => {
+	/* The transcript snaps to the end on a CHANGE of `sendMark`, never on
+	 *  `sending`: Approve/Deny, an ask answer, a retry and a slash TAP all set
+	 *  `sending` so the composer disables itself, and none of them is a message
+	 *  leaving. These are the sites code review round 1 (R2) found reading
+	 *  `sending`, pinned here against the real hook so the fix cannot rot. */
+	const compact: SlashCommand = {
+		name: "compact",
+		description: "Summarise the conversation so far",
+		aliases: [],
+		arguments: "none",
+	};
+
+	it("holds still for an approval, an ask answer and a slash tap, each of which sets `sending`", async () => {
+		const { client, open } = handClient();
+		await mount(client, "", false, false);
+		const mark = c().sendMark;
+
+		await act(async () => c().answerApproval("approval-1", true, false));
+		await settle();
+		expect(open[0]?.body.op).toBe("approval_answer");
+		expect(c().sending).toBe(true);
+		expect(c().sendMark).toBe(mark);
+		await act(async () => open[0]?.resolve({}));
+		await settle();
+
+		await act(async () => c().answerAsk("ask-1", "yes", 0));
+		await settle();
+		expect(open[1]?.body.op).toBe("ask_answer");
+		expect(c().sending).toBe(true);
+		expect(c().sendMark).toBe(mark);
+		await act(async () => open[1]?.resolve({}));
+		await settle();
+
+		await act(async () => c().slash(compact));
+		await settle();
+		expect(open[2]?.body.op).toBe("slash");
+		expect(c().sending).toBe(true);
+		expect(c().sendMark).toBe(mark);
+		await act(async () => open[2]?.resolve({}));
+		await settle();
+		expect(c().sendMark).toBe(mark);
+	});
+
+	/* The control the pin above needs: the mark is live, so "unchanged" is a
+	 *  statement about these paths and not about a mark nothing ever moves. */
+	it("counts the admitted send it exists for", async () => {
+		const { client, open } = handClient();
+		await mount(client, "A: one message", false, false);
+		const mark = c().sendMark;
+		await act(async () => c().send());
+		await settle();
+		expect(open[0]?.body.op).toBe("prompt");
+		expect(c().sendMark).toBe(mark + 1);
+		await act(async () => open[0]?.resolve({ ok: true, detail: "queued" }));
+		await settle();
+	});
+});

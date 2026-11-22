@@ -16,6 +16,13 @@ const host = vi.hoisted(() => ({
 	mounts: 0,
 	unmounts: 0,
 }));
+/* The list renders the "Jump to latest" chip, whose label ladder reads the app's
+ * resolved text scale. This suite exercises tail policy, not type size, so the
+ * provider is answered here rather than through `uniwind` (the same seam every
+ * other component test that pulls the provider in uses). */
+vi.mock("@/ui/text-scale-provider", () => ({
+	useTextScale: () => ({ effectiveScale: 1 }),
+}));
 vi.mock("react-native", async () => {
 	const React = await import("react");
 	return {

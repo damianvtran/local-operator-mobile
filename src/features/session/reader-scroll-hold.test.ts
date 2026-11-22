@@ -268,7 +268,7 @@ describe("transcript wiring (m3)", () => {
 		expect(body).toContain("restsAtTail({");
 		expect(body).toContain("contentPt: facts.contentPt");
 		expect(body).toContain("viewportPt: viewportRef.current");
-		expect(body).toContain("atTail.current = atEnd;");
+		expect(body).toContain("markAtTail(atEnd);");
 		// A rest is where the reader stopped: no scroll call at rest.
 		expect(body).not.toContain("pinTail()");
 		expect(body).not.toContain("scrollToOffset");

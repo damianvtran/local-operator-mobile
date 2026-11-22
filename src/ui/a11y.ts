@@ -179,6 +179,9 @@ export const CONTROL = {
 	transcriptGapLoad: "transcript-gap-load",
 	/** Re-read the newest page after a failed refresh, at the newest edge. */
 	transcriptRetryLatest: "transcript-retry-latest",
+	/** The floating "Jump to latest" chip over the transcript: offered only to a
+	 *  reader who left the end while new output arrived below them. */
+	transcriptJumpToLatest: "transcript-jump-to-latest",
 	/** Team Bridge is hub-owned: these selectors remain stable without a relay connection. */
 	teamBridgeAttach: "team-bridge-attach",
 	teamBridgeBack: "team-bridge-back",

@@ -295,6 +295,18 @@
 		"role": "meta",
 		"note": "Cue under the capped activity region when more rows are hidden below and there are no region names to list. Keep the middle dot and the down arrow; lower case."
 	},
+	"mobile.session.jump_to_latest": {
+		"role": "button",
+		"note": "The visible and accessible name of the floating chip over the transcript that takes a reader who scrolled up back to the newest message. It appears only after new output arrived while they were away. Keep the leading down arrow; imperative, sentence case, no final full stop. The arrow points at the newest content below, not at the reading direction."
+	},
+	"mobile.session.jump_to_latest_short": {
+		"role": "button",
+		"note": "The visible form of mobile.session.jump_to_latest on phones narrower than 360 pt, where the full sentence crowds the row beside it. Keep the leading down arrow; one or two words at most. The accessible name stays the full sentence, so this label may be an abbreviation."
+	},
+	"mobile.session.jump_to_latest_name": {
+		"role": "button",
+		"note": "The ACCESSIBLE name of the floating \"jump to latest\" chip: the same sentence as mobile.session.jump_to_latest WITHOUT the leading down arrow, because a screen reader would read the glyph as \"down arrow\". Imperative, sentence case, no final full stop. Shown visually only by screen readers, never on the chip itself."
+	},
 	"mobile.session.video.title_fallback": {
 		"role": "heading",
 		"note": "Header title of the video screen while the transcript row that names the clip is not loaded yet. One word, Title case if the language uses it."

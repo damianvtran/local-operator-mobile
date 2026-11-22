@@ -124,6 +124,11 @@ export interface ComposerState {
 	/** The instruction retained under an unknown outcome, or `null`. */
 	retained: ContinuationEnvelope | null;
 	sending: boolean;
+	/** Counts ACCEPTED sends (a prompt, or a typed slash op). The transcript snaps
+	 *  to the end on a change of this, not of `sending`: that flag is also true
+	 *  while Approve/Deny, an ask answer, a retry or a slash TAP is in flight, and
+	 *  none of those is a message leaving this composer (code review round 1, R2). */
+	sendMark: number;
 	/** `null` when nothing is wrong; a sentence otherwise. */
 	error: string | null;
 	/** A definitive acknowledgement of an EDITED draft: a success, not an error. */
@@ -276,6 +281,8 @@ export const useComposer = (input: {
 		);
 	}, [outboxOwns]);
 	const [sending, setSending] = useState(false);
+	/* Bumped where a send is ADMITTED and nowhere else — see the prop's doc. */
+	const [sendMark, setSendMark] = useState(0);
 	/* The same guard as `sending`, but synchronous. React state is what DISABLES the
 	 * controls; it is not visible to a second event in the same frame, and a double
 	 * tap on a slash row arrives exactly there — measured: two taps in one tick put
@@ -518,6 +525,7 @@ export const useComposer = (input: {
 				payloadImages === undefined ? parseSlashDraft(trimmed) : null;
 
 			setSending(true);
+			setSendMark((at) => at + 1);
 			setError(null);
 			setNotice(null);
 			skipNotice.current = false;
@@ -1170,6 +1178,7 @@ export const useComposer = (input: {
 		abandonAttach: attachLatch.abandon,
 		retained,
 		sending,
+		sendMark,
 		error,
 		notice,
 		controls,
