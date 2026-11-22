@@ -43,7 +43,7 @@ import Animated, {
 	useSharedValue,
 	withTiming,
 } from "react-native-reanimated";
-import type { PromptImage } from "@/contracts";
+import type { PromptImage, SkillEntry } from "@/contracts";
 import { useClipboardImageOffer } from "@/features/session/attach-clipboard";
 import { createAttachmentSheetHandoff } from "@/features/session/attach-handoff";
 import { attachLocksWhilePicking } from "@/features/session/attach-latch";
@@ -54,6 +54,10 @@ import {
 } from "@/features/session/attach-rule";
 import type { ComposerChip } from "@/features/session/chip-labels";
 import { AttachSheet } from "@/features/session/components/attach-sheet";
+import {
+	SkillTray,
+	type SkillTrayProps,
+} from "@/features/session/components/skill-tray";
 import { ComposerStateMarkers } from "@/features/session/components/state-markers";
 import {
 	attachmentLabel,
@@ -123,6 +127,7 @@ import {
 	Textarea,
 } from "@/ui/components";
 import { ChromeSurface } from "@/ui/components/chrome-surface";
+import type { TextareaProps } from "@/ui/components/textarea";
 import { TEXT_END_CLASS, useIsRTL } from "@/ui/direction";
 import { TOUCH_FLOOR } from "@/ui/layout";
 import {
@@ -254,6 +259,21 @@ type WebListener =
  * navigation, and the only path that clears it is a definitive acknowledgement of
  * the bytes it actually shows.
  */
+/** What the session screen hands the composer for the `$skill` tray. `rows` is
+ *  the tray's content (empty = closed); the rest is the field's caret reporting,
+ *  which the hook needs to know WHICH token the caret is in. */
+export type ComposerSkills = Pick<
+	SkillTrayProps,
+	"onPick" | "onHold" | "onRelease"
+> & {
+	rows: readonly SkillEntry[];
+	onSelectionChange: TextareaProps["onSelectionChange"];
+	/** A ONE-SHOT caret placement after a pick, else undefined. */
+	selection: TextareaProps["selection"];
+	onFocus: () => void;
+	onBlur: () => void;
+};
+
 export type ComposerProps = {
 	controls: ComposerControls;
 	draft: string;
@@ -380,6 +400,11 @@ export type ComposerProps = {
 	/** A leading `/` opens the sheet; `null` keeps it shut. */
 	slashQuery: string | null;
 	slashSheet: React.ReactNode;
+	/** The `$skill` list and the field plumbing it needs (`use-skills.ts`).
+	 *  Absent keeps the field exactly as before: the HOME composer passes nothing,
+	 *  because a new chat has no session id to ask `GET /api/skills` about yet;
+	 *  Team Bridge has its own composer and its own `@` strip. */
+	skills?: ComposerSkills;
 	/** A handle to the field, for the one caller that focuses it by name (the
 	 *  home's New chat). The third mechanical prop beyond the spec's two chips:
 	 *  § 4.3 requires New chat to focus the composer, and focus needs a ref. */
@@ -739,6 +764,7 @@ export const Composer = ({
 	identityRow = null,
 	slashQuery,
 	slashSheet,
+	skills,
 	fieldRef,
 	compact = null,
 	limit = null,
@@ -1729,6 +1755,17 @@ export const Composer = ({
 					{controls.disabledReason}
 				</Text>
 			) : null}
+			{/* The `$skill` list sits LAST in the extras, directly above the field it
+			    edits, and inside the card so the composer's geometry budget already
+			    accounts for its height (`extrasHeight`). */}
+			{skills && skills.rows.length > 0 ? (
+				<SkillTray
+					rows={skills.rows}
+					onPick={skills.onPick}
+					onHold={skills.onHold}
+					onRelease={skills.onRelease}
+				/>
+			) : null}
 		</>
 	);
 
@@ -2314,8 +2351,16 @@ export const Composer = ({
 							if (canSendRef.current) sendRef.current();
 						}}
 						fieldRef={inputRef}
-						onFocus={() => setFocused(true)}
-						onBlur={() => setFocused(false)}
+						onFocus={() => {
+							setFocused(true);
+							skills?.onFocus();
+						}}
+						onBlur={() => {
+							setFocused(false);
+							skills?.onBlur();
+						}}
+						onSelectionChange={skills?.onSelectionChange}
+						selection={skills?.selection}
 						testID={CONTROL.composerInput}
 					/>
 				</View>

@@ -1226,6 +1226,11 @@ export default function Home({
 				}
 				slashQuery={null}
 				slashSheet={null}
+				/* No `skills` here on purpose: `$skill` autocomplete asks
+				 *  `GET /api/skills?session_id=`, and a new chat has no session id yet
+				 *  (discovery is per conversation directory). The session composer
+				 *  has it; extending it to the home needs the relay to answer for a
+				 *  folder, which it does not today. */
 				fieldRef={fieldRef}
 			/>
 		</ReadableColumn>

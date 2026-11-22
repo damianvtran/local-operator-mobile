@@ -1174,6 +1174,8 @@ export const SURFACE = {
 	modelSheet: "model-sheet",
 	effortSheet: "effort-sheet",
 	slashSheet: "slash-sheet",
+	/** The `$skill` list docked above the session composer's field. */
+	skillTray: "skill-tray",
 	todosPanel: "todos-panel",
 	todosBody: "todos-body",
 	subagentsPanel: "subagents-panel",
@@ -2505,6 +2507,9 @@ export const effortRungId = (rung: string): string => `effort-rung-${rung}`;
 
 /** One command in the slash sheet. */
 export const slashCommandId = (name: string): string => `slash-command-${name}`;
+
+/** One row of the `$skill` tray, by skill name. */
+export const skillTrayRowId = (name: string): string => `skill-tray-${name}`;
 
 /** One attached image in the composer, by its position. */
 export const composerAttachmentId = (index: number): string =>
