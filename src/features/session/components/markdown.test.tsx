@@ -471,9 +471,10 @@ describe("iOS VoiceOver reach inside a selectable answer", () => {
 			accessibilityRole: undefined,
 			longPress: true,
 		});
-		// The code block's copy control stays its own accessible button.
+		// The code block's copy control stays its own accessible button (a
+		// touch-driven View on iOS, `ScrollSafePressable`, so a wide block scrolls).
 		expect(inner).toEqual([
-			{ accessible: undefined, accessibilityRole: "button", longPress: true },
+			{ accessible: true, accessibilityRole: "button", longPress: true },
 		]);
 		expect(markup).toContain('role="link"');
 		expect(host.links.map((link) => link.label)).toEqual(["Reuters"]);

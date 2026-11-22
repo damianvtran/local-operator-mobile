@@ -30,10 +30,13 @@
  */
 import { Platform } from "react-native";
 
-/** The width (pt) of the leading-edge strip a back swipe may start in. The
- *  system's own edge swipe is about this wide, and the transcript keeps a 16 pt
- *  page margin so a scroller never sits under most of it. */
-export const BACK_SWIPE_EDGE_PT = 20;
+/** The width (pt) of the leading-edge strip a back swipe may start in. screens
+ *  measures the finger where the swipe BEGINS, after it has already travelled a
+ *  few points, so this is wider than the system's ~20 pt edge zone (a 20 pt limit
+ *  refused real edge swipes in the simulator) and is a touch target's width. A
+ *  table's own first column starts at the 16 pt page margin, so a rightward drag
+ *  that starts in this strip goes back; one that starts further in scrolls it. */
+export const BACK_SWIPE_EDGE_PT = 44;
 
 /** The first iOS release whose native stack has the full-screen swipe-back. */
 export const FULL_SCREEN_POP_IOS_MAJOR = 26;
