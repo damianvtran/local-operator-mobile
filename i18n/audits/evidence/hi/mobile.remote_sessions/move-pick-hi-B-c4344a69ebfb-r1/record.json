@@ -1,0 +1,169 @@
+{
+  "schema_version": 1,
+  "audit_pass": "B",
+  "locale": "hi",
+  "namespace": "mobile.remote_sessions",
+  "keycount": 7,
+  "sourcecommit": "9362cce8a631791b676b2d2c9eda90c43fc7e11c",
+  "source_commit": "9362cce8a631791b676b2d2c9eda90c43fc7e11c",
+  "brief_sha256": "5a72dfd72dc820b1fa8e73d78b97807581572334ee0fd25eb2eab346e759ebca",
+  "draft_sha256": "eedec3de1f87567b35790e88eb62109718fa268fd7654b7592d33ff509cd7f8d",
+  "all_input_sha256": {
+    "/Users/damian/.local-operator/sessions/ca8720609fc7/scratchpad/translation-brief.json": "5a72dfd72dc820b1fa8e73d78b97807581572334ee0fd25eb2eab346e759ebca",
+    "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/move-picker-locale-ledger.json": "aa77a6933f2519ee1d5d625b3e063e94a5bab33a81f679a7680f2d8a2ef5899f",
+    "/Users/damian/.local-operator/sessions/6b48875431ee/scratchpad/draft-hi.json": "eedec3de1f87567b35790e88eb62109718fa268fd7654b7592d33ff509cd7f8d",
+    "/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/i18n/catalogues/en/mobile.remote_sessions.json": "436f8ec3bda274431146e7e7cb82b2add418f598bd2a7a6d7426f561a4312984",
+    "/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/i18n/catalogues/en/mobile.remote_sessions.context.json": "c703dff07b634d3d2d4b7c789e6a4a1eecf192a57618ea8e9e72197d325d08eb",
+    "/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/features/sessions/move-sheet.tsx": "6a3f7126eb2fefc5ad0138a1731e3898d66d333ea8ca1b4ac99321da18d495aa",
+    "/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/i18n/catalogues/hi/mobile.remote_sessions.json": "882b9552d3711b4bf0de1325a753d446ff99807696e49efa0c43b166df8f8fd4",
+    "/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/i18n/catalogues/hi/mobile.sidebar.json": "38d9aa1ee75e463ef00ba5ab27d6e6143d0bee692b7efa3d7da63d83834a9bbc",
+    "/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/AGENTS.md": "84021f7c9df58bfe01376669c187cbdf777c680d918f9f001201faeae2a14ad7",
+    "/Users/damian/local-operator/AGENTS.md": "c8c66d86f7603dd4cfbcfc9beb887b369450004f3d9695a7d6e91e0fd58dba44",
+    "/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/i18n/catalogues/hi/mobile.composer_input.json": "c8c8bb1b0dcf40ca1d8a5ddce5eae7ba1b86baeb8bc819ff4c61c4c6a7deb35a"
+  },
+  "author_session": "6b48875431ee",
+  "A_session": "94bfc6fb7b61",
+  "B_session": "c4344a69ebfb",
+  "actor_identity_source": "current session host context; supplied locale ledger for author/A",
+  "actual_model_verified_receipt": "UNKNOWN",
+  "visible_fallback_model": "openai/gpt-6.1-sol",
+  "visible_previous_model": "anthropic/claude-opus-5-5",
+  "fallback_qualification": "Visible user model-switch notice: temporary fallback due to provider quota. Not independently verified serving-model proof.",
+  "read_route": "ordinary approved local UTF-8 copy/context reads; nested metadata is not routable; no faked public-copy receipt",
+  "scope_keys": [
+    "mobile.remote_sessions.move_pick.right_now",
+    "mobile.remote_sessions.move_pick.cannot_reach",
+    "mobile.remote_sessions.move_pick.no_answer",
+    "mobile.remote_sessions.move_pick.on_this_computer",
+    "mobile.remote_sessions.move_pick.no_devices",
+    "mobile.remote_sessions.move_pick.discovery_help",
+    "mobile.remote_sessions.move_pick.destination_heading"
+  ],
+  "measurements": [
+    {
+      "key": "mobile.remote_sessions.move_pick.cannot_reach",
+      "english_codepoints": 20,
+      "hindi_codepoints": 33,
+      "ratio": 1.65
+    },
+    {
+      "key": "mobile.remote_sessions.move_pick.destination_heading",
+      "english_codepoints": 15,
+      "hindi_codepoints": 27,
+      "ratio": 1.8
+    },
+    {
+      "key": "mobile.remote_sessions.move_pick.discovery_help",
+      "english_codepoints": 178,
+      "hindi_codepoints": 221,
+      "ratio": 1.242
+    },
+    {
+      "key": "mobile.remote_sessions.move_pick.no_answer",
+      "english_codepoints": 43,
+      "hindi_codepoints": 45,
+      "ratio": 1.047
+    },
+    {
+      "key": "mobile.remote_sessions.move_pick.no_devices",
+      "english_codepoints": 29,
+      "hindi_codepoints": 30,
+      "ratio": 1.034
+    },
+    {
+      "key": "mobile.remote_sessions.move_pick.on_this_computer",
+      "english_codepoints": 16,
+      "hindi_codepoints": 14,
+      "ratio": 0.875
+    },
+    {
+      "key": "mobile.remote_sessions.move_pick.right_now",
+      "english_codepoints": 9,
+      "hindi_codepoints": 3,
+      "ratio": 0.333
+    }
+  ],
+  "findings": [
+    {
+      "id": "HI-B-W1",
+      "severity": "minor",
+      "key": "mobile.remote_sessions.move_pick.cannot_reach",
+      "current_text": "{device} से संपर्क नहीं हो पा रहा",
+      "proposed_text": "{device} से संपर्क नहीं हो पा रहा",
+      "reason": "33 vs 20 source codepoints (+65%); arbitrary opaque device names can further expand the status. Retain accurate wording; parent should check narrow-phone wrapping. No rendered overflow demonstrated.",
+      "disposition": "defer rendered width check to parent; not a linguistic blocker"
+    },
+    {
+      "id": "HI-B-W2",
+      "severity": "minor",
+      "key": "mobile.remote_sessions.move_pick.destination_heading",
+      "current_text": "ले जाने या कॉपी करने की जगह",
+      "proposed_text": "ले जाने या कॉपी करने की जगह",
+      "reason": "27 vs 15 source codepoints (+80%); the compact radio-group heading may wrap. Retain accurate wording; parent should check narrow-phone wrapping. No rendered overflow demonstrated.",
+      "disposition": "defer rendered width check to parent; not a linguistic blocker"
+    },
+    {
+      "id": "HI-B-W3",
+      "severity": "minor",
+      "key": "mobile.remote_sessions.move_pick.discovery_help",
+      "current_text": "यह ऐप सिर्फ़ उन डिवाइसों को दिखा सकता है जिनके सत्र आपकी सूची में दिखते हैं। जिस डिवाइस का कोई सत्र नहीं दिखता, उसे अभी नहीं चुन सकते — दूसरे कंप्यूटर पर Local Operator खोलें, फिर सत्रों की सूची नीचे खींचकर रीफ़्रेश करें।",
+      "proposed_text": "यह ऐप सिर्फ़ उन डिवाइसों को दिखा सकता है जिनके सत्र आपकी सूची में दिखते हैं। जिस डिवाइस का कोई सत्र नहीं दिखता, उसे अभी नहीं चुन सकते — दूसरे कंप्यूटर पर Local Operator खोलें, फिर सत्रों की सूची नीचे खींचकर रीफ़्रेश करें।",
+      "reason": "221 vs 178 source codepoints (+24.2%); multiline help has additional vertical-height risk. Retain accurate wording; parent should check narrow-phone wrapping. No rendered overflow demonstrated.",
+      "disposition": "defer rendered width check to parent; not a linguistic blocker"
+    }
+  ],
+  "per_key_findings": {
+    "mobile.remote_sessions.move_pick.right_now": [],
+    "mobile.remote_sessions.move_pick.cannot_reach": [
+      {
+        "id": "HI-B-W1",
+        "severity": "minor",
+        "key": "mobile.remote_sessions.move_pick.cannot_reach",
+        "current_text": "{device} से संपर्क नहीं हो पा रहा",
+        "proposed_text": "{device} से संपर्क नहीं हो पा रहा",
+        "reason": "33 vs 20 source codepoints (+65%); arbitrary opaque device names can further expand the status. Retain accurate wording; parent should check narrow-phone wrapping. No rendered overflow demonstrated.",
+        "disposition": "defer rendered width check to parent; not a linguistic blocker"
+      }
+    ],
+    "mobile.remote_sessions.move_pick.no_answer": [],
+    "mobile.remote_sessions.move_pick.on_this_computer": [],
+    "mobile.remote_sessions.move_pick.no_devices": [],
+    "mobile.remote_sessions.move_pick.discovery_help": [
+      {
+        "id": "HI-B-W3",
+        "severity": "minor",
+        "key": "mobile.remote_sessions.move_pick.discovery_help",
+        "current_text": "यह ऐप सिर्फ़ उन डिवाइसों को दिखा सकता है जिनके सत्र आपकी सूची में दिखते हैं। जिस डिवाइस का कोई सत्र नहीं दिखता, उसे अभी नहीं चुन सकते — दूसरे कंप्यूटर पर Local Operator खोलें, फिर सत्रों की सूची नीचे खींचकर रीफ़्रेश करें।",
+        "proposed_text": "यह ऐप सिर्फ़ उन डिवाइसों को दिखा सकता है जिनके सत्र आपकी सूची में दिखते हैं। जिस डिवाइस का कोई सत्र नहीं दिखता, उसे अभी नहीं चुन सकते — दूसरे कंप्यूटर पर Local Operator खोलें, फिर सत्रों की सूची नीचे खींचकर रीफ़्रेश करें।",
+        "reason": "221 vs 178 source codepoints (+24.2%); multiline help has additional vertical-height risk. Retain accurate wording; parent should check narrow-phone wrapping. No rendered overflow demonstrated.",
+        "disposition": "defer rendered width check to parent; not a linguistic blocker"
+      }
+    ],
+    "mobile.remote_sessions.move_pick.destination_heading": [
+      {
+        "id": "HI-B-W2",
+        "severity": "minor",
+        "key": "mobile.remote_sessions.move_pick.destination_heading",
+        "current_text": "ले जाने या कॉपी करने की जगह",
+        "proposed_text": "ले जाने या कॉपी करने की जगह",
+        "reason": "27 vs 15 source codepoints (+80%); the compact radio-group heading may wrap. Retain accurate wording; parent should check narrow-phone wrapping. No rendered overflow demonstrated.",
+        "disposition": "defer rendered width check to parent; not a linguistic blocker"
+      }
+    ]
+  },
+  "current_report_verdict": {
+    "verdict": "PASS_WITH_MINORS",
+    "unresolved_blocker_major_count": 0,
+    "minor_count": 3,
+    "keys_read": 7
+  },
+  "icu_cldr": "N/A simple messages; one opaque device; six argument-free; no plural/select/date/number skeleton",
+  "pseudo": "N/A no pseudo catalogue in inspected locale inventory; no fabricated measurements",
+  "not_shipping": true,
+  "pair_status": "awaits parent verification",
+  "source_hook_gap": "OPEN — not fixed by audit",
+  "bundle_hashes": {
+    "report.md": "1bbb60412cd02528f5c7284089957840da6726e2a28f8468377eb68166f68527",
+    "audit.log": "6e425b9ac21bb03b951a6bef7ba7ce1113f94d5c885a4e7b8dab910da6392c6d"
+  }
+}

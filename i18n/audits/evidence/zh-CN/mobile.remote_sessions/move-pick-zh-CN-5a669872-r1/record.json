@@ -1,0 +1,289 @@
+{
+  "record_kind": "i18n-audit",
+  "audit_id": "move-pick-zh-CN-5a669872-r1",
+  "slice": "move-picker-seven-keys",
+  "locale": "zh-CN",
+  "namespace": "mobile.remote_sessions",
+  "audit_date": "2026-11-21",
+  "round": 1,
+  "key_count": 7,
+  "keys_audited": [
+    "mobile.remote_sessions.move_pick.cannot_reach",
+    "mobile.remote_sessions.move_pick.destination_heading",
+    "mobile.remote_sessions.move_pick.discovery_help",
+    "mobile.remote_sessions.move_pick.no_answer",
+    "mobile.remote_sessions.move_pick.no_devices",
+    "mobile.remote_sessions.move_pick.on_this_computer",
+    "mobile.remote_sessions.move_pick.right_now"
+  ],
+  "translator_session": "54921291584e",
+  "translator_actual_model": "openai/gpt-6.1-sol",
+  "translator_model_source": "Translator draft and notes report visible model-switch receipt; independently verified files and hashes, not translator execution transcript.",
+  "auditor": {
+    "agent": "translation-auditor (team lopdev)",
+    "session": "5a669872c784",
+    "model": "openai/gpt-6.1-sol",
+    "actual_model_source": "Visible user [model switch] event in this execution: openai/gpt-6.1-sol temporary fallback from anthropic/claude-opus-5-5, reason provider failure: quota. All audit reasoning/check execution after this receipt.",
+    "independent_from_translator_session": true
+  },
+  "draft": {
+    "path": "/Users/damian/.local-operator/sessions/54921291584e/scratchpad/draft-zh-CN.json",
+    "sha256": "a98004322415178b983e8a2f86349086dd56465d1958afc818383746b854d476",
+    "sha256_verified": true
+  },
+  "brief": {
+    "path": "/Users/damian/.local-operator/sessions/ca8720609fc7/scratchpad/translation-brief.json",
+    "sha256": "5a72dfd72dc820b1fa8e73d78b97807581572334ee0fd25eb2eab346e759ebca",
+    "sha256_verified": true
+  },
+  "brief_sha256": "5a72dfd72dc820b1fa8e73d78b97807581572334ee0fd25eb2eab346e759ebca",
+  "source_commit": "9362cce8a631791b676b2d2c9eda90c43fc7e11c",
+  "source_branch": "feat/i18n-move-sheet-copy",
+  "worktree": "/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy",
+  "read_route": "Ordinary explicitly approved exact worktree/scratch reads via functions.read and Python pathlib/json; git rev-parse/ls-files read-only. Nested context read directly, not a routable public-copy key. No read_public_copy invocation or public/keyed-reader receipt claimed. No tracked mobile style/glossary found by git ls-files; core zh-CN style/glossary used as shared reference and cross-checked with actual mobile catalogues. No repository writes.",
+  "input_hashes": {
+    "brief": {
+      "path": "/Users/damian/.local-operator/sessions/ca8720609fc7/scratchpad/translation-brief.json",
+      "sha256": "5a72dfd72dc820b1fa8e73d78b97807581572334ee0fd25eb2eab346e759ebca"
+    },
+    "draft": {
+      "path": "/Users/damian/.local-operator/sessions/54921291584e/scratchpad/draft-zh-CN.json",
+      "sha256": "a98004322415178b983e8a2f86349086dd56465d1958afc818383746b854d476"
+    },
+    "translator_notes": {
+      "path": "/Users/damian/.local-operator/sessions/54921291584e/scratchpad/notes-zh-CN.md",
+      "sha256": "994b893e40fae5a9b3ad99705220f2f69de295f126457d0288c4421f31a38b1c"
+    },
+    "translator_verification": {
+      "path": "/Users/damian/.local-operator/sessions/54921291584e/scratchpad/verification-zh-CN.json",
+      "sha256": "cf5c10cefc70d08f333ef2d8891258377cf380b8c9ac3f26f517b5b7f25a4c52"
+    },
+    "english": {
+      "path": "/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/i18n/catalogues/en/mobile.remote_sessions.json",
+      "sha256": "436f8ec3bda274431146e7e7cb82b2add418f598bd2a7a6d7426f561a4312984"
+    },
+    "context": {
+      "path": "/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/i18n/catalogues/en/mobile.remote_sessions.context.json",
+      "sha256": "c703dff07b634d3d2d4b7c789e6a4a1eecf192a57618ea8e9e72197d325d08eb"
+    },
+    "usage": {
+      "path": "/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/features/sessions/move-sheet.tsx",
+      "sha256": "6a3f7126eb2fefc5ad0138a1731e3898d66d333ea8ca1b4ac99321da18d495aa"
+    },
+    "zh_existing": {
+      "path": "/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/i18n/catalogues/zh-CN/mobile.remote_sessions.json",
+      "sha256": "eb825b4e48b28aa8bdc7bc1610c5edccd5b7bc2f679d36cab1c94ecd79ed1249"
+    },
+    "zh_sidebar": {
+      "path": "/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/i18n/catalogues/zh-CN/mobile.sidebar.json",
+      "sha256": "21a2fbc85ca4064074610e42737c521edd2969493979571c349b2c4163a644d2"
+    },
+    "style": {
+      "path": "/Users/damian/local-operator/i18n/style-guides/zh-CN.md",
+      "sha256": "8f95d89debbd0af848e72e4805e256ef9566632e520a5c6d9b37928cd617142c"
+    },
+    "glossary": {
+      "path": "/Users/damian/local-operator/i18n/glossary.md",
+      "sha256": "0eb34437a8c3d6f564f278ef957a603b1d9f51bb07d5ddae5ea8f37deba962f8"
+    },
+    "core_guidance": {
+      "path": "/Users/damian/local-operator/AGENTS.md",
+      "sha256": "c8c66d86f7603dd4cfbcfc9beb887b369450004f3d9695a7d6e91e0fd58dba44"
+    },
+    "mobile_guidance": {
+      "path": "/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/AGENTS.md",
+      "sha256": "84021f7c9df58bfe01376669c187cbdf777c680d918f9f001201faeae2a14ad7"
+    },
+    "schema_reference": {
+      "path": "/Users/damian/.local-operator/sessions/e5caed1bcb4e/scratchpad/bundles/fr/mobile.remote_sessions/move-pick-fr-e5caed1b-r1/record.json",
+      "sha256": "a2cb1e7f3fce51b1ae603ab066560c6beec1d7c40f2954d272f8bcdb6f96e85d"
+    }
+  },
+  "checks": {
+    "keys_missing": 0,
+    "keys_extra": 0,
+    "brief_vs_en_mismatches": 0,
+    "brief_vs_context_mismatches": 0,
+    "source_authoring_hashes_verified": true,
+    "placeholder_brace_sets": "exact: {device} once in cannot_reach, six empty; simple-message grammar enforced",
+    "negative_controls": "Missing, renamed, duplicated, nested, select syntax rejected; valid control accepted. Actual log retained.",
+    "icu_scope": "Dependency-free simple argument grammar, not repo ICU parser. No plural/select/number/date/skeleton/markup in seven source/target messages.",
+    "CLDR_plural": "N/A for all seven. zh-CN other-only, no count/branches to preserve or add.",
+    "nfc": "pass",
+    "bidi_control_chars": 0,
+    "RTL_scope": "zh-CN LTR; mixed-direction arbitrary-name literal substitution only, no shaping/layout proof",
+    "product_name": "Local Operator byte-identical once",
+    "pseudo": "not run; no pseudo-localization or rendered-fit claim",
+    "width_method": "Unicode East Asian W/F and full-width punctuation = 2 cells; other noncombining = 1; combining = 0. Placeholder token literal in source/target; arbitrary actual name is unbounded. Heuristic only.",
+    "repo_validator": "not run per prohibition",
+    "register_probe_correction": "Initial naive character filter falsely flagged 请 inside 请求; inspected sentence and source, corrected lexical probe; initial failure and rerun logged, no translation edit."
+  },
+  "redaction_marker_hits": {
+    "pattern": "\\[\\s*(?:redacted|masked|removed)[^\\]]*\\]|<\\s*(?:redacted|masked|removed)[^>]*>|\\*{3,}|█+|⟦[^⟧]*(?:redact|mask)[^⟧]*⟧",
+    "copy_inputs": 0,
+    "by_copy_scope": {
+      "english": 0,
+      "context": 0,
+      "draft_values": 0,
+      "glossary_examples": 0
+    },
+    "draft_non_values_metadata_hits": 0,
+    "raw_file_marker_pattern_hits": {
+      "brief": 0,
+      "draft": 0,
+      "translator_notes": 0,
+      "translator_verification": 1
+    },
+    "explanation": "Single translator_verification raw hit is the regex/example literal ⟦[^⟧]*(?:redact|mask)[^⟧]*⟧ inside redaction_marker_scan.pattern, inspected directly; not redacted copy. Bounded scan, not a secret audit."
+  },
+  "verdict": "passed",
+  "linguistic_verdict": "passed",
+  "namespace_verdicts": {
+    "mobile.remote_sessions (seven move_pick keys only)": "passed"
+  },
+  "current_report_verdict": {
+    "status": "passed",
+    "unresolved_blocker_major_count": 0,
+    "finding_ids": [],
+    "verdict_reason": "Seven keys linguistically and simple-placeholder clean; no substantive findings, no materially longer width estimate. Non-linguistic source-hook gap remains OPEN."
+  },
+  "findings": [],
+  "per_key": [
+    {
+      "key": "mobile.remote_sessions.move_pick.cannot_reach",
+      "english": "Can't reach {device}",
+      "current_text": "无法连接{device}",
+      "analysis": "无法连接 is the established reachability term in existing unreachable copy. The remote computer is named by exactly one {device}, with no localization of its arbitrary value. Calm concise status, not a phone error.",
+      "linguistic_verdict": "passed",
+      "verdict": "passed",
+      "findings": [],
+      "severity": null,
+      "width": {
+        "english_codepoints": 20,
+        "target_codepoints": 12,
+        "english_estimated_cells": 20,
+        "target_estimated_cells": 16,
+        "cell_ratio": 0.8
+      }
+    },
+    {
+      "key": "mobile.remote_sessions.move_pick.destination_heading",
+      "english": "Move or copy to",
+      "current_text": "移动或复制到",
+      "analysis": "移动或复制到 is an idiomatic destination heading: both operations retained, 到 introduces choices, not an execution claim. 移动/复制 match existing row_long_press_hint. No final punctuation.",
+      "linguistic_verdict": "passed",
+      "verdict": "passed",
+      "findings": [],
+      "severity": null,
+      "width": {
+        "english_codepoints": 15,
+        "target_codepoints": 6,
+        "english_estimated_cells": 15,
+        "target_estimated_cells": 12,
+        "cell_ratio": 0.8
+      }
+    },
+    {
+      "key": "mobile.remote_sessions.move_pick.discovery_help",
+      "english": "This app can offer the devices your sessions show. A device with no visible session cannot be picked yet — open Local Operator on the other computer and pull the list to refresh.",
+      "current_text": "本应用仅列出会话列表中可见的设备。没有可见会话的设备暂时无法选择。在另一台电脑上打开Local Operator，再下拉会话列表刷新。",
+      "analysis": "Accurately restricts offered devices to those visible through the session list; 没有可见会话 and 暂时 retain the eligibility limitation and yet. Instructions remain ordered: open Local Operator on the other computer, then pull down the session list to refresh. 会话/设备/电脑 match the glossary. No gratuitous 请; product spelling and lack of CJK/Latin padding match the style guide.",
+      "linguistic_verdict": "passed",
+      "verdict": "passed",
+      "findings": [],
+      "severity": null,
+      "width": {
+        "english_codepoints": 178,
+        "target_codepoints": 67,
+        "english_estimated_cells": 178,
+        "target_estimated_cells": 120,
+        "cell_ratio": 0.6742
+      }
+    },
+    {
+      "key": "mobile.remote_sessions.move_pick.no_answer",
+      "english": "It did not answer when this computer asked.",
+      "current_text": "此电脑发出请求后，远程电脑未响应。",
+      "analysis": "此电脑发出请求后，远程电脑未响应。 naturally makes the two computers explicit: connected relay requests, remote computer fails to answer, not the phone. 请求 is the lexical noun request, not politeness 请. Source lines 484–485 make this client fallback only when trimmed opaque server reason is absent.",
+      "linguistic_verdict": "passed",
+      "verdict": "passed",
+      "findings": [],
+      "severity": null,
+      "width": {
+        "english_codepoints": 43,
+        "target_codepoints": 17,
+        "english_estimated_cells": 43,
+        "target_estimated_cells": 34,
+        "cell_ratio": 0.7907
+      }
+    },
+    {
+      "key": "mobile.remote_sessions.move_pick.no_devices",
+      "english": "No other devices are visible.",
+      "current_text": "当前没有其他可见设备。",
+      "analysis": "当前没有其他可见设备。 preserves other and visible without claiming offline devices or network absence. 当前 supplies natural present-state context. It is a complete factual sentence (context explicitly calls for one), so 。 is acceptable under the full-sentence exception, not a short-label punctuation defect.",
+      "linguistic_verdict": "passed",
+      "verdict": "passed",
+      "findings": [],
+      "severity": null,
+      "width": {
+        "english_codepoints": 29,
+        "target_codepoints": 11,
+        "english_estimated_cells": 29,
+        "target_estimated_cells": 22,
+        "cell_ratio": 0.7586
+      }
+    },
+    {
+      "key": "mobile.remote_sessions.move_pick.on_this_computer",
+      "english": "On this computer",
+      "current_text": "在此电脑上",
+      "analysis": "在此电脑上 naturally identifies the connected computer, matching existing 此电脑 usage and sidebar 在{device}上. No 手机 substitution, duplicate remote-location key or final punctuation.",
+      "linguistic_verdict": "passed",
+      "verdict": "passed",
+      "findings": [],
+      "severity": null,
+      "width": {
+        "english_codepoints": 16,
+        "target_codepoints": 5,
+        "english_estimated_cells": 16,
+        "target_estimated_cells": 10,
+        "cell_ratio": 0.625
+      }
+    },
+    {
+      "key": "mobile.remote_sessions.move_pick.right_now",
+      "english": "Right now",
+      "current_text": "当前",
+      "analysis": "当前 is the natural terse current-state section label, unlike an imperative such as 立即. Appropriate heading register, no punctuation or arguments.",
+      "linguistic_verdict": "passed",
+      "verdict": "passed",
+      "findings": [],
+      "severity": null,
+      "width": {
+        "english_codepoints": 9,
+        "target_codepoints": 2,
+        "english_estimated_cells": 9,
+        "target_estimated_cells": 4,
+        "cell_ratio": 0.4444
+      }
+    }
+  ],
+  "separate_process_gap": {
+    "status": "OPEN",
+    "name": "source-hook evidence gap",
+    "linguistic_failure": false,
+    "fixed_by_audit": false,
+    "source": "Delegating user explicitly says SourcehookevidenceGAPOPEN; no hook run or inferred clearance here."
+  },
+  "human_native_speaker": "waived by delegation; independent LLM audit, not human/native-speaker proof",
+  "unverified": [
+    "Actual mounted late-language frame and narrow-phone rendered fit",
+    "Runtime ICU/parser implementation",
+    "Mixed-direction arbitrary-name layout/shaping",
+    "Source-hook evidence (OPEN)",
+    "Generated catalogue integration (target draft not yet in existing catalogue)"
+  ],
+  "prohibited_actions_performed": false,
+  "scope_note": "Only seven keys judged. Existing catalogue and sidebar used solely as glossary/register context; existing 请/Latin-spacing differences not globally cleaned up or flagged."
+}

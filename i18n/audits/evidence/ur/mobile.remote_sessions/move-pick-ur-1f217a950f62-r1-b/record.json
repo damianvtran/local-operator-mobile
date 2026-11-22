@@ -1,0 +1,807 @@
+{
+  "schema_version": 1,
+  "audit_id": "move-pick-ur-1f217a950f62-r1-b",
+  "audit_pass": "B",
+  "locale": "ur",
+  "namespace": "mobile.remote_sessions",
+  "scope": "Only the seven frozen move_pick keys; no full-namespace, other-language, Arabic or whole-app approval",
+  "source_commit": "9362cce8a631791b676b2d2c9eda90c43fc7e11c",
+  "source_files": {
+    "src/i18n/catalogues/en/mobile.remote_sessions.json": "436f8ec3bda274431146e7e7cb82b2add418f598bd2a7a6d7426f561a4312984",
+    "src/i18n/catalogues/en/mobile.remote_sessions.context.json": "c703dff07b634d3d2d4b7c789e6a4a1eecf192a57618ea8e9e72197d325d08eb",
+    "src/features/sessions/move-sheet.tsx": "6a3f7126eb2fefc5ad0138a1731e3898d66d333ea8ca1b4ac99321da18d495aa"
+  },
+  "brief_sha256": "5a72dfd72dc820b1fa8e73d78b97807581572334ee0fd25eb2eab346e759ebca",
+  "draft_sha256": "e4da7bd8528a3f24622878a2d93e7c1b820771b01d16cf6ba23b639176ff068b",
+  "input_sha256": {
+    "/Users/damian/.local-operator/sessions/ca8720609fc7/scratchpad/translation-brief.json": "5a72dfd72dc820b1fa8e73d78b97807581572334ee0fd25eb2eab346e759ebca",
+    "/Users/damian/.local-operator/sessions/bd4d8a762e59/scratchpad/draft-ur.json": "e4da7bd8528a3f24622878a2d93e7c1b820771b01d16cf6ba23b639176ff068b",
+    "/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/i18n/catalogues/ur/mobile.remote_sessions.json": "c49b1ac702a58d224129f8f3097332a8d810f7028c2d71cb90aa6acae6506d57",
+    "/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/i18n/catalogues/ur/mobile.sidebar.json": "a6e11c23083193d443aab0144672b8f9ad92e58ae68cb6a56b09fd2aef6b6387",
+    "/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/i18n/catalogues/ur/mobile.computers.json": "e4e949937e831fce317f30f1e7aec8e73daf6cd270d5fd15880629017e922261",
+    "/Users/damian/local-operator/i18n/style-guides/ur.md": "c0eecf7f7b5e89956b7de9ab7a9eb647ff1a7ef701ccf2a7f0264d5eea15ca60",
+    "/Users/damian/local-operator/i18n/glossary.md": "0eb34437a8c3d6f564f278ef957a603b1d9f51bb07d5ddae5ea8f37deba962f8",
+    "/Users/damian/.local-operator/sessions/bd4d8a762e59/scratchpad/notes-ur.md": "a915cbb25087642a4dcdf497404269b3f27637493194dfe3051af6c5f14df186",
+    "/Users/damian/.local-operator/sessions/bd4d8a762e59/scratchpad/verification-ur.json": "a0d1fd10ff7a44c218abd4a6484d848c54102e3bd2dd548d7a97971a24ad3e09",
+    "/Users/damian/.local-operator/sessions/3ebdc948939c/scratchpad/bundles/ur/mobile.remote_sessions/move-pick-ur-3ebdc948-r1-a/report.md": "4717bddd1e6f668482d98944cf8aca44ee95b76f918d4f152be8a3723380288f",
+    "/Users/damian/.local-operator/sessions/3ebdc948939c/scratchpad/bundles/ur/mobile.remote_sessions/move-pick-ur-3ebdc948-r1-a/record.json": "e804426c9dd964a25a3a7c8ce95c94ea4787ca060675fbefca821c0948d69b0a",
+    "/Users/damian/.local-operator/sessions/1f217a950f62/scratchpad/ur-B-independent-judgment.json": "c7f5f0f96c633d357e99cf3cd39274bfe58b3b94b367c39028dc0cc220d55b82",
+    "/Users/damian/.local-operator/sessions/1f217a950f62/scratchpad/ur-B-checks.py": "37580e568e275656c79051f82a1ded40bff923627003b851da835f29cec2879a"
+  },
+  "identities": {
+    "translator_session": "bd4d8a762e59",
+    "audit_A_session": "3ebdc948939c",
+    "audit_B_session": "1f217a950f62",
+    "independent": true,
+    "basis": "Three distinct session actors; B read actual English/context/usage/current Urdu before freezing own per-key linguistic judgment, then read A verdict. B authored no translation and edited no worktree file."
+  },
+  "model": {
+    "verified_serving_model": "UNKNOWN",
+    "serving_receipt": null,
+    "initial_system_model": "anthropic/claude-opus-5-5",
+    "observed_model_switch": "openai/gpt-6.1-sol",
+    "fallback_disclosure": "Visible user model-switch notice reports temporary fallback due to provider quota failure; no independently verified serving receipt. Audit executed after notice."
+  },
+  "read_route": {
+    "method": "ordinary approved copy reads and dependency-free stdlib reads of exact named files",
+    "public_keyed_receipt": null,
+    "context": "nested role/note objects; not routed as keyed public copy",
+    "human_native_review": "waived by delegation, not performed"
+  },
+  "keys_read": 7,
+  "all_seven_keys": [
+    "mobile.remote_sessions.move_pick.cannot_reach",
+    "mobile.remote_sessions.move_pick.destination_heading",
+    "mobile.remote_sessions.move_pick.discovery_help",
+    "mobile.remote_sessions.move_pick.no_answer",
+    "mobile.remote_sessions.move_pick.no_devices",
+    "mobile.remote_sessions.move_pick.on_this_computer",
+    "mobile.remote_sessions.move_pick.right_now"
+  ],
+  "per_key": [
+    {
+      "key": "mobile.remote_sessions.move_pick.cannot_reach",
+      "english": "Can't reach {device}",
+      "current": "{device} سے رابطہ نہیں ہو رہا",
+      "placeholders": [
+        "{device}"
+      ],
+      "nfc": true,
+      "inserted_bidi_controls": 0,
+      "source_codepoints": 20,
+      "draft_codepoints": 29,
+      "ratio": 1.45,
+      "icu_cldr": "N/A: plain argument or argument-free; no plural/select/number/date skeletons",
+      "linguistic_judgment": "Natural ongoing-contact failure: رابطہ نہیں ہو رہا matches the existing unreachable wording. The named remote computer remains the target; it does not blame the phone.",
+      "verdict": "PASS_WITH_DEFERRED_MINOR_RISK",
+      "findings": [
+        {
+          "id": "UR-B1",
+          "severity": "minor",
+          "key": "mobile.remote_sessions.move_pick.cannot_reach",
+          "current_text": "{device} سے رابطہ نہیں ہو رہا",
+          "proposed_text": "{device} سے رابطہ نہیں ہو رہا",
+          "reason": "29 versus 20 source codepoints (ratio 1.45) is an expansion-risk signal, not measured glyph width or proof of overflow. Arbitrary opaque names can expand without bound and alter first-strong direction.",
+          "translator_recommendation": "Retain accurate wording; do not shorten at the cost of meaning or insert bidi controls. Owning rendered lane should check narrow-phone wrapping/height.",
+          "disposition": "deferred — non-gating width/render risk; no linguistic remediation required"
+        }
+      ]
+    },
+    {
+      "key": "mobile.remote_sessions.move_pick.destination_heading",
+      "english": "Move or copy to",
+      "current": "منتقل یا کاپی کرنے کی جگہ",
+      "placeholders": [],
+      "nfc": true,
+      "inserted_bidi_controls": 0,
+      "source_codepoints": 15,
+      "draft_codepoints": 25,
+      "ratio": 1.6667,
+      "icu_cldr": "N/A: plain argument or argument-free; no plural/select/number/date skeletons",
+      "linguistic_judgment": "منتقل یا کاپی کرنے کی جگہ is a natural nominal destination heading, not an imperative. Both operations are preserved. Longer than English: rendered wrapping check deferred, not a semantic defect.",
+      "verdict": "PASS_WITH_DEFERRED_MINOR_RISK",
+      "findings": [
+        {
+          "id": "UR-B2",
+          "severity": "minor",
+          "key": "mobile.remote_sessions.move_pick.destination_heading",
+          "current_text": "منتقل یا کاپی کرنے کی جگہ",
+          "proposed_text": "منتقل یا کاپی کرنے کی جگہ",
+          "reason": "25 versus 15 source codepoints (ratio 1.6667) is an expansion-risk signal, not measured glyph width or proof of overflow.",
+          "translator_recommendation": "Retain accurate wording; do not shorten at the cost of meaning or insert bidi controls. Owning rendered lane should check narrow-phone wrapping/height.",
+          "disposition": "deferred — non-gating width/render risk; no linguistic remediation required"
+        }
+      ]
+    },
+    {
+      "key": "mobile.remote_sessions.move_pick.discovery_help",
+      "english": "This app can offer the devices your sessions show. A device with no visible session cannot be picked yet — open Local Operator on the other computer and pull the list to refresh.",
+      "current": "یہ ایپ صرف وہ ڈیوائسز دکھا سکتی ہے جن کے سیشن فہرست میں نظر آتے ہیں۔ جس ڈیوائس کا کوئی سیشن نظر نہیں آ رہا، اسے ابھی منتخب نہیں کیا جا سکتا — دوسرے کمپیوٹر پر Local Operator کھولیں، پھر سیشن کی فہرست کو نیچے کھینچ کر تازہ کریں۔",
+      "placeholders": [],
+      "nfc": true,
+      "inserted_bidi_controls": 0,
+      "source_codepoints": 178,
+      "draft_codepoints": 227,
+      "ratio": 1.2753,
+      "icu_cldr": "N/A: plain argument or argument-free; no plural/select/number/date skeletons",
+      "linguistic_judgment": "Accurately restricts selectable devices to those with visible sessions. دکھا سکتی ہے is appropriate for offering visible choices here, not a promise of complete discovery. ابھی preserves the temporary limitation; کھولیں and تازہ کریں are respectful imperatives. The other-computer instruction and downward pull-to-refresh instruction both survive. Local Operator stays Latin.",
+      "verdict": "PASS_WITH_DEFERRED_MINOR_RISK",
+      "findings": [
+        {
+          "id": "UR-B3",
+          "severity": "minor",
+          "key": "mobile.remote_sessions.move_pick.discovery_help",
+          "current_text": "یہ ایپ صرف وہ ڈیوائسز دکھا سکتی ہے جن کے سیشن فہرست میں نظر آتے ہیں۔ جس ڈیوائس کا کوئی سیشن نظر نہیں آ رہا، اسے ابھی منتخب نہیں کیا جا سکتا — دوسرے کمپیوٹر پر Local Operator کھولیں، پھر سیشن کی فہرست کو نیچے کھینچ کر تازہ کریں۔",
+          "proposed_text": "یہ ایپ صرف وہ ڈیوائسز دکھا سکتی ہے جن کے سیشن فہرست میں نظر آتے ہیں۔ جس ڈیوائس کا کوئی سیشن نظر نہیں آ رہا، اسے ابھی منتخب نہیں کیا جا سکتا — دوسرے کمپیوٹر پر Local Operator کھولیں، پھر سیشن کی فہرست کو نیچے کھینچ کر تازہ کریں۔",
+          "reason": "227 versus 178 source codepoints (ratio 1.2753) is an expansion-risk signal, not measured glyph width or proof of overflow.",
+          "translator_recommendation": "Retain accurate wording; do not shorten at the cost of meaning or insert bidi controls. Owning rendered lane should check narrow-phone wrapping/height.",
+          "disposition": "deferred — non-gating width/render risk; no linguistic remediation required"
+        }
+      ]
+    },
+    {
+      "key": "mobile.remote_sessions.move_pick.no_answer",
+      "english": "It did not answer when this computer asked.",
+      "current": "جب اس کمپیوٹر نے رابطہ کیا تو اس نے جواب نہیں دیا۔",
+      "placeholders": [],
+      "nfc": true,
+      "inserted_bidi_controls": 0,
+      "source_codepoints": 43,
+      "draft_codepoints": 50,
+      "ratio": 1.1628,
+      "icu_cldr": "N/A: plain argument or argument-free; no plural/select/number/date skeletons",
+      "linguistic_judgment": "جب اس کمپیوٹر نے رابطہ کیا تو اس نے جواب نہیں دیا۔ naturally contrasts the contacting current computer with the remote non-answering subject. The second اس refers back to the remote status immediately above, as English It does. No phone substitution or invented cause.",
+      "verdict": "PASS",
+      "findings": []
+    },
+    {
+      "key": "mobile.remote_sessions.move_pick.no_devices",
+      "english": "No other devices are visible.",
+      "current": "کوئی اور ڈیوائس نظر نہیں آ رہی۔",
+      "placeholders": [],
+      "nfc": true,
+      "inserted_bidi_controls": 0,
+      "source_codepoints": 29,
+      "draft_codepoints": 31,
+      "ratio": 1.069,
+      "icu_cldr": "N/A: plain argument or argument-free; no plural/select/number/date skeletons",
+      "linguistic_judgment": "کوئی اور ڈیوائس نظر نہیں آ رہی۔ means no other device is visible, not that no device exists or is online. Singular agreement under کوئی is idiomatic Urdu and preserves the English empty-set claim.",
+      "verdict": "PASS",
+      "findings": []
+    },
+    {
+      "key": "mobile.remote_sessions.move_pick.on_this_computer",
+      "english": "On this computer",
+      "current": "اس کمپیوٹر پر",
+      "placeholders": [],
+      "nfc": true,
+      "inserted_bidi_controls": 0,
+      "source_codepoints": 16,
+      "draft_codepoints": 13,
+      "ratio": 0.8125,
+      "icu_cldr": "N/A: plain argument or argument-free; no plural/select/number/date skeletons",
+      "linguistic_judgment": "اس کمپیوٹر پر is concise and accurate for the current relay-computer location. کمپیوٹر matches the existing catalogue; no phone wording.",
+      "verdict": "PASS",
+      "findings": []
+    },
+    {
+      "key": "mobile.remote_sessions.move_pick.right_now",
+      "english": "Right now",
+      "current": "اس وقت",
+      "placeholders": [],
+      "nfc": true,
+      "inserted_bidi_controls": 0,
+      "source_codepoints": 9,
+      "draft_codepoints": 6,
+      "ratio": 0.6667,
+      "icu_cldr": "N/A: plain argument or argument-free; no plural/select/number/date skeletons",
+      "linguistic_judgment": "اس وقت is idiomatic for present state under this section heading and avoids an urgent command reading.",
+      "verdict": "PASS",
+      "findings": []
+    }
+  ],
+  "findings": [
+    {
+      "id": "UR-B1",
+      "severity": "minor",
+      "key": "mobile.remote_sessions.move_pick.cannot_reach",
+      "current_text": "{device} سے رابطہ نہیں ہو رہا",
+      "proposed_text": "{device} سے رابطہ نہیں ہو رہا",
+      "reason": "29 versus 20 source codepoints (ratio 1.45) is an expansion-risk signal, not measured glyph width or proof of overflow. Arbitrary opaque names can expand without bound and alter first-strong direction.",
+      "translator_recommendation": "Retain accurate wording; do not shorten at the cost of meaning or insert bidi controls. Owning rendered lane should check narrow-phone wrapping/height.",
+      "disposition": "deferred — non-gating width/render risk; no linguistic remediation required"
+    },
+    {
+      "id": "UR-B2",
+      "severity": "minor",
+      "key": "mobile.remote_sessions.move_pick.destination_heading",
+      "current_text": "منتقل یا کاپی کرنے کی جگہ",
+      "proposed_text": "منتقل یا کاپی کرنے کی جگہ",
+      "reason": "25 versus 15 source codepoints (ratio 1.6667) is an expansion-risk signal, not measured glyph width or proof of overflow.",
+      "translator_recommendation": "Retain accurate wording; do not shorten at the cost of meaning or insert bidi controls. Owning rendered lane should check narrow-phone wrapping/height.",
+      "disposition": "deferred — non-gating width/render risk; no linguistic remediation required"
+    },
+    {
+      "id": "UR-B3",
+      "severity": "minor",
+      "key": "mobile.remote_sessions.move_pick.discovery_help",
+      "current_text": "یہ ایپ صرف وہ ڈیوائسز دکھا سکتی ہے جن کے سیشن فہرست میں نظر آتے ہیں۔ جس ڈیوائس کا کوئی سیشن نظر نہیں آ رہا، اسے ابھی منتخب نہیں کیا جا سکتا — دوسرے کمپیوٹر پر Local Operator کھولیں، پھر سیشن کی فہرست کو نیچے کھینچ کر تازہ کریں۔",
+      "proposed_text": "یہ ایپ صرف وہ ڈیوائسز دکھا سکتی ہے جن کے سیشن فہرست میں نظر آتے ہیں۔ جس ڈیوائس کا کوئی سیشن نظر نہیں آ رہا، اسے ابھی منتخب نہیں کیا جا سکتا — دوسرے کمپیوٹر پر Local Operator کھولیں، پھر سیشن کی فہرست کو نیچے کھینچ کر تازہ کریں۔",
+      "reason": "227 versus 178 source codepoints (ratio 1.2753) is an expansion-risk signal, not measured glyph width or proof of overflow.",
+      "translator_recommendation": "Retain accurate wording; do not shorten at the cost of meaning or insert bidi controls. Owning rendered lane should check narrow-phone wrapping/height.",
+      "disposition": "deferred — non-gating width/render risk; no linguistic remediation required"
+    }
+  ],
+  "mechanical": {
+    "checks": "PASS from fresh command exit 0 recorded in audit.log",
+    "placeholders": "cannot_reach has {device} exactly once, six keys argument-free",
+    "ICU_CLDR": "N/A simple interpolation/no plural/select/number/date skeleton; no full ICU-runtime parser claim",
+    "NFC": true,
+    "bidi_controls_inserted": 0,
+    "negative_controls": [
+      "missing device detected",
+      "injected RLM detected",
+      "missing key detected"
+    ],
+    "redaction": {
+      "patterns": [
+        "\\[\\s*REDACTED(?:[^\\]]*)\\]",
+        "<\\s*REDACTED(?:[^>]*)>",
+        "\\bREDACTED\\b",
+        "\\[\\s*MASKED\\s*\\]",
+        "\\[\\s*FILTERED\\s*\\]",
+        "\\[\\s*PRIVATE\\s*\\]",
+        "<\\s*hidden\\s*>",
+        "\\*{3,}"
+      ],
+      "counts": {
+        "source_copy": 0,
+        "draft_copy": 0,
+        "brief_copy": 0,
+        "brief_metadata": 0,
+        "brief_context": 0,
+        "draft_metadata": 0
+      }
+    }
+  },
+  "rtl_source_trace": [
+    {
+      "name": "StudioMac",
+      "logical_text": "StudioMac سے رابطہ نہیں ہو رہا",
+      "name_bytes_preserved": true,
+      "first_strong": "L",
+      "trace": [
+        [
+          "U+0053",
+          "L"
+        ],
+        [
+          "U+0074",
+          "L"
+        ],
+        [
+          "U+0075",
+          "L"
+        ],
+        [
+          "U+0064",
+          "L"
+        ],
+        [
+          "U+0069",
+          "L"
+        ],
+        [
+          "U+006F",
+          "L"
+        ],
+        [
+          "U+004D",
+          "L"
+        ],
+        [
+          "U+0061",
+          "L"
+        ],
+        [
+          "U+0063",
+          "L"
+        ],
+        [
+          "U+0020",
+          "WS"
+        ],
+        [
+          "U+0633",
+          "AL"
+        ],
+        [
+          "U+06D2",
+          "AL"
+        ],
+        [
+          "U+0020",
+          "WS"
+        ],
+        [
+          "U+0631",
+          "AL"
+        ],
+        [
+          "U+0627",
+          "AL"
+        ],
+        [
+          "U+0628",
+          "AL"
+        ],
+        [
+          "U+0637",
+          "AL"
+        ],
+        [
+          "U+06C1",
+          "AL"
+        ],
+        [
+          "U+0020",
+          "WS"
+        ],
+        [
+          "U+0646",
+          "AL"
+        ],
+        [
+          "U+06C1",
+          "AL"
+        ],
+        [
+          "U+06CC",
+          "AL"
+        ],
+        [
+          "U+06BA",
+          "AL"
+        ],
+        [
+          "U+0020",
+          "WS"
+        ],
+        [
+          "U+06C1",
+          "AL"
+        ],
+        [
+          "U+0648",
+          "AL"
+        ],
+        [
+          "U+0020",
+          "WS"
+        ],
+        [
+          "U+0631",
+          "AL"
+        ],
+        [
+          "U+06C1",
+          "AL"
+        ],
+        [
+          "U+0627",
+          "AL"
+        ]
+      ]
+    },
+    {
+      "name": "Mac(2)",
+      "logical_text": "Mac(2) سے رابطہ نہیں ہو رہا",
+      "name_bytes_preserved": true,
+      "first_strong": "L",
+      "trace": [
+        [
+          "U+004D",
+          "L"
+        ],
+        [
+          "U+0061",
+          "L"
+        ],
+        [
+          "U+0063",
+          "L"
+        ],
+        [
+          "U+0028",
+          "ON"
+        ],
+        [
+          "U+0032",
+          "EN"
+        ],
+        [
+          "U+0029",
+          "ON"
+        ],
+        [
+          "U+0020",
+          "WS"
+        ],
+        [
+          "U+0633",
+          "AL"
+        ],
+        [
+          "U+06D2",
+          "AL"
+        ],
+        [
+          "U+0020",
+          "WS"
+        ],
+        [
+          "U+0631",
+          "AL"
+        ],
+        [
+          "U+0627",
+          "AL"
+        ],
+        [
+          "U+0628",
+          "AL"
+        ],
+        [
+          "U+0637",
+          "AL"
+        ],
+        [
+          "U+06C1",
+          "AL"
+        ],
+        [
+          "U+0020",
+          "WS"
+        ],
+        [
+          "U+0646",
+          "AL"
+        ],
+        [
+          "U+06C1",
+          "AL"
+        ],
+        [
+          "U+06CC",
+          "AL"
+        ],
+        [
+          "U+06BA",
+          "AL"
+        ],
+        [
+          "U+0020",
+          "WS"
+        ],
+        [
+          "U+06C1",
+          "AL"
+        ],
+        [
+          "U+0648",
+          "AL"
+        ],
+        [
+          "U+0020",
+          "WS"
+        ],
+        [
+          "U+0631",
+          "AL"
+        ],
+        [
+          "U+06C1",
+          "AL"
+        ],
+        [
+          "U+0627",
+          "AL"
+        ]
+      ]
+    },
+    {
+      "name": "دفتر-Mac(2)",
+      "logical_text": "دفتر-Mac(2) سے رابطہ نہیں ہو رہا",
+      "name_bytes_preserved": true,
+      "first_strong": "AL",
+      "trace": [
+        [
+          "U+062F",
+          "AL"
+        ],
+        [
+          "U+0641",
+          "AL"
+        ],
+        [
+          "U+062A",
+          "AL"
+        ],
+        [
+          "U+0631",
+          "AL"
+        ],
+        [
+          "U+002D",
+          "ES"
+        ],
+        [
+          "U+004D",
+          "L"
+        ],
+        [
+          "U+0061",
+          "L"
+        ],
+        [
+          "U+0063",
+          "L"
+        ],
+        [
+          "U+0028",
+          "ON"
+        ],
+        [
+          "U+0032",
+          "EN"
+        ],
+        [
+          "U+0029",
+          "ON"
+        ],
+        [
+          "U+0020",
+          "WS"
+        ],
+        [
+          "U+0633",
+          "AL"
+        ],
+        [
+          "U+06D2",
+          "AL"
+        ],
+        [
+          "U+0020",
+          "WS"
+        ],
+        [
+          "U+0631",
+          "AL"
+        ],
+        [
+          "U+0627",
+          "AL"
+        ],
+        [
+          "U+0628",
+          "AL"
+        ],
+        [
+          "U+0637",
+          "AL"
+        ],
+        [
+          "U+06C1",
+          "AL"
+        ],
+        [
+          "U+0020",
+          "WS"
+        ],
+        [
+          "U+0646",
+          "AL"
+        ],
+        [
+          "U+06C1",
+          "AL"
+        ],
+        [
+          "U+06CC",
+          "AL"
+        ],
+        [
+          "U+06BA",
+          "AL"
+        ],
+        [
+          "U+0020",
+          "WS"
+        ],
+        [
+          "U+06C1",
+          "AL"
+        ],
+        [
+          "U+0648",
+          "AL"
+        ],
+        [
+          "U+0020",
+          "WS"
+        ],
+        [
+          "U+0631",
+          "AL"
+        ],
+        [
+          "U+06C1",
+          "AL"
+        ],
+        [
+          "U+0627",
+          "AL"
+        ]
+      ]
+    },
+    {
+      "name": "Mac-گھر ۲",
+      "logical_text": "Mac-گھر ۲ سے رابطہ نہیں ہو رہا",
+      "name_bytes_preserved": true,
+      "first_strong": "L",
+      "trace": [
+        [
+          "U+004D",
+          "L"
+        ],
+        [
+          "U+0061",
+          "L"
+        ],
+        [
+          "U+0063",
+          "L"
+        ],
+        [
+          "U+002D",
+          "ES"
+        ],
+        [
+          "U+06AF",
+          "AL"
+        ],
+        [
+          "U+06BE",
+          "AL"
+        ],
+        [
+          "U+0631",
+          "AL"
+        ],
+        [
+          "U+0020",
+          "WS"
+        ],
+        [
+          "U+06F2",
+          "EN"
+        ],
+        [
+          "U+0020",
+          "WS"
+        ],
+        [
+          "U+0633",
+          "AL"
+        ],
+        [
+          "U+06D2",
+          "AL"
+        ],
+        [
+          "U+0020",
+          "WS"
+        ],
+        [
+          "U+0631",
+          "AL"
+        ],
+        [
+          "U+0627",
+          "AL"
+        ],
+        [
+          "U+0628",
+          "AL"
+        ],
+        [
+          "U+0637",
+          "AL"
+        ],
+        [
+          "U+06C1",
+          "AL"
+        ],
+        [
+          "U+0020",
+          "WS"
+        ],
+        [
+          "U+0646",
+          "AL"
+        ],
+        [
+          "U+06C1",
+          "AL"
+        ],
+        [
+          "U+06CC",
+          "AL"
+        ],
+        [
+          "U+06BA",
+          "AL"
+        ],
+        [
+          "U+0020",
+          "WS"
+        ],
+        [
+          "U+06C1",
+          "AL"
+        ],
+        [
+          "U+0648",
+          "AL"
+        ],
+        [
+          "U+0020",
+          "WS"
+        ],
+        [
+          "U+0631",
+          "AL"
+        ],
+        [
+          "U+06C1",
+          "AL"
+        ],
+        [
+          "U+0627",
+          "AL"
+        ]
+      ]
+    }
+  ],
+  "rtl_limit": "Logical codepoints and literal opaque-name bytes only. First-strong L/AL varies; source does not enforce a verified paragraph base. No native ordering, shaping, punctuation-placement, isolation or fit proof. General style-guide rendering claims are not mobile-runtime evidence.",
+  "source_behavior": "Source-only: remoteDeviceLabel passed to cannot_reach; trimmed nonblank unreachable_reason wins verbatim over fallback; no server reason translated.",
+  "A_comparison": {
+    "source": "/Users/damian/.local-operator/sessions/3ebdc948939c/scratchpad/bundles/ur/mobile.remote_sessions/move-pick-ur-3ebdc948-r1-a/report.md",
+    "reported_verdict": "PASS WITH MINORS; zero blocker/major",
+    "B_assessment": "Independent B agrees on seven-key semantics; A not used as proof of mechanical checks or own linguistic reasoning."
+  },
+  "source_hook_gap": {
+    "status": "OPEN",
+    "note": "Not resolved by this audit; paired gate and parent verification remain parent responsibility."
+  },
+  "current_report_verdict": {
+    "namespace": "PASS_WITH_MINORS — seven-key slice only",
+    "overall": "PASS_WITH_MINORS",
+    "unresolved_blocker_major_count": 0,
+    "minor_count": 3,
+    "keys_read": 7,
+    "paired_clearance_claimed": false
+  },
+  "not_run": [
+    "hooks",
+    "testsuite",
+    "compiler",
+    "build",
+    "install",
+    "push",
+    "browser",
+    "native rendering"
+  ],
+  "worktree_edited": false
+}

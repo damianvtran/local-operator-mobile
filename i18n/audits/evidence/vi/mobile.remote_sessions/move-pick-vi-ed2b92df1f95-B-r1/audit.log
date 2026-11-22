@@ -1,0 +1,116 @@
+Dependency-free checks executed via functions.eval (Python standard library only).
+Operations: Path.read_bytes/read_text; json.loads; hashlib.sha256; git rev-parse HEAD (read-only); regex source assertions; unicodedata.normalize; codepoint len.
+No tests/build/compiler/hooks/native/browser executed.
+
+frozen HEAD: PASS
+approved brief hash: PASS
+vi draft hash: PASS
+brief source hash src/i18n/catalogues/en/mobile.remote_sessions.json: PASS
+brief source hash src/i18n/catalogues/en/mobile.remote_sessions.context.json: PASS
+brief source hash src/features/sessions/move-sheet.tsx: PASS
+draft input hash /Users/damian/.local-operator/sessions/ca8720609fc7/scratchpad/translation-brief.json: PASS
+draft input hash /Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/i18n/catalogues/en/mobile.remote_sessions.json: PASS
+draft input hash /Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/i18n/catalogues/en/mobile.remote_sessions.context.json: PASS
+draft input hash /Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/features/sessions/move-sheet.tsx: PASS
+draft input hash /Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/i18n/catalogues/vi/mobile.remote_sessions.json: PASS
+draft input hash /Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/i18n/catalogues/vi/mobile.sidebar.json: PASS
+draft input hash /Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/i18n/catalogues/vi/mobile.computers.json: PASS
+draft input hash /Users/damian/local-operator/i18n/style-guides/vi.md: PASS
+draft input hash /Users/damian/local-operator/i18n/glossary.md: PASS
+seven exact scoped keys: PASS
+actor independence: PASS
+mobile.remote_sessions.move_pick.cannot_reach English equals approved brief: PASS
+mobile.remote_sessions.move_pick.cannot_reach context equals approved brief: PASS
+mobile.remote_sessions.move_pick.cannot_reach placeholder equality: PASS
+mobile.remote_sessions.move_pick.cannot_reach NFC: PASS
+mobile.remote_sessions.move_pick.cannot_reach no bidi controls: PASS
+mobile.remote_sessions.move_pick.cannot_reach one textual translation call: PASS
+mobile.remote_sessions.move_pick.destination_heading English equals approved brief: PASS
+mobile.remote_sessions.move_pick.destination_heading context equals approved brief: PASS
+mobile.remote_sessions.move_pick.destination_heading placeholder equality: PASS
+mobile.remote_sessions.move_pick.destination_heading NFC: PASS
+mobile.remote_sessions.move_pick.destination_heading no bidi controls: PASS
+mobile.remote_sessions.move_pick.destination_heading one textual translation call: PASS
+mobile.remote_sessions.move_pick.discovery_help English equals approved brief: PASS
+mobile.remote_sessions.move_pick.discovery_help context equals approved brief: PASS
+mobile.remote_sessions.move_pick.discovery_help placeholder equality: PASS
+mobile.remote_sessions.move_pick.discovery_help NFC: PASS
+mobile.remote_sessions.move_pick.discovery_help no bidi controls: PASS
+mobile.remote_sessions.move_pick.discovery_help one textual translation call: PASS
+mobile.remote_sessions.move_pick.no_answer English equals approved brief: PASS
+mobile.remote_sessions.move_pick.no_answer context equals approved brief: PASS
+mobile.remote_sessions.move_pick.no_answer placeholder equality: PASS
+mobile.remote_sessions.move_pick.no_answer NFC: PASS
+mobile.remote_sessions.move_pick.no_answer no bidi controls: PASS
+mobile.remote_sessions.move_pick.no_answer one textual translation call: PASS
+mobile.remote_sessions.move_pick.no_devices English equals approved brief: PASS
+mobile.remote_sessions.move_pick.no_devices context equals approved brief: PASS
+mobile.remote_sessions.move_pick.no_devices placeholder equality: PASS
+mobile.remote_sessions.move_pick.no_devices NFC: PASS
+mobile.remote_sessions.move_pick.no_devices no bidi controls: PASS
+mobile.remote_sessions.move_pick.no_devices one textual translation call: PASS
+mobile.remote_sessions.move_pick.on_this_computer English equals approved brief: PASS
+mobile.remote_sessions.move_pick.on_this_computer context equals approved brief: PASS
+mobile.remote_sessions.move_pick.on_this_computer placeholder equality: PASS
+mobile.remote_sessions.move_pick.on_this_computer NFC: PASS
+mobile.remote_sessions.move_pick.on_this_computer no bidi controls: PASS
+mobile.remote_sessions.move_pick.on_this_computer one textual translation call: PASS
+mobile.remote_sessions.move_pick.right_now English equals approved brief: PASS
+mobile.remote_sessions.move_pick.right_now context equals approved brief: PASS
+mobile.remote_sessions.move_pick.right_now placeholder equality: PASS
+mobile.remote_sessions.move_pick.right_now NFC: PASS
+mobile.remote_sessions.move_pick.right_now no bidi controls: PASS
+mobile.remote_sessions.move_pick.right_now one textual translation call: PASS
+opaque device exactly once: PASS
+six argument-free: PASS
+product name exactly once Latin: PASS
+server reason wins over fallback (source only): PASS
+opaque device source handoff: PASS
+copy redaction markers absent: PASS
+context metadata redaction markers absent: PASS
+
+Actual codepoint measurements:
+[
+  {
+    "key": "mobile.remote_sessions.move_pick.cannot_reach",
+    "en_codepoints": 20,
+    "vi_codepoints": 31,
+    "ratio": 1.55
+  },
+  {
+    "key": "mobile.remote_sessions.move_pick.destination_heading",
+    "en_codepoints": 15,
+    "vi_codepoints": 27,
+    "ratio": 1.8
+  },
+  {
+    "key": "mobile.remote_sessions.move_pick.discovery_help",
+    "en_codepoints": 178,
+    "vi_codepoints": 219,
+    "ratio": 1.23
+  },
+  {
+    "key": "mobile.remote_sessions.move_pick.no_answer",
+    "en_codepoints": 43,
+    "vi_codepoints": 51,
+    "ratio": 1.186
+  },
+  {
+    "key": "mobile.remote_sessions.move_pick.no_devices",
+    "en_codepoints": 29,
+    "vi_codepoints": 29,
+    "ratio": 1.0
+  },
+  {
+    "key": "mobile.remote_sessions.move_pick.on_this_computer",
+    "en_codepoints": 16,
+    "vi_codepoints": 17,
+    "ratio": 1.062
+  },
+  {
+    "key": "mobile.remote_sessions.move_pick.right_now",
+    "en_codepoints": 9,
+    "vi_codepoints": 8,
+    "ratio": 0.889
+  }
+]

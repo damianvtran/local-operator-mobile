@@ -1,4 +1,11 @@
 {
+	"mobile.remote_sessions.move_pick.right_now": "Actuellement",
+	"mobile.remote_sessions.move_pick.cannot_reach": "{device} est injoignable",
+	"mobile.remote_sessions.move_pick.no_answer": "Il n’a pas répondu à la demande de cet ordinateur.",
+	"mobile.remote_sessions.move_pick.on_this_computer": "Sur cet ordinateur",
+	"mobile.remote_sessions.move_pick.no_devices": "Aucun autre appareil n’est visible.",
+	"mobile.remote_sessions.move_pick.discovery_help": "Seuls les appareils associés aux sessions visibles sont proposés. Un appareil sans session visible ne peut pas encore être sélectionné. Ouvrez Local Operator sur l’autre ordinateur, puis tirez la liste des sessions vers le bas pour l’actualiser.",
+	"mobile.remote_sessions.move_pick.destination_heading": "Déplacer ou copier vers",
 	"mobile.remote_sessions.title": "Conversation distante",
 	"mobile.remote_sessions.loading": "Vérification de la prise en charge des sessions distantes…",
 	"mobile.remote_sessions.unsupported": "Cette action n’est pas encore disponible dans les conversations à distance. Utilisez-la sur l’ordinateur propriétaire.",

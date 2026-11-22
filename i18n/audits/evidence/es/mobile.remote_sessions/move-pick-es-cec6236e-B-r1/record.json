@@ -1,0 +1,351 @@
+{
+  "record_kind": "independent_translation_audit",
+  "audit_id": "move-pick-es-cec6236e-B-r1",
+  "slice": "move-pick-seven-new-keys",
+  "locale": "es",
+  "namespace": "mobile.remote_sessions",
+  "audit_date": "2026-11-22",
+  "round": 1,
+  "audit_pass": "B",
+  "key_count": 7,
+  "keys_audited": [
+    "mobile.remote_sessions.move_pick.cannot_reach",
+    "mobile.remote_sessions.move_pick.destination_heading",
+    "mobile.remote_sessions.move_pick.discovery_help",
+    "mobile.remote_sessions.move_pick.no_answer",
+    "mobile.remote_sessions.move_pick.no_devices",
+    "mobile.remote_sessions.move_pick.on_this_computer",
+    "mobile.remote_sessions.move_pick.right_now"
+  ],
+  "translator_session": "e9b2c7a56448",
+  "translator_actual_model": "openai/gpt-6.1-sol (draft/ledger attribution, not independently serving-verified)",
+  "A_auditor_identity": {
+    "session": "4ea33df6bad7",
+    "purpose": "independence only; no A reasoning used"
+  },
+  "auditor": {
+    "agent": "translation-auditor",
+    "session": "cec6236edd99",
+    "model": "openai/gpt-6.1-sol",
+    "actual_model_source": "Explicit conversation [model switch] receipt: provider failure quota; fallback from anthropic/claude-opus-5-5. No independent provider telemetry.",
+    "fallback_observed": true,
+    "independent_from_translator_session": true,
+    "independent_from_A_auditor": true,
+    "different_model_diversity": "not claimed/not required"
+  },
+  "draft": {
+    "path": "/Users/damian/.local-operator/sessions/e9b2c7a56448/scratchpad/draft-es.json",
+    "sha256": "1e929c06d54c13309587f3f6965165a30943bb381bde41333a636c768a550fb8",
+    "sha256_verified": true
+  },
+  "draft_sha256": "1e929c06d54c13309587f3f6965165a30943bb381bde41333a636c768a550fb8",
+  "brief": {
+    "path": "/Users/damian/.local-operator/sessions/ca8720609fc7/scratchpad/translation-brief.json",
+    "sha256": "5a72dfd72dc820b1fa8e73d78b97807581572334ee0fd25eb2eab346e759ebca",
+    "sha256_verified": true
+  },
+  "brief_sha256": "5a72dfd72dc820b1fa8e73d78b97807581572334ee0fd25eb2eab346e759ebca",
+  "source_commit": "9362cce8a631791b676b2d2c9eda90c43fc7e11c",
+  "source_branch": "feat/i18n-move-sheet-copy",
+  "read_route": "Ordinary approved absolute-path JSON/TSX/guidance reads plus dependency-free Python/git blob inspection. Nested context is explanatory, not routable. No public/keyed-reader receipt.",
+  "input_hashes": {
+    "brief": {
+      "path": "/Users/damian/.local-operator/sessions/ca8720609fc7/scratchpad/translation-brief.json",
+      "sha256": "5a72dfd72dc820b1fa8e73d78b97807581572334ee0fd25eb2eab346e759ebca"
+    },
+    "draft": {
+      "path": "/Users/damian/.local-operator/sessions/e9b2c7a56448/scratchpad/draft-es.json",
+      "sha256": "1e929c06d54c13309587f3f6965165a30943bb381bde41333a636c768a550fb8"
+    },
+    "ledger": {
+      "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/move-picker-locale-ledger.json",
+      "sha256": "21a195120ee4e0af308cd827b5f54f940345756f8ed2972ac9f90e8eafae59c7"
+    },
+    "english": {
+      "path": "/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/i18n/catalogues/en/mobile.remote_sessions.json",
+      "sha256": "436f8ec3bda274431146e7e7cb82b2add418f598bd2a7a6d7426f561a4312984"
+    },
+    "context": {
+      "path": "/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/i18n/catalogues/en/mobile.remote_sessions.context.json",
+      "sha256": "c703dff07b634d3d2d4b7c789e6a4a1eecf192a57618ea8e9e72197d325d08eb"
+    },
+    "usage": {
+      "path": "/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/features/sessions/move-sheet.tsx",
+      "sha256": "6a3f7126eb2fefc5ad0138a1731e3898d66d333ea8ca1b4ac99321da18d495aa"
+    },
+    "es_existing": {
+      "path": "/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/i18n/catalogues/es/mobile.remote_sessions.json",
+      "sha256": "465cb080574f5398ad7a4adb0907239986603c872e9d676bd84e578628c77881"
+    },
+    "es_sidebar": {
+      "path": "/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/i18n/catalogues/es/mobile.sidebar.json",
+      "sha256": "bfeb725cbb579462506ee448bcaf1b7ecb6ee6adad89bf980758d74e2dff150f"
+    },
+    "es_style_reference": {
+      "path": "/Users/damian/local-operator/i18n/style-guides/es.md",
+      "sha256": "77b9227213802d14c74d4298d6b346ad842bbf2a5ca3b9d46fc6144430d26c3e"
+    },
+    "glossary_reference": {
+      "path": "/Users/damian/local-operator/i18n/glossary.md",
+      "sha256": "0eb34437a8c3d6f564f278ef957a603b1d9f51bb07d5ddae5ea8f37deba962f8"
+    },
+    "core_guidance": {
+      "path": "/Users/damian/local-operator/AGENTS.md",
+      "sha256": "c8c66d86f7603dd4cfbcfc9beb887b369450004f3d9695a7d6e91e0fd58dba44"
+    },
+    "mobile_guidance": {
+      "path": "/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/AGENTS.md",
+      "sha256": "84021f7c9df58bfe01376669c187cbdf777c680d918f9f001201faeae2a14ad7"
+    },
+    "audit_script": {
+      "path": "/Users/damian/.local-operator/sessions/cec6236edd99/scratchpad/audit-es-B.py",
+      "sha256": "7492f2f4ddfd45cb7d259f83421bb66c31b67f84724e4e1877dc56f8db19ecd5"
+    }
+  },
+  "checks": {
+    "source_authoring_hashes_verified": true,
+    "source_blob_identity": true,
+    "brief_vs_en_mismatches": [],
+    "brief_vs_context_mismatches": [],
+    "keys_missing": [],
+    "keys_extra": [],
+    "placeholder_brace_sets": "PASS exactly one {device}, six empty",
+    "negative_controls": "PASS dropped/renamed placeholder, injected bidi",
+    "icu_scope": "N/A simple messages; no plural/select/number/date/time syntax",
+    "CLDR_plural": "N/A: no count-dependent messages; Spanish one/many/other not triggered",
+    "nfc": true,
+    "bidi_control_chars": 0,
+    "RTL_scope": "N/A Spanish; no native ordering claim",
+    "product_name": "Local Operator exact Latin once in discovery_help",
+    "pseudo": "synthetic +30% literal padding with {device} preserved; codepoints only, not render proof",
+    "repo_validator": "Not run: audit-only authorization"
+  },
+  "redaction_marker_hits": {
+    "pattern": "\\[REDACTED\\]|<REDACTED>|\\*\\*\\*REDACTED\\*\\*\\*|REDACTED_[A-Z_]+",
+    "copy_inputs": {
+      "english": 0,
+      "draft_values": 0,
+      "context": 0,
+      "selected_glossary": 0
+    },
+    "raw_metadata_inclusive": {
+      "draft": 0,
+      "brief": 0,
+      "ledger": 0
+    },
+    "limit": "Exact listed marker patterns only; not secret scanning or proof against all redaction forms. Metadata-inclusive scan is separate from audited copy."
+  },
+  "verdict": "PASS_WITH_MINOR_WIDTH_RISKS",
+  "linguistic_verdict": "PASS",
+  "namespace_verdicts": {
+    "mobile.remote_sessions (seven move_pick keys only)": {
+      "linguistic_verdict": "PASS",
+      "keys_read": 7,
+      "minor_width_risks": 3
+    }
+  },
+  "current_report_verdict": {
+    "status": "PASS_WITH_MINOR_WIDTH_RISKS",
+    "unresolved_blocker_major_count": 0,
+    "finding_ids": [
+      "ES-B1",
+      "ES-B2",
+      "ES-B3"
+    ],
+    "verdict_reason": "Seven messages accurate, idiomatic and glossary/register consistent; integrity checks pass. Three measured codepoint expansion risks deferred to rendered verification."
+  },
+  "pair_clearance": "PENDING_PARENT_CHECK_NOT_CLAIMED",
+  "findings": [
+    {
+      "id": "ES-B1",
+      "severity": "minor",
+      "category": "width risk only",
+      "key": "mobile.remote_sessions.move_pick.cannot_reach",
+      "current_text": "No se puede contactar con {device}",
+      "proposed_text": "No se puede contactar con {device}",
+      "recommendation": "Retain the accurate current wording; defer a narrow-phone rendered wrapping check. Do not open a minor-only translation round.",
+      "reason": "Measured 20→34 codepoints (1.700× English); wrapping is allowed but overflow/extra height remains unverified without a rendered frame.",
+      "disposition": "deferred — rendering excluded from this audit; no linguistic fix required"
+    },
+    {
+      "id": "ES-B2",
+      "severity": "minor",
+      "category": "width risk only",
+      "key": "mobile.remote_sessions.move_pick.no_devices",
+      "current_text": "No hay otros dispositivos visibles.",
+      "proposed_text": "No hay otros dispositivos visibles.",
+      "recommendation": "Retain the accurate current wording; defer a narrow-phone rendered wrapping check. Do not open a minor-only translation round.",
+      "reason": "Measured 29→35 codepoints (1.207× English); wrapping is allowed but overflow/extra height remains unverified without a rendered frame.",
+      "disposition": "deferred — rendering excluded from this audit; no linguistic fix required"
+    },
+    {
+      "id": "ES-B3",
+      "severity": "minor",
+      "category": "width risk only",
+      "key": "mobile.remote_sessions.move_pick.discovery_help",
+      "current_text": "Esta app solo ofrece los dispositivos que aparecen en tus sesiones. Si un dispositivo no tiene ninguna sesión visible, aún no puedes seleccionarlo. Abre Local Operator en el otro equipo y desliza la lista hacia abajo para actualizarla.",
+      "proposed_text": "Esta app solo ofrece los dispositivos que aparecen en tus sesiones. Si un dispositivo no tiene ninguna sesión visible, aún no puedes seleccionarlo. Abre Local Operator en el otro equipo y desliza la lista hacia abajo para actualizarla.",
+      "recommendation": "Retain the accurate current wording; defer a narrow-phone rendered wrapping check. Do not open a minor-only translation round.",
+      "reason": "Measured 178→235 codepoints (1.320× English); wrapping is allowed but overflow/extra height remains unverified without a rendered frame.",
+      "disposition": "deferred — rendering excluded from this audit; no linguistic fix required"
+    }
+  ],
+  "per_key": [
+    {
+      "key": "mobile.remote_sessions.move_pick.cannot_reach",
+      "english": "Can't reach {device}",
+      "current_text": "No se puede contactar con {device}",
+      "english_codepoints": 20,
+      "spanish_codepoints": 34,
+      "expansion_ratio": 1.7,
+      "placeholder_tokens": [
+        "{device}"
+      ],
+      "nfc": true,
+      "bidi_controls": 0,
+      "markup_tokens": [],
+      "synthetic_30pct_stress_codepoints": 44,
+      "linguistic_reasoning": "Natural impersonal connection status, not a claim that the phone is disconnected. Matches existing unreachable: No se puede contactar con el equipo propietario. The opaque name occupies the exact single {device} slot; no article or translation is imposed on it.",
+      "linguistic_verdict": "PASS",
+      "findings": [
+        "ES-B1"
+      ]
+    },
+    {
+      "key": "mobile.remote_sessions.move_pick.destination_heading",
+      "english": "Move or copy to",
+      "current_text": "Mover o copiar a",
+      "english_codepoints": 15,
+      "spanish_codepoints": 16,
+      "expansion_ratio": 1.067,
+      "placeholder_tokens": [],
+      "nfc": true,
+      "bidi_controls": 0,
+      "markup_tokens": [],
+      "synthetic_30pct_stress_codepoints": 23,
+      "linguistic_reasoning": "Mover and copiar retain the established verbs in row_long_press_hint. Infinitives are idiomatic for a destination heading, and a introduces the destination radio choices; no operation-start claim or final punctuation.",
+      "linguistic_verdict": "PASS",
+      "findings": []
+    },
+    {
+      "key": "mobile.remote_sessions.move_pick.discovery_help",
+      "english": "This app can offer the devices your sessions show. A device with no visible session cannot be picked yet — open Local Operator on the other computer and pull the list to refresh.",
+      "current_text": "Esta app solo ofrece los dispositivos que aparecen en tus sesiones. Si un dispositivo no tiene ninguna sesión visible, aún no puedes seleccionarlo. Abre Local Operator en el otro equipo y desliza la lista hacia abajo para actualizarla.",
+      "english_codepoints": 178,
+      "spanish_codepoints": 235,
+      "expansion_ratio": 1.32,
+      "placeholder_tokens": [],
+      "nfc": true,
+      "bidi_controls": 0,
+      "markup_tokens": [],
+      "synthetic_30pct_stress_codepoints": 308,
+      "linguistic_reasoning": "Idiomatic tú register in tus/puedes/Abre/desliza, consistent with Comprueba/Actualiza in the existing namespace. Solo makes the documented visibility limitation explicit, not an invented restriction. dispositivos names generic destinations; equipo means the other computer. No visible session remains the selection limitation; both opening Local Operator and pulling the list downward to refresh are present.",
+      "linguistic_verdict": "PASS",
+      "findings": [
+        "ES-B3"
+      ]
+    },
+    {
+      "key": "mobile.remote_sessions.move_pick.no_answer",
+      "english": "It did not answer when this computer asked.",
+      "current_text": "No respondió a la solicitud de este equipo.",
+      "english_codepoints": 43,
+      "spanish_codepoints": 43,
+      "expansion_ratio": 1.0,
+      "placeholder_tokens": [],
+      "nfc": true,
+      "bidi_controls": 0,
+      "markup_tokens": [],
+      "synthetic_30pct_stress_codepoints": 58,
+      "linguistic_reasoning": "Respondió a la solicitud is normal computing prose, not the literal calque preguntó. The omitted subject is the unreachable computer in the preceding status; de este equipo correctly identifies the requesting relay computer, not the phone. Source branch retains nonblank server reasons verbatim; this sentence is fallback only.",
+      "linguistic_verdict": "PASS",
+      "findings": []
+    },
+    {
+      "key": "mobile.remote_sessions.move_pick.no_devices",
+      "english": "No other devices are visible.",
+      "current_text": "No hay otros dispositivos visibles.",
+      "english_codepoints": 29,
+      "spanish_codepoints": 35,
+      "expansion_ratio": 1.207,
+      "placeholder_tokens": [],
+      "nfc": true,
+      "bidi_controls": 0,
+      "markup_tokens": [],
+      "synthetic_30pct_stress_codepoints": 48,
+      "linguistic_reasoning": "No hay otros dispositivos visibles is natural neutral Spanish and preserves visible, rather than asserting that other devices are offline or absent from the network. dispositivo matches the shared device glossary.",
+      "linguistic_verdict": "PASS",
+      "findings": [
+        "ES-B2"
+      ]
+    },
+    {
+      "key": "mobile.remote_sessions.move_pick.on_this_computer",
+      "english": "On this computer",
+      "current_text": "En este equipo",
+      "english_codepoints": 16,
+      "spanish_codepoints": 14,
+      "expansion_ratio": 0.875,
+      "placeholder_tokens": [],
+      "nfc": true,
+      "bidi_controls": 0,
+      "markup_tokens": [],
+      "synthetic_30pct_stress_codepoints": 21,
+      "linguistic_reasoning": "En este equipo is compact and idiomatic. equipo matches equipo propietario/conectado and este equipo in the existing remote-session namespace; it does not rename the relay computer as the phone. The unrelated existing sidebar máquina does not create new drift in this seven-key scope.",
+      "linguistic_verdict": "PASS",
+      "findings": []
+    },
+    {
+      "key": "mobile.remote_sessions.move_pick.right_now",
+      "english": "Right now",
+      "current_text": "Ahora mismo",
+      "english_codepoints": 9,
+      "spanish_codepoints": 11,
+      "expansion_ratio": 1.222,
+      "placeholder_tokens": [],
+      "nfc": true,
+      "bidi_controls": 0,
+      "markup_tokens": [],
+      "synthetic_30pct_stress_codepoints": 17,
+      "linguistic_reasoning": "Ahora mismo is a normal temporal section heading, not an instruction to act. Sentence case and lack of final punctuation match the source and surrounding compact labels.",
+      "linguistic_verdict": "PASS",
+      "findings": []
+    }
+  ],
+  "pseudo_examples": {
+    "mobile.remote_sessions.move_pick.cannot_reach": "[No se puede contactar con {device}~~~~~~~~]",
+    "mobile.remote_sessions.move_pick.destination_heading": "[Mover o copiar a~~~~~]",
+    "mobile.remote_sessions.move_pick.discovery_help": "[Esta app solo ofrece los dispositivos que aparecen en tus sesiones. Si un dispositivo no tiene ninguna sesión visible, aún no puedes seleccionarlo. Abre Local Operator en el otro equipo y desliza la lista hacia abajo para actualizarla.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]",
+    "mobile.remote_sessions.move_pick.no_answer": "[No respondió a la solicitud de este equipo.~~~~~~~~~~~~~]",
+    "mobile.remote_sessions.move_pick.no_devices": "[No hay otros dispositivos visibles.~~~~~~~~~~~]",
+    "mobile.remote_sessions.move_pick.on_this_computer": "[En este equipo~~~~~]",
+    "mobile.remote_sessions.move_pick.right_now": "[Ahora mismo~~~~]"
+  },
+  "separate_process_gap": {
+    "status": "OPEN",
+    "name": "SOURCEHOOKGAP",
+    "linguistic_failure": false,
+    "fixed_by_audit": false,
+    "source": "manager brief and ledger; no validation credit"
+  },
+  "human_native_speaker": "waived by supplied brief; independent LLM audit only",
+  "unverified": [
+    "Rendered/native layout and arbitrary-name directionality",
+    "Runtime formatter and late-language flow",
+    "Repository validator/tests/compiler/build",
+    "Pair clearance pending parent",
+    "SOURCEHOOKGAP remains OPEN"
+  ],
+  "artifacts": {
+    "report.md": {
+      "path": "/Users/damian/.local-operator/sessions/cec6236edd99/scratchpad/bundles/es/mobile.remote_sessions/move-pick-es-cec6236e-B-r1/report.md",
+      "sha256": "ce83a6baa87d028d01096799e23d937a62255d7644ea8e91415ff2dea69e4b60"
+    },
+    "audit.log": {
+      "path": "/Users/damian/.local-operator/sessions/cec6236edd99/scratchpad/bundles/es/mobile.remote_sessions/move-pick-es-cec6236e-B-r1/audit.log",
+      "sha256": "17495cd2eec632d5b513339f58402cb0f21c357e2c8a47c97d237436b3bd16b8"
+    }
+  },
+  "artifact_hash_policy": "record excludes its own recursive hash; report and audit.log hashes captured after complete writes",
+  "prior_command_failure": "Read-only discovery pipeline exit 1 because no matching glossary/style files in mobile i18n; core style/glossary read instead. All integrity checks exit 0."
+}

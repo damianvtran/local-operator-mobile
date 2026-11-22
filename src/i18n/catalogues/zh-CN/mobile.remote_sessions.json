@@ -1,4 +1,11 @@
 {
+	"mobile.remote_sessions.move_pick.right_now": "当前",
+	"mobile.remote_sessions.move_pick.cannot_reach": "无法连接{device}",
+	"mobile.remote_sessions.move_pick.no_answer": "此电脑发出请求后，远程电脑未响应。",
+	"mobile.remote_sessions.move_pick.on_this_computer": "在此电脑上",
+	"mobile.remote_sessions.move_pick.no_devices": "当前没有其他可见设备。",
+	"mobile.remote_sessions.move_pick.discovery_help": "本应用仅列出会话列表中可见的设备。没有可见会话的设备暂时无法选择。在另一台电脑上打开Local Operator，再下拉会话列表刷新。",
+	"mobile.remote_sessions.move_pick.destination_heading": "移动或复制到",
 	"mobile.remote_sessions.title": "远程对话",
 	"mobile.remote_sessions.loading": "正在检查此电脑是否支持远程会话…",
 	"mobile.remote_sessions.unsupported": "远程对话暂不支持此操作。请在所属电脑上使用。",

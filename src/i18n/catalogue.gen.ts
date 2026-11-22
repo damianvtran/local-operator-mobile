@@ -847,6 +847,13 @@ export type CatalogueKey =
 	| "mobile.remote_sessions.health_reconnecting"
 	| "mobile.remote_sessions.loading"
 	| "mobile.remote_sessions.media_changed"
+	| "mobile.remote_sessions.move_pick.cannot_reach"
+	| "mobile.remote_sessions.move_pick.destination_heading"
+	| "mobile.remote_sessions.move_pick.discovery_help"
+	| "mobile.remote_sessions.move_pick.no_answer"
+	| "mobile.remote_sessions.move_pick.no_devices"
+	| "mobile.remote_sessions.move_pick.on_this_computer"
+	| "mobile.remote_sessions.move_pick.right_now"
 	| "mobile.remote_sessions.owner_only"
 	| "mobile.remote_sessions.owner_unresolved"
 	| "mobile.remote_sessions.retained_only"
@@ -2188,6 +2195,12 @@ export type NoParamKey =
 	| "mobile.remote_sessions.gate_unsupported"
 	| "mobile.remote_sessions.loading"
 	| "mobile.remote_sessions.media_changed"
+	| "mobile.remote_sessions.move_pick.destination_heading"
+	| "mobile.remote_sessions.move_pick.discovery_help"
+	| "mobile.remote_sessions.move_pick.no_answer"
+	| "mobile.remote_sessions.move_pick.no_devices"
+	| "mobile.remote_sessions.move_pick.on_this_computer"
+	| "mobile.remote_sessions.move_pick.right_now"
 	| "mobile.remote_sessions.owner_unresolved"
 	| "mobile.remote_sessions.retained_only"
 	| "mobile.remote_sessions.row_long_press_hint"
@@ -3534,6 +3547,13 @@ export type MessageParams = {
 	"mobile.remote_sessions.health_reconnecting": { owner: string | number };
 	"mobile.remote_sessions.loading": NoParams;
 	"mobile.remote_sessions.media_changed": NoParams;
+	"mobile.remote_sessions.move_pick.cannot_reach": { device: string | number };
+	"mobile.remote_sessions.move_pick.destination_heading": NoParams;
+	"mobile.remote_sessions.move_pick.discovery_help": NoParams;
+	"mobile.remote_sessions.move_pick.no_answer": NoParams;
+	"mobile.remote_sessions.move_pick.no_devices": NoParams;
+	"mobile.remote_sessions.move_pick.on_this_computer": NoParams;
+	"mobile.remote_sessions.move_pick.right_now": NoParams;
 	"mobile.remote_sessions.owner_only": { owner: string | number };
 	"mobile.remote_sessions.owner_unresolved": NoParams;
 	"mobile.remote_sessions.retained_only": NoParams;
@@ -5022,6 +5042,13 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.remote_sessions.health_reconnecting": "This phone lost its connection and keeps trying. The conversation may still be running on {owner}; sending may fail until the connection is back.",
 	"mobile.remote_sessions.loading": "Checking this computer’s remote-session support…",
 	"mobile.remote_sessions.media_changed": "This media changed or access ended during download. Nothing was opened. Try again when the owner computer is available.",
+	"mobile.remote_sessions.move_pick.cannot_reach": "Can't reach {device}",
+	"mobile.remote_sessions.move_pick.destination_heading": "Move or copy to",
+	"mobile.remote_sessions.move_pick.discovery_help": "This app can offer the devices your sessions show. A device with no visible session cannot be picked yet — open Local Operator on the other computer and pull the list to refresh.",
+	"mobile.remote_sessions.move_pick.no_answer": "It did not answer when this computer asked.",
+	"mobile.remote_sessions.move_pick.no_devices": "No other devices are visible.",
+	"mobile.remote_sessions.move_pick.on_this_computer": "On this computer",
+	"mobile.remote_sessions.move_pick.right_now": "Right now",
 	"mobile.remote_sessions.owner_only": "Approvals, Stop, model changes and slash commands work only on {owner} for now.",
 	"mobile.remote_sessions.owner_unresolved": "The relay cannot confirm which computer owns this conversation. Refresh the sessions list and try again.",
 	"mobile.remote_sessions.retained_only": "Highlight previews need a newer Local Operator on the connected computer. Open them on the owner computer for now. Attached documents can still be saved.",
@@ -6495,6 +6522,13 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.remote_sessions.health_reconnecting": { role: "status", note: "Status sheet, remote conversation, phone reconnecting. Keep {owner} unchanged." },
 	"mobile.remote_sessions.loading": { role: "status", note: "Remote conversation support or per-operation relay failure; owner means the mesh computer that holds the conversation, not the phone. Never suggest signing out or recalling the session." },
 	"mobile.remote_sessions.media_changed": { role: "status", note: "Operation-local remote Highlight refusal. Keep transcript and attached documents usable; never suggest signing out." },
+	"mobile.remote_sessions.move_pick.cannot_reach": { role: "status", note: "Move/copy picker: calm, short status when the conversation's remote computer is unreachable, not a phone connection error. {device} is an arbitrary computer display name passed verbatim; preserve the exact placeholder, never translate its value. Allow wrapping on narrow phones. Urdu: natural RTL with a potentially mixed-direction name; do not add bidi controls or assume a Latin-only name." },
+	"mobile.remote_sessions.move_pick.destination_heading": { role: "heading", note: "Compact section heading above destination radio buttons. Preserve both Move and Copy; not an action button or a promise that an operation has started. Allow wrapping on narrow phones. No placeholders or final punctuation. Urdu: natural RTL prose without directional controls." },
+	"mobile.remote_sessions.move_pick.discovery_help": { role: "help", note: "Empty-state explanation: destinations come from visible sessions, not a complete network inventory. Preserve both instructions: open Local Operator on the other computer, then pull the session list to refresh. Local Operator is the product name, not a command; do not translate it. Multi-line phone body: preserve the visibility limitation, do not abbreviate away instructions. No placeholders. Urdu: natural RTL with the Latin product name; no inserted bidi controls." },
+	"mobile.remote_sessions.move_pick.no_answer": { role: "status", note: "Client fallback only when server unreachable_reason is absent or blank; server reasons are not translated here. 'It' is the remote computer; 'this computer' is the connected relay computer, never the phone. Calm body text may wrap. No placeholders. Urdu: natural RTL prose without directional controls." },
+	"mobile.remote_sessions.move_pick.no_devices": { role: "status", note: "Empty state: no other eligible destinations are visible in the session list. Do not claim devices are offline or absent from the network. Brief factual sentence, wrapping allowed on narrow phones. No placeholders. Urdu: natural RTL prose without directional controls." },
+	"mobile.remote_sessions.move_pick.on_this_computer": { role: "status", note: "Current location for a local conversation. 'This computer' is the connected relay computer, not the phone. Compact status, wrapping allowed; no placeholders or final punctuation. Remote locations reuse mobile.sidebar.row.on_device. Urdu: natural RTL prose without directional controls." },
+	"mobile.remote_sessions.move_pick.right_now": { role: "heading", note: "Move/copy picker: compact section label above the current computer, not a command to act immediately. Narrow phone sheet; no final punctuation or placeholders. Urdu: natural RTL prose without inserted directional controls." },
 	"mobile.remote_sessions.owner_only": { role: "status", note: "Shown instead of unavailable controls in a remote conversation (approve/deny, stop, model and effort pickers, typed slash commands). {owner} is the owner computer's display name; keep it unchanged. Not an error: a current limit of remote conversations." },
 	"mobile.remote_sessions.owner_unresolved": { role: "status", note: "Remote conversation support or per-operation relay failure; owner means the mesh computer that holds the conversation, not the phone. Never suggest signing out or recalling the session." },
 	"mobile.remote_sessions.retained_only": { role: "status", note: "Fallback only for a connected relay without remote Highlight reads: update that computer or open on the owner computer. Retained attached documents remain supported. Highlights is the feature label." },
@@ -7982,6 +8016,13 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.remote_sessions.health_reconnecting": "Este teléfono perdió la conexión y sigue intentándolo. Puede que la conversación siga ejecutándose en {owner}; los envíos pueden fallar hasta que vuelva la conexión.",
 		"mobile.remote_sessions.loading": "Comprobando la compatibilidad con sesiones remotas…",
 		"mobile.remote_sessions.media_changed": "Este contenido multimedia cambió o se perdió el acceso durante la descarga. No se abrió nada. Vuelve a intentarlo cuando el equipo propietario esté disponible.",
+		"mobile.remote_sessions.move_pick.cannot_reach": "No se puede contactar con {device}",
+		"mobile.remote_sessions.move_pick.destination_heading": "Mover o copiar a",
+		"mobile.remote_sessions.move_pick.discovery_help": "Esta app solo ofrece los dispositivos que aparecen en tus sesiones. Si un dispositivo no tiene ninguna sesión visible, aún no puedes seleccionarlo. Abre Local Operator en el otro equipo y desliza la lista hacia abajo para actualizarla.",
+		"mobile.remote_sessions.move_pick.no_answer": "No respondió a la solicitud de este equipo.",
+		"mobile.remote_sessions.move_pick.no_devices": "No hay otros dispositivos visibles.",
+		"mobile.remote_sessions.move_pick.on_this_computer": "En este equipo",
+		"mobile.remote_sessions.move_pick.right_now": "Ahora mismo",
 		"mobile.remote_sessions.owner_only": "Por ahora, las aprobaciones, Detener, los cambios de modelo y los comandos con barra solo funcionan en {owner}.",
 		"mobile.remote_sessions.owner_unresolved": "El relé no puede confirmar qué equipo es propietario de esta conversación. Actualiza la lista de sesiones y vuelve a intentarlo.",
 		"mobile.remote_sessions.retained_only": "Las vistas previas de Highlights necesitan una versión más reciente de Local Operator en el equipo conectado. Por ahora, ábrelas en el equipo propietario. Los documentos adjuntos se pueden seguir guardando.",
@@ -9453,6 +9494,13 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.remote_sessions.health_reconnecting": "Ce téléphone a perdu sa connexion et continue d’essayer. La conversation est peut-être toujours en cours sur {owner} ; l’envoi peut échouer jusqu’au retour de la connexion.",
 		"mobile.remote_sessions.loading": "Vérification de la prise en charge des sessions distantes…",
 		"mobile.remote_sessions.media_changed": "Ce média a changé ou l’accès a pris fin pendant le téléchargement. Rien n’a été ouvert. Réessayez lorsque l’ordinateur propriétaire sera disponible.",
+		"mobile.remote_sessions.move_pick.cannot_reach": "{device} est injoignable",
+		"mobile.remote_sessions.move_pick.destination_heading": "Déplacer ou copier vers",
+		"mobile.remote_sessions.move_pick.discovery_help": "Seuls les appareils associés aux sessions visibles sont proposés. Un appareil sans session visible ne peut pas encore être sélectionné. Ouvrez Local Operator sur l’autre ordinateur, puis tirez la liste des sessions vers le bas pour l’actualiser.",
+		"mobile.remote_sessions.move_pick.no_answer": "Il n’a pas répondu à la demande de cet ordinateur.",
+		"mobile.remote_sessions.move_pick.no_devices": "Aucun autre appareil n’est visible.",
+		"mobile.remote_sessions.move_pick.on_this_computer": "Sur cet ordinateur",
+		"mobile.remote_sessions.move_pick.right_now": "Actuellement",
 		"mobile.remote_sessions.owner_only": "Pour l’instant, les approbations, Arrêter, les changements de modèle et les commandes slash ne fonctionnent que sur {owner}.",
 		"mobile.remote_sessions.owner_unresolved": "Le relais ne peut pas confirmer quel ordinateur possède cette conversation. Actualisez la liste des sessions et réessayez.",
 		"mobile.remote_sessions.retained_only": "Les aperçus des Highlights nécessitent une version plus récente de Local Operator sur l’ordinateur connecté. Ouvrez-les sur l’ordinateur propriétaire en attendant. Les documents joints peuvent toujours être enregistrés.",
@@ -10924,6 +10972,13 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.remote_sessions.health_reconnecting": "इस फ़ोन का कनेक्शन टूट गया है और यह कोशिश कर रहा है। बातचीत शायद अब भी {owner} पर चल रही है; कनेक्शन लौटने तक भेजना विफल हो सकता है।",
 		"mobile.remote_sessions.loading": "इस कंप्यूटर पर दूरस्थ सत्रों का समर्थन जाँचा जा रहा है…",
 		"mobile.remote_sessions.media_changed": "डाउनलोड के दौरान यह मीडिया बदल गया या पहुँच समाप्त हो गई। कुछ भी नहीं खोला गया। स्वामी कंप्यूटर उपलब्ध होने पर फिर कोशिश करें।",
+		"mobile.remote_sessions.move_pick.cannot_reach": "{device} से संपर्क नहीं हो पा रहा",
+		"mobile.remote_sessions.move_pick.destination_heading": "ले जाने या कॉपी करने की जगह",
+		"mobile.remote_sessions.move_pick.discovery_help": "यह ऐप सिर्फ़ उन डिवाइसों को दिखा सकता है जिनके सत्र आपकी सूची में दिखते हैं। जिस डिवाइस का कोई सत्र नहीं दिखता, उसे अभी नहीं चुन सकते — दूसरे कंप्यूटर पर Local Operator खोलें, फिर सत्रों की सूची नीचे खींचकर रीफ़्रेश करें।",
+		"mobile.remote_sessions.move_pick.no_answer": "इस कंप्यूटर के अनुरोध पर उसने जवाब नहीं दिया।",
+		"mobile.remote_sessions.move_pick.no_devices": "कोई दूसरा डिवाइस नहीं दिख रहा।",
+		"mobile.remote_sessions.move_pick.on_this_computer": "इस कंप्यूटर पर",
+		"mobile.remote_sessions.move_pick.right_now": "अभी",
 		"mobile.remote_sessions.owner_only": "फ़िलहाल अनुमतियाँ, रोकें, मॉडल बदलना और स्लैश कमांड सिर्फ़ {owner} पर काम करते हैं।",
 		"mobile.remote_sessions.owner_unresolved": "रिले पुष्टि नहीं कर पा रहा कि यह बातचीत किस कंप्यूटर की है। सत्रों की सूची रीफ़्रेश करें और दोबारा कोशिश करें।",
 		"mobile.remote_sessions.retained_only": "Highlights का पूर्वावलोकन देखने के लिए जुड़े कंप्यूटर पर Local Operator का नया संस्करण चाहिए। फ़िलहाल इन्हें स्वामी कंप्यूटर पर खोलें। संलग्न दस्तावेज़ अब भी सहेजे जा सकते हैं।",
@@ -12395,6 +12450,13 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.remote_sessions.health_reconnecting": "Телефон потерял соединение и продолжает попытки. Разговор, возможно, всё ещё идёт на {owner}; отправка может не работать, пока соединение не восстановится.",
 		"mobile.remote_sessions.loading": "Проверяем поддержку удалённых сеансов…",
 		"mobile.remote_sessions.media_changed": "Во время загрузки медиафайл изменился или доступ к нему прекратился. Ничего не было открыто. Повторите попытку, когда компьютер-владелец будет доступен.",
+		"mobile.remote_sessions.move_pick.cannot_reach": "{device}: нет связи",
+		"mobile.remote_sessions.move_pick.destination_heading": "Куда переместить или скопировать",
+		"mobile.remote_sessions.move_pick.discovery_help": "Приложение предлагает устройства, сессии которых видны в списке. Устройство без видимой сессии пока нельзя выбрать — откройте Local Operator на другом компьютере и потяните список сессий вниз, чтобы обновить его.",
+		"mobile.remote_sessions.move_pick.no_answer": "Удалённый компьютер не ответил на запрос этого компьютера.",
+		"mobile.remote_sessions.move_pick.no_devices": "Другие устройства не видны.",
+		"mobile.remote_sessions.move_pick.on_this_computer": "На этом компьютере",
+		"mobile.remote_sessions.move_pick.right_now": "Сейчас",
 		"mobile.remote_sessions.owner_only": "Пока что одобрения, «Стоп», смена модели и слэш-команды работают только на {owner}.",
 		"mobile.remote_sessions.owner_unresolved": "Ретранслятор не может подтвердить, какому компьютеру принадлежит разговор. Обновите список сеансов и повторите попытку.",
 		"mobile.remote_sessions.retained_only": "Для предпросмотра Highlights нужна более новая версия Local Operator на подключённом компьютере. Пока открывайте их на компьютере-владельце. Прикреплённые документы по-прежнему можно сохранять.",
@@ -13866,6 +13928,13 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.remote_sessions.health_reconnecting": "اس فون کا کنکشن ٹوٹ گیا ہے اور یہ کوشش کر رہا ہے۔ گفتگو شاید اب بھی {owner} پر چل رہی ہے؛ کنکشن واپس آنے تک بھیجنا ناکام ہو سکتا ہے۔",
 		"mobile.remote_sessions.loading": "اس کمپیوٹر پر دور دراز سیشن کی معاونت جانچی جا رہی ہے…",
 		"mobile.remote_sessions.media_changed": "ڈاؤن لوڈ کے دوران یہ میڈیا بدل گیا یا رسائی ختم ہو گئی۔ کچھ بھی نہیں کھولا گیا۔ مالک کمپیوٹر دستیاب ہونے پر دوبارہ کوشش کریں۔",
+		"mobile.remote_sessions.move_pick.cannot_reach": "{device} سے رابطہ نہیں ہو رہا",
+		"mobile.remote_sessions.move_pick.destination_heading": "منتقل یا کاپی کرنے کی جگہ",
+		"mobile.remote_sessions.move_pick.discovery_help": "یہ ایپ صرف وہ ڈیوائسز دکھا سکتی ہے جن کے سیشن فہرست میں نظر آتے ہیں۔ جس ڈیوائس کا کوئی سیشن نظر نہیں آ رہا، اسے ابھی منتخب نہیں کیا جا سکتا — دوسرے کمپیوٹر پر Local Operator کھولیں، پھر سیشن کی فہرست کو نیچے کھینچ کر تازہ کریں۔",
+		"mobile.remote_sessions.move_pick.no_answer": "جب اس کمپیوٹر نے رابطہ کیا تو اس نے جواب نہیں دیا۔",
+		"mobile.remote_sessions.move_pick.no_devices": "کوئی اور ڈیوائس نظر نہیں آ رہی۔",
+		"mobile.remote_sessions.move_pick.on_this_computer": "اس کمپیوٹر پر",
+		"mobile.remote_sessions.move_pick.right_now": "اس وقت",
 		"mobile.remote_sessions.owner_only": "فی الحال منظوریاں، روکیں، ماڈل کی تبدیلی اور سلیش کمانڈز صرف {owner} پر کام کرتی ہیں۔",
 		"mobile.remote_sessions.owner_unresolved": "ریلے تصدیق نہیں کر پا رہا کہ یہ گفتگو کس کمپیوٹر کی ہے۔ سیشن کی فہرست تازہ کریں اور دوبارہ کوشش کریں۔",
 		"mobile.remote_sessions.retained_only": "Highlights کے پیش منظر کے لیے منسلک کمپیوٹر پر Local Operator کا نیا ورژن درکار ہے۔ فی الحال انہیں مالک کمپیوٹر پر کھولیں۔ منسلک دستاویزات اب بھی محفوظ کی جا سکتی ہیں۔",
@@ -15337,6 +15406,13 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.remote_sessions.health_reconnecting": "Điện thoại này mất kết nối và đang thử lại. Cuộc trò chuyện có thể vẫn đang chạy trên {owner}; việc gửi có thể thất bại cho đến khi kết nối trở lại.",
 		"mobile.remote_sessions.loading": "Đang kiểm tra khả năng hỗ trợ phiên từ xa…",
 		"mobile.remote_sessions.media_changed": "Nội dung đa phương tiện đã thay đổi hoặc quyền truy cập đã kết thúc khi đang tải xuống. Chưa mở nội dung nào. Hãy thử lại khi máy tính sở hữu cuộc trò chuyện sẵn sàng.",
+		"mobile.remote_sessions.move_pick.cannot_reach": "Không thể liên lạc với {device}",
+		"mobile.remote_sessions.move_pick.destination_heading": "Di chuyển hoặc sao chép tới",
+		"mobile.remote_sessions.move_pick.discovery_help": "Ứng dụng chỉ cho chọn những thiết bị có cuộc trò chuyện đang hiển thị. Chưa thể chọn thiết bị không có cuộc trò chuyện nào hiển thị — hãy mở Local Operator trên máy tính kia rồi kéo danh sách cuộc trò chuyện để làm mới.",
+		"mobile.remote_sessions.move_pick.no_answer": "Máy tính đó không phản hồi yêu cầu từ máy tính này.",
+		"mobile.remote_sessions.move_pick.no_devices": "Không thấy thiết bị nào khác.",
+		"mobile.remote_sessions.move_pick.on_this_computer": "Trên máy tính này",
+		"mobile.remote_sessions.move_pick.right_now": "Hiện tại",
 		"mobile.remote_sessions.owner_only": "Hiện tại, phê duyệt, Dừng, đổi mô hình và lệnh gạch chéo chỉ hoạt động trên {owner}.",
 		"mobile.remote_sessions.owner_unresolved": "Máy chuyển tiếp chưa thể xác nhận máy tính nào sở hữu cuộc trò chuyện này. Làm mới danh sách phiên rồi thử lại.",
 		"mobile.remote_sessions.retained_only": "Để xem trước Highlights, máy tính đang kết nối cần có phiên bản Local Operator mới hơn. Tạm thời hãy mở chúng trên máy tính sở hữu cuộc trò chuyện. Bạn vẫn có thể lưu tài liệu đính kèm.",
@@ -16808,6 +16884,13 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.remote_sessions.health_reconnecting": "此手机已断开连接，正在重试。对话可能仍在 {owner} 上运行；连接恢复前发送可能会失败。",
 		"mobile.remote_sessions.loading": "正在检查此电脑是否支持远程会话…",
 		"mobile.remote_sessions.media_changed": "下载期间，此媒体已更改或访问权限已失效。未打开任何内容。请在所属电脑可用时重试。",
+		"mobile.remote_sessions.move_pick.cannot_reach": "无法连接{device}",
+		"mobile.remote_sessions.move_pick.destination_heading": "移动或复制到",
+		"mobile.remote_sessions.move_pick.discovery_help": "本应用仅列出会话列表中可见的设备。没有可见会话的设备暂时无法选择。在另一台电脑上打开Local Operator，再下拉会话列表刷新。",
+		"mobile.remote_sessions.move_pick.no_answer": "此电脑发出请求后，远程电脑未响应。",
+		"mobile.remote_sessions.move_pick.no_devices": "当前没有其他可见设备。",
+		"mobile.remote_sessions.move_pick.on_this_computer": "在此电脑上",
+		"mobile.remote_sessions.move_pick.right_now": "当前",
 		"mobile.remote_sessions.owner_only": "目前，批准、停止、更换模型和斜杠命令仅能在 {owner} 上使用。",
 		"mobile.remote_sessions.owner_unresolved": "中继无法确认此对话属于哪台电脑。请刷新会话列表后重试。",
 		"mobile.remote_sessions.retained_only": "预览 Highlights 需要所连接的电脑安装更新版本的 Local Operator。暂时请在所属电脑上打开。附件文档仍可保存。",
