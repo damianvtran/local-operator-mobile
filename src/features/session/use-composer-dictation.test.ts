@@ -22,6 +22,7 @@ import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Capabilities, PromptImage } from "@/contracts";
+import { sendFromHome } from "@/features/home/home-dictation-send";
 import { outbox } from "@/features/session/outbox";
 import { clearPendingEchoes } from "@/features/session/pending-echo";
 import {
@@ -288,6 +289,7 @@ describe("a resting mic line in the session composer (issue #323)", () => {
 });
 
 let homeVoice: DictationState;
+let setHomeDraft: (text: string) => void;
 let homeDraft = "";
 function HomeHost({
 	client,
@@ -298,6 +300,7 @@ function HomeHost({
 }) {
 	const [draft, setDraft] = useState("");
 	homeDraft = draft;
+	setHomeDraft = setDraft;
 	homeVoice = useHomeDictation({
 		endpoints: client,
 		scopeKey,
@@ -656,5 +659,145 @@ describe("manual recovery through the real composer and dictation hooks", () => 
 		});
 		expect(mic.discard).toHaveBeenCalledExactlyOnceWith(TAKE);
 		expect(c().voice.phase).toBe("idle");
+	});
+});
+
+describe("round 3 take-bound actions", () => {
+	it("R2 cannot replay A's Retry against failed replacement B", async () => {
+		const h = fakeClient();
+		h.transcribe.status = 502;
+		installTake();
+		await mount(h.client);
+		await finishTake();
+		const retryA = c().voice.retry;
+		await act(async () => c().voice.cancel());
+		const replacement = { ...TAKE, uri: "file:///synthetic/replacement.m4a" };
+		installTake(async () => replacement);
+		await finishTake();
+		expect(c().voice.phase).toBe("failed");
+		await act(async () => retryA());
+		await settle();
+		expect(h.uploads).toHaveLength(2);
+		expect(c().voice.phase).toBe("failed");
+		// The current B control remains usable; stale-action protection is not a retry ban.
+		await act(async () => c().voice.retry());
+		await settle();
+		expect(h.uploads).toHaveLength(3);
+	});
+
+	for (const replacementPhase of ["recording", "failed"] as const) {
+		it(`R3 delayed Home admission preserves replacement B ${replacementPhase}`, async () => {
+			const h = fakeClient();
+			h.transcribe.status = 502;
+			installTake();
+			await mountHome(h.client, "same-editor");
+			await act(async () => homeVoice.press());
+			await settle();
+			await act(async () => homeVoice.press());
+			await settle();
+			expect(homeVoice.phase).toBe("failed");
+			const save = deferred<void>();
+			let admission: Promise<void> | undefined;
+			sendFromHome(homeVoice, (accepted) => {
+				admission = save.promise.then(() => accepted?.());
+			});
+			await act(async () => homeVoice.cancel());
+			const replacement = { ...TAKE, uri: "file:///synthetic/home-B.m4a" };
+			const cancelB = vi.fn(async () => undefined);
+			mic.start = () => ({
+				stop: async () => replacement,
+				cancel: cancelB,
+				level: () => null,
+			});
+			await act(async () => homeVoice.press());
+			await settle();
+			if (replacementPhase === "failed") {
+				await act(async () => homeVoice.press());
+				await settle();
+			}
+			expect(homeVoice.phase).toBe(replacementPhase);
+			await act(async () => {
+				save.resolve();
+				await admission;
+			});
+			await settle();
+			expect(homeVoice.phase).toBe(replacementPhase);
+			expect(cancelB).not.toHaveBeenCalled();
+			expect(mic.discard).not.toHaveBeenCalledWith(replacement);
+		});
+	}
+
+	for (const accepted of [false, true]) {
+		it(`R3 unchanged failed Home take is ${accepted ? "discarded on acceptance" : "retained on refusal"}`, async () => {
+			const h = fakeClient();
+			h.transcribe.status = 502;
+			installTake();
+			await mountHome(h.client, "admission-control");
+			await act(async () => homeVoice.press());
+			await settle();
+			await act(async () => homeVoice.press());
+			await settle();
+			expect(homeVoice.phase).toBe("failed");
+			let admit: (() => void) | undefined;
+			sendFromHome(homeVoice, (action) => {
+				admit = action;
+			});
+			expect(homeVoice.phase).toBe("failed");
+			expect(mic.discard).not.toHaveBeenCalled();
+			if (accepted) await act(async () => admit?.());
+			await settle();
+			expect(homeVoice.phase).toBe(accepted ? "idle" : "failed");
+			expect(mic.discard).toHaveBeenCalledTimes(accepted ? 1 : 0);
+		});
+	}
+
+	it("R3 delayed admission cannot cancel a take in a replacement editor", async () => {
+		const h = fakeClient();
+		h.transcribe.status = 502;
+		installTake();
+		await mountHome(h.client, "old-editor");
+		await act(async () => homeVoice.press());
+		await settle();
+		await act(async () => homeVoice.press());
+		await settle();
+		let admit: (() => void) | undefined;
+		sendFromHome(homeVoice, (action) => {
+			admit = action;
+		});
+		await mountHome(h.client, "new-editor");
+		await act(async () => homeVoice.press());
+		await settle();
+		expect(homeVoice.phase).toBe("recording");
+		await act(async () => admit?.());
+		expect(homeVoice.phase).toBe("recording");
+	});
+
+	it("R4 waits for delayed first Home attachment before offering capture", async () => {
+		const h = fakeClient();
+		const start = installTake();
+		await mountHome(h.client, "");
+		await act(async () => setHomeDraft("typed before attachment"));
+		expect(homeVoice.micSetup).toBe(false);
+		expect(homeVoice.micVisible).toBe(false);
+		const fallbackPress = homeVoice.press;
+		await act(async () => fallbackPress());
+		await settle();
+		expect(start).not.toHaveBeenCalled();
+		expect(homeVoice.phase).toBe("idle");
+		const attachment = deferred<string>();
+		const attached = attachment.promise.then((scope) =>
+			mountHome(h.client, scope),
+		);
+		attachment.resolve("first-persisted-editor");
+		await attached;
+		expect(homeDraft).toBe("typed before attachment");
+		expect(homeVoice.micVisible).toBe(true);
+		await act(async () => fallbackPress());
+		await settle();
+		expect(start).not.toHaveBeenCalled();
+		await act(async () => homeVoice.press());
+		await settle();
+		expect(homeVoice.phase).toBe("recording");
+		expect(start).toHaveBeenCalledTimes(1);
 	});
 });

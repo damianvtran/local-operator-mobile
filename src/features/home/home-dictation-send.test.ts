@@ -27,6 +27,15 @@ const voiceAt = (start: DictationSnapshot) => {
 			return state.phase;
 		},
 		line: () => dictationStatusLine(state),
+		captureForSend: () => {
+			const captured = state;
+			return () => {
+				if (state !== captured) return;
+				const idle = state.phase === "idle";
+				calls.push(idle ? "clearOutcome" : "cancelForSend");
+				state = reduceDictation(state, { type: idle ? "edit" : "send" }).state;
+			};
+		},
 		calls,
 		cancelForSend: () => {
 			calls.push("cancelForSend");

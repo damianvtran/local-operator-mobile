@@ -18,22 +18,22 @@
 export const sendFromHome = (
 	voice: {
 		readonly phase: string;
-		cancelForSend: () => void;
-		clearOutcome: () => void;
+		captureForSend: () => () => void;
 	},
 	send: (onAccepted?: () => void) => void,
 ): void => {
 	/* A settled failed take belongs to the draft until admission: a refused
 	 * typed send must not destroy the reader's only recoverable audio. Live
 	 * capture still stops at the tap, before admission, as before. */
+	const accept = voice.captureForSend();
 	if (voice.phase === "failed") {
-		send(voice.cancelForSend);
+		send(accept);
 		return;
 	}
 	if (voice.phase !== "idle") {
-		voice.cancelForSend();
+		accept();
 		send();
 		return;
 	}
-	send(voice.clearOutcome);
+	send(accept);
 };

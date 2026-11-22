@@ -112,6 +112,8 @@ export interface DictationState {
 	cancel: () => void;
 	/** A send/steer took the composer: abort, discard, and SAY SO (U2). */
 	cancelForSend: () => void;
+	/** Freeze the editor/take at the send tap before durable admission awaits. */
+	captureForSend: () => () => void;
 	/** The reader edited the draft: end a resting line, leave a live take alone
 	 *  (issue #323). Called from the FIELD's change handler only — never from the
 	 *  transcript append, whose `added` line it would hide. */
@@ -432,11 +434,16 @@ export const useDictation = (input: DictationInput): DictationState => {
 
 	/* Retry is a separate intent from the mic: removed controls can still have
 	 * queued callbacks, which must not fall through to starting another take. */
+	/* A removed Retry button must not acquire a replacement take in the same
+	 * editor. Bind to the retained slot, not its URI (adapters can reuse URIs). */
+	const retryTake = snapshot.phase === "failed" ? retainedRef.current : null;
 	const retry = useCallback(() => {
 		if (
 			!isCurrent() ||
 			snapshotRef.current.phase !== "failed" ||
-			retainedRef.current?.identity !== identity
+			retryTake === null ||
+			retainedRef.current !== retryTake ||
+			retryTake.identity !== identity
 		)
 			return;
 		/* Transition before the first await so repeated taps cannot upload twice. */
@@ -444,7 +451,7 @@ export const useDictation = (input: DictationInput): DictationState => {
 		onErrorRef.current("");
 		if (effects.includes("retry-transcription"))
 			void transcribeRetained(++runIdRef.current);
-	}, [dispatch, identity, isCurrent, transcribeRetained]);
+	}, [dispatch, identity, isCurrent, retryTake, transcribeRetained]);
 
 	const press = useCallback(() => {
 		if (!isCurrent()) return;
@@ -515,6 +522,26 @@ export const useDictation = (input: DictationInput): DictationState => {
 		discardLive();
 	}, [discardLive, dispatch]);
 
+	/* Admission may wait on storage while the editor stays interactive. Capture
+	 * at the TAP, not at render/admission: neither a new editor nor a new take
+	 * can inherit the accepted send's destructive side effects. The run epoch
+	 * also distinguishes replacements before they have a retained file. */
+	const captureForSend = useCallback(() => {
+		const run = runIdRef.current;
+		const take = retainedRef.current;
+		const idle = snapshotRef.current.phase === "idle";
+		return () => {
+			if (
+				!isCurrent() ||
+				runIdRef.current !== run ||
+				retainedRef.current !== take
+			)
+				return;
+			if (idle) dispatch({ type: "edit" });
+			else cancelForSend();
+		};
+	}, [cancelForSend, dispatch, isCurrent]);
+
 	/* No effects to perform: `edit` never touches a live take. */
 	const clearOutcome = useCallback(() => {
 		dispatch({ type: "edit" });
@@ -557,6 +584,7 @@ export const useDictation = (input: DictationInput): DictationState => {
 		retry,
 		cancel,
 		cancelForSend,
+		captureForSend,
 		clearOutcome,
 	};
 };
@@ -595,7 +623,10 @@ export const useHomeDictation = (input: {
 	return useDictation({
 		endpoints: input.endpoints,
 		scopeKey: input.scopeKey,
-		capabilities: input.capabilities,
+		/* The fallback text editor has no durable destination yet. Its first
+		 * attachment carries typing forward but changes scope; do not offer a
+		 * take that identity cleanup would silently discard at that boundary. */
+		capabilities: input.scopeKey === "" ? null : input.capabilities,
 		/* The home's send is a start that hands off to the session; it never
 		 * holds the composer "sending", and the machine ignores this anyway. */
 		sending: false,
