@@ -33,7 +33,8 @@ import { StreamBlock } from "@/features/session/components/stream-fade";
 
 it("uses the native non-interaction driver once and finishes immediately on settle", async () => {
 	const dom: DomShim = installDomShim();
-	const root = createRoot(dom.container as Element);
+	const container = dom.container as Element;
+	const root = createRoot(container);
 	const birth = {};
 	const draw = async (
 		created: object | null,
@@ -57,13 +58,13 @@ it("uses the native non-interaction driver once and finishes immediately on sett
 			}),
 		);
 		expect(driver.start).toHaveBeenCalledTimes(1);
-		const host = dom.container.firstChild;
+		const host = container.firstChild;
 		await draw(null, birth, "Appended text");
 		expect(driver.start).toHaveBeenCalledTimes(1);
 		await draw(null, null, "Final text");
 		expect(driver.stop).toHaveBeenCalledTimes(1);
 		expect(driver.setValue).toHaveBeenCalledExactlyOnceWith(1);
-		expect(dom.container.firstChild).toBe(host);
+		expect(container.firstChild).toBe(host);
 		await draw(null, {}, "Reconnect snapshot");
 		expect(driver.start).toHaveBeenCalledTimes(1);
 	} finally {
