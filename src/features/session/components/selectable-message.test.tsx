@@ -45,7 +45,33 @@ vi.mock("react-native", async () => {
 				return host.os;
 			},
 		},
-		View: record(null, "div"),
+		/* The iOS body wrapper reads its hold from raw touch events (`@/ui/touch-press`,
+		 *  no `Pressable`: a responder claim stops a table inside from scrolling).
+		 *  A View carrying `onTouchMove` is that wrapper; it is recorded in
+		 *  `pressables` with an `onLongPress` that really holds a finger down for
+		 *  the delay on the fake clock, so the tests below drive the real path. */
+		View: ({
+			children,
+			...props
+		}: {
+			children?: ReactNode;
+			onTouchStart?: (event: unknown) => void;
+			onTouchMove?: unknown;
+			onTouchEnd?: () => void;
+		}) => {
+			if (props.onTouchMove !== undefined) {
+				host.pressables.push({
+					...props,
+					onLongPress: () => {
+						props.onTouchStart?.({
+							nativeEvent: { pageX: 5, pageY: 5, touches: [{}] },
+						});
+						vi.advanceTimersByTime(600);
+					},
+				});
+			}
+			return createElement("div", null, children);
+		},
 		Text: record(host.texts, "span"),
 		// React 19 hands `ref` to a function component as a prop; the handle
 		// records select-all the way RN's `TextInput.setSelection` would send it.
@@ -122,11 +148,13 @@ beforeEach(() => {
 	host.inputs.length = 0;
 	host.texts.length = 0;
 	host.setSelections.length = 0;
+	vi.useFakeTimers();
 	dom = installDomShim();
 	root = createRoot(dom.container as Element);
 });
 afterEach(async () => {
 	await act(async () => root.unmount());
+	vi.useRealTimers();
 	dom.dispose();
 });
 

@@ -96,7 +96,7 @@ describe("D11: the drawer footer is two rows and shared across Agents and Team B
 			"<WorkspaceDrawerProvider bridgeAdapter={useTeamBridgeDrawerAdapter()}>",
 		);
 		expect(root).toContain(
-			"<BridgeWorkspaceDrawer> <Stack screenOptions={{ headerShown: false }} /> </BridgeWorkspaceDrawer>",
+			"<BridgeWorkspaceDrawer> <Stack screenOptions={STACK_SCREEN_OPTIONS} /> </BridgeWorkspaceDrawer>",
 		);
 	});
 
