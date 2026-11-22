@@ -1012,7 +1012,12 @@ const WIRE_ROUTES: {
 				command_id: COMMAND_UUID,
 				text: "hello",
 			}),
-		bodyKeys: ["op", "command_id", "text"],
+		expectedBody: {
+			op: "prompt",
+			command_id: COMMAND_UUID,
+			text: "hello",
+			inline_ui: true,
+		},
 	},
 	{
 		/* No success capture exists for the subagent routes; the recorded refusal is

@@ -107,6 +107,10 @@ import {
 	MEDIA_ARTIFACT_TOOLS,
 } from "@/features/session/fold-model";
 import {
+	type DisplayTranscriptEntry,
+	LIVE_INLINE_UI,
+} from "@/features/session/live-inline-ui";
+import {
 	bridgeReceiptLabel,
 	canonicalRowKey,
 	hubLabel,
@@ -1628,9 +1632,10 @@ export function groupPhrases(group: QuietGroup): string[] {
  * the streaming anchor, find and the offset table keep addressing it; text
  * arriving on a streaming row turns it back into ordinary prose.
  */
-export function isBlankAssistantEntry(entry: TranscriptEntry): boolean {
+export function isBlankAssistantEntry(entry: DisplayTranscriptEntry): boolean {
 	return (
 		entry.kind === "assistant" &&
+		entry[LIVE_INLINE_UI] === undefined &&
 		entry.text.trim() === "" &&
 		entry.images.length === 0 &&
 		(entry.videos?.length ?? 0) === 0 &&

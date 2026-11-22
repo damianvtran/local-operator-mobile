@@ -143,6 +143,9 @@ vi.mock("@/features/session/table-scroll-hook", () => ({
 import { Markdown } from "./markdown";
 import { GroupInsetContext } from "./trace-rail";
 
+const INLINE_UI_ORDER =
+	/Before 😀[\s\S]*Daily counts[\s\S]*Monday[\s\S]*17[\s\S]*After the grid/;
+
 describe("rendered assistant markdown dispatch", () => {
 	beforeEach(() => {
 		host.links = [];
@@ -150,6 +153,35 @@ describe("rendered assistant markdown dispatch", () => {
 		host.pressables = [];
 		host.open.mockClear();
 	});
+	it("places typed blocks between exact prose and never interprets a literal lop-ui fence", () => {
+		const legacy = '```lop-ui\n{"title":"Source code"}\n```';
+		const unnegotiated = renderToStaticMarkup(
+			createElement(Markdown, { text: legacy }),
+		);
+		expect(unnegotiated).toContain("lop-ui");
+		expect(unnegotiated).toContain("&quot;title&quot;:&quot;Source code&quot;");
+		const markup = renderToStaticMarkup(
+			createElement(Markdown, {
+				text: legacy,
+				assistantParts: [
+					{ kind: "markdown", text: "Before 😀\n" },
+					{
+						kind: "ui",
+						value: {
+							type: "spreadsheet",
+							title: "Daily counts",
+							columns: ["Day", "Count"],
+							rows: [["Monday", 17]],
+						},
+					},
+					{ kind: "markdown", text: "\nAfter the grid" },
+				],
+			}),
+		);
+		expect(markup).toMatch(INLINE_UI_ORDER);
+		expect(markup).not.toContain("Source code");
+	});
+
 	it.each([
 		"[Reuters](https://www.reuters.com/world/)",
 		"- **[Reuters](https://www.reuters.com/world/)**",

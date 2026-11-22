@@ -60,6 +60,21 @@ describe("warm cache", () => {
 		expect(got).toEqual(want);
 	});
 
+	it("does not copy negotiated presentation into the warm snapshot", async () => {
+		const store = memoryWarmStore();
+		const cache = createWarmCache(store, { warn: quiet() });
+		const frame = projection();
+		expect(
+			await cache.saveSession(A, "s1", {
+				...frame,
+				inline_ui: { version: 1, messages: { a: { text: "Sidecar basis" } } },
+			}),
+		).toBe(true);
+		const back = (await cache.loadSession(A, "s1"))?.projection;
+		expect(back?.transcript).toEqual(frame.transcript);
+		expect(back?.inline_ui).toBeUndefined();
+	});
+
 	it("round-trips the session list", async () => {
 		const cache = createWarmCache(memoryWarmStore(), { warn: quiet() });
 		const frame = listFrame();

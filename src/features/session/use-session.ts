@@ -304,7 +304,7 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 			(before) => {
 				if (!endpoints || !sameProjectionOwner(owner, currentIdentity.current))
 					return Promise.reject(new Error("History is unavailable."));
-				return endpoints.history(sessionId, { before });
+				return endpoints.history(sessionId, { before, inlineUi: true });
 			},
 			() => historyChanged((revision) => revision + 1),
 			// A hole left by a background, a network change or a stream reconnect
@@ -443,6 +443,7 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 			sessions.getState().beginStream(sessionId);
 			setError(null);
 			const stream = endpoints.sessionStream(sessionId, {
+				inlineUi: true,
 				// Read per connect, not per effect: a stream opened before the first
 				// live list frame declares on its next reconnect (`steer-journal-order.ts`).
 				steerJournalOrder: steerJournalOrderDeclared(listStore.getState()),

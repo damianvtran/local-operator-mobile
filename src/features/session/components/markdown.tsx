@@ -22,13 +22,21 @@ import {
 import Svg, { Defs, LinearGradient, Rect, Stop } from "react-native-svg";
 import { DiagramBlock } from "@/features/session/components/diagram-block";
 import {
+	type InlineUiData,
+	InlineUiPreview,
+	inlineUiData,
+	inlineUiPlainText,
+} from "@/features/session/components/inline-ui-preview";
+import {
 	type HostSelection,
 	SelectableMessage,
 	useTextSelection,
 } from "@/features/session/components/selectable-message";
 import { GroupInsetContext } from "@/features/session/components/trace-rail";
 import { isDiagramBlock } from "@/features/session/diagram-source";
+import type { AssistantPart } from "@/features/session/inline-ui-parts";
 import {
+	type Block,
 	blocksPlainText,
 	type InlineSpan,
 	parseInline,
@@ -685,22 +693,43 @@ const HEADING_CLASS: Record<number, string> = {
 	3: "text-body-lg font-medium text-ink",
 };
 
+type MessageBlock = Block | { kind: "inline-ui"; data: InlineUiData };
+
 export const Markdown = memo(function Markdown({
 	text,
 	host,
+	assistantParts,
 }: {
 	text: string;
+	assistantParts?: readonly AssistantPart[];
 	/** A host that owns the long-press (Team Bridge's actions sheet); see
 	 *  `HostSelection`. Pass a memoised object: this component is `memo`. */
 	host?: HostSelection;
 }) {
-	/* THE PARSE IS A FUNCTION OF THE TEXT AND NOTHING ELSE (design pass item E,
-	 *  cause 2), so it is memoised on the text alone: a re-render that arrives with
-	 *  the same answer (a panel opening, a scroll-linked parent, the row's own
-	 *  disclosure) re-uses the block list, and a streaming frame re-parses only the
-	 *  row that actually changed. */
-	const blocks = useMemo(() => parseMarkdown(text), [text]);
-	const plainText = useCallback(() => blocksPlainText(blocks), [blocks]);
+	// Only negotiated, decoded parts can render widgets. Legacy text (even a
+	// literal lop-ui code fence) always takes the same Markdown path as before.
+	const blocks = useMemo<MessageBlock[]>(
+		() =>
+			assistantParts === undefined
+				? parseMarkdown(text)
+				: assistantParts.flatMap<MessageBlock>((part) =>
+						part.kind === "markdown"
+							? parseMarkdown(part.text)
+							: [{ kind: "inline-ui", data: inlineUiData(part.value) }],
+					),
+		[text, assistantParts],
+	);
+	const plainText = useCallback(
+		() =>
+			blocks
+				.map((block) =>
+					block.kind === "inline-ui"
+						? inlineUiPlainText(block.data)
+						: blocksPlainText([block]),
+				)
+				.join("\n\n"),
+		[blocks],
+	);
 	return (
 		/* The whole answer is ONE selection surface, so a drag can run across
 		 *  paragraphs, lists and code (iOS mode; `selectable-message.tsx`). */
@@ -718,6 +747,8 @@ export const Markdown = memo(function Markdown({
 			<View className="gap-3">
 				{blocks.map((block, index) => {
 					switch (block.kind) {
+						case "inline-ui":
+							return <InlineUiPreview key={index} data={block.data} />;
 						case "code": {
 							const listing = (
 								<CodeBlock

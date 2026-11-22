@@ -152,7 +152,7 @@ describe("history reader production wiring", () => {
 		expect(create(identity, current, endpoints)).toBe(historyWindow);
 		expect(endpoints.history).toHaveBeenCalledExactlyOnceWith(
 			identity.sessionId,
-			{ before: undefined },
+			{ before: undefined, inlineUi: true },
 		);
 		expect(JSON.stringify(composer)).toBe(before);
 		expect(declaration).not.toMatch(NON_READER_MUTATIONS);

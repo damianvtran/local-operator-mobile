@@ -1,14 +1,17 @@
 import { once } from "node:events";
 import { readFileSync } from "node:fs";
 import { createServer } from "node:http";
-import { expect, it } from "vitest";
+import { expect, it, vi } from "vitest";
 import {
 	parsePayload,
 	type SessionProjection,
 	type TranscriptEntry,
 } from "@/contracts";
 import { RelayEndpoints, RelayHttpClient } from "@/relay";
+import { createProjectionStore } from "@/state";
+import { fixtureBody } from "@/testing/fixture-relay";
 import { HistoryWindow } from "./history-window";
+import { LIVE_INLINE_UI } from "./live-inline-ui";
 
 /** Actual fetch → RelayHttpClient → boundary schema → endpoint → pager. This
  * loopback is synthetic wire infrastructure, not a native/rendered-app claim. */
@@ -181,6 +184,210 @@ it("pages authenticated synthetic history through production HTTP and retries re
 				final_has_more: window.hasMore,
 			}),
 		);
+	} finally {
+		server.closeAllConnections();
+		await new Promise<void>((resolve, reject) =>
+			server.close((error) => (error ? reject(error) : resolve())),
+		);
+	}
+});
+
+it("negotiates live and paged overlays over HTTP and falls back to legacy prose", async () => {
+	const session = "00000000-0000-4000-8000-000000000001";
+	const base = parsePayload(
+		"sessionProjection",
+		fixtureBody("sse/sse-projection-live-idle.json"),
+	);
+	const answer = (id: string, text: string): TranscriptEntry => ({
+		id,
+		kind: "assistant",
+		text,
+		tool_call_id: "",
+		tool_name: "",
+		tool_state: "done",
+		summary: "",
+		intent: "",
+		diff_added: 0,
+		diff_removed: 0,
+		elapsed_s: 0,
+		error: "",
+		details: {},
+		images: [],
+		final: true,
+		text_complete: true,
+	});
+	const live = answer("current", "Legacy live table");
+	const mid = answer("middle", "Legacy middle answer");
+	const older = answer("older", "Legacy older table");
+	const widget = {
+		type: "table",
+		title: "Counts",
+		columns: ["N"],
+		rows: [[3]],
+	};
+	const envelope = (offset: number) => ({
+		version: 1,
+		text: "Hi😀\r\nBye",
+		widgets: [{ offset, payload: widget }],
+	});
+	const requests: string[] = [];
+	const commands: unknown[] = [];
+	const server = createServer((request, response) => {
+		const url = new URL(request.url ?? "/", "http://127.0.0.1");
+		requests.push(`${request.method} ${url.pathname}${url.search}`);
+		const rich = url.searchParams.get("inline_ui") === "1";
+		if (url.pathname.endsWith("/events")) {
+			response.writeHead(200, { "content-type": "text/event-stream" });
+			const seed = { ...base, session_id: session, transcript: [live] };
+			const emit = (data: object) =>
+				response.write(`event: projection\ndata: ${JSON.stringify(data)}\n\n`);
+			emit({
+				...seed,
+				version: 1,
+				...(rich && {
+					inline_ui: { version: 1, messages: { current: envelope(4) } },
+				}),
+			});
+			// A later full frame must remove only the addressed rich content, even
+			// when the legacy row is byte-identical and the UI memoizes it.
+			emit({
+				...seed,
+				version: 2,
+				...(rich && {
+					inline_ui: { version: 1, messages: { current: envelope(3) } },
+				}),
+			});
+			emit({ ...seed, version: 3 });
+			return;
+		}
+		response.setHeader("content-type", "application/json");
+		if (url.pathname.endsWith("/history")) {
+			const first = url.searchParams.get("before") === live.id;
+			const row = first ? mid : older;
+			response.end(
+				JSON.stringify({
+					entries: [row],
+					has_more: first,
+					...(rich && {
+						inline_ui: {
+							version: 1,
+							messages: { [row.id]: envelope(4), current: envelope(4) },
+						},
+					}),
+				}),
+			);
+			return;
+		}
+		let raw = "";
+		request.on("data", (chunk) => {
+			raw += chunk;
+		});
+		request.on("end", () => {
+			commands.push(JSON.parse(raw));
+			response.end(JSON.stringify({ ok: true, detail: "received" }));
+		});
+	});
+	server.listen(0, "127.0.0.1");
+	try {
+		await once(server, "listening");
+		const address = server.address();
+		if (!address || typeof address === "string")
+			throw new Error("No loopback address");
+		const endpoints = new RelayEndpoints(
+			new RelayHttpClient({
+				baseUrl: `http://127.0.0.1:${address.port}`,
+				auth: () => ({ cookie: null, origin: null, credentials: "omit" }),
+			}),
+		);
+		const store = createProjectionStore();
+		store.getState().beginStream(session);
+		const window = new HistoryWindow(
+			(before) => endpoints.history(session, { before, inlineUi: true }),
+			() => {},
+		);
+		const observed: unknown[] = [];
+		const stream = endpoints.sessionStream(session, {
+			inlineUi: true,
+			steerJournalOrder: true,
+			onFrame: (frame) => {
+				if (frame.kind !== "projection") return;
+				store.getState().applyFrame(session, frame.data);
+				window.accept(store.getState().entries[session]?.projection ?? null);
+				const tail = window.visibleRows.at(-1);
+				observed.push(tail?.[LIVE_INLINE_UI] ?? tail?.text);
+			},
+		});
+		stream.connection.start();
+		try {
+			await vi.waitFor(() => expect(observed).toHaveLength(3));
+			const rich = [
+				{ kind: "markdown", text: "Hi😀" },
+				{ kind: "ui", value: widget },
+				{ kind: "markdown", text: "\r\nBye" },
+			];
+			expect(observed).toEqual([rich, live.text, live.text]);
+			await window.load();
+			await window.load();
+			expect(
+				window.visibleRows.map((row) => [
+					row.id,
+					row[LIVE_INLINE_UI] ?? row.text,
+				]),
+			).toEqual([
+				[older.id, rich],
+				[mid.id, rich],
+				[live.id, live.text],
+			]);
+			expect(window.hasMore).toBe(false);
+			const legacy = await endpoints.history(session, { before: live.id });
+			expect(legacy).toMatchObject({ entries: [mid], has_more: true });
+			expect(legacy.inline_ui).toBeUndefined();
+			const prompt = {
+				op: "prompt",
+				command_id: "10000000-0000-4000-8000-000000000001",
+				text: "Count them",
+			} as const;
+			const steer = {
+				op: "steer",
+				command_id: "10000000-0000-4000-8000-000000000002",
+				text: "Use the last week",
+			} as const;
+			expect(await endpoints.command(session, prompt)).toMatchObject({
+				ok: true,
+			});
+			expect(await endpoints.command(session, steer)).toMatchObject({
+				ok: true,
+			});
+			expect(await endpoints.ping(session)).toMatchObject({ ok: true });
+			expect(commands).toEqual([
+				{ ...prompt, inline_ui: true },
+				{ ...steer, inline_ui: true },
+				{ op: "ping" },
+			]);
+			const path = `/api/sessions/${session}`;
+			expect(requests).toEqual([
+				`GET ${path}/events?steer_journal_order=1&inline_ui=1`,
+				`GET ${path}/history?before=current&inline_ui=1`,
+				`GET ${path}/history?before=middle&inline_ui=1`,
+				`GET ${path}/history?before=current`,
+				`POST ${path}/command`,
+				`POST ${path}/command`,
+				`POST ${path}/command`,
+			]);
+			console.log(
+				JSON.stringify({
+					requests,
+					sse: observed,
+					paged: window.visibleRows.map((row) => ({
+						id: row.id,
+						overlay: !!row[LIVE_INLINE_UI],
+					})),
+					commands,
+				}),
+			);
+		} finally {
+			stream.stop();
+		}
 	} finally {
 		server.closeAllConnections();
 		await new Promise<void>((resolve, reject) =>
