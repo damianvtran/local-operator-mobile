@@ -62,6 +62,8 @@ import relayComposerContext from "@/i18n/catalogues/en/relay.composer.context.js
 import relayComposer from "@/i18n/catalogues/en/relay.composer.json";
 import healthContext from "@/i18n/catalogues/en/relay.health.context.json";
 import health from "@/i18n/catalogues/en/relay.health.json";
+import relaySkillsContext from "@/i18n/catalogues/en/relay.skills.context.json";
+import relaySkills from "@/i18n/catalogues/en/relay.skills.json";
 import relayTranscriptContext from "@/i18n/catalogues/en/relay.transcript.context.json";
 import relayTranscript from "@/i18n/catalogues/en/relay.transcript.json";
 
@@ -254,6 +256,16 @@ const NAMESPACES = [
 		messages: relayComposer,
 		context: relayComposerContext,
 		expected: 3,
+	},
+	{
+		/* The relay's `$skill` picker vocabulary (tray label, hidden tag, the
+		 * skipped-skills notice, the too-large remedy), mirrored key for key from the
+		 * core (`local_operator/i18n/catalogues/<locale>/relay.skills.json`) so the
+		 * phone and relay web describe a `$skill` send in the same words. */
+		name: "relay.skills",
+		messages: relaySkills,
+		context: relaySkillsContext,
+		expected: 4,
 	},
 	{
 		/* The relay's transcript condensing and tool-fold vocabulary, mirrored key
@@ -647,7 +659,9 @@ describe("the English catalogues", () => {
 		/* …plus its round-1 remediation: + mobile.session.jump_to_latest_name, the
 		 * arrow-free ACCESSIBLE name (a screen reader read the visible "↓" as
 		 * "down arrow"): 1376 + 1 = 1377. */
-		expect(total).toBe(1377);
+		/* feat/session-skill-autocomplete: + the four mirrored relay.skills keys:
+		 * 1377 + 4 = 1381, the generated catalogue's own count over this tree. */
+		expect(total).toBe(1381);
 	});
 
 	it("lists every catalogue file this suite checks", () => {
