@@ -106,6 +106,8 @@ export interface DictationState {
 	meter: MeterStore;
 	/** Start when idle, finish while recording, or explicitly retry a failed take. */
 	press: () => void;
+	/** Retry only the retained failed take; a stale control never opens the mic. */
+	retry: () => void;
 	/** The reader's own discard: stop and delete, send NO request, say nothing. */
 	cancel: () => void;
 	/** A send/steer took the composer: abort, discard, and SAY SO (U2). */
@@ -428,17 +430,27 @@ export const useDictation = (input: DictationInput): DictationState => {
 		setSeconds(0);
 	}, [clearTimers, meter, releaseRecording]);
 
+	/* Retry is a separate intent from the mic: removed controls can still have
+	 * queued callbacks, which must not fall through to starting another take. */
+	const retry = useCallback(() => {
+		if (
+			!isCurrent() ||
+			snapshotRef.current.phase !== "failed" ||
+			retainedRef.current?.identity !== identity
+		)
+			return;
+		/* Transition before the first await so repeated taps cannot upload twice. */
+		const { effects } = dispatch({ type: "retry" });
+		onErrorRef.current("");
+		if (effects.includes("retry-transcription"))
+			void transcribeRetained(++runIdRef.current);
+	}, [dispatch, identity, isCurrent, transcribeRetained]);
+
 	const press = useCallback(() => {
 		if (!isCurrent()) return;
 		const phase = snapshotRef.current.phase;
 		if (phase === "failed") {
-			if (retainedRef.current?.identity !== identity) return;
-			/* The transition happens before the first await: repeated taps cannot
-			 * upload twice or append the same result twice. No send is involved. */
-			const { effects } = dispatch({ type: "retry" });
-			onErrorRef.current("");
-			if (effects.includes("retry-transcription"))
-				void transcribeRetained(++runIdRef.current);
+			retry();
 			return;
 		}
 		/* `pressRoute` owns the order: a live take always finishes, and only a
@@ -472,9 +484,8 @@ export const useDictation = (input: DictationInput): DictationState => {
 		endpoints,
 		micSetup,
 		micVisible,
-		identity,
 		isCurrent,
-		transcribeRetained,
+		retry,
 		openMic,
 		sending,
 		stopAndTranscribe,
@@ -543,6 +554,7 @@ export const useDictation = (input: DictationInput): DictationState => {
 		status: dictationStatusLine(forced ?? snapshot),
 		meter,
 		press,
+		retry,
 		cancel,
 		cancelForSend,
 		clearOutcome,
@@ -569,6 +581,8 @@ export const useDictation = (input: DictationInput): DictationState => {
  */
 export const useHomeDictation = (input: {
 	endpoints: RelayEndpoints | null;
+	/** Stable startup record identity: New replaces it without changing relays. */
+	scopeKey: string;
 	capabilities: Capabilities | null | undefined;
 	draft: string;
 	setDraft: (text: string) => void;
@@ -580,6 +594,7 @@ export const useHomeDictation = (input: {
 	setDraftRef.current = input.setDraft;
 	return useDictation({
 		endpoints: input.endpoints,
+		scopeKey: input.scopeKey,
 		capabilities: input.capabilities,
 		/* The home's send is a start that hands off to the session; it never
 		 * holds the composer "sending", and the machine ignores this anyway. */

@@ -981,8 +981,8 @@ export const Composer = ({
 					<Button
 						variant="quiet"
 						label={t("mobile.composer_input.notice_retry")}
-						onPress={voice.press}
-						testID={`${CONTROL.composerMic}-retry`}
+						onPress={voice.retry}
+						testID={CONTROL.composerDictationRetry}
 					/>
 				) : null}
 				{rowIsLive(voice.phase) || voice.phase === "failed" ? (

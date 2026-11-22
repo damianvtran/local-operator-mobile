@@ -52,6 +52,17 @@ const coordinator = () => {
 
 const failed: DictationSnapshot = { phase: "idle", outcome: "mic-failed" };
 
+it("keeps a recoverable failed take on refusal and discards only on admission", () => {
+	const voice = voiceAt({ phase: "failed", outcome: null });
+	const start = coordinator();
+	sendFromHome(voice, start.send);
+	expect(voice.phase).toBe("failed");
+	expect(voice.calls).toEqual([]);
+	start.admit();
+	expect(voice.phase).toBe("idle");
+	expect(voice.calls).toEqual(["cancelForSend"]);
+});
+
 describe("the home send and a resting mic line", () => {
 	it("keeps the line while the coordinator has not admitted the message", () => {
 		const voice = voiceAt(failed);

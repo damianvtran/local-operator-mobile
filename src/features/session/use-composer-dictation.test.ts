@@ -16,6 +16,7 @@
  * as in `use-composer-echo.test.ts`, so no device storage read races the
  * assertions.
  */
+import { readFileSync } from "node:fs";
 import { act, createElement, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -27,6 +28,10 @@ import {
 	type ComposerState,
 	useComposer,
 } from "@/features/session/use-composer";
+import {
+	type DictationState,
+	useHomeDictation,
+} from "@/features/session/use-dictation";
 import { type RelayEndpoints, RelayError } from "@/relay";
 import { DICTATION_OUTCOME_COPY } from "@/stt/dictation-machine";
 import type {
@@ -110,6 +115,9 @@ vi.mock("@/features/session/envelope-store", async (importOriginal) => {
 const VOICE = {
 	stt: { available: true, path: "synthetic-stt" },
 } as unknown as Capabilities;
+
+const RETRY_ACTION =
+	/label=\{t\("mobile\.composer_input\.notice_retry"\)\}\s+onPress=\{voice\.(\w+)\}/;
 
 let SID = "s-composer-dictation-0";
 let sessions = 0;
@@ -279,6 +287,71 @@ describe("a resting mic line in the session composer (issue #323)", () => {
 	});
 });
 
+let homeVoice: DictationState;
+let homeDraft = "";
+function HomeHost({
+	client,
+	scopeKey,
+}: {
+	client: RelayEndpoints;
+	scopeKey: string;
+}) {
+	const [draft, setDraft] = useState("");
+	homeDraft = draft;
+	homeVoice = useHomeDictation({
+		endpoints: client,
+		scopeKey,
+		capabilities: VOICE,
+		draft,
+		setDraft,
+		onError: () => undefined,
+	});
+	return null;
+}
+const mountHome = async (client: RelayEndpoints, scopeKey: string) => {
+	await act(async () =>
+		root?.render(createElement(HomeHost, { client, scopeKey })),
+	);
+};
+
+for (const timing of ["retained retry", "late completion"] as const) {
+	it(`fences Home ${timing} when New rotates only the draft identity`, async () => {
+		const h = fakeClient();
+		const result = deferred<{ status: number; text: string }>();
+		h.transcribe.status = 502;
+		if (timing === "late completion")
+			h.transcribe.answer = () => result.promise;
+		installTake();
+		await switchAccount("synthetic-home-account");
+		await mountHome(h.client, "adopted-draft");
+		await act(async () => homeVoice.press());
+		await settle();
+		await act(async () => homeVoice.press());
+		await settle();
+		expect(homeVoice.phase).toBe(
+			timing === "retained retry" ? "failed" : "transcribing",
+		);
+		const oldRetry = homeVoice.press;
+		await mountHome(h.client, "fresh-local-draft");
+		if (timing === "retained retry") {
+			h.transcribe.status = 200;
+			h.transcribe.body = JSON.stringify({ text: "stale", path: "synthetic" });
+			await act(async () => oldRetry());
+		} else
+			await act(async () =>
+				result.resolve({
+					status: 200,
+					text: JSON.stringify({ text: "stale" }),
+				}),
+			);
+		await settle();
+		expect(homeDraft).toBe("");
+		expect(homeVoice.phase).toBe("idle");
+		expect(h.uploads).toHaveLength(1);
+		expect(mic.discard).toHaveBeenCalledExactlyOnceWith(TAKE);
+	});
+}
+
 const TAKE: MicrophoneRecording = {
 	uri: "file:///synthetic/recoverable-take.m4a",
 	name: "recoverable-take.m4a",
@@ -322,6 +395,43 @@ const switchAccount = async (scope: string) => {
 };
 
 describe("manual recovery through the real composer and dictation hooks", () => {
+	for (const outcome of ["settlement", "discard"] as const) {
+		it(`cannot reopen the mic by replaying the rendered Retry action after ${outcome}`, async () => {
+			const h = fakeClient();
+			h.transcribe.status = 502;
+			const start = installTake();
+			await mount(h.client);
+			await finishTake();
+			expect(c().voice.phase).toBe("failed");
+			// Capture the action wired to the actual Retry control, not the generic
+			// mic action: replaying a removed control must never become a new take.
+			const source = readFileSync(
+				new URL("./components/composer.tsx", import.meta.url),
+				"utf8",
+			);
+			const action = source.match(RETRY_ACTION)?.[1];
+			expect(action).toBeTruthy();
+			const retry = c().voice[action as keyof DictationState] as () => void;
+			if (outcome === "discard") await act(async () => c().voice.cancel());
+			else {
+				h.transcribe.status = 200;
+				h.transcribe.body = JSON.stringify({
+					text: "recovered",
+					path: "synthetic",
+				});
+				await act(async () => retry());
+				await settle();
+			}
+			expect(c().voice.phase).toBe("idle");
+			const uploads = h.uploads.length;
+			await act(async () => retry());
+			await settle();
+			expect(start).toHaveBeenCalledTimes(1);
+			expect(h.uploads).toHaveLength(uploads);
+			expect(c().voice.phase).toBe("idle");
+		});
+	}
+
 	it("retains failure without automatic work, retries the same bytes once and never sends", async () => {
 		const h = fakeClient();
 		h.transcribe.status = 502;
