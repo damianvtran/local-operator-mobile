@@ -1591,6 +1591,28 @@ export function createRelay(options: RelayOptions = {}) {
 		return settled ? `${text}\n\n214 shards scanned, 0 failed.` : text;
 	};
 
+	// Cumulative text on the wire, but different arrival shapes for the same
+	// renderer: small append, large prose burst, split emoji, new code card,
+	// then an authoritative final frame. All text is synthetic.
+	const fadeDeltas = [
+		"Streaming proof begins.",
+		" A short phrase arrives.",
+		" Then a second phrase.",
+		"\n\n" +
+			"A completed paragraph remains stable while the tail grows. ".repeat(30),
+		"\n\nNow a long paragraph.",
+		" Prose, **emphasis**, and [a link](https://example.com).",
+		" A burst follows. ".repeat(25),
+		" The emoji starts: \ud83d",
+		"\udc69\u200d",
+		"\ud83d\udcbb and finishes.",
+		" اردو متن یہاں ہے۔",
+		"\n\n```sh\nprintf 'synthetic receipt\\n'\n```",
+		"\n\nAfter the code card.",
+		" One more live suffix.",
+		" The last live sentence.",
+	];
+
 	const sessionFrames = (
 		projection: SessionProjection,
 	): ((tick: number) => StreamFrame | "end" | null) => {
@@ -1621,6 +1643,10 @@ export function createRelay(options: RelayOptions = {}) {
 			const settled = tick === settleAfter;
 			if (growth !== null) {
 				text = growth(tick, settled);
+			} else if (stream.growth === "transcript-fade") {
+				text += settled
+					? "\n\nStreaming proof complete."
+					: (fadeDeltas[tick] ?? "");
 			} else {
 				text = settled
 					? `${text}\n\nReconciliation finished: 214 files scanned, 3 edits applied.`

@@ -73,7 +73,7 @@ export interface StreamSpec {
 	 *  shape §4.1 #10 of the S5 design pass needs consecutive frames of. See
 	 *  `sessionFrames`'s `tableArrival` for the tick order and why the divider
 	 *  never arrives alone. */
-	growth?: "table";
+	growth?: "table" | "transcript-fade";
 }
 
 /** A refusal the mock answers before (or instead of) reaching the relay. */
@@ -1667,6 +1667,21 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 		() => ({
 			projections: { [liveIdle.session_id]: structuredClone(liveIdle) },
 			stream: { mode: "streaming", settleAfterTurns: 6 },
+		}),
+	);
+
+	add(
+		"transcript-fade",
+		"Small and bursty assistant deltas, a growing paragraph, and a code card before settle.",
+		[],
+		() => ({
+			projections: { [liveIdle.session_id]: structuredClone(liveIdle) },
+			stream: {
+				mode: "streaming",
+				settleAfterTurns: 16,
+				intervalMs: 300,
+				growth: "transcript-fade",
+			},
 		}),
 	);
 

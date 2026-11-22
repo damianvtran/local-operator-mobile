@@ -115,6 +115,10 @@ export interface SessionRuntime {
 	historyErrorScope: "newest" | "older" | null;
 	streaming: boolean;
 	streamingRowId: string | null;
+	/** Motion can only be attributed to arrivals on this accepted wire stream. */
+	streamArrivalEpoch: number | null;
+	/** The wire tail, not a row introduced by history paging or gap healing. */
+	streamArrivalTail: TranscriptEntry | null;
 	/** True while the frame on screen came from the warm cache and no live frame
 	 *  has arrived yet: the conversation is shown as it was when saved, not live. */
 	hydrated: boolean;
@@ -1082,6 +1086,11 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 		 *  above stays on the raw flag — it marks where streamed TEXT lands. */
 		streaming: running,
 		streamingRowId,
+		streamArrivalEpoch:
+			ownsProjection && entry.connected && !entry.awaitingSnapshot
+				? (entry.streamEpoch ?? null)
+				: null,
+		streamArrivalTail: projection?.transcript.at(-1) ?? null,
 		hydrated,
 		connection,
 		/** The session stream's own liveness, for the header's status dot

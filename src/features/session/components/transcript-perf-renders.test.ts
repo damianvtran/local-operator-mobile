@@ -39,7 +39,12 @@ import { type DomShim, installDomShim } from "@/testing/dom-shim";
  * times are the local evidence.
  */
 
-const counts = vi.hoisted(() => ({ rows: 0, parses: 0, inlineParses: 0 }));
+const counts = vi.hoisted(() => ({
+	rows: 0,
+	parses: 0,
+	inlineParses: 0,
+	parsedUnits: 0,
+}));
 /** How many cells the harness mounts: a virtualiser's window, so the timing case
  *  can measure the list the device actually holds. */
 const harness = vi.hoisted(() => ({ windowPt: Number.POSITIVE_INFINITY }));
@@ -148,9 +153,16 @@ vi.mock("@/features/session/markdown", async (importOriginal) => {
 		await importOriginal<typeof import("@/features/session/markdown")>();
 	return {
 		...actual,
-		parseMarkdown: (text: string) => {
+		parseMarkdown: (
+			text: string,
+			checkpoint?: Parameters<typeof actual.parseMarkdown>[1],
+		) => {
 			counts.parses += 1;
-			return actual.parseMarkdown(text);
+			counts.parsedUnits += text.length;
+			return actual.parseMarkdown(
+				text,
+				process.env.LOP_STREAM_FULL_PARSE_CONTROL ? undefined : checkpoint,
+			);
 		},
 		parseInline: (text: string) => {
 			counts.inlineParses += 1;
@@ -281,6 +293,8 @@ const render = async (entries: TranscriptEntry[]) => {
 				sessionId: session,
 				entries,
 				streamingRowId: `row-${LAST}`,
+				streamArrivalEpoch: 1,
+				streamArrivalTail: entries[LAST] ?? null,
 				anchorId: `row-${LAST}`,
 				testID: "perf-transcript",
 			}),
@@ -293,6 +307,7 @@ beforeEach(() => {
 	counts.rows = 0;
 	counts.parses = 0;
 	counts.inlineParses = 0;
+	counts.parsedUnits = 0;
 	dom = installDomShim();
 	vi.stubGlobal("requestAnimationFrame", () => 0);
 	vi.stubGlobal("cancelAnimationFrame", () => {});
@@ -339,6 +354,45 @@ describe("streamed frames do not re-render the transcript", () => {
 		expect(rows).toEqual(Array(10).fill(1));
 		expect(Math.max(...parses)).toBeLessThanOrEqual(1);
 		expect(drawn).toEqual(Array(10).fill(true));
+	});
+
+	it("only parses the active paragraph in the real transcript, including a burst and split Unicode", async () => {
+		const prefix = `${"A complete **formatted** paragraph.\n\n".repeat(120)}`;
+		let answer = "In flight.";
+		let entries = timeline();
+		const withText = (text: string) =>
+			entries.map((row, at) => (at === LAST ? { ...row, text } : { ...row }));
+		entries = withText(prefix + answer);
+		await render(entries);
+		let parsed = 0;
+		let full = 0;
+		let expected = 0;
+		for (const delta of [
+			" Still growing.",
+			" Next.",
+			" A long burst.".repeat(70),
+			" 👩",
+			"‍",
+			"💻",
+			"  سلام",
+		]) {
+			answer += delta;
+			entries = withText(prefix + answer);
+			counts.parsedUnits = 0;
+			counts.rows = 0;
+			await render(entries);
+			parsed += counts.parsedUnits;
+			full += prefix.length + answer.length;
+			expected += answer.length;
+			expect(counts.rows).toBe(1);
+			expect(
+				squash(textOf(dom?.container as TextNode)).endsWith(squash(answer)),
+			).toBe(true);
+		}
+		console.log(
+			`[transcript-perf] ${parsed} parsed UTF-16 units over seven rendered updates; full parse would read ${full}`,
+		);
+		expect(parsed).toBe(expected);
 	});
 
 	it("reports the commit time of a frame on a 4 KB answer (printed, not gated)", async () => {

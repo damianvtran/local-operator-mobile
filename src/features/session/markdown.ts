@@ -173,9 +173,17 @@ export function startsTable(lines: string[], index: number): boolean {
  * parser's cost is paid per frame and a general grammar would be paid for text the
  * reader is already reading.
  */
-export const parseMarkdown = (text: string): Block[] => {
+export const parseMarkdown = (
+	text: string,
+	checkpoint?: (offset: number, blockCount: number) => void,
+): Block[] => {
 	const blocks: Block[] = [];
 	const lines = text.split("\n");
+	// A complete blank line reached by the outer parser is a hard boundary.
+	// Blanks inside fences never reach it, and a final, unterminated blank may
+	// still grow into syntax. Streaming can reuse everything before this point.
+	let lastBlank = -1;
+	let stableBlocks = 0;
 	let index = 0;
 	while (index < lines.length) {
 		const line = lines[index] ?? "";
@@ -283,6 +291,10 @@ export const parseMarkdown = (text: string): Block[] => {
 			continue;
 		}
 		if (line.trim().length === 0) {
+			if (checkpoint && index < lines.length - 1) {
+				lastBlank = index;
+				stableBlocks = blocks.length;
+			}
 			index += 1;
 			continue;
 		}
@@ -307,6 +319,13 @@ export const parseMarkdown = (text: string): Block[] => {
 			index += 1;
 		}
 		blocks.push({ kind: "paragraph", text: paragraph.join("\n") });
+	}
+	if (checkpoint && lastBlank !== -1) {
+		let offset = text.length;
+		for (let line = lines.length - 1; line > lastBlank; line -= 1) {
+			offset -= (lines[line]?.length ?? 0) + (line > lastBlank + 1 ? 1 : 0);
+		}
+		checkpoint(offset, stableBlocks);
 	}
 	return blocks;
 };

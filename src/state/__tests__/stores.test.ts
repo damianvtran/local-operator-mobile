@@ -610,6 +610,26 @@ describe("the projection store fences per connection and keeps the last snapshot
 		expect(readEntry(store.getState(), "s1").awaitingSnapshot).toBe(false);
 	});
 
+	it("stamps newly accepted snapshots locally even when reconnect repeats a version", () => {
+		const store = createProjectionStore();
+		const epoch = () => readEntry(store.getState(), "s1").streamEpoch;
+		const apply = (version: number) =>
+			store.getState().applyFrame("s1", { ...projection(), version });
+		store.getState().hydrate("s1", projection());
+		expect(epoch()).toBeUndefined();
+		store.getState().beginStream("s1");
+		apply(10);
+		const first = epoch();
+		expect(first).toEqual(expect.any(Number));
+		apply(11);
+		apply(9);
+		expect(epoch()).toBe(first);
+		store.getState().endStream("s1");
+		store.getState().beginStream("s1");
+		expect(apply(11)).toBe("accepted-snapshot");
+		expect(epoch()).not.toBe(first);
+	});
+
 	it("drops an older frame inside one connection and counts it", () => {
 		const store = createProjectionStore();
 		const frame = projection();

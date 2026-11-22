@@ -34,6 +34,9 @@ export interface ProjectionEntry {
 	/** True between a connection opening and its seed frame: the state the contract
 	 *  calls `awaitingSnapshot`. */
 	awaitingSnapshot: boolean;
+	/** Local identity of the accepted snapshot. Unlike a wire version it changes
+	 *  even when a replacement connection resumes at the same version. */
+	streamEpoch?: number;
 	/** The version held for the CURRENT connection, or `null`. Diagnostics only; it
 	 *  is never compared across connections. */
 	version: number | null;
@@ -97,6 +100,7 @@ const EMPTY_ENTRY: ProjectionEntry = {
 const fences = new Map<string, ProjectionFence>();
 
 export function createProjectionStore() {
+	let nextStreamEpoch = 0;
 	return createStore<ProjectionStore>()((set, get) => ({
 		entries: {},
 
@@ -150,6 +154,10 @@ export function createProjectionStore() {
 						projection,
 						connected: true,
 						awaitingSnapshot: false,
+						streamEpoch:
+							decision === "accepted-snapshot"
+								? ++nextStreamEpoch
+								: current.streamEpoch,
 						version: projection.version,
 						droppedFrames: current.droppedFrames,
 					},
