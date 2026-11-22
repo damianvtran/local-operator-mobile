@@ -199,6 +199,27 @@ export interface ScenarioWorld {
 		failWrite?: { status: number; error: string };
 	};
 	/**
+	 * The `$skill` surface (local-operator SKM-D3), as one block because it is one
+	 * feature: PRESENT advertises the TOP-LEVEL `capabilities.skill_invocation`,
+	 * serves `GET /api/skills` and honours `expand_skills` on a prompt/steer body
+	 * with the additive `skills: {attached, skipped}` receipt. ABSENT is an older
+	 * relay: no capability, a 404 route, and the flag silently dropped — exactly
+	 * the hazard the phone's capability gate exists for. Opt-in, so no existing
+	 * scenario changes shape.
+	 */
+	skills?: {
+		/** `GET /api/skills`'s rows, in the order served (the relay sorts by name). */
+		catalogue: Array<{ name: string; description: string; hidden: boolean }>;
+		/** Names the expansion reports as skipped (an empty SKILL.md) rather than
+		 *  attached, when a message mentions them. */
+		skipped?: string[];
+		/** Every expansion is refused `422 skills_too_large`. */
+		tooLarge?: boolean;
+		/** The catalogue read is refused with this status (the tray must stay
+		 *  closed, silently). */
+		failCatalogue?: { status: number; error: string };
+	};
+	/**
 	 * The armed-index surface this state pins (S17): the whole
 	 * `GET /api/schedules` body, or a RECORDED RESPONSE (`FixtureOverride`)
 	 * when a cell needs a status the route does not produce. Absent, the mock
@@ -1385,6 +1406,79 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 				projections: { [eight.projection.session_id]: eight.projection },
 				rowOverridesById: { [eight.projection.session_id]: eight.override },
 				sessionTags: { catalogue },
+			};
+		},
+	);
+
+	/* The `$skill` picker's world: a live idle row and a catalogue that exercises
+	 * the tray — a hidden skill, a long description that must truncate, an
+	 * uppercase-prefix-free mix for the lowercase-evidence rule. Interaction-only
+	 * (no `shows` cell), like `tags-cap`: it exists so the picker, the
+	 * `expand_skills` body and the receipt can be driven without a real relay. */
+	const skillsCatalogue = () => [
+		{
+			name: "ape-agent",
+			description: "Drive an agent through a long-running task.",
+			hidden: false,
+		},
+		{
+			name: "architect",
+			description:
+				"Design a change before writing it: read the code, name the seams, and write the plan down in one page.",
+			hidden: false,
+		},
+		{ name: "research", description: "Look something up.", hidden: false },
+		{
+			name: "secret-sauce",
+			description: "Not offered automatically; invoked by name only.",
+			hidden: true,
+		},
+		{ name: "empty-skill", description: "Has no content.", hidden: false },
+	];
+	const skillsRow = () =>
+		projectionFrom(liveIdle, {
+			session_id: syntheticSessionId("skills-row"),
+			conversation_name: "Skills picker",
+		});
+
+	add(
+		"skills",
+		"A live conversation on a relay that serves the `$skill` picker: `capabilities.skill_invocation`, `GET /api/skills` and `expand_skills` with its receipt (`empty-skill` is reported skipped).",
+		[],
+		() => {
+			const row = skillsRow();
+			return {
+				projections: { [row.session_id]: row },
+				skills: { catalogue: skillsCatalogue(), skipped: ["empty-skill"] },
+			};
+		},
+	);
+
+	add(
+		"skills-too-large",
+		"The `$skill` picker's relay refusing every expansion `422 skills_too_large`: the draft stays and the composer says what to do.",
+		[],
+		() => {
+			const row = skillsRow();
+			return {
+				projections: { [row.session_id]: row },
+				skills: { catalogue: skillsCatalogue(), tooLarge: true },
+			};
+		},
+	);
+
+	add(
+		"skills-error",
+		"The `$skill` catalogue read is refused: the tray never opens and nothing is said (the draft stays plain prose).",
+		[],
+		() => {
+			const row = skillsRow();
+			return {
+				projections: { [row.session_id]: row },
+				skills: {
+					catalogue: skillsCatalogue(),
+					failCatalogue: { status: 500, error: "skills unavailable" },
+				},
 			};
 		},
 	);

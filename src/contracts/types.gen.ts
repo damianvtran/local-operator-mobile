@@ -686,6 +686,14 @@ export interface Capabilities {
 	 * routes cannot be served — never defaulted to available.
 	 */
 	session_tags?: { available: boolean };
+	/**
+	 * The `$skill` capability (local-operator SKM-D3): the catalogue route
+	 * `GET /api/skills`, the `expand_skills` body flag on prompt/steer and the
+	 * receipt's `skills` block, as one licence. A TOP-LEVEL key, not
+	 * `remote_sessions.skill_invocation`. An older relay omits it, and ABSENCE
+	 * means no `$` affordance — never defaulted to available.
+	 */
+	skill_invocation?: { available: boolean };
 	/** `POST /api/sessions/start`'s capability (local-operator
 	 *  `docs/design/mobile-start-receipts.md`); `effort: true` licenses `effort`
 	 *  in a start body (v0.101.9). Absent = a relay that predates it. */
@@ -850,6 +858,24 @@ export interface CommandsResponse {
 	commands: SlashCommand[];
 }
 
+/** One row of the `$name` catalogue (`GET /api/skills?session_id=`). */
+export interface SkillEntry {
+	name: string;
+	/** One line, at most 160 characters (the relay cuts it). */
+	description: string;
+	hidden: boolean;
+}
+
+export interface SkillsResponse {
+	skills: SkillEntry[];
+}
+
+/** The additive `skills` block of a prompt/steer receipt (names without `$`). */
+export interface SkillExpansionReceipt {
+	attached: string[];
+	skipped: string[];
+}
+
 export interface ModelEntry {
 	selector: string;
 	provider: string;
@@ -919,6 +945,9 @@ export type CommandOp =
 			images?: PromptImage[];
 			input_mode?: InputMode;
 			input_path?: string;
+			/** Ask the relay to expand `$name` mentions (local conversations only;
+			 *  a remote one answers `409 remote_unsupported`). */
+			expand_skills?: boolean;
 	  }
 	| {
 			op: "steer";
@@ -927,6 +956,9 @@ export type CommandOp =
 			images?: PromptImage[];
 			input_mode?: InputMode;
 			input_path?: string;
+			/** Ask the relay to expand `$name` mentions (local conversations only;
+			 *  a remote one answers `409 remote_unsupported`). */
+			expand_skills?: boolean;
 	  }
 	| { op: "abort" }
 	| { op: "cancel"; mode?: "graceful" | "immediate" }
@@ -972,6 +1004,9 @@ export interface CommandAck {
 	ok: true;
 	/** Prose from the owning runtime; display verbatim, never parse. */
 	detail: string;
+	/** Present whenever the relay honoured `expand_skills`, even with both
+	 *  lists empty; absent from a relay that does not expand. */
+	skills?: SkillExpansionReceipt;
 }
 
 /** `GET /api/sessions/{id}/supplements/{digest}/document` — one stored turn
