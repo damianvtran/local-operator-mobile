@@ -129,7 +129,10 @@ describe("the move picker's client-owned copy", () => {
 	const pickBody = SOURCE.slice(SOURCE.indexOf("const PickBody ="));
 	const english = JSON.parse(
 		readFileSync(
-			new URL("../../i18n/catalogues/en/mobile.remote_sessions.json", import.meta.url),
+			new URL(
+				"../../i18n/catalogues/en/mobile.remote_sessions.json",
+				import.meta.url,
+			),
 			"utf8",
 		),
 	) as Record<string, string>;
