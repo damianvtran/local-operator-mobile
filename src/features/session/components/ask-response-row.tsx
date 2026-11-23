@@ -23,6 +23,7 @@ import { TOUCH_FLOOR } from "@/ui/layout";
 import { cx } from "@/ui/variants";
 
 import { AnsweredValues } from "./answered-values";
+import { AskIdFoot } from "./ask-id";
 
 /**
  * The ask response card — a settled ask's record in the transcript
@@ -81,6 +82,12 @@ export const AskResponseRow = ({ entry, testID }: AskResponseRowProps) => {
 	const pairs = answeredPairs(questions, entry.details.answers);
 	const told = timeout ? String(entry.details.text || "") : "";
 	const hasDetails = pairs.length > 0 || told !== "";
+	/* The ask's OWN id, when the wire carried it (`details.ask_id`): the receipt
+	 *  this card draws is the settled half of the same conversation, and the id at
+	 *  its foot is what lets a reader match the `a-745e` an agent quotes in prose.
+	 *  Absent on a receipt an older runtime wrote, and then nothing is drawn —
+	 *  never a placeholder. */
+	const askId = String(entry.details.ask_id ?? "");
 	const tone = status === "declined" ? "text-ink-muted" : askToneInk(line.tone);
 
 	return (
@@ -164,6 +171,7 @@ export const AskResponseRow = ({ entry, testID }: AskResponseRowProps) => {
 					) : null}
 				</View>
 			) : null}
+			{askId === "" ? null : <AskIdFoot askId={askId} />}
 		</View>
 	);
 };

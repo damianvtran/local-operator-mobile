@@ -93,6 +93,7 @@ import { useTextScale } from "@/ui/text-scale-provider";
 import { choiceRowClasses, cx } from "@/ui/variants";
 
 import { AnsweredValues } from "./answered-values";
+import { AskIdFoot, useCopyAskId } from "./ask-id";
 
 /**
  * The asks sheet — every queued ask, across conversations (design §5.3's
@@ -224,6 +225,13 @@ export type AsksSheetProps = {
 	 *  population re-read failing later - while the reader may be mid-answer - can
 	 *  never reach it. */
 	onReadFailed?: (info: { drawn: number }) => void;
+	/** The rows the sheet's own aggregate read returned, whenever they change. The
+	 *  session screen feeds them to the ask-id chips in the prose, which is the one
+	 *  place a WITHDRAWN ask can be named at all — it leaves the frame when it
+	 *  settles and the transcript draws no row for it, so this read is its only
+	 *  trace. Optional: a surface with no chips passes nothing and the sheet's
+	 *  behaviour is unchanged. */
+	onRows?: (rows: readonly PendingAsk[]) => void;
 };
 
 /** The recommendation's suffix (capitalised after the dot, like every string
@@ -901,8 +909,17 @@ export const AsksSheet = ({
 	initialOpenAsk = null,
 	frameRows = null,
 	onReadFailed,
+	onRows,
 }: AsksSheetProps) => {
 	const [rows, setRows] = useState<PendingAsk[]>([]);
+	/* The reads handed back to the screen (see `onRows`): the chips in the prose
+	 *  resolve against the same queue this sheet draws, which is the only trace a
+	 *  WITHDRAWN ask leaves anywhere in the app. Only the AGGREGATE is reported:
+	 *  the frame rows are already on the screen's own projection, so sending them
+	 *  back would churn the screen's state on every frame for nothing. */
+	useEffect(() => {
+		onRows?.(rows);
+	}, [rows, onRows]);
 	const [loaded, setLoaded] = useState(false);
 	/** Whether the AGGREGATE has been read successfully at least once. Not
 	 *  `loaded` (which a failed read also sets): before this the aggregate is
@@ -913,6 +930,7 @@ export const AsksSheet = ({
 	 *  dropped rows, so a prefix is never drawn beside a full count. */
 	const [truncated, setTruncated] = useState(false);
 	const [error, setError] = useState("");
+	const copyAskId = useCopyAskId();
 	const [nowMs, setNowMs] = useState(() => Date.now());
 	/* `undefined` = the reader has not chosen yet, so the OPENING's pre-expanded ask
 	 *  (`initialOpenAsk`) applies from the very first render. Writing it in the
@@ -1468,11 +1486,19 @@ export const AsksSheet = ({
 							: "",
 						asked,
 						facts.stateLine.text,
+						/* The id the reader came for: an element that owns its children has
+						 *  no other way to read it aloud. */
+						row.ask_id,
 					]
 						.filter((part) => part !== "")
 						.join(", ")}
 					accessibilityState={state({ expanded })}
 					onPress={() => toggle(row.ask_id)}
+					/* The id copies on a HOLD, not on a nested control: a `Pressable`
+					 *  inside this one is unreachable by a screen reader on native (the row's
+					 *  own element owns its children), and the row already answers a press.
+					 *  This is the same gesture the chip in the prose uses. */
+					onLongPress={() => copyAskId(row.ask_id)}
 					testID={askRowId(row.ask_id)}
 					style={{ minHeight: TOUCH_FLOOR }}
 					className="justify-center py-1"
@@ -1495,17 +1521,28 @@ export const AsksSheet = ({
 									{asked}
 								</Text>
 							)}
-							<Text className="text-start text-meta">
-								<Text className={askToneInk(facts.stateLine.tone)}>
-									{facts.stateLine.text}
-								</Text>
-								{facts.urgent ? (
-									<Text className="font-medium text-warning">
-										{" "}
-										{t("mobile.asks.urgent")}
+							<View className="flex-row items-center gap-x-2">
+								<Text className="min-w-0 flex-1 text-start text-meta">
+									<Text className={askToneInk(facts.stateLine.tone)}>
+										{facts.stateLine.text}
 									</Text>
-								) : null}
-							</Text>
+									{facts.urgent ? (
+										<Text className="font-medium text-warning">
+											{" "}
+											{t("mobile.asks.urgent")}
+										</Text>
+									) : null}
+								</Text>
+								{/* The id at the row's own foot — a WITHDRAWN ask has no other
+								 *  trace — on the state's line so the row keeps its 44 pt band.
+								 *  A hold on the row copies it. */}
+								<Text className="font-mono text-mono-sm text-ink-muted">
+									{row.ask_id}
+								</Text>
+								<Text className="text-mono-sm text-ink-dim" aria-hidden>
+									⧉
+								</Text>
+							</View>
 						</View>
 						{/* The disclosure caret mirrors in a right-to-left layout: a `▸`
 						 *  points at the row's far end there, away from where the row
@@ -1598,6 +1635,9 @@ export const AsksSheet = ({
 					</View>
 				) : null}
 				{detailOf(row)}
+				{/* The id at the card's foot: the one place a reader can copy what the
+				 *  agent quoted, with the control at the touch floor. */}
+				<AskIdFoot askId={row.ask_id} />
 			</AskCard>
 		);
 	};

@@ -34,6 +34,9 @@ vi.mock("lucide-react-native", () => ({
 	ArrowUpRight: () => null,
 	Check: () => null,
 }));
+/* The ask id's copy door now imports the clipboard, which has no Node entry
+ *  (expo-modules-core reads `__DEV__`). */
+vi.mock("expo-clipboard", () => ({ setStringAsync: async () => true }));
 vi.mock("react-native", () => ({
 	AccessibilityInfo: { setAccessibilityFocus: vi.fn() },
 	findNodeHandle: () => 1,

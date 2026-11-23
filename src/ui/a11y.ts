@@ -1509,6 +1509,11 @@ export const IDENTIFIER_FAMILIES: readonly string[] = [
 	"asks-badge-",
 	"ask-field-",
 	"ask-other-",
+	/* The id a reader can MATCH: one chip per ask id quoted in prose, and the
+	 *  copy affordance at the foot of an ask row or receipt. Keyed by the ask id,
+	 *  so a flow reaches the chip of the id the transcript carries. */
+	"ask-chip-",
+	"ask-id-copy-",
 	/* The find sheet's result rows: one per hit, keyed by the message the row
 	 *  will land on, so a flow (or the capture's press) reaches a specific hit
 	 *  without counting rows. */
@@ -2561,6 +2566,14 @@ export const subagentChipId = (jobId: string): string =>
 
 /** One ask's row in the asks sheet, keyed by the ask's own id. */
 export const askRowId = (askId: string): string => `ask-row-${askId}`;
+
+/** An ask id quoted in an agent's prose: the chip that names its state and opens
+ *  the ask. Keyed by the id the agent wrote (ids are unique per session only). */
+export const askIdChipId = (askId: string): string => `ask-chip-${askId}`;
+
+/** The copy affordance at the foot of an ask card, row or transcript receipt —
+ *  the same id, where it can be pressed as a real box rather than as prose. */
+export const askIdCopyId = (askId: string): string => `ask-id-copy-${askId}`;
 
 /** One file-callout row of a supplement block: its index within the row's
  *  featured `files` list (the recorded order, newest job version first). */
