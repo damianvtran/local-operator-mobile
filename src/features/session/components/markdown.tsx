@@ -14,7 +14,6 @@ import {
 import {
 	Linking,
 	Platform,
-	Pressable,
 	ScrollView,
 	Text,
 	type TextStyle,
@@ -61,6 +60,7 @@ import { useTokenColor } from "@/ui/appearance";
 import { estimatedColumnWidth } from "@/ui/column";
 import { LTR_TEXT, useIsRTL } from "@/ui/direction";
 import { TOUCH_FLOOR } from "@/ui/layout";
+import { ScrollSafePressable } from "@/ui/scroll-safe-pressable";
 import { useTextScale } from "@/ui/text-scale-provider";
 import { cx } from "@/ui/variants";
 
@@ -767,7 +767,7 @@ function CodeBlockView({
 	const { enter, selectionColor, leafSelectable } = useTextSelection();
 	const body = lines.join("\n");
 	return (
-		<Pressable
+		<ScrollSafePressable
 			accessibilityRole={ROLE.button}
 			accessibilityLabel={`Copy ${language || "code"} block`}
 			// The visual is the block itself, whose height follows its content — a
@@ -787,7 +787,7 @@ function CodeBlockView({
 				// transient, because a toast for a copy would replace a real message.
 				void Clipboard.setStringAsync(body).then(() => setCopied(true));
 			}}
-			// This Pressable is the deepest responder under a long-press on code, so
+			// This is the deepest touch reader under a long-press on code, so
 			// it must forward the hold to the message's selection mode (iOS). On
 			// Android `enter` is a no-op whose presence still stops the long hold
 			// that selected text natively from also firing the copy-on-tap.
@@ -818,7 +818,7 @@ function CodeBlockView({
 					</Text>
 				</ScrollView>
 			</View>
-		</Pressable>
+		</ScrollSafePressable>
 	);
 }
 

@@ -51,7 +51,6 @@ import {
 import {
 	type AccessibilityActionEvent,
 	Platform,
-	Pressable,
 	Text,
 	TextInput,
 	type TextProps,
@@ -70,6 +69,7 @@ import {
 	usesSelectionMode,
 } from "@/features/session/text-selection";
 import { useTokenColor } from "@/ui/appearance";
+import { useTouchPress } from "@/ui/touch-press";
 
 type TextSelectionContextValue = {
 	/** Enter this message's selection mode (iOS); a no-op elsewhere, which also
@@ -149,6 +149,8 @@ const SELECT_TEXT_ACTIONS = [
 ];
 
 const NO_ACCESSIBILITY: SelectTextAccessibility = {};
+
+const NOOP_ENTER = () => {};
 
 const NOOP_CONTEXT: TextSelectionContextValue = {
 	enter: () => {},
@@ -255,6 +257,11 @@ export function SelectableMessage({
 		enterTextSelection(id);
 	}, [disabled, id, hosted]);
 
+	/* The iOS long-press that enters the mode, read from raw touch events and not a
+	 *  `Pressable`: a `Pressable` here claimed the responder and a table, code block
+	 *  or diagram inside could not be scrolled sideways (`@/ui/touch-press`). */
+	const longPress = useTouchPress({ onLongPress: enter });
+
 	useEffect(() => {
 		if (!hosted) return;
 		hostEntries.set(id, enter);
@@ -307,13 +314,17 @@ export function SelectableMessage({
 		: LEAF_SELECTABLE;
 	const context = useMemo(
 		() => ({
-			// A nested pressable's hold opens the host's sheet, not the mode.
-			enter: hostLongPress ?? enter,
+			// A nested pressable's hold opens the host's sheet, not the mode. On iOS
+			// the nested wrapper reads raw touches and never claims the responder
+			// (`ScrollSafePressable`), so the hold bubbles to the row's own
+			// long-press: calling the sheet here too would open it twice.
+			enter:
+				hosted && Platform.OS === "ios" ? NOOP_ENTER : (hostLongPress ?? enter),
 			selectionColor,
 			accessibility,
 			leafSelectable: leaves,
 		}),
-		[enter, hostLongPress, selectionColor, accessibility, leaves],
+		[enter, hosted, hostLongPress, selectionColor, accessibility, leaves],
 	);
 
 	if (hosted && !usesSelectionMode()) {
@@ -380,17 +391,18 @@ export function SelectableMessage({
 
 	return (
 		<TextSelectionContext.Provider value={context}>
-			<Pressable
-				// No `onPress`: taps belong to the links, images and code blocks
-				// inside, and to the row around this body.
-				onLongPress={enter}
+			<View
+				// No press: taps belong to the links, images and code blocks inside,
+				// and to the row around this body. Only the hold is read, from raw touches
+				// so the scrollers inside keep their drag.
+				{...longPress}
 				// Not one VoiceOver element: the links and copy buttons inside
 				// must stay individually reachable (review R1, M1).
 				accessible={false}
 				testID={testID}
 			>
 				{children}
-			</Pressable>
+			</View>
 		</TextSelectionContext.Provider>
 	);
 }
