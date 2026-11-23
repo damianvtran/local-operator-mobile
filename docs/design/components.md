@@ -526,6 +526,29 @@ multi-line draft grows upward), so on iOS the 44 pt discs sit centred in the 48 
 row and disc-to-shell is 4 + 2 = 6 pt on both edges (`composerRestInsets`); on the 48 floor
 the pill drops from 60 to 56. The open card was already on-scale and is unchanged.
 
+### Scroll compaction (phone portrait)
+
+While the reader scrolls the transcript the dock yields its second row: the card
+(112) becomes the bare pill (56) and back, so more transcript shows. Design spec
+2026-11-23; the card stays the rest shape, and every number below is a **design
+value, not a measurement** (`composer-compaction.ts`; tune from TestFlight).
+
+| Rule | Binding |
+|---|---|
+| Shrinks | a **reader's** drag that nets ≥ 24 pt from where it began (either direction), or a release at ≥ 1000 pt/s, with nothing pinning. Momentum alone, and every scroll the app makes (tail pin, history load, reveal, `snapToTail`), never flips it |
+| Grows | a tap on the pill field (focus), settling within 16 pt of the tail for 150 ms (finger up, no glide), jump-to-latest, a send, or a pin appearing. Scroll-driven flips are held 300 ms apart; the reader's own intent beats the hold |
+| Pins (always the card) | an image attachment; dictation recording / transcribing / failed or any dictation row; an error, notice or retained message; the `$` skill tray; the `/` slash sheet; field focus or a visible keyboard |
+| Not pins | a typed draft of any length (whitespace included) and Stop. The pill shows the draft's **first line** (`maxLines` 1, text never altered, ✕ clear and the model/effort row return with the card); Send stays beside it whenever there is a draft, at every text size; Stop keeps its `danger-wash` disc |
+| Pill row | attach 44 · field · mic 44 · action 44 (Send only with a draft, Stop only while a turn runs), all ≥ the platform touch floor. One mounted `Textarea` across card and pill |
+| Shape | the existing pill path: 56 (`ceil(24 × scale + 24)` at large text), R height/2, side margin **16** against the card's 12, all three off the one `progress` value over 220 ms, `cubic-bezier(0.2, 0, 0, 1)`; instant under Reduce Motion |
+| Off | a screen reader running (`useScreenReaderEnabled`), tablet / split layouts, short landscape (already a pill; unchanged), and Home (no signal passed) |
+
+The signal is a plain object the session screen owns (`createComposerCompaction`):
+the list reports the reader's gestures into it and the Composer subscribes to its
+one boolean, so a scroll never re-renders the screen. **Web never shrinks from
+scrolling** (react-native-web emits only `onScroll`); `initialShrunk` is the seam
+that renders the shrunk state for frames.
+
 ### Glass (iOS)
 
 The shell and the strip's model/effort chips draw `expo-glass-effect` Liquid
