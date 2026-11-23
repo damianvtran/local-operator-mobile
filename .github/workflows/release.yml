@@ -110,7 +110,9 @@ jobs:
             # `workflow_dispatch` is the branch the run was started from.
             tag="$DISPATCH_TAG"
           else
-            tag="$REF_NAME"
+            # On a tag push there is no dispatch input; GitHub exports the
+            # short tag name as GITHUB_REF_NAME (nounset rejects unbound names).
+            tag="$GITHUB_REF_NAME"
           fi
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
 
@@ -217,6 +219,11 @@ jobs:
     # The same workflow a pull request runs, called rather than copied. A release
     # that gated on a second, slightly different list of checks is how "green CI"
     # and "what shipped" drift apart.
+    # The called release-staging job lists this run's artefacts. Its token
+    # cannot exceed the caller's permissions, so grant the read only here.
+    permissions:
+      contents: read
+      actions: read
     uses: ./.github/workflows/ci.yml
 
   android:
