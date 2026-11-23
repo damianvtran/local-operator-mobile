@@ -1752,7 +1752,15 @@ export const AsksSheet = ({
 										}
 									>
 										{progressLine === null ? null : (
-											<Text className="min-w-0 flex-1 text-start text-meta text-ink-dim">
+											<Text
+												className={
+													/* flex-1 is the row's: in the stacked COLUMN (large text)
+													 *  it collapsed the sentence to nothing (QA r3 Q1). */
+													stackPair
+														? "text-start text-meta text-ink-dim"
+														: "min-w-0 flex-1 text-start text-meta text-ink-dim"
+												}
+											>
 												{progressLine}
 											</Text>
 										)}

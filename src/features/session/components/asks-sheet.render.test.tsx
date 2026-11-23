@@ -49,7 +49,14 @@ vi.mock("react-native", () => ({
 		if (className) host.classes.push(className);
 		return children ?? null;
 	},
-	Text: ({ children }: { children?: ReactNode }) => {
+	Text: ({
+		children,
+		className,
+	}: {
+		children?: ReactNode;
+		className?: string;
+	}) => {
+		if (className) host.classes.push(className);
 		/* A label followed by a suffix arrives as an array of children. */
 		for (const child of Array.isArray(children) ? children : [children])
 			if (typeof child === "string") host.texts.push(child);
@@ -306,6 +313,12 @@ describe("the footer", () => {
 		await render([OPEN], { initialOpenAsk: "A" });
 		expect(host.classes).not.toContain("flex-row items-center gap-x-3");
 		expect(host.classes).toContain("gap-1");
+		/* QA r3 Q1: flex-1 on the sentence is the ROW's rule; in the stacked column
+		 *  it collapsed the sentence to nothing at accessibility sizes. */
+		expect(host.classes).toContain("text-start text-meta text-ink-dim");
+		expect(host.classes).not.toContain(
+			"min-w-0 flex-1 text-start text-meta text-ink-dim",
+		);
 		expect(host.texts).toContain(t("mobile.asks.dismiss_open"));
 		expect(host.texts).toContain(t("mobile.asks.progress.pick_or_type"));
 	});

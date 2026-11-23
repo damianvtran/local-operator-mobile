@@ -89,7 +89,7 @@
 	},
 	"mobile.asks.secret_notice_saved": {
 		"role": "help",
-		"note": "Same caption as the plain secret notice, with the extra fact that the value is also saved on the computer for reuse. Keep it a superset of the plain wording. Ends with a full stop (the plain notice has none)."
+		"note": "Same caption as the plain secret notice, with the extra fact that the value is also saved on the computer for reuse. Keep it a superset of the plain wording. No final full stop, like the plain notice."
 	},
 	"mobile.asks.other_label": {
 		"role": "button",
