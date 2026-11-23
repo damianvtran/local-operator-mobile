@@ -11,6 +11,7 @@ import {
 	type ButtonVariant,
 	buttonClasses,
 	CONTROL_DISABLED_INK,
+	cx,
 } from "@/ui/variants";
 
 /**
@@ -51,6 +52,11 @@ export type ButtonProps = {
 	trailingIcon?: (props: { color: string; size: number }) => ReactNode;
 	loading?: boolean;
 	disabled?: boolean;
+	/** Grow to the height of the row this button shares, instead of hugging its
+	 *  own label: two buttons side by side must read as one pair even when one
+	 *  label wraps and the other does not. Opt-in; every other button keeps its
+	 *  own height. */
+	fill?: boolean;
 	/** Short visual labels may need a more descriptive screen-reader name. */
 	accessibilityLabel?: string;
 	accessibilityHint?: string;
@@ -85,6 +91,7 @@ export const Button = ({
 	trailingIcon,
 	loading = false,
 	disabled = false,
+	fill = false,
 	accessibilityLabel,
 	accessibilityHint,
 	expanded,
@@ -132,7 +139,9 @@ export const Button = ({
 			style={
 				visualHeight < TOUCH_FLOOR
 					? { minHeight: TOUCH_FLOOR, justifyContent: "center" }
-					: undefined
+					: fill
+						? { flexGrow: 1 }
+						: undefined
 			}
 			testID={testID}
 			disabled={disabled}
@@ -145,7 +154,12 @@ export const Button = ({
 			}}
 		>
 			{({ pressed }) => (
-				<View className={buttonClasses(variant, size, { pressed, disabled })}>
+				<View
+					className={cx(
+						buttonClasses(variant, size, { pressed, disabled }),
+						fill && "flex-1",
+					)}
+				>
 					{loading ? (
 						<ActivityIndicator
 							size="small"

@@ -498,6 +498,14 @@ describe("ask option row (ask-panel parity N2)", () => {
 		expect(pressed.row).toContain("bg-accent-muted");
 		expect(selected.row).toContain("bg-accent-muted");
 		expect(selected.edge).toContain("w-1");
+		/* An empty ring at rest (a square for multi-select) that fills when
+		 * selected, and a semibold label: selection is shape and weight too. */
+		expect(rest.indicator).toContain("rounded-full");
+		expect(rest.indicator).not.toContain("bg-accent");
+		expect(choiceRowClasses({ multi: true }).indicator).toContain("rounded-sm");
+		expect(selected.indicator).toContain("bg-accent");
+		expect(selected.label).toContain("font-semibold");
+		expect(rest.label).not.toContain("font-semibold");
 		/* Disabled is a colour change (components.md § 0), never opacity. */
 		expect(disabled.row).toContain("bg-sunken");
 		expect(disabled.label).toBe("text-ink-disabled");
@@ -514,8 +522,7 @@ describe("ask option row (ask-panel parity N2)", () => {
 
 	it("keeps every text pair on the row at 4.5:1 or better, in both themes", () => {
 		/* The numbers the PR states: ink on the two tints, the description's
-		 * `ink-dim`, and the check's `accent-hover` (plain `accent` is 4.22:1 on
-		 * the selected fill in light, which is why it is not the check's ink). */
+		 * `ink-dim`, the ring, and the filled disc with its check. */
 		const channel = (hex: string, at: number) => {
 			const c = Number.parseInt(hex.slice(at, at + 2), 16) / 255;
 			return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
@@ -537,13 +544,21 @@ describe("ask option row (ask-panel parity N2)", () => {
 					ratio(palette["ink-dim"], palette[ground]),
 				).toBeGreaterThanOrEqual(4.5);
 			}
+			/* The empty ring against both fills (3:1 non-text floor; muted is the
+			 * pressed state), the selected disc against the selected fill, and the
+			 * check on the disc. */
 			expect(
-				ratio(palette["accent-hover"], palette["accent-muted"]),
+				ratio(palette["border-control"], palette["accent-wash"]),
+			).toBeGreaterThanOrEqual(3);
+			expect(
+				ratio(palette["border-control"], palette["accent-muted"]),
+			).toBeGreaterThanOrEqual(3);
+			expect(
+				ratio(palette.accent, palette["accent-muted"]),
+			).toBeGreaterThanOrEqual(3);
+			expect(
+				ratio(palette["on-accent"], palette.accent),
 			).toBeGreaterThanOrEqual(4.5);
 		}
-		/* The control for the claim above: plain `accent` really does fall short. */
-		expect(
-			ratio(PALETTE.light.accent, PALETTE.light["accent-muted"]),
-		).toBeLessThan(4.5);
 	});
 });

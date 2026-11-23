@@ -445,28 +445,38 @@ export const cardClasses = (options: { inList?: boolean } = {}): string =>
 	);
 
 /**
- * One option row of an ask's answer form (ask-panel parity N2): a tinted fill
- * with an accent left edge, the same object on the relay page.
+ * One option row of an ask's answer form (ask-panel parity N2/D4): a tinted fill
+ * with an accent left edge and a trailing indicator, the same object on the
+ * relay page.
  *
- * - Rest: `accent-wash` fill, 2 pt `accent` edge. Pressed: `accent-muted`.
- * - Selected: `accent-muted` fill, 4 pt edge — and the caller draws a trailing
- *   check mark, because a 2 pt wider edge and a one-step fill change are
- *   colour and weight alone (the ✓ is what makes the selection survive
- *   greyscale; it is this slice's addition, not an existing kit rule).
+ * - Rest: `accent-wash` fill, 2 pt `accent` edge, an EMPTY ring (single choice)
+ *   or square (`multi`) in `border-control`. Pressed: `accent-muted`.
+ * - Selected: `accent-muted` fill, 4 pt edge, a semibold label, and the indicator
+ *   FILLS to an accent disc/square holding the check — selection is shape and
+ *   weight as well as colour, so it survives greyscale.
  * - Disabled is a colour change (`sunken`, `ink-disabled`), never an opacity
  *   change (components.md § 0). A SELECTED row that goes disabled while the
  *   answer is in flight keeps its selected look: the reader must still see
  *   which answer is being sent.
- * - Ink: `ink` on `accent-wash` is 14.36:1 light / 13.36:1 dark and on
- *   `accent-muted` 12.51:1 / 10.73:1; the description's `ink-dim` is 5.40 /
- *   5.95 on wash and 4.70 / 4.77 on muted, so every text pair clears 4.5:1.
- *   The plain `accent` role would NOT as check ink on `accent-muted` in light
- *   (4.22:1) — the caller reads `accent-hover` (5.75 light / 6.69 dark).
- * - The slot is 4 pt wide in every state so the label never shifts when the
- *   edge thickens.
+ * - Contrast, light / dark (computed from `tokens.gen.ts`, pinned by
+ *   `variants.test.ts`): `ink` on `accent-wash` 14.36 / 13.36 and on
+ *   `accent-muted` 12.51 / 10.73; the description's `ink-dim` 5.40 / 5.95 on
+ *   wash and 4.70 / 4.77 on muted. The ring (`border-control`) is 3.45 / 3.74 on
+ *   wash and 3.00 / 3.00 on muted (pressed) — the 3:1 non-text floor. The
+ *   selected disc is `accent` on `accent-muted` 4.22 / 5.76 with the check in
+ *   `on-accent` on `accent` 5.33 / 8.58.
+ * - The edge slot is 4 pt wide in every state so the label never shifts when
+ *   the edge thickens.
  */
-export const choiceRowClasses = (state: ControlState = {}) => {
-	const { selected = false, pressed = false, disabled = false } = state;
+export const choiceRowClasses = (
+	state: ControlState & { multi?: boolean } = {},
+) => {
+	const {
+		selected = false,
+		pressed = false,
+		disabled = false,
+		multi = false,
+	} = state;
 	const dimmed = disabled && !selected;
 	return {
 		row: cx(
@@ -485,7 +495,19 @@ export const choiceRowClasses = (state: ControlState = {}) => {
 			selected ? "w-1" : "w-0.5",
 			dimmed ? "bg-hairline-strong" : "bg-accent",
 		),
-		label: dimmed ? "text-ink-disabled" : "text-ink",
+		indicator: cx(
+			"h-5 w-5 items-center justify-center border-2",
+			multi ? "rounded-sm" : "rounded-full",
+			selected
+				? "border-accent bg-accent"
+				: dimmed
+					? "border-hairline-strong"
+					: "border-border-control",
+		),
+		label: cx(
+			selected && "font-semibold",
+			dimmed ? "text-ink-disabled" : "text-ink",
+		),
 		note: dimmed ? "text-ink-disabled" : "text-ink-dim",
 	};
 };

@@ -108,8 +108,8 @@ describe("the asks sheet's Other door", () => {
 		 * arrived. The hint stays (with a kept-text sentence of its own) and the
 		 * desktop's one prompt is the string it says. */
 		expect(SOURCE).not.toMatch(DROPPED_HINT_CONDITIONAL);
-		expect(SOURCE).toContain('"Type your answer"');
-		expect(SOURCE).toContain("your text is kept");
+		expect(SOURCE).toContain('t("mobile.asks.other_hint")');
+		expect(SOURCE).toContain('t("mobile.asks.other_kept")');
 	});
 
 	it("pins the answering verbs in Sheet's footer — the three-region rule (D2)", () => {
@@ -154,8 +154,8 @@ describe("the asks sheet's card layout (ask-panel parity N1/N2/N4)", () => {
 		 * (2026-11-23), under everything the reader came to read. */
 		const card = at("openCard(openInBand)");
 		const waiting = at("waitingBand.map(");
-		const earlier = at('t("mobile.asks.earlier")');
-		const honesty = at("This app shows queued questions while it is open");
+		const earlier = at('t("mobile.asks.settled")');
+		const honesty = at('t("mobile.asks.honesty")');
 		expect(card).toBeLessThan(waiting);
 		expect(waiting).toBeLessThan(earlier);
 		expect(earlier).toBeLessThan(honesty);
@@ -201,11 +201,12 @@ describe("the asks sheet's card layout (ask-panel parity N1/N2/N4)", () => {
 		expect(SOURCE).toContain('t("mobile.asks.decline")');
 		expect(SOURCE).toContain('t("mobile.asks.dismiss_open")');
 		expect(SOURCE).not.toContain('label="Answer"');
-		const progress = at("{progressLine}");
+		const progress = at("progressLine ??");
 		const send = at('t("mobile.asks.send_answer")');
 		const dismiss = at('t("mobile.asks.dismiss_open")');
-		expect(progress).toBeLessThan(send);
-		expect(send).toBeLessThan(dismiss);
+		/* The pair, then ONE row holding why Send is grey and the quiet way out. */
+		expect(send).toBeLessThan(progress);
+		expect(progress).toBeLessThan(dismiss);
 	});
 
 	it("dismisses a waiting ask only WITH a reason, and a lapsed one without", () => {
