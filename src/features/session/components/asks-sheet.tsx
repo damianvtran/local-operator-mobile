@@ -241,17 +241,28 @@ const QuestionField = ({
 	/* Set by the DOOR's own press, so the field it just revealed takes the caret —
 	 *  one tap, keyboard up, exactly as the approved prototype behaves (UX r1 U2).
 	 *  A draft restored on reopen arrives with this false, so it comes back
-	 *  quietly (no keyboard over the sheet the reader just opened). */
-	const [focusDoorField, setFocusDoorField] = useState(false);
+	 *  quietly (no keyboard over the sheet the reader just opened).
+	 *
+	 *  THREE paths reach the field because a single one was measured not to:
+	 *  the tick's effect (the field is already mounted — a re-tap of an open
+	 *  door), `autoFocus` at mount (the press IS what mounted it), and the
+	 *  field's own `onLayout` as the fallback when focus() ran before iOS had a
+	 *  frame to give it (the evidence run's first attempt: the door opened and
+	 *  the keyboard never came up). */
+	const doorFocusWanted = useRef(false);
+	const [doorFocusTick, setDoorFocusTick] = useState(0);
+	const takeDoorFocus = () => {
+		if (!doorFocusWanted.current) return;
+		doorFocusWanted.current = false;
+		fieldRef.current?.focus();
+	};
 	useEffect(() => {
-		if (!focusDoorField) return;
-		setFocusDoorField(false);
-		/* After the commit that mounted the field: iOS raises the keyboard for a
-		 *  field that is already in the tree, and the sheet's reveal then runs
-		 *  from the field's own `onFocus`. */
-		const frame = requestAnimationFrame(() => fieldRef.current?.focus());
-		return () => cancelAnimationFrame(frame);
-	}, [focusDoorField]);
+		if (doorFocusTick === 0 || !doorFocusWanted.current) return;
+		/* A null ref here means the field mounts in this same commit: it keeps the
+		 *  flag and its `autoFocus`/`onLayout` finishes the job. */
+		doorFocusWanted.current = false;
+		fieldRef.current?.focus();
+	}, [doorFocusTick]);
 	if (options.length === 0) {
 		return (
 			<View>
@@ -376,7 +387,8 @@ const QuestionField = ({
 						 *  and deliberately does NOT dismiss the keyboard first: the field
 						 *  asks for it in the next frame, and a dismiss in between made the
 						 *  keyboard drop and rise again. */
-						setFocusDoorField(true);
+						doorFocusWanted.current = true;
+						setDoorFocusTick((tick) => tick + 1);
 						onOtherChange({ ...other, open: true });
 					}}
 					testID={askOtherId(String(question.id))}
@@ -415,6 +427,8 @@ const QuestionField = ({
 				<TextInput
 					ref={fieldRef}
 					onFocus={() => onFieldFocus?.(fieldRef.current as unknown as View)}
+					onLayout={takeDoorFocus}
+					autoFocus={doorFocusWanted.current}
 					multiline
 					returnKeyType="done"
 					submitBehavior="blurAndSubmit"
