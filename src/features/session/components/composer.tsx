@@ -35,6 +35,7 @@ import {
 } from "react-native";
 
 import Animated, {
+	Easing,
 	interpolate,
 	runOnJS,
 	useAnimatedReaction,
@@ -66,6 +67,7 @@ import {
 	composerFeedback,
 	noticeActionName,
 } from "@/features/session/composer";
+import type { ComposerCompaction } from "@/features/session/composer-compaction";
 import {
 	ATTACH_GLYPH_PT,
 	COMPOSER_ACTION_CLUSTER,
@@ -85,11 +87,16 @@ import {
 	noticeActionPlan,
 } from "@/features/session/composer-layout";
 import {
+	COMPOSER_CARD_MARGIN,
 	COMPOSER_CONTROLS_GAP,
 	COMPOSER_FIELD_BOX,
 	COMPOSER_GLASS_LAYER_RADIUS,
+	COMPOSER_MORPH_EASING,
+	COMPOSER_MORPH_MS,
+	COMPOSER_PILL_MARGIN,
 	composerFieldRowAlign,
 	composerPaintedHeight,
+	composerPinsCard,
 	composerPresentation,
 	composerRestRow,
 	composerShellPadding,
@@ -109,6 +116,7 @@ import {
 	shouldRevealSkillTray,
 	trayHeightCanChange,
 } from "@/features/session/skills/skill-state";
+import { useComposerShrunk } from "@/features/session/use-composer-shrunk";
 import type { DictationState } from "@/features/session/use-dictation";
 import { t } from "@/i18n";
 import { formatDuration } from "@/stt/dictation";
@@ -134,7 +142,8 @@ import {
 import { ChromeSurface } from "@/ui/components/chrome-surface";
 import type { TextareaProps } from "@/ui/components/textarea";
 import { TEXT_END_CLASS, useIsRTL } from "@/ui/direction";
-import { TOUCH_FLOOR } from "@/ui/layout";
+import { TOUCH_FLOOR, useLayout } from "@/ui/layout";
+import { parseCubicBezier } from "@/ui/motion";
 import {
 	composerAtHostCap,
 	composerBudget,
@@ -142,6 +151,7 @@ import {
 } from "@/ui/size-class";
 import { LARGE_TEXT_SCALE } from "@/ui/text-scale";
 import { useTextScale } from "@/ui/text-scale-provider";
+import { useScreenReaderEnabled } from "@/ui/use-screen-reader";
 import {
 	COMPOSER_FIELD_MAX_LINES,
 	CONTROL_DISABLED_INK,
@@ -169,6 +179,9 @@ const VISUALLY_HIDDEN = {
  *  measured 50 against 48 at 100 % (design round 1, D1's own figures). Adding the
  *  border to the floor makes every state the same box at the default scale. */
 const DICTATION_ROW_BORDER_PX = 2;
+/** The scroll-driven morph's curve, built once from the spec's CSS string by the
+ *  same adapter the sheets use. */
+const MORPH_EASING = Easing.bezier(...parseCubicBezier(COMPOSER_MORPH_EASING));
 
 /** One line of the row's status text (body-sm, 14 px at 1.45), in px at scale 1.
  *
@@ -409,6 +422,10 @@ export type ComposerProps = {
 	/** A leading `/` opens the sheet; `null` keeps it shut. */
 	slashQuery: string | null;
 	slashSheet: React.ReactNode;
+	/** The scroll-compaction signal the session screen owns and its transcript
+	 *  reports into (`composer-compaction.ts`). Absent — Home, any host with no
+	 *  transcript — keeps the dock exactly as it was: never shrunk. */
+	compaction?: ComposerCompaction;
 	/** The `$skill` list and the field plumbing it needs (`use-skills.ts`).
 	 *  Absent keeps the field exactly as before: the HOME composer passes nothing,
 	 *  because a new chat has no session id to ask `GET /api/skills` about yet;
@@ -774,6 +791,7 @@ export const Composer = ({
 	identityRow = null,
 	slashQuery,
 	slashSheet,
+	compaction,
 	skills,
 	fieldRef,
 	compact = null,
@@ -1054,6 +1072,19 @@ export const Composer = ({
 	const ownField = useRef<TextInput>(null);
 	const inputRef = fieldRef ?? ownField;
 	const reducedMotion = useReducedMotion();
+	/* SCROLL COMPACTION (`composer-compaction.ts`): the dock yields its second row
+	 *  while the reader scrolls the transcript. It is a PHONE-PORTRAIT behaviour:
+	 *  short landscape is already a pill, a tablet or split layout has room, and a
+	 *  screen reader's focus must not chase a dock that changes shape. `compact`
+	 *  here is the host's short-landscape fact, the same one `restsAsCard` reads. */
+	const layout = useLayout();
+	const screenReader = useScreenReaderEnabled();
+	const compactionOk =
+		compact === null &&
+		layout.sizeClass === "compact" &&
+		!layout.split &&
+		!screenReader;
+	const shrunkSignal = useComposerShrunk(compaction);
 	const elevated = useTokenColor("elevated");
 	/* The shell's FOCUS edge, and only that (visual audit D8). At rest the card
 	 *  is separated by its `elevated` fill alone, as the relay's is: the operator
@@ -1092,6 +1123,11 @@ export const Composer = ({
 		stop: controls.stopVisible,
 		error: !!error || !!retainedMessage || !!notice,
 		keyboard: keyboardVisible,
+		/* Pins only: `composerPinsCard` keeps a card under the `$` tray and the `/`
+		 *  sheet, which the other facts do not already say. */
+		skillTray: !!skills && skills.rows.length > 0,
+		slashSheet: slashQuery !== null,
+		shrunk: compactionOk && shrunkSignal,
 		inset: bottomInset ?? 0,
 		scale: effectiveScale,
 		/* The composer paints on the platform's touch floor, so its presentation
@@ -1099,6 +1135,16 @@ export const Composer = ({
 		 *  (28 announced over a 30 pt paint). */
 		floor: TOUCH_FLOOR,
 	};
+	const pinsCard = composerPinsCard(presentationFacts);
+	/* The pill the SCROLL made, as opposed to short landscape's own: the dock is
+	 *  shrunk, nothing pins it, and `composerPresentation` agrees. */
+	const shrunkPill = presentationFacts.shrunk && !pinsCard;
+	useEffect(() => {
+		compaction?.setEnabled(compactionOk);
+	}, [compaction, compactionOk]);
+	useEffect(() => {
+		compaction?.setPinned(pinsCard);
+	}, [compaction, pinsCard]);
 	/* What the dock would be on ITS OWN facts — focus, a draft, an attachment, a
 	 *  take, a live turn or a notice. `onEditingChange` and the dictation slot
 	 *  rule below read this one: the host's "is the reader editing" must not turn
@@ -1112,7 +1158,14 @@ export const Composer = ({
 	 *  with a draft, an attachment or focus is open for its own reasons. */
 	const openForDictationOnly =
 		activePresentation.expanded &&
-		!composerPresentation({ ...presentationFacts, dictation: false }).expanded;
+		/* `shrunk: false`: "open only for dictation" asks what the dock would be
+		 *  with no take, and a draft or Stop opens it for its own reasons — a
+		 *  scroll-made pill must not make those read as dictation-only. */
+		!composerPresentation({
+			...presentationFacts,
+			dictation: false,
+			shrunk: false,
+		}).expanded;
 	const trailing = controlsTrailing({
 		openForDictationOnly,
 		recording: voice?.phase === "recording",
@@ -1202,7 +1255,10 @@ export const Composer = ({
 				? 0
 				: keyboardVisible
 					? keyboardDuration.current
-					: 200,
+					: COMPOSER_MORPH_MS,
+			/* The keyboard's own timing keeps the library curve it always had; the
+			 *  scroll-driven morph takes the spec's. Reduced motion is instant. */
+			...(keyboardVisible ? {} : { easing: MORPH_EASING }),
 		});
 	}, [presentation.expanded, reducedMotion, keyboardVisible, progress]);
 	useEffect(() => {
@@ -1301,8 +1357,18 @@ export const Composer = ({
 	 *  20 pt-inset tablet) as an off-scale step — the same split `dialog.tsx`
 	 *  makes. The painted position is unchanged: carrier padding + this margin is
 	 *  the old `inset + 8`, and with the keyboard up the carrier pays nothing. */
+	/* The side margin rides the shell's `progress`: the scroll-made pill is inset
+	 *  `COMPOSER_PILL_MARGIN`, the card `COMPOSER_CARD_MARGIN`. Short landscape's
+	 *  pill is its resting form and keeps the card's margin (`pillMargin`). */
+	const pillMargin =
+		compact === null ? COMPOSER_PILL_MARGIN : COMPOSER_CARD_MARGIN;
 	const dockMotion = useAnimatedStyle(() => ({
 		marginBottom: keyboardOffset.value + 8,
+		marginHorizontal: morphHeight(
+			progress.value,
+			pillMargin,
+			COMPOSER_CARD_MARGIN,
+		),
 	}));
 	const dockInset = keyboardVisible ? 0 : Math.max(0, bottomInset ?? 0);
 
@@ -2028,8 +2094,10 @@ export const Composer = ({
 	 *  resting height in one press (the operator: "shrinks back once cleared").
 	 *  The host's `onClearDraft` clears the unsent editor only — never a
 	 *  retained instruction, an uncertainty row or the queue (#206). */
+	/* Not in the scroll-made pill, whose field row is attach · text · mic · action:
+	 *  the ✕ returns with the card. */
 	const clearDraft =
-		onClearDraft && (draft.length > 0 || images.length > 0) ? (
+		!shrunkPill && onClearDraft && (draft.length > 0 || images.length > 0) ? (
 			<IconButton
 				accessibilityLabel={t("mobile.composer_input.clear_draft")}
 				accessibilityHint={t("mobile.composer_input.clear_draft_hint")}
@@ -2166,60 +2234,59 @@ export const Composer = ({
 			</View>
 		</Pressable>
 	);
-	const actionCluster = (
-		<View className={COMPOSER_ACTION_CLUSTER}>
-			{controls.stopVisible ? (
-				<Pressable
-					accessibilityRole={ROLE.button}
-					accessibilityLabel="Stop the running turn"
-					accessibilityState={state({ busy: stopping })}
-					style={{ minWidth: TOUCH_FLOOR, minHeight: TOUCH_FLOOR }}
-					onPress={onStop}
-					testID={CONTROL.composerStop}
-				>
-					{/* A 44 pt `danger-wash` DISC one `gap-1` step from send (D-S5, the
-					 *  relay's stop): 4 pt disc to disc on iOS, 8 pt on the 48 pt floor
-					 *  where each 44 pt disc is centred in its 48 pt target (U-42).
-					 *  the bare "■" glyph floated ~30 pt from send and read as decoration.
-					 *  The wash is quiet enough not to compete with the accent send disc. */}
-					<View
-						className={cx(COMPOSER_DISC, "bg-danger-wash")}
-						style={{ opacity: stopping ? 0.6 : 1 }}
-					>
-						<Square size={14} color={dangerInk} fill={dangerInk} aria-hidden />
-					</View>
-				</Pressable>
-			) : null}
-			{/* The width is PINNED, whatever the label: a control that grows when it
-			    morphs moves everything after it, which on a phone means it moves under
-			    the thumb about to press it. */}
-			<Pressable
-				accessibilityRole={ROLE.button}
-				accessibilityLabel={controls.primary.accessibilityLabel}
-				/* Why the primary is dead, on the control itself: the visible
-				 *  sentence yields to the retained notice (D6), and a screen reader
-				 *  landing on a disabled Send should still hear the reason. */
-				accessibilityHint={
-					controls.primary.disabled
-						? (controls.disabledReason ?? undefined)
-						: undefined
-				}
-				style={{ minWidth: TOUCH_FLOOR, minHeight: TOUCH_FLOOR }}
-				accessibilityState={state({
-					disabled: controls.primary.disabled,
-					busy: controls.sending,
-				})}
-				disabled={controls.primary.disabled}
-				onPress={onSend}
-				testID={CONTROL.composerSend}
+	const stopButton = controls.stopVisible ? (
+		<Pressable
+			accessibilityRole={ROLE.button}
+			accessibilityLabel="Stop the running turn"
+			accessibilityState={state({ busy: stopping })}
+			style={{ minWidth: TOUCH_FLOOR, minHeight: TOUCH_FLOOR }}
+			onPress={onStop}
+			testID={CONTROL.composerStop}
+		>
+			{/* A 44 pt `danger-wash` DISC one `gap-1` step from send (D-S5, the
+			 *  relay's stop): 4 pt disc to disc on iOS, 8 pt on the 48 pt floor
+			 *  where each 44 pt disc is centred in its 48 pt target (U-42).
+			 *  the bare "■" glyph floated ~30 pt from send and read as decoration.
+			 *  The wash is quiet enough not to compete with the accent send disc. */}
+			<View
+				className={cx(COMPOSER_DISC, "bg-danger-wash")}
+				style={{ opacity: stopping ? 0.6 : 1 }}
 			>
-				<View
-					className={cx(
-						COMPOSER_DISC,
-						controls.primary.disabled ? "bg-sunken" : "bg-accent",
-					)}
-				>
-					{/* The disabled ink is the kit's own constant, not a local choice: this
+				<Square size={14} color={dangerInk} fill={dangerInk} aria-hidden />
+			</View>
+		</Pressable>
+	) : null;
+	/* The width is PINNED, whatever the label: a control that grows when it
+			    morphs moves everything after it, which on a phone means it moves under
+			    the thumb about to press it. */
+	const sendButton = (
+		<Pressable
+			accessibilityRole={ROLE.button}
+			accessibilityLabel={controls.primary.accessibilityLabel}
+			/* Why the primary is dead, on the control itself: the visible
+			 *  sentence yields to the retained notice (D6), and a screen reader
+			 *  landing on a disabled Send should still hear the reason. */
+			accessibilityHint={
+				controls.primary.disabled
+					? (controls.disabledReason ?? undefined)
+					: undefined
+			}
+			style={{ minWidth: TOUCH_FLOOR, minHeight: TOUCH_FLOOR }}
+			accessibilityState={state({
+				disabled: controls.primary.disabled,
+				busy: controls.sending,
+			})}
+			disabled={controls.primary.disabled}
+			onPress={onSend}
+			testID={CONTROL.composerSend}
+		>
+			<View
+				className={cx(
+					COMPOSER_DISC,
+					controls.primary.disabled ? "bg-sunken" : "bg-accent",
+				)}
+			>
+				{/* The disabled ink is the kit's own constant, not a local choice: this
 				    control is the only one in the app that hand-rolls the primary's
 				    disabled treatment instead of going through `Button`, and it was the
 				    one place still painting a disabled label in `ink-disabled` — 2.42:1 on
@@ -2228,20 +2295,35 @@ export const Composer = ({
 				    own stricter rule being missed: a label NAMES the action, so
 				    `CONTROL_DISABLED_INK` is `ink-dim` and `variants.test.ts` pins it. That
 				    is 5.02:1 light, 6.59:1 dark. */}
-					<Text
-						className={cx(
-							"text-body-sm font-medium",
-							controls.primary.disabled
-								? CONTROL_DISABLED_INK
-								: "text-on-accent",
-						)}
-					>
-						{controls.primary.label}
-					</Text>
-				</View>
-			</Pressable>
+				<Text
+					className={cx(
+						"text-body-sm font-medium",
+						controls.primary.disabled ? CONTROL_DISABLED_INK : "text-on-accent",
+					)}
+				>
+					{controls.primary.label}
+				</Text>
+			</View>
+		</Pressable>
+	);
+	const actionCluster = (
+		<View className={COMPOSER_ACTION_CLUSTER}>
+			{stopButton}
+			{sendButton}
 		</View>
 	);
+	/* The scroll-made pill's trailing action: Stop while a turn runs, Send only
+	 *  once there is a draft — never a dead Send disc beside an empty field (the
+	 *  card's cluster keeps it for layout stability). A draft keeps Send at every
+	 *  text size: the reader typed it to send it. Attachments, dictation and
+	 *  notices pin the card, so this is never the pill's content for those. */
+	const pillAction =
+		stopButton !== null || draft.length > 0 ? (
+			<View className={COMPOSER_ACTION_CLUSTER}>
+				{stopButton}
+				{draft.length > 0 ? sendButton : null}
+			</View>
+		) : null;
 
 	/* The dictation row (design §2.5): a line that SPANS the composer, holding
 	    one height across recording, transcribing and the three outcome states, so
@@ -2368,7 +2450,9 @@ export const Composer = ({
 						/* Eight body lines when the screen has them (TestFlight 836: the
 						 * old six-on-a-22-pt-ruler showed ~4); `maxHeightPx` below holds
 						 * it under the header/keyboard budget. */
-						maxLines={compactSingle ? 1 : COMPOSER_FIELD_MAX_LINES}
+						maxLines={
+							compactSingle || shrunkPill ? 1 : COMPOSER_FIELD_MAX_LINES
+						}
 						/* The field's own box is the dock's ruler: the 48 pt resting row
 						 * and 44 pt in both open rows, so 56 = 4 + 48 + 4 and
 						 * 112 = 12 + 44 + 4 + 44 + 8 hold
@@ -2402,7 +2486,16 @@ export const Composer = ({
 				</View>
 				{clearDraft}
 				{presentation.expanded ? null : (
-					<View className="flex-row items-center">{mic ?? actionCluster}</View>
+					<View className="flex-row items-center">
+						{shrunkPill ? (
+							<>
+								{mic}
+								{pillAction}
+							</>
+						) : (
+							(mic ?? actionCluster)
+						)}
+					</View>
 				)}
 			</View>
 			{dictationRow}
@@ -2479,7 +2572,7 @@ export const Composer = ({
 	const dock = (
 		<Animated.View
 			ref={rootRef}
-			style={[{ marginHorizontal: 12 }, dockMotion]}
+			style={dockMotion}
 			onLayout={(event) => {
 				onLayout?.(event);
 				/* The dock's own width, for the short-landscape fit: the strip that

@@ -86,6 +86,20 @@ export const composerPaintedHeight = (
 		? pad.top + floor + COMPOSER_CONTROLS_GAP + floor + pad.bottom
 		: pad.top + composerRestRow(floor) + pad.bottom;
 };
+/** The dock's side margin as the card (the dock's own, 12) and as the scroll-made
+ *  pill: the pill is inset further so it reads as a lighter, smaller object than
+ *  the card it shrank from. Both are painted off the SAME `progress` value as the
+ *  height and radius, so the three travel together. Design value (spec
+ *  2026-11-23, tunable 8–40), not measured. Short landscape, whose pill is its
+ *  resting form, keeps the card's 12. */
+export const COMPOSER_CARD_MARGIN = 12;
+export const COMPOSER_PILL_MARGIN = 16;
+/** The card<->pill morph, for the scroll-driven shape (spec 2026-11-23 §4.1:
+ *  220 ms, cubic-bezier(0.2, 0, 0, 1)). A snap, not a continuous follow: the
+ *  composer is a flex sibling of the list, so a height tied to scroll distance
+ *  would resize the list on every scroll pixel. */
+export const COMPOSER_MORPH_MS = 220;
+export const COMPOSER_MORPH_EASING = "cubic-bezier(0.2, 0, 0, 1)";
 /** Build389 presentation only: never derives auth or modifies draft content. */
 export type ComposerPresentationFacts = {
 	focused: boolean;
@@ -106,7 +120,46 @@ export type ComposerPresentationFacts = {
 	 *  band above the composer. Short landscape passes `false` and keeps its
 	 *  pill; absent means `false`, so every earlier caller and pin is unchanged. */
 	card?: boolean;
+	/** The reader is moving the transcript and the dock has yielded its room
+	 *  (`composer-compaction.ts`). Honoured only while nothing pins the card
+	 *  (`composerPinsCard`); absent means `false`, so Home and every earlier
+	 *  caller are unchanged. A shrunk dock is the pill even with a draft, a live
+	 *  turn (Stop) or `card: true`: those force the card only when the dock is
+	 *  not shrunk. */
+	shrunk?: boolean;
+	/** The `$skill` tray is showing. A pin: the list under the field is the thing
+	 *  the reader is choosing from. */
+	skillTray?: boolean;
+	/** The `/` slash sheet is open. A pin, for the same reason. */
+	slashSheet?: boolean;
 };
+/** Facts that keep the dock a CARD whatever the reader's scrolling does: what
+ *  the reader is editing or must be able to read. Scrolling never shrinks a
+ *  dock holding any of them, and one appearing grows a shrunk dock back.
+ *
+ *  Deliberately NOT here, per the operator (2026-11-23): a typed draft of any
+ *  length (the pill shows its first line; the text is never touched) and a
+ *  running turn (the pill keeps the Stop disc). Focus and a visible keyboard ARE
+ *  here: shrinking is only for the unfocused, keyboard-down dock. */
+export const composerPinsCard = (
+	facts: Pick<
+		ComposerPresentationFacts,
+		| "focused"
+		| "keyboard"
+		| "attachments"
+		| "dictation"
+		| "error"
+		| "skillTray"
+		| "slashSheet"
+	>,
+) =>
+	facts.focused ||
+	facts.keyboard ||
+	facts.attachments > 0 ||
+	facts.dictation ||
+	facts.error ||
+	facts.skillTray === true ||
+	facts.slashSheet === true;
 /** Clearance is outside the shell; one radius applies to all corners. Whitespace
  * is still a draft, so geometry must never normalize the reader's content.
  *
@@ -117,14 +170,16 @@ export type ComposerPresentationFacts = {
  * and reproduce the same synchronous-call crash one call deeper. It is only ever
  * called during render. */
 export const composerPresentation = (facts: ComposerPresentationFacts) => {
+	const shrunk = facts.shrunk === true && !composerPinsCard(facts);
 	const expanded =
-		facts.card === true ||
-		facts.focused ||
-		facts.draft.length > 0 ||
-		facts.attachments > 0 ||
-		facts.dictation ||
-		facts.stop ||
-		facts.error;
+		!shrunk &&
+		(facts.card === true ||
+			facts.focused ||
+			facts.draft.length > 0 ||
+			facts.attachments > 0 ||
+			facts.dictation ||
+			facts.stop ||
+			facts.error);
 	const floor = facts.floor ?? COMPOSER_FIELD_BOX;
 	/* The painted pill, on the SAME floor the component paints, plus the large-text
 	 *  growth. Reporting 56/28 over a 60/30 paint was a second source of truth for

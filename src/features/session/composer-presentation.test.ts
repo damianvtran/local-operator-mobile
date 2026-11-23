@@ -1,13 +1,18 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
+	COMPOSER_CARD_MARGIN,
 	COMPOSER_CONTROLS_GAP,
 	COMPOSER_FIELD_BOX,
 	COMPOSER_GLASS_LAYER_RADIUS,
+	COMPOSER_MORPH_EASING,
+	COMPOSER_MORPH_MS,
+	COMPOSER_PILL_MARGIN,
 	COMPOSER_REST_PAD,
 	COMPOSER_REST_ROW,
 	composerFieldRowAlign,
 	composerPaintedHeight,
+	composerPinsCard,
 	composerPresentation,
 	composerRestInsets,
 	composerShellPadding,
@@ -261,5 +266,109 @@ describe("the controls row's trailing slot (UX U2 / U7, design D2)", () => {
 		expect(
 			COMPOSER.match(/testID=\{CONTROL\.composerDictationFinish\}/g),
 		).toHaveLength(1);
+	});
+});
+
+/* SCROLL COMPACTION (design spec 2026-11-23). Every assertion above is untouched:
+ *  `shrunk` is an extra fact that is absent for Home and every earlier caller. */
+describe("scroll-compacted pill", () => {
+	const shrunk = { ...empty, shrunk: true };
+
+	it("is the 56 pt pill with the card's content facts that do NOT pin", () => {
+		/* A draft of any length (whitespace included), a running turn and the
+		 *  portrait `card: true` all force the card today; shrunk, they do not. */
+		for (const delta of [
+			{},
+			{ card: true },
+			{ draft: "a" },
+			{ draft: " " },
+			{ draft: "line one\nline two\nline three" },
+			{ stop: true },
+			{ draft: "x", stop: true, card: true },
+		]) {
+			expect(composerPresentation({ ...shrunk, ...delta })).toMatchObject({
+				expanded: false,
+				height: 56,
+				radius: 28,
+			});
+		}
+	});
+
+	it("keeps the card under every pin, scrolled or not", () => {
+		for (const delta of [
+			{ focused: true },
+			{ keyboard: true },
+			{ attachments: 1 },
+			{ dictation: true },
+			{ error: true },
+			{ skillTray: true },
+			{ slashSheet: true },
+		]) {
+			expect(composerPinsCard({ ...empty, ...delta })).toBe(true);
+			/* A pin only withdraws the shrink; the rest is today's rule. Portrait
+			 *  rests as the card (`card: true`), so a pinned portrait dock is it. */
+			expect(
+				composerPresentation({ ...shrunk, ...delta, card: true }),
+			).toMatchObject({ expanded: true, height: 112, radius: 24 });
+			expect(composerPresentation({ ...shrunk, ...delta }).expanded).toBe(
+				composerPresentation({ ...empty, ...delta }).expanded,
+			);
+		}
+	});
+
+	it("names a draft and Stop as NOT pins (operator, 2026-11-23)", () => {
+		expect(composerPinsCard(empty)).toBe(false);
+		expect(
+			composerPinsCard({ ...empty, draft: "hello", stop: true } as never),
+		).toBe(false);
+	});
+
+	it("is a no-op when not shrunk: the card forcing facts still expand it", () => {
+		for (const shrunkFact of [undefined, false]) {
+			for (const delta of [{ card: true }, { draft: "a" }, { stop: true }]) {
+				expect(
+					composerPresentation({ ...empty, shrunk: shrunkFact, ...delta })
+						.expanded,
+				).toBe(true);
+			}
+			expect(
+				composerPresentation({ ...empty, shrunk: shrunkFact }).expanded,
+			).toBe(false);
+		}
+	});
+
+	it("does not let the tray or slash sheet change a dock that is not shrunk", () => {
+		/* They pin only; Home and the unscrolled composer expand on the same facts
+		 *  as before. */
+		expect(composerPresentation({ ...empty, skillTray: true }).expanded).toBe(
+			false,
+		);
+		expect(composerPresentation({ ...empty, slashSheet: true }).expanded).toBe(
+			false,
+		);
+	});
+
+	it("grows with text like any pill rather than clipping scaled targets", () => {
+		const p = composerPresentation({ ...shrunk, scale: 2 });
+		expect(p.height).toBeGreaterThan(56);
+		expect(p.radius).toBe(p.height / 2);
+	});
+
+	it("insets the pill further than the card, and morphs in 220 ms", () => {
+		expect(COMPOSER_CARD_MARGIN).toBe(12);
+		expect(COMPOSER_PILL_MARGIN).toBe(16);
+		expect(COMPOSER_PILL_MARGIN).toBeGreaterThan(COMPOSER_CARD_MARGIN);
+		expect(COMPOSER_MORPH_MS).toBe(220);
+		expect(COMPOSER_MORPH_EASING).toBe("cubic-bezier(0.2, 0, 0, 1)");
+	});
+
+	it("keeps the helpers a worklet may call free of the new non-worklet one", () => {
+		/* `composerPinsCard` is render-time only. If it were reachable from a
+		 *  `useAnimatedStyle` body it would need "worklet" (composer-worklets.test). */
+		const component = read("src/features/session/components/composer.tsx");
+		const worklets = component.slice(component.indexOf("const shellMotion"));
+		const dock = worklets.slice(0, worklets.indexOf("const dangerInk"));
+		expect(dock).not.toContain("composerPinsCard");
+		expect(dock).not.toContain("composerPresentation(");
 	});
 });
