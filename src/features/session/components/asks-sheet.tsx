@@ -8,9 +8,24 @@ import {
 	useRef,
 	useState,
 } from "react";
-import { Pressable, Text, TextInput, View } from "react-native";
+import {
+	Keyboard,
+	Platform,
+	Pressable,
+	Text,
+	TextInput,
+	View,
+} from "react-native";
 
 import type { AskQuestion, PendingAsk, SessionSummary } from "@/contracts";
+import {
+	askDraftKeyFor,
+	dropAskDraft,
+	readAskDraft,
+	retainAskDrafts,
+	secretQuestionIds,
+	writeAskDraft,
+} from "@/features/session/ask-drafts";
 import {
 	type AskOther,
 	answeredPairs,
@@ -43,6 +58,7 @@ import {
 } from "@/features/session/asks-open-policy";
 import type { RelayEndpoints } from "@/relay";
 import {
+	askAnswerFieldId,
 	askFieldId,
 	askOtherFieldId,
 	askOtherId,
@@ -58,6 +74,7 @@ import { useTokenColor } from "@/ui/appearance";
 import { Button } from "@/ui/components/button";
 import { IconButton } from "@/ui/components/icon-button";
 import { Sheet } from "@/ui/components/sheet";
+import { useSheetBodyScroll } from "@/ui/components/sheet-body-scroll";
 import { TOUCH_FLOOR } from "@/ui/layout";
 import { cx } from "@/ui/variants";
 
@@ -194,6 +211,7 @@ const QuestionField = ({
 	other,
 	onChange,
 	onOtherChange,
+	onFieldFocus,
 	disabled,
 }: {
 	question: AskQuestion;
@@ -206,6 +224,8 @@ const QuestionField = ({
 	other: AskOther;
 	onChange: (next: string[]) => void;
 	onOtherChange: (next: AskOther) => void;
+	/** The field that took focus, so the sheet can scroll it above the footer. */
+	onFieldFocus?: (node: View | null) => void;
 	disabled: boolean;
 }) => {
 	const options = Array.isArray(question.options) ? question.options : [];
@@ -215,6 +235,55 @@ const QuestionField = ({
 	 *  a colour VALUE — so the raw field rendered its placeholder at full ink,
 	 *  reading as a prefilled answer (design D4). */
 	const placeholderColour = useTokenColor("ink-muted");
+	/* One ref for whichever field this question shows: only one is ever mounted,
+	 *  and focus is what makes it the reader's position. */
+	const fieldRef = useRef<TextInput | null>(null);
+	/* A MULTILINE FIELD GROWS UNDER THE CARET, and the reveal ran before the
+	 *  growth: the first evidence frames showed line two of the answer cut by the
+	 *  pinned footer (2-line and 4-line states alike). So growth while the field
+	 *  is focused asks the sheet for the reveal again — the same anchor, measured
+	 *  against the taller field. Only growth triggers it; deleting text does not
+	 *  scroll the page under the reader. */
+	const fieldFocused = useRef(false);
+	const lastFieldHeight = useRef(0);
+	const takeGrowth = (height: number) => {
+		/* The CURRENT height, recorded on shrink too: a maximum-ever figure stopped
+		 *  re-revealing after four lines were deleted and three typed again
+		 *  (review r2-m4), which is the same cut line this reveal exists to stop. */
+		const grew = height > lastFieldHeight.current + 1;
+		lastFieldHeight.current = height;
+		if (!grew || !fieldFocused.current) return;
+		if (fieldRef.current !== null)
+			onFieldFocus?.(fieldRef.current as unknown as View);
+	};
+	/* Set by the DOOR's own press, so the field it just revealed takes the caret —
+	 *  one tap, keyboard up, exactly as the approved prototype behaves (UX r1 U2).
+	 *  A draft restored on reopen arrives with this false, so it comes back
+	 *  quietly (no keyboard over the sheet the reader just opened).
+	 *
+	 *  THREE paths reach the field because a single one was measured not to:
+	 *  the tick's effect (the field is already mounted — a re-tap of an open
+	 *  door), `autoFocus` at mount (the press IS what mounted it), and the
+	 *  field's own `onLayout` as the fallback when focus() ran before iOS had a
+	 *  frame to give it (the evidence run's first attempt: the door opened and
+	 *  the keyboard never came up). */
+	const doorFocusWanted = useRef(false);
+	const [doorFocusTick, setDoorFocusTick] = useState(0);
+	const takeDoorFocus = () => {
+		if (!doorFocusWanted.current) return;
+		doorFocusWanted.current = false;
+		fieldRef.current?.focus();
+	};
+	useEffect(() => {
+		if (doorFocusTick === 0 || !doorFocusWanted.current) return;
+		/* A null ref means the field mounts in this same commit: the flag STAYS set
+		 *  so `autoFocus` / `onLayout` takes it. Clearing it first made that
+		 *  fallback dead code (review r2 N1 / UX U10). */
+		const field = fieldRef.current;
+		if (field === null) return;
+		doorFocusWanted.current = false;
+		field.focus();
+	}, [doorFocusTick]);
 	if (options.length === 0) {
 		return (
 			<View>
@@ -225,6 +294,9 @@ const QuestionField = ({
 					</Text>
 				) : null}
 				<TextInput
+					ref={fieldRef}
+					onFocus={() => onFieldFocus?.(fieldRef.current as unknown as View)}
+					testID={askAnswerFieldId(String(question.id))}
 					className="min-h-11 rounded-sm border border-border-control bg-elevated px-3 text-body text-ink"
 					value={value[0] ?? ""}
 					onChangeText={(text) => onChange([text])}
@@ -232,6 +304,11 @@ const QuestionField = ({
 					placeholder={question.secret ? "Secret value" : "Your answer"}
 					placeholderTextColor={placeholderColour}
 					secureTextEntry={question.secret}
+					/* Done puts the keyboard away and NEVER submits — the same rule the
+					 *  `Other` field follows (design D6 / review r1 N4): a phone Return
+					 *  must not send an irreversible answer. */
+					returnKeyType="done"
+					submitBehavior="blurAndSubmit"
 					// 16 pt or the OS zooms the whole page on focus, which moves
 					// every control the reader was about to press.
 					style={{ fontSize: 16 }}
@@ -268,6 +345,7 @@ const QuestionField = ({
 						accessibilityState={state({ selected: on, disabled })}
 						disabled={disabled}
 						onPress={() => {
+							Keyboard.dismiss();
 							if (!question.multi) {
 								onChange([option.label]);
 								/* Choosing an option closes the door — the exclusion's card
@@ -315,16 +393,28 @@ const QuestionField = ({
 				<Pressable
 					accessibilityRole={ROLE.radio}
 					accessibilityLabel="Other"
-					accessibilityHint={OTHER_HINT}
+					/* The hint follows the row's own line: with text kept, "Type your
+					 *  answer" told a screen reader the opposite of what the row shows
+					 *  (UX r2 U8). */
+					accessibilityHint={
+						other.open || other.text.trim() === "" ? OTHER_HINT : KEPT_TEXT_HINT
+					}
 					accessibilityState={state({ selected: other.open, disabled })}
 					disabled={disabled}
 					onPress={() => {
 						/* A ticked multi-select `Other` unticks, as any checkbox does;
-						   the single-select radio re-selects rather than toggling off. */
+						 *  the single-select radio re-selects rather than toggling off. */
 						if (question.multi && other.open) {
+							Keyboard.dismiss();
 							onOtherChange({ ...other, open: false });
 							return;
 						}
+						/* ONE TAP puts the caret in the field this press reveals (UX r1 U2),
+						 *  and deliberately does NOT dismiss the keyboard first: the field
+						 *  asks for it in the next frame, and a dismiss in between made the
+						 *  keyboard drop and rise again. */
+						doorFocusWanted.current = true;
+						setDoorFocusTick((tick) => tick + 1);
 						onOtherChange({ ...other, open: true });
 					}}
 					testID={askOtherId(String(question.id))}
@@ -353,16 +443,42 @@ const QuestionField = ({
 				</Pressable>
 			) : null}
 			{door && other.open ? (
+				/* THE TYPED ANSWER, GROWN TO FOUR LINES (spec 3.3). Multiline so a
+				 *  sentence is readable while it is written; capped at ~100 pt so the
+				 *  question above it keeps its place; 16 pt text or the OS zooms the
+				 *  page on focus, which moves every control the reader was about to
+				 *  press. Done (the Return key) puts the keyboard away and NEVER
+				 *  submits — a phone Return must not send an irreversible answer
+				 *  (Ben, a-5712). */
 				<TextInput
-					className="min-h-11 rounded-sm border border-border-control bg-elevated px-3 text-body text-ink"
+					ref={fieldRef}
+					onFocus={() => {
+						fieldFocused.current = true;
+						onFieldFocus?.(fieldRef.current as unknown as View);
+					}}
+					onBlur={() => {
+						fieldFocused.current = false;
+					}}
+					onContentSizeChange={(event) =>
+						takeGrowth(event.nativeEvent.contentSize.height)
+					}
+					onLayout={takeDoorFocus}
+					autoFocus={doorFocusWanted.current}
+					multiline
+					returnKeyType="done"
+					submitBehavior="blurAndSubmit"
+					className="rounded-sm border border-border-control bg-elevated px-3 py-2 text-body text-ink"
 					value={other.text}
 					onChangeText={(text) => onOtherChange({ open: true, text })}
 					editable={!disabled}
 					placeholder="Your answer"
 					placeholderTextColor={placeholderColour}
-					// 16 pt or the OS zooms the whole page on focus, which moves
-					// every control the reader was about to press.
-					style={{ fontSize: 16 }}
+					style={{
+						fontSize: 16,
+						minHeight: 44,
+						maxHeight: 100,
+						textAlignVertical: "top",
+					}}
 					accessibilityLabel={`Your answer to: ${question.question}`}
 					testID={askOtherFieldId(String(question.id))}
 				/>
@@ -415,6 +531,13 @@ const AskDetail = ({
 	onOtherChange: (id: string, next: AskOther) => void;
 	onToggleSkip: (id: string) => void;
 }) => {
+	/* The sheet's scroll bridge: null when this list renders outside a sheet (a
+	 *  test, the settled card), in which case focus simply does not scroll. */
+	const scroll = useSheetBodyScroll();
+	/* One node per question block, keyed by question id, so the field that takes
+	 *  focus can name the question it belongs to: the block is the anchor when the
+	 *  whole question fits, the field itself when it does not. */
+	const blockRefs = useRef(new Map<string, View | null>());
 	const status = String(row.status || "open");
 	const answerable = isAnswerable(status);
 	/* `expired` draws its fields (the reader still sees what was asked) but
@@ -450,7 +573,14 @@ const AskDetail = ({
 					 *  audit, not questions. */
 					const position = questions.indexOf(question) + 1;
 					return (
-						<View key={id} className="gap-1" testID={askFieldId(id)}>
+						<View
+							key={id}
+							ref={(node) => {
+								blockRefs.current.set(id, node);
+							}}
+							className="gap-1"
+							testID={askFieldId(id)}
+						>
 							{questions.length > 1 ? (
 								<Text
 									className="font-mono text-mono-sm text-ink-dim"
@@ -468,6 +598,12 @@ const AskDetail = ({
 								other={draft.others[id] ?? EMPTY_OTHER}
 								onChange={(next) => onAnswer(id, next)}
 								onOtherChange={(next) => onOtherChange(id, next)}
+								onFieldFocus={(node) =>
+									scroll?.revealField({
+										block: blockRefs.current.get(id) ?? null,
+										field: node,
+									})
+								}
 								disabled={disabled || isSkipped}
 							/>
 							{/* A 44 pt target, not a link: it is the only way to say
@@ -587,10 +723,15 @@ export const AsksSheet = ({
 	);
 	const openAsk = shownExpansion(openAskChoice, initialOpenAsk);
 	/* The expanded form's draft — the SHEET's state because two regions render
-	 *  from it (the scrolling questions and the pinned footer's verbs), and it
-	 *  must still die with its expansion, the way it did when it lived inside
-	 *  `AskDetail` and the unmount cleared it: "the native app deliberately
-	 *  persists nothing — and re-expands empty" (ADR 0005 §2; the module note).
+	 *  from it (the scrolling questions and the pinned footer's verbs).
+	 *
+	 *  WHERE IT LIVES NOW (operator, a-5712: "Keep it"; ADR 0005 §2, amended
+	 *  2026-11-22). The draft no longer dies with its expansion: a typed `Other`
+	 *  answer (and the chosen options) is kept in memory, keyed by conversation +
+	 *  ask, by `@/features/session/ask-drafts`. It survives a close and a reopen,
+	 *  and it is dropped when the ask is settled or no longer outstanding — and on
+	 *  restart. NOTHING REACHES THE DISK, so the ADR's "caches nothing durably"
+	 *  rule is intact; a SECRET question's answer is never kept at all.
 	 *
 	 *  THE RESET RUNS IN RENDER, deliberately: an effect would paint the next
 	 *  ask's questions (`q1`… — ids repeat across asks) against the last ask's
@@ -601,9 +742,61 @@ export const AsksSheet = ({
 	 *  frame exists with the two asks mixed. */
 	const [draft, setDraft] = useState<AnswerDraft>(() => emptyDraft(null));
 	const expansion = openAsk ?? null;
+	/* The ROW of the expanded ask, whatever list drew it: the draft's key is the
+	 *  ask's OWN conversation (`askDraftKeyFor`), so a foreign row's answer is
+	 *  written, read and pruned under one key. */
+	const expansionRow = useMemo(() => {
+		if (expansion === null) return null;
+		return (
+			[...rows, ...(frameRows ?? [])].find(
+				(candidate) => candidate.ask_id === expansion,
+			) ?? null
+		);
+	}, [expansion, rows, frameRows]);
+	/* The expanded ask's questions, secret ones included: the store strips secret
+	 *  answers on write, so the WRITE needs to know which they are. */
+	const expansionQuestions = useMemo(
+		() =>
+			Array.isArray(expansionRow?.questions)
+				? (expansionRow.questions as AskQuestion[])
+				: ([] as AskQuestion[]),
+		[expansionRow],
+	);
+	const draftKey =
+		expansion === null
+			? null
+			: askDraftKeyFor(expansionRow ?? { ask_id: expansion }, currentSessionId);
 	if (draft.ask !== expansion) {
-		setDraft(emptyDraft(expansion));
+		/* A DRAFT THE READER ALREADY TYPED COMES BACK (Ben, a-5712: "Keep it").
+		 *  Keyed by conversation + ask, so it survives the expansion reset below
+		 *  and a close-and-reopen; secret questions are never in the store at all
+		 *  (`@/features/session/ask-drafts`). */
+		const kept = draftKey === null ? null : readAskDraft(draftKey);
+		setDraft(
+			kept === null
+				? emptyDraft(expansion)
+				: {
+						ask: expansion,
+						answers: kept.answers,
+						skipped: [...kept.skipped],
+						others: kept.others,
+					},
+		);
 	}
+	/* Write through on every change, so a close between two keystrokes keeps the
+	 *  text. The store's own gate removes secret answers. */
+	useEffect(() => {
+		if (draftKey === null || draft.ask === null) return;
+		writeAskDraft(
+			draftKey,
+			{
+				answers: draft.answers,
+				others: draft.others,
+				skipped: [...draft.skipped],
+			},
+			secretQuestionIds(expansionQuestions),
+		);
+	}, [draft, draftKey, expansionQuestions]);
 	const [pendingAction, setPendingAction] = useState<PendingAction>(null);
 	const [rowError, setRowError] = useState<{
 		askId: string;
@@ -752,6 +945,23 @@ export const AsksSheet = ({
 		[frameRows, rows, aggregateRead, currentSessionId, settled],
 	);
 	drawnCount.current = shownRows.length;
+	/* Forget every draft whose ask is no longer outstanding — settled here or on
+	 *  another surface, withdrawn, or lapsed out of the queue. */
+	useEffect(() => {
+		/* Nothing is pruned before the first read has answered: an empty `shownRows`
+		 *  while the sheet is still loading is not evidence that an ask is gone, and
+		 *  pruning on it would throw away the very draft this store exists to keep
+		 *  (#247 is the same shape of "short list while reading" the sheet already
+		 *  defends against). */
+		if (!loaded) return;
+		const live = new Set(
+			outstandingAsks(shownRows).map((row) =>
+				askDraftKeyFor(row, currentSessionId),
+			),
+		);
+		retainAskDrafts(live);
+	}, [shownRows, currentSessionId, loaded]);
+
 	/* The head first, then the wire's own order — the order the bar names. */
 	const listed = useMemo(() => orderedForDisplay(shownRows), [shownRows]);
 
@@ -877,6 +1087,8 @@ export const AsksSheet = ({
 				/* Recorded BEFORE the re-read: the frame that lands under it may still
 				 *  list the ask as open, and the merge must not resurrect it. */
 				setSettled((previous) => new Set(previous).add(row.ask_id));
+				/* Settled is settled: the typed text has no ask left to belong to. */
+				dropAskDraft(askDraftKeyFor(row, currentSessionId));
 				/* Advance the walk from the list as it stood: the re-read below
 				 *  refreshes the truth, but the reader's next ask is already
 				 *  visible here. Any row with a verb — a lapsed ask's Dismiss
@@ -912,6 +1124,17 @@ export const AsksSheet = ({
 			/* The queue is a list, so it takes the half detent; one ask fits its
 			 *  content (the model-list precedent, components.md §8). */
 			detent={listed.length > 1 ? "half" : "content"}
+			/* THE TWO SIZES AND THE KEYBOARD (this sheet's own brief): Medium
+			 *  hugs the content and Large gives a long question room for its option
+			 *  cards; the platform's own swipe-down puts the keyboard away, and a
+			 *  first tap outside it does the same instead of throwing a typed
+			 *  answer away. The chosen size is remembered for the app run, in
+			 *  memory only — the same rule the draft below follows. */
+			resizable
+			resizeKey="asks"
+			keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
+			dismissKeyboardOnScrimTap
+			dismissKeyboardOnBodyTap
 			/* THE ANSWERING CONTROLS ARE PINNED, and so is the refusal line — the
 			 *  kit's three-region rule (`Sheet`'s `footer` doc; the #69 precedent
 			 *  on three sibling sheets). Measured on iphone-se at 100 %: the

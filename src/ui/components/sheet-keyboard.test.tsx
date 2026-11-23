@@ -23,6 +23,21 @@ import type { HomeModelRow } from "@/features/home/home-defaults";
 import type { KeyboardFrame } from "@/features/session/keyboard-frame";
 import { type DomShim, installDomShim } from "@/testing/dom-shim";
 
+/* `Sheet` imports reanimated and gesture-handler; Node has neither (see the
+ * shared reduction's own note). */
+vi.mock("react-native-reanimated", async () => {
+	const { reanimatedModuleMock } = await import(
+		"@/testing/native-gesture-mocks"
+	);
+	return reanimatedModuleMock();
+});
+vi.mock("react-native-gesture-handler", async () => {
+	const { gestureHandlerModuleMock } = await import(
+		"@/testing/native-gesture-mocks"
+	);
+	return gestureHandlerModuleMock();
+});
+
 const WINDOW = { width: 390, height: 844 };
 const INSETS = { top: 47, bottom: 34, left: 0, right: 0 };
 const KEYBOARD = 336;

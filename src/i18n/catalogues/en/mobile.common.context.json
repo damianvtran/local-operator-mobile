@@ -58,5 +58,25 @@
 	"mobile.common.loading": {
 		"role": "status",
 		"note": "Screen-reader name announced for a loading skeleton placeholder on any screen. Status word, no trailing ellipsis; keep under ~16 characters. No placeholders."
+	},
+	"mobile.common.resize_panel": {
+		"role": "button",
+		"note": "Screen-reader name of the grab bar that resizes a bottom sheet between its two sizes. It is an adjustable control, so the current size follows the name as the control's value ('Medium'/'Large') and 'Taller'/'Shorter' are its actions. Short noun phrase, no placeholders, no final full stop."
+	},
+	"mobile.common.size.medium": {
+		"role": "meta",
+		"note": "The smaller of a resizable sheet's two sizes, read as the control's current value and never shown as a button. One word; the pair with 'Large' must read as two sizes of the same thing."
+	},
+	"mobile.common.size.large": {
+		"role": "meta",
+		"note": "The larger of a resizable sheet's two sizes, read as the control's current value and never shown as a button. One word; the pair with 'Medium' must read as two sizes of the same thing."
+	},
+	"mobile.common.size.taller": {
+		"role": "button",
+		"note": "The VoiceOver/TalkBack action that grows a resizable sheet from Medium to Large. Comparative adjective, no final full stop, no placeholders."
+	},
+	"mobile.common.size.shorter": {
+		"role": "button",
+		"note": "The VoiceOver/TalkBack action that shrinks a resizable sheet from Large to Medium. Comparative adjective, no final full stop, no placeholders."
 	}
 }
