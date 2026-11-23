@@ -33,7 +33,7 @@
 	"mobile.asks.honesty": "Ứng dụng này hiển thị các câu hỏi đang chờ khi đang mở. Khi đã đóng, ứng dụng không thể báo cho bạn.",
 	"mobile.asks.nothing_left": "Không còn gì để trả lời ở đây. Một giao diện khác đã nhận những câu hỏi này.",
 	"mobile.asks.none_recorded": "Chưa ghi nhận câu trả lời nào cho câu hỏi này.",
-	"mobile.asks.recommended": "· được đề xuất",
-	"mobile.asks.urgent": "· khẩn cấp",
+	"mobile.asks.recommended": "· Được đề xuất",
+	"mobile.asks.urgent": "· Khẩn cấp",
 	"mobile.asks.deadline_ago": "Đã quá hạn cách đây {duration}"
 }

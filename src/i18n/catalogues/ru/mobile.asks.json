@@ -33,7 +33,7 @@
 	"mobile.asks.honesty": "Это приложение показывает вопросы в очереди, пока оно открыто. Когда оно закрыто, оно не может вас уведомить.",
 	"mobile.asks.nothing_left": "Здесь больше нечего отвечать. Эти вопросы уже забрала другая поверхность.",
 	"mobile.asks.none_recorded": "Для этого вопроса ответ не записан.",
-	"mobile.asks.recommended": "· рекомендовано",
-	"mobile.asks.urgent": "· срочно",
+	"mobile.asks.recommended": "· Рекомендовано",
+	"mobile.asks.urgent": "· Срочно",
 	"mobile.asks.deadline_ago": "Срок истёк {duration} назад"
 }

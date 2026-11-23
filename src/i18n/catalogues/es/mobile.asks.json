@@ -33,7 +33,7 @@
 	"mobile.asks.honesty": "Esta aplicación muestra las preguntas en espera mientras está abierta. No puede avisarte cuando está cerrada.",
 	"mobile.asks.nothing_left": "No queda nada que responder aquí. Otra superficie ya tomó estas preguntas.",
 	"mobile.asks.none_recorded": "No se registró ninguna respuesta para esta pregunta.",
-	"mobile.asks.recommended": "· recomendado",
-	"mobile.asks.urgent": "· urgente",
+	"mobile.asks.recommended": "· Recomendado",
+	"mobile.asks.urgent": "· Urgente",
 	"mobile.asks.deadline_ago": "Plazo vencido hace {duration}"
 }

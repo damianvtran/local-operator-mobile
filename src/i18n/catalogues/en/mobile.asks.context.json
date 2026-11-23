@@ -137,11 +137,11 @@
 	},
 	"mobile.asks.recommended": {
 		"role": "meta",
-		"note": "Suffix after an option label marking the agent's recommended option. Keep the leading middle dot. Identical to the relay web page's wording. No final full stop."
+		"note": "Suffix after an option label marking the agent's recommended option. Keep the leading middle dot. Capitalised after the dot (sentence-case rule); the relay web page's lowercase wording is a follow-up. No final full stop."
 	},
 	"mobile.asks.urgent": {
 		"role": "meta",
-		"note": "Suffix after an ask's state line marking it urgent. Keep the leading middle dot. Identical to the relay web page's wording. No final full stop."
+		"note": "Suffix after an ask's state line marking it urgent. Keep the leading middle dot. Capitalised after the dot (sentence-case rule); the relay web page's lowercase wording is a follow-up. No final full stop."
 	},
 	"mobile.asks.deadline_ago": {
 		"role": "meta",

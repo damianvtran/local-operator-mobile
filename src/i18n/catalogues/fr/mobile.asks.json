@@ -33,7 +33,7 @@
 	"mobile.asks.honesty": "Cette application affiche les questions en attente tant qu’elle est ouverte. Elle ne peut pas vous joindre lorsqu’elle est fermée.",
 	"mobile.asks.nothing_left": "Plus rien à répondre ici. Une autre surface a déjà pris ces questions.",
 	"mobile.asks.none_recorded": "Aucune réponse n’a été enregistrée pour cette question.",
-	"mobile.asks.recommended": "· recommandé",
-	"mobile.asks.urgent": "· urgent",
+	"mobile.asks.recommended": "· Recommandé",
+	"mobile.asks.urgent": "· Urgent",
 	"mobile.asks.deadline_ago": "Échéance dépassée depuis {duration}"
 }

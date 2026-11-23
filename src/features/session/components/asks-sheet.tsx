@@ -226,7 +226,8 @@ export type AsksSheetProps = {
 	onReadFailed?: (info: { drawn: number }) => void;
 };
 
-/** The recommendation's suffix: the relay page's own words, byte for byte. */
+/** The recommendation's suffix (capitalised after the dot, like every string
+ *  in the panel; the relay page's lowercase wording is a follow-up). */
 const RecommendedMark = () => (
 	<Text className="text-meta text-ink-dim">
 		{" "}

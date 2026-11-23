@@ -33,7 +33,7 @@
 	"mobile.asks.honesty": "This app shows queued questions while it is open. It cannot reach you while it is closed.",
 	"mobile.asks.nothing_left": "Nothing left to answer here. Another surface has already taken these questions.",
 	"mobile.asks.none_recorded": "No answer was recorded for this question.",
-	"mobile.asks.recommended": "· recommended",
-	"mobile.asks.urgent": "· urgent",
+	"mobile.asks.recommended": "· Recommended",
+	"mobile.asks.urgent": "· Urgent",
 	"mobile.asks.deadline_ago": "Deadline {duration} ago"
 }

@@ -542,7 +542,7 @@ const IDENTICAL_BY_DESIGN_JUDGED: Readonly<
 		"mobile.asks.title_fallback":
 			"« Questions » is the French word too, spelled as in English; the relay page's French catalogue uses it for the same panel.",
 		"mobile.asks.urgent":
-			"« · urgent » is the French word, spelled as in English, and is the relay page's own French wording for the same suffix (`relay.asks.card.urgent`).",
+			"« · Urgent » is the French word, spelled as in English (the relay page's French suffix is the lowercase `relay.asks.card.urgent`).",
 		"mobile.sidebar.sections":
 			"« Sections » is the French word for the drawer's sections, spelled as in English; the desktop's French catalogue uses the same word (`ui.chat.sidebar_view.sections`).",
 		"mobile.settings.account.app_name":
