@@ -1394,6 +1394,10 @@ export type CatalogueKey =
 	| "relay.health.quiet_detail"
 	| "relay.health.reconnecting"
 	| "relay.health.reconnecting_detail"
+	| "relay.skills.skipped"
+	| "relay.skills.too_large"
+	| "relay.skills.tray.hidden"
+	| "relay.skills.tray.label"
 	| "relay.transcript.composer.queued"
 	| "relay.transcript.fold.failed_label"
 	| "relay.transcript.fold.more"
@@ -2539,6 +2543,9 @@ export type NoParamKey =
 	| "relay.health.quiet_detail"
 	| "relay.health.reconnecting"
 	| "relay.health.reconnecting_detail"
+	| "relay.skills.too_large"
+	| "relay.skills.tray.hidden"
+	| "relay.skills.tray.label"
 	| "relay.transcript.fold.failed_label"
 	| "relay.transcript.label.ask"
 	| "relay.transcript.label.job"
@@ -3919,6 +3926,10 @@ export type MessageParams = {
 	"relay.health.quiet_detail": NoParams;
 	"relay.health.reconnecting": NoParams;
 	"relay.health.reconnecting_detail": NoParams;
+	"relay.skills.skipped": { names: string | number; count: number };
+	"relay.skills.too_large": NoParams;
+	"relay.skills.tray.hidden": NoParams;
+	"relay.skills.tray.label": NoParams;
 	"relay.transcript.composer.queued": { count: number };
 	"relay.transcript.fold.failed_label": NoParams;
 	"relay.transcript.fold.more": { count: number };
@@ -5320,6 +5331,10 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"relay.health.quiet_detail": "This session on your computer has stopped responding — it may be busy or stuck. A send can show a failure and still arrive once it catches up. Retrying won't send it twice.",
 	"relay.health.reconnecting": "Reconnecting",
 	"relay.health.reconnecting_detail": "This phone lost its connection to your computer and keeps trying. The session may still be running there; sending may fail until the connection is back.",
+	"relay.skills.skipped": "Sent without {names} — {count, plural, one {that skill has} other {those skills have}} no content to attach.",
+	"relay.skills.too_large": "These skills are too large to send together. Remove one skill and send again.",
+	"relay.skills.tray.hidden": "hidden",
+	"relay.skills.tray.label": "Skills",
 	"relay.transcript.composer.queued": "{count, plural, one {# queued} other {# queued}}",
 	"relay.transcript.fold.failed_label": "Includes a failed action",
 	"relay.transcript.fold.more": "{count, plural, one {and # other action} other {and # other actions}}",
@@ -6706,6 +6721,10 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"relay.health.quiet_detail": { role: "help", note: "Sheet body for the YELLOW 'Not answering' state when the session is reachable but has gone quiet (heartbeat_stale). True behaviour to keep: a send can report a failure yet still be delivered once the session catches up; retrying under the same command id is safe. Do not promise queueing or delivery." },
 	"relay.health.reconnecting": { role: "status", note: "Title of the sheet and accessible name of the YELLOW status dot when the PHONE's own connection is down (the computer may be fine). One short state word, no ellipsis. Translator budget: 16 cells (the core's own maxCells for this key at 24d328a19a); the native context schema has no maxCells field, so the number is recorded here." },
 	"relay.health.reconnecting_detail": { role: "help", note: "Sheet body for the reconnecting state. It is the PHONE's connection that is down; the session itself may still be running, and the phone keeps trying on its own. 'Sending may fail' is deliberate — never promise that messages wait or are queued." },
+	"relay.skills.skipped": { role: "status", note: "Mirrored verbatim from the core relay catalogue (local_operator/i18n/catalogues/en/relay.skills.json at bfa3df2ac). Notice after a message was sent: the listed skills had no content to attach, so the message went without them. {names} is a comma-separated list of $-prefixed skill names (technical tokens, never translated); {count} is how many. The message WAS sent." },
+	"relay.skills.too_large": { role: "status", note: "Mirrored verbatim from the core relay catalogue (local_operator/i18n/catalogues/en/relay.skills.json at bfa3df2ac). Error under the message field: the skills named in the draft are too large to send together, so nothing was sent and the draft is kept. States the remedy: remove one skill and send again." },
+	"relay.skills.tray.hidden": { role: "meta", note: "Mirrored verbatim from the core relay catalogue (local_operator/i18n/catalogues/en/relay.skills.json at bfa3df2ac). Small tag on a skill row whose author marked it as not offered automatically (frontmatter 'hide'); the skill is still listed because the user typed its name. One lowercase word, no punctuation." },
+	"relay.skills.tray.label": { role: "heading", note: "Mirrored verbatim from the core relay catalogue (local_operator/i18n/catalogues/en/relay.skills.json at bfa3df2ac). Accessible name of the list of skills docked above the message field while the user types a $name. The noun 'skills' as the product names them; no punctuation." },
 	"relay.transcript.composer.queued": { role: "status", note: "Mirrored from the core relay catalogue (local_operator/i18n/catalogues/en/relay.transcript.context.json; core role: composer queued prompt count). Restores the pre-redesign queued-prompt count; {count} is the number of prompts waiting, not tool calls." },
 	"relay.transcript.fold.failed_label": { role: "status", note: "Mirrored from the core relay catalogue (local_operator/i18n/catalogues/en/relay.transcript.context.json; core role: collapsed group accessible failure state). Screen-reader text accompanying the failure glyph; it does not claim a count." },
 	"relay.transcript.fold.more": { role: "meta", note: "Mirrored from the core relay catalogue (local_operator/i18n/catalogues/en/relay.transcript.context.json; core role: tool-fold overflow unit). Follows at most five count units and counts actions hidden by that display cap, not additional tool types." },
@@ -8106,6 +8125,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"relay.health.quiet_detail": "Esta sesión dejó de responder en tu máquina — puede que esté ocupada o atascada. Un mensaje puede aparecer como fallido y aun así llegar cuando la sesión se ponga al día. Reintentar no lo enviará dos veces.",
 		"relay.health.reconnecting": "Reconectando",
 		"relay.health.reconnecting_detail": "Este teléfono perdió la conexión con tu máquina y sigue intentando reconectarse. Puede que la sesión siga ejecutándose allí; un envío puede fallar hasta que vuelva la conexión.",
+		"relay.skills.skipped": "Enviado sin {names} — {count, plural, one {esa habilidad no tiene contenido que adjuntar} many {esas habilidades no tienen contenido que adjuntar} other {esas habilidades no tienen contenido que adjuntar}}.",
+		"relay.skills.too_large": "Estas habilidades son demasiado grandes para enviarlas juntas. Quita una habilidad y envía de nuevo.",
+		"relay.skills.tray.hidden": "oculta",
+		"relay.skills.tray.label": "Habilidades",
 		"relay.transcript.composer.queued": "{count, plural, one {# en cola} many {# en cola} other {# en cola}}",
 		"relay.transcript.fold.failed_label": "Incluye una acción fallida",
 		"relay.transcript.fold.more": "{count, plural, one {y # acción más} many {y # de acciones más} other {y # acciones más}}",
@@ -9490,6 +9513,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"relay.health.quiet_detail": "Sur votre ordinateur, cette session ne répond plus — elle est peut-être occupée ou bloquée. Un message peut être signalé en échec et arriver malgré tout quand elle aura rattrapé son retard. Réessayer ne l’enverra pas en double.",
 		"relay.health.reconnecting": "Reconnexion",
 		"relay.health.reconnecting_detail": "Ce téléphone a perdu la connexion avec votre ordinateur et continue d’essayer de se reconnecter. La session s’y exécute peut-être encore ; un envoi peut échouer tant que la connexion n’est pas rétablie.",
+		"relay.skills.skipped": "Envoyé sans {names} — {count, plural, one {cette compétence n’a pas de contenu à joindre} many {ces compétences n’ont pas de contenu à joindre} other {ces compétences n’ont pas de contenu à joindre}}.",
+		"relay.skills.too_large": "Ces compétences sont trop volumineuses pour être envoyées ensemble. Retirez-en une et renvoyez le message.",
+		"relay.skills.tray.hidden": "masquée",
+		"relay.skills.tray.label": "Compétences",
 		"relay.transcript.composer.queued": "{count, plural, one {# en attente} many {# en attente} other {# en attente}}",
 		"relay.transcript.fold.failed_label": "Contient une action en échec",
 		"relay.transcript.fold.more": "{count, plural, one {et # autre action} many {et # d’autres actions} other {et # autres actions}}",
@@ -10874,6 +10901,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"relay.health.quiet_detail": "आपके कंप्यूटर पर इस सत्र ने उत्तर देना बंद कर दिया है — शायद यह व्यस्त हो या अटक गया हो। भेजा गया संदेश विफल दिख सकता है, फिर भी सत्र के दोबारा उत्तर देने पर पहुँच सकता है। फिर से कोशिश करने पर भी यह दो बार नहीं पहुँचेगा।",
 		"relay.health.reconnecting": "फिर से कनेक्ट हो रहा",
 		"relay.health.reconnecting_detail": "इस फ़ोन का आपके कंप्यूटर से कनेक्शन टूट गया है और यह लगातार फिर से कनेक्ट होने की कोशिश कर रहा है। हो सकता है सत्र वहाँ अब भी चल रहा हो; कनेक्शन वापस आने तक संदेश भेजना विफल हो सकता है।",
+		"relay.skills.skipped": "{names} के बिना भेजा गया — {count, plural, one {उस कौशल में ऐसी कोई सामग्री नहीं है जिसे संलग्न किया जा सके} other {उन कौशलों में ऐसी कोई सामग्री नहीं है जिसे संलग्न किया जा सके}}।",
+		"relay.skills.too_large": "ये कौशल एक साथ भेजने के लिए बहुत बड़े हैं। एक कौशल हटाएँ और फिर से भेजें।",
+		"relay.skills.tray.hidden": "छिपा",
+		"relay.skills.tray.label": "कौशल",
 		"relay.transcript.composer.queued": "{count, plural, one {# कतार में} other {# कतार में}}",
 		"relay.transcript.fold.failed_label": "इसमें एक विफल क्रिया शामिल है",
 		"relay.transcript.fold.more": "{count, plural, one {और # अन्य क्रिया} other {और # अन्य क्रियाएँ}}",
@@ -12258,6 +12289,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"relay.health.quiet_detail": "Эта сессия на компьютере перестала отвечать — возможно, она занята или зависла. Даже если отправка покажет ошибку, сообщение может дойти, когда сессия наверстает упущенное. Повторная попытка не отправит его дважды.",
 		"relay.health.reconnecting": "Переподключение",
 		"relay.health.reconnecting_detail": "Этот телефон потерял подключение к компьютеру и продолжает попытки переподключиться. Сессия там, возможно, всё ещё работает; пока подключение не восстановится, отправка может не пройти.",
+		"relay.skills.skipped": "Отправлено без {names} — {count, plural, one {у этого навыка нет содержимого для вложения} few {у этих навыков нет содержимого для вложения} many {у этих навыков нет содержимого для вложения} other {у этих навыков нет содержимого для вложения}}.",
+		"relay.skills.too_large": "Эти навыки слишком велики, чтобы отправить их вместе. Удалите один навык и отправьте снова.",
+		"relay.skills.tray.hidden": "скрыт",
+		"relay.skills.tray.label": "Навыки",
 		"relay.transcript.composer.queued": "{count, plural, one {# в очереди} few {# в очереди} many {# в очереди} other {# в очереди}}",
 		"relay.transcript.fold.failed_label": "Содержит неудачное действие",
 		"relay.transcript.fold.more": "{count, plural, one {и ещё # действие} few {и ещё # действия} many {и ещё # действий} other {и ещё # действия}}",
@@ -13642,6 +13677,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"relay.health.quiet_detail": "آپ کے کمپیوٹر پر اس سیشن نے جواب دینا بند کر دیا ہے — شاید یہ مصروف ہو یا اٹک گیا ہو۔ بھیجا گیا پیغام ناکام دکھائی دے سکتا ہے، مگر سیشن کے پھر سے جواب دینے پر پہنچ بھی سکتا ہے۔ دوبارہ کوشش کرنے پر بھی یہ دو بار نہیں پہنچے گا۔",
 		"relay.health.reconnecting": "پھر منسلک ہو رہا",
 		"relay.health.reconnecting_detail": "اس فون کا آپ کے کمپیوٹر سے کنکشن ٹوٹ گیا ہے اور یہ مسلسل دوبارہ کوشش کر رہا ہے۔ ہو سکتا ہے سیشن وہاں اب بھی چل رہا ہو؛ کنکشن بحال ہونے تک پیغام بھیجنا ناکام ہو سکتا ہے۔",
+		"relay.skills.skipped": "{names} کے بغیر بھیجا گیا — {count, plural, one {اس مہارت میں ایسا کوئی مواد نہیں ہے جسے منسلک کیا جا سکے} other {ان مہارتوں میں ایسا کوئی مواد نہیں ہے جسے منسلک کیا جا سکے}}۔",
+		"relay.skills.too_large": "یہ مہارتیں ایک ساتھ بھیجنے کے لیے بہت بڑی ہیں۔ ایک مہارت ہٹا کر دوبارہ بھیجیں۔",
+		"relay.skills.tray.hidden": "پوشیدہ",
+		"relay.skills.tray.label": "مہارتیں",
 		"relay.transcript.composer.queued": "{count, plural, one {# قطار میں} other {# قطار میں}}",
 		"relay.transcript.fold.failed_label": "اس میں ناکام عمل شامل ہے",
 		"relay.transcript.fold.more": "{count, plural, one {اور # دوسرا عمل} other {اور # دیگر اعمال}}",
@@ -15026,6 +15065,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"relay.health.quiet_detail": "Phiên này trên máy tính của bạn đã ngừng phản hồi — có thể đang bận hoặc bị treo. Có thể tin nhắn báo gửi thất bại nhưng vẫn được chuyển đến khi phiên bắt kịp. Thử lại sẽ không gửi tin nhắn hai lần.",
 		"relay.health.reconnecting": "Đang kết nối lại",
 		"relay.health.reconnecting_detail": "Điện thoại này đã mất kết nối với máy tính của bạn và đang liên tục thử lại. Phiên có thể vẫn đang chạy ở đó; gửi tin nhắn có thể không thành công cho đến khi kết nối trở lại.",
+		"relay.skills.skipped": "Đã gửi mà không kèm {names} — {count, plural, other {kỹ năng được liệt kê không có nội dung để đính kèm}}.",
+		"relay.skills.too_large": "Các kỹ năng này quá lớn để gửi cùng nhau. Bỏ một kỹ năng và gửi lại.",
+		"relay.skills.tray.hidden": "ẩn",
+		"relay.skills.tray.label": "Kỹ năng",
 		"relay.transcript.composer.queued": "{count, plural, other {# đang chờ}}",
 		"relay.transcript.fold.failed_label": "Có thao tác thất bại",
 		"relay.transcript.fold.more": "{count, plural, other {và # thao tác khác}}",
@@ -16410,6 +16453,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"relay.health.quiet_detail": "电脑上的此会话已停止响应——可能正忙或卡住了。发送可能显示失败，但会话重新响应后仍可能送达。重试也不会重复送达。",
 		"relay.health.reconnecting": "重连中",
 		"relay.health.reconnecting_detail": "此手机与电脑的连接已断开，正在不断尝试重连。会话可能仍在电脑上运行；重新连上之前，发送消息可能会失败。",
+		"relay.skills.skipped": "已发送，但未附带{names}——{count, plural, other {所列技能没有可附加的内容}}。",
+		"relay.skills.too_large": "这些技能太大，无法一起发送。移除一个技能后重新发送。",
+		"relay.skills.tray.hidden": "隐藏",
+		"relay.skills.tray.label": "技能",
 		"relay.transcript.composer.queued": "{count, plural, other {# 条已排队}}",
 		"relay.transcript.fold.failed_label": "包含失败的操作",
 		"relay.transcript.fold.more": "{count, plural, other {另有 # 项操作}}",

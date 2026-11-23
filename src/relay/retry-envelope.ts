@@ -81,6 +81,11 @@ export interface ContinuationEnvelope {
 	images?: PromptImage[];
 	input_mode?: InputMode;
 	input_path?: string;
+	/** Ask the relay to expand `$name` mentions (SKM-D1). Part of the retry
+	 *  envelope's BYTES: a replay must ask for the same expansion the first attempt
+	 *  did, or the retry would send the literal text of a message the user wrote as
+	 *  a skill invocation. Omitted — never `false` — when not requested. */
+	expand_skills?: boolean;
 }
 
 /** What is written to storage. The wrapper is what makes an old item readable
@@ -190,6 +195,10 @@ export function isValidEnvelope(value: unknown): value is ContinuationEnvelope {
 		if (candidate.input_path === "") return false;
 		if (candidate.input_path.length > 96) return false;
 	}
+	/* The relay expands only a literal `true`; a stored `false`/string is a
+	 * corrupt item, not a "no". */
+	if (candidate.expand_skills !== undefined && candidate.expand_skills !== true)
+		return false;
 	return true;
 }
 
@@ -284,7 +293,11 @@ export class RetryEnvelopeStore {
 		op: ContinuationOp,
 		text: string,
 		images?: PromptImage[],
-		annotation?: { input_mode?: InputMode; input_path?: string },
+		annotation?: {
+			input_mode?: InputMode;
+			input_path?: string;
+			expand_skills?: boolean;
+		},
 	): Promise<{ envelope: ContinuationEnvelope; reused: boolean }> {
 		const existing = await this.peek(sessionId, { requireReadable: true });
 		/* `reused` is the signal the composer needs: returning the stored envelope
@@ -306,6 +319,7 @@ export class RetryEnvelopeStore {
 			...(annotation?.input_path !== undefined && annotation.input_path !== ""
 				? { input_path: annotation.input_path }
 				: {}),
+			...(annotation?.expand_skills === true ? { expand_skills: true } : {}),
 		};
 		await this.hold(sessionId, envelope);
 		return { envelope, reused: false };

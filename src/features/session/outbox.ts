@@ -327,6 +327,7 @@ function payloadOf(input: OutboxSendInput): string {
 		(input.images ?? []).map((image) => [image.mime_type, image.data_b64]),
 		input.input_mode ?? null,
 		input.input_path ?? null,
+		input.expand_skills === true,
 	]);
 }
 
@@ -718,6 +719,7 @@ export class Outbox {
 					...(held.input_path !== undefined
 						? { input_path: held.input_path }
 						: {}),
+					...(held.expand_skills === true ? { expand_skills: true } : {}),
 					envelope: held,
 					timeoutMs: this.policy.attemptTimeoutMs,
 				};
