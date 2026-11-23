@@ -50,7 +50,9 @@ const user = (id: string) => row({ id, kind: "user" });
 const steer = (id: string) => row({ id, kind: "steer" });
 const tool = (id: string) =>
 	row({ id, kind: "tool", tool_name: "bash", text: "", elapsed_s: 2 });
-/** Mid-turn narration: declares calls, so it is work the bar may stand for. */
+/** Mid-turn narration: the model's words AND declared calls, which is what the
+ *  relay sends when a message says something and calls tools in one step. The
+ *  words stay on screen; only the calls fold (2026-11-21 operator report). */
 const narration = (id: string) =>
 	row({ id, kind: "assistant", calls_tools: true } as Partial<TranscriptEntry> &
 		Pick<TranscriptEntry, "id" | "kind">);
@@ -59,8 +61,9 @@ const reply = (id: string) => row({ id, kind: "assistant" });
 
 /** Prompts, steers, replies and the next prompt — what the reader must see. */
 const READER_FACING = /^[usr]\d|^next$/;
-/** Narration and tool rows — the work the bar stands for. */
-const WORK_ROW = /^[nt]\d/;
+/** Tool rows — the work the bar stands for; narration is the model's words. */
+const TOOL_ROW = /^t\d/;
+const NARRATION_ROW = /^n\d/;
 
 const visibleIds = (entries: TranscriptEntry[], live = false) =>
 	condensePlan({ entries, expanded: new Set(), latch: new Map(), live })
@@ -100,8 +103,15 @@ describe("B: a condensed turn never hides the reader's messages or the agent's a
 			"r3",
 			"next",
 		]);
-		// The work still condenses: no narration or tool row is on screen.
-		expect(shown.some((id) => WORK_ROW.test(id))).toBe(false);
+		// The work still condenses: every tool row is behind the bar, and the
+		// narration that declared the calls stays with the words it said.
+		expect(shown.some((id) => TOOL_ROW.test(id))).toBe(false);
+		expect(shown.filter((id) => NARRATION_ROW.test(id))).toEqual([
+			"n1",
+			"n2",
+			"n3",
+			"n4",
+		]);
 	});
 
 	it("keeps the same rows visible on the durable wire, where steers read as `user`", () => {
@@ -141,8 +151,8 @@ describe("B: a condensed turn never hides the reader's messages or the agent's a
 		const shown = settled.items
 			.filter((item) => item.kind === "entry")
 			.map((item) => item.id);
-		expect(shown).toEqual(["u1", "r1", "r2"]);
-		expect(settled.turns[0]?.hiddenIds).toEqual(["n1", "t1", "n2", "t2"]);
+		expect(shown).toEqual(["u1", "n1", "r1", "n2", "r2"]);
+		expect(settled.turns[0]?.hiddenIds).toEqual(["t1", "t2"]);
 	});
 });
 
