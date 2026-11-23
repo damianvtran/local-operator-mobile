@@ -13,5 +13,10 @@
 	"mobile.common.copied": "کاپی ہو گیا",
 	"mobile.common.copy_command_hint": "یہ “{label}” والی کمانڈ کاپی کرتا ہے",
 	"mobile.common.close": "بند کریں",
-	"mobile.common.loading": "لوڈ ہو رہا ہے"
+	"mobile.common.loading": "لوڈ ہو رہا ہے",
+	"mobile.common.resize_panel": "پینل کا سائز تبدیل کریں",
+	"mobile.common.size.medium": "درمیانہ",
+	"mobile.common.size.large": "بڑا",
+	"mobile.common.size.taller": "زیادہ اونچا",
+	"mobile.common.size.shorter": "زیادہ نیچا"
 }
