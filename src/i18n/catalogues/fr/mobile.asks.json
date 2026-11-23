@@ -1,0 +1,16 @@
+{
+	"mobile.asks.send_answer": "Envoyer la réponse",
+	"mobile.asks.send_answers": "Envoyer les réponses",
+	"mobile.asks.decline": "Refuser",
+	"mobile.asks.dismiss": "Ignorer",
+	"mobile.asks.dismiss_open": "Ignorer…",
+	"mobile.asks.dismiss_title": "Ignorer cette question",
+	"mobile.asks.dismiss_reason.moot": "Plus nécessaire",
+	"mobile.asks.dismiss_reason.moot_note": "l’agent n’attendra plus de réponse",
+	"mobile.asks.dismiss_reason.chat": "Répondu dans la conversation",
+	"mobile.asks.dismiss_reason.chat_note": "vous avez déjà répondu dans la conversation",
+	"mobile.asks.earlier": "Plus tôt",
+	"mobile.asks.progress.tally": "Réponses : {answered} sur {total}",
+	"mobile.asks.progress.pick_or_type": "Choisissez une option ou saisissez la vôtre pour répondre.",
+	"mobile.asks.progress.type": "Saisissez votre réponse, ou passez-la, pour envoyer."
+}

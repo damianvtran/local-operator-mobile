@@ -1,0 +1,16 @@
+{
+	"mobile.asks.send_answer": "Gửi câu trả lời",
+	"mobile.asks.send_answers": "Gửi câu trả lời",
+	"mobile.asks.decline": "Từ chối",
+	"mobile.asks.dismiss": "Bỏ qua",
+	"mobile.asks.dismiss_open": "Bỏ qua…",
+	"mobile.asks.dismiss_title": "Bỏ qua câu hỏi này",
+	"mobile.asks.dismiss_reason.moot": "Không còn cần nữa",
+	"mobile.asks.dismiss_reason.moot_note": "tác nhân sẽ không chờ câu trả lời nữa",
+	"mobile.asks.dismiss_reason.chat": "Đã trả lời trong cuộc trò chuyện",
+	"mobile.asks.dismiss_reason.chat_note": "bạn đã trả lời trong cuộc trò chuyện",
+	"mobile.asks.earlier": "Trước đó",
+	"mobile.asks.progress.tally": "Đã trả lời {answered} trên {total}",
+	"mobile.asks.progress.pick_or_type": "Chọn một phương án hoặc tự nhập câu trả lời để trả lời.",
+	"mobile.asks.progress.type": "Nhập câu trả lời hoặc bỏ qua để gửi."
+}

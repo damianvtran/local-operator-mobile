@@ -16,6 +16,8 @@ import accountRoutingContext from "@/i18n/catalogues/en/mobile.account_routing.c
 import accountRouting from "@/i18n/catalogues/en/mobile.account_routing.json";
 import agentAvatarContext from "@/i18n/catalogues/en/mobile.agent_avatar.context.json";
 import agentAvatar from "@/i18n/catalogues/en/mobile.agent_avatar.json";
+import asksContext from "@/i18n/catalogues/en/mobile.asks.context.json";
+import asks from "@/i18n/catalogues/en/mobile.asks.json";
 import chromeContext from "@/i18n/catalogues/en/mobile.chrome.context.json";
 import chrome from "@/i18n/catalogues/en/mobile.chrome.json";
 import commonContext from "@/i18n/catalogues/en/mobile.common.context.json";
@@ -98,6 +100,15 @@ const NAMESPACES = [
 		messages: signin,
 		context: signinContext,
 		expected: 32, // M3 S4 −1: the dead mobile.signin.diagnostics (no call site; the panel uses show_/hide_diagnostics) removed (33 − 1 = 32). M3 S2a +1: the loopback-unavailable detail (32 + 1 = 33); 18 + 14: S1 sign-in panel, sign-in/welcome screens (M3 slice S1)
+	},
+	{
+		name: "mobile.asks",
+		messages: asks,
+		context: asksContext,
+		// Ask-panel parity N3/N4: send/decline/dismiss labels (5), the dismiss
+		// reasons (5), "Earlier" (1) and the footer progress lines (3), counted
+		// over the en JSON.
+		expected: 14,
 	},
 	{
 		name: "mobile.oauth",

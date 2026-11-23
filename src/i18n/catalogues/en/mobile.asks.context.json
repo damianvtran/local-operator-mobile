@@ -1,0 +1,58 @@
+{
+	"mobile.asks.send_answer": {
+		"role": "button",
+		"note": "Primary button of the open ask card, pinned in the sheet footer, when the ask has ONE question. Sends the reader's answer to the agent; a verb phrase used as a label, sentence case, no final full stop. LIMIT: not 'Answer' (that was the old label) and never used for a multi-question ask, which has its own key."
+	},
+	"mobile.asks.send_answers": {
+		"role": "button",
+		"note": "Primary button of the open ask card when the ask has SEVERAL questions: one press sends every answer together. Same wording family as the singular key; a language that does not mark number may use the same words. Sentence case, no final full stop."
+	},
+	"mobile.asks.decline": {
+		"role": "button",
+		"note": "Danger button beside the send button. Tells the agent 'no answer — decide yourself'; it answers the agent, unlike Dismiss. A verb used as a label, sentence case, no final full stop."
+	},
+	"mobile.asks.dismiss": {
+		"role": "button",
+		"note": "Quiet button on an ask whose deadline already passed (the agent went ahead without an answer). One press removes it from the list at once and asks the reader nothing. One word or short verb phrase, sentence case, no ellipsis and no final full stop. LIMIT: the same verb as the 'Dismiss…' key, minus the ellipsis."
+	},
+	"mobile.asks.dismiss_open": {
+		"role": "button",
+		"note": "Quiet link under the send and decline buttons of a waiting ask. It opens a choice of two reasons rather than acting at once, which is what the trailing ellipsis says; keep the ellipsis (use the ellipsis character your language normally uses). Same verb as the plain Dismiss key. Sentence case, no final full stop."
+	},
+	"mobile.asks.dismiss_title": {
+		"role": "heading",
+		"note": "Short heading above the two reasons offered when the reader dismisses a waiting question. Names the act in the sheet's own noun, 'question'. No final full stop."
+	},
+	"mobile.asks.dismiss_reason.moot": {
+		"role": "button",
+		"note": "First reason when dismissing a waiting question: the question no longer matters, so the agent should stop waiting. Sentence case, no final full stop. Its note line follows on the row."
+	},
+	"mobile.asks.dismiss_reason.moot_note": {
+		"role": "help",
+		"note": "Second line of the 'No longer needed' reason: what the agent will do. Lower case after the row's label in English; no final full stop."
+	},
+	"mobile.asks.dismiss_reason.chat": {
+		"role": "button",
+		"note": "Second reason when dismissing a waiting question: the reader already gave the answer in the conversation itself, so the agent should read it there. Sentence case, no final full stop."
+	},
+	"mobile.asks.dismiss_reason.chat_note": {
+		"role": "help",
+		"note": "Second line of the 'Answered in chat' reason: what happened. Lower case in English; no final full stop. 'Chat' and 'conversation' are the same thing here."
+	},
+	"mobile.asks.earlier": {
+		"role": "heading",
+		"note": "Heading above the asks that are already settled (answered, declined or dismissed), below everything that still waits. Sentence case, one word in English, no final full stop. LIMIT: about the order of the list, not a date."
+	},
+	"mobile.asks.progress.tally": {
+		"role": "status",
+		"note": "Quiet line above the send button while it is disabled, for an ask with several questions: how many of its questions have an answer. {answered} and {total} are non-negative integers and both must survive translation; {answered} never exceeds {total}. No final full stop. A language whose participle agrees with the count should be phrased so it does not (a label before the numbers works)."
+	},
+	"mobile.asks.progress.pick_or_type": {
+		"role": "status",
+		"note": "Quiet line above the send button while it is disabled, for an ask with ONE question that offers options: what the reader must do to enable it. The reader can pick an offered option or type their own answer. Full sentence with a final full stop."
+	},
+	"mobile.asks.progress.type": {
+		"role": "status",
+		"note": "Quiet line above the send button while it is disabled, for an ask with ONE question that offers no options: type an answer, or use the skip link, to enable sending. Full sentence with a final full stop."
+	}
+}

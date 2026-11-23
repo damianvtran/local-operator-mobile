@@ -47,6 +47,20 @@ export type CatalogueKey =
 	| "mobile.account_routing.unsaved"
 	| "mobile.agent_avatar.edit_hint"
 	| "mobile.agent_avatar.label"
+	| "mobile.asks.decline"
+	| "mobile.asks.dismiss"
+	| "mobile.asks.dismiss_open"
+	| "mobile.asks.dismiss_reason.chat"
+	| "mobile.asks.dismiss_reason.chat_note"
+	| "mobile.asks.dismiss_reason.moot"
+	| "mobile.asks.dismiss_reason.moot_note"
+	| "mobile.asks.dismiss_title"
+	| "mobile.asks.earlier"
+	| "mobile.asks.progress.pick_or_type"
+	| "mobile.asks.progress.tally"
+	| "mobile.asks.progress.type"
+	| "mobile.asks.send_answer"
+	| "mobile.asks.send_answers"
 	| "mobile.chrome.clear_search"
 	| "mobile.chrome.close_conversations"
 	| "mobile.chrome.composer.dismiss_keyboard"
@@ -1446,6 +1460,19 @@ export type NoParamKey =
 	| "mobile.account_routing.unsaved"
 	| "mobile.agent_avatar.edit_hint"
 	| "mobile.agent_avatar.label"
+	| "mobile.asks.decline"
+	| "mobile.asks.dismiss"
+	| "mobile.asks.dismiss_open"
+	| "mobile.asks.dismiss_reason.chat"
+	| "mobile.asks.dismiss_reason.chat_note"
+	| "mobile.asks.dismiss_reason.moot"
+	| "mobile.asks.dismiss_reason.moot_note"
+	| "mobile.asks.dismiss_title"
+	| "mobile.asks.earlier"
+	| "mobile.asks.progress.pick_or_type"
+	| "mobile.asks.progress.type"
+	| "mobile.asks.send_answer"
+	| "mobile.asks.send_answers"
 	| "mobile.chrome.clear_search"
 	| "mobile.chrome.close_conversations"
 	| "mobile.chrome.composer.dismiss_keyboard"
@@ -2598,6 +2625,20 @@ export type MessageParams = {
 	"mobile.account_routing.unsaved": NoParams;
 	"mobile.agent_avatar.edit_hint": NoParams;
 	"mobile.agent_avatar.label": NoParams;
+	"mobile.asks.decline": NoParams;
+	"mobile.asks.dismiss": NoParams;
+	"mobile.asks.dismiss_open": NoParams;
+	"mobile.asks.dismiss_reason.chat": NoParams;
+	"mobile.asks.dismiss_reason.chat_note": NoParams;
+	"mobile.asks.dismiss_reason.moot": NoParams;
+	"mobile.asks.dismiss_reason.moot_note": NoParams;
+	"mobile.asks.dismiss_title": NoParams;
+	"mobile.asks.earlier": NoParams;
+	"mobile.asks.progress.pick_or_type": NoParams;
+	"mobile.asks.progress.tally": { answered: string | number; total: string | number };
+	"mobile.asks.progress.type": NoParams;
+	"mobile.asks.send_answer": NoParams;
+	"mobile.asks.send_answers": NoParams;
 	"mobile.chrome.clear_search": NoParams;
 	"mobile.chrome.close_conversations": NoParams;
 	"mobile.chrome.composer.dismiss_keyboard": NoParams;
@@ -4013,6 +4054,20 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.account_routing.unsaved": "Not saved yet.",
 	"mobile.agent_avatar.edit_hint": "Change this picture in the desktop app",
 	"mobile.agent_avatar.label": "Agent picture",
+	"mobile.asks.decline": "Decline",
+	"mobile.asks.dismiss": "Dismiss",
+	"mobile.asks.dismiss_open": "Dismiss…",
+	"mobile.asks.dismiss_reason.chat": "Answered in chat",
+	"mobile.asks.dismiss_reason.chat_note": "you already replied in the conversation",
+	"mobile.asks.dismiss_reason.moot": "No longer needed",
+	"mobile.asks.dismiss_reason.moot_note": "stop waiting on it",
+	"mobile.asks.dismiss_title": "Dismiss this question",
+	"mobile.asks.earlier": "Earlier",
+	"mobile.asks.progress.pick_or_type": "Pick an option or type your own to answer.",
+	"mobile.asks.progress.tally": "{answered} of {total} answered",
+	"mobile.asks.progress.type": "Type your answer, or skip it, to send.",
+	"mobile.asks.send_answer": "Send answer",
+	"mobile.asks.send_answers": "Send answers",
 	"mobile.chrome.clear_search": "Clear search",
 	"mobile.chrome.close_conversations": "Close conversations",
 	"mobile.chrome.composer.dismiss_keyboard": "Dismiss keyboard",
@@ -5413,6 +5468,20 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.account_routing.unsaved": { role: "status", note: "A selected draft differs from the backend value; changing radio alone does not persist." },
 	"mobile.agent_avatar.edit_hint": { role: "help", note: "Shown as a toast when the reader taps or long-presses the agent's picture in a conversation header, and read as that control's accessibility hint. The phone app cannot edit agent pictures; the Local Operator desktop app can. Keep \"desktop app\" generic (no product name). No final full stop." },
 	"mobile.agent_avatar.label": { role: "button", note: "Accessible name of the agent's profile picture in a conversation header (a decorative picture that is also a button explaining where to change it). A noun phrase, not an action. \"Agent\" is the product term for the AI assistant the conversation runs. No final full stop." },
+	"mobile.asks.decline": { role: "button", note: "Danger button beside the send button. Tells the agent 'no answer — decide yourself'; it answers the agent, unlike Dismiss. A verb used as a label, sentence case, no final full stop." },
+	"mobile.asks.dismiss": { role: "button", note: "Quiet button on an ask whose deadline already passed (the agent went ahead without an answer). One press removes it from the list at once and asks the reader nothing. One word or short verb phrase, sentence case, no ellipsis and no final full stop. LIMIT: the same verb as the 'Dismiss…' key, minus the ellipsis." },
+	"mobile.asks.dismiss_open": { role: "button", note: "Quiet link under the send and decline buttons of a waiting ask. It opens a choice of two reasons rather than acting at once, which is what the trailing ellipsis says; keep the ellipsis (use the ellipsis character your language normally uses). Same verb as the plain Dismiss key. Sentence case, no final full stop." },
+	"mobile.asks.dismiss_reason.chat": { role: "button", note: "Second reason when dismissing a waiting question: the reader already gave the answer in the conversation itself, so the agent should read it there. Sentence case, no final full stop." },
+	"mobile.asks.dismiss_reason.chat_note": { role: "help", note: "Second line of the 'Answered in chat' reason: what happened. Lower case in English; no final full stop. 'Chat' and 'conversation' are the same thing here." },
+	"mobile.asks.dismiss_reason.moot": { role: "button", note: "First reason when dismissing a waiting question: the question no longer matters, so the agent should stop waiting. Sentence case, no final full stop. Its note line follows on the row." },
+	"mobile.asks.dismiss_reason.moot_note": { role: "help", note: "Second line of the 'No longer needed' reason: what the agent will do. Lower case after the row's label in English; no final full stop." },
+	"mobile.asks.dismiss_title": { role: "heading", note: "Short heading above the two reasons offered when the reader dismisses a waiting question. Names the act in the sheet's own noun, 'question'. No final full stop." },
+	"mobile.asks.earlier": { role: "heading", note: "Heading above the asks that are already settled (answered, declined or dismissed), below everything that still waits. Sentence case, one word in English, no final full stop. LIMIT: about the order of the list, not a date." },
+	"mobile.asks.progress.pick_or_type": { role: "status", note: "Quiet line above the send button while it is disabled, for an ask with ONE question that offers options: what the reader must do to enable it. The reader can pick an offered option or type their own answer. Full sentence with a final full stop." },
+	"mobile.asks.progress.tally": { role: "status", note: "Quiet line above the send button while it is disabled, for an ask with several questions: how many of its questions have an answer. {answered} and {total} are non-negative integers and both must survive translation; {answered} never exceeds {total}. No final full stop. A language whose participle agrees with the count should be phrased so it does not (a label before the numbers works)." },
+	"mobile.asks.progress.type": { role: "status", note: "Quiet line above the send button while it is disabled, for an ask with ONE question that offers no options: type an answer, or use the skip link, to enable sending. Full sentence with a final full stop." },
+	"mobile.asks.send_answer": { role: "button", note: "Primary button of the open ask card, pinned in the sheet footer, when the ask has ONE question. Sends the reader's answer to the agent; a verb phrase used as a label, sentence case, no final full stop. LIMIT: not 'Answer' (that was the old label) and never used for a multi-question ask, which has its own key." },
+	"mobile.asks.send_answers": { role: "button", note: "Primary button of the open ask card when the ask has SEVERAL questions: one press sends every answer together. Same wording family as the singular key; a language that does not mark number may use the same words. Sentence case, no final full stop." },
 	"mobile.chrome.clear_search": { role: "button", note: "Accessible name of the small × inside the sidebar's search field; it empties the search text. Shown only while the field has text. No final full stop." },
 	"mobile.chrome.close_conversations": { role: "button", note: "Accessible name (screen readers only, never shown) of two controls that both dismiss the conversations sidebar: the ✕ in the sidebar header and the dimmed page strip beside the open sidebar. 'Conversations' is the sidebar's list of chat sessions, not one conversation. Imperative, no final full stop." },
 	"mobile.chrome.composer.dismiss_keyboard": { role: "button", note: "Build389 shared composer context strip / exclusive home presentation. Preserve {count} plural and {host} parameters where present." },
@@ -6827,6 +6896,20 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.account_routing.unsaved": "Aún sin guardar.",
 		"mobile.agent_avatar.edit_hint": "Cambia esta imagen en la aplicación de escritorio",
 		"mobile.agent_avatar.label": "Imagen del agente",
+		"mobile.asks.decline": "Rechazar",
+		"mobile.asks.dismiss": "Descartar",
+		"mobile.asks.dismiss_open": "Descartar…",
+		"mobile.asks.dismiss_reason.chat": "Respondido en la conversación",
+		"mobile.asks.dismiss_reason.chat_note": "ya respondiste en la conversación",
+		"mobile.asks.dismiss_reason.moot": "Ya no hace falta",
+		"mobile.asks.dismiss_reason.moot_note": "el agente dejará de esperar respuesta",
+		"mobile.asks.dismiss_title": "Descartar esta pregunta",
+		"mobile.asks.earlier": "Anteriores",
+		"mobile.asks.progress.pick_or_type": "Elige una opción o escribe la tuya para responder.",
+		"mobile.asks.progress.tally": "Respondidas: {answered} de {total}",
+		"mobile.asks.progress.type": "Escribe tu respuesta, u omítela, para enviar.",
+		"mobile.asks.send_answer": "Enviar respuesta",
+		"mobile.asks.send_answers": "Enviar respuestas",
 		"mobile.chrome.clear_search": "Borrar búsqueda",
 		"mobile.chrome.close_conversations": "Cerrar conversaciones",
 		"mobile.chrome.composer.dismiss_keyboard": "Ocultar teclado",
@@ -8225,6 +8308,20 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.account_routing.unsaved": "Pas encore enregistré.",
 		"mobile.agent_avatar.edit_hint": "Modifiez cette photo dans l’application de bureau",
 		"mobile.agent_avatar.label": "Photo de l’agent",
+		"mobile.asks.decline": "Refuser",
+		"mobile.asks.dismiss": "Ignorer",
+		"mobile.asks.dismiss_open": "Ignorer…",
+		"mobile.asks.dismiss_reason.chat": "Répondu dans la conversation",
+		"mobile.asks.dismiss_reason.chat_note": "vous avez déjà répondu dans la conversation",
+		"mobile.asks.dismiss_reason.moot": "Plus nécessaire",
+		"mobile.asks.dismiss_reason.moot_note": "l’agent n’attendra plus de réponse",
+		"mobile.asks.dismiss_title": "Ignorer cette question",
+		"mobile.asks.earlier": "Plus tôt",
+		"mobile.asks.progress.pick_or_type": "Choisissez une option ou saisissez la vôtre pour répondre.",
+		"mobile.asks.progress.tally": "Réponses : {answered} sur {total}",
+		"mobile.asks.progress.type": "Saisissez votre réponse, ou passez-la, pour envoyer.",
+		"mobile.asks.send_answer": "Envoyer la réponse",
+		"mobile.asks.send_answers": "Envoyer les réponses",
 		"mobile.chrome.clear_search": "Effacer la recherche",
 		"mobile.chrome.close_conversations": "Fermer les conversations",
 		"mobile.chrome.composer.dismiss_keyboard": "Masquer le clavier",
@@ -9623,6 +9720,20 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.account_routing.unsaved": "अभी सहेजा नहीं गया।",
 		"mobile.agent_avatar.edit_hint": "यह तस्वीर डेस्कटॉप ऐप में बदलें",
 		"mobile.agent_avatar.label": "एजेंट की तस्वीर",
+		"mobile.asks.decline": "अस्वीकार करें",
+		"mobile.asks.dismiss": "हटाएँ",
+		"mobile.asks.dismiss_open": "हटाएँ…",
+		"mobile.asks.dismiss_reason.chat": "चैट में जवाब दिया",
+		"mobile.asks.dismiss_reason.chat_note": "आप पहले ही बातचीत में जवाब दे चुके हैं",
+		"mobile.asks.dismiss_reason.moot": "अब ज़रूरत नहीं",
+		"mobile.asks.dismiss_reason.moot_note": "एजेंट अब जवाब का इंतज़ार नहीं करेगा",
+		"mobile.asks.dismiss_title": "यह सवाल हटाएँ",
+		"mobile.asks.earlier": "पहले",
+		"mobile.asks.progress.pick_or_type": "जवाब देने के लिए एक विकल्प चुनें या अपना लिखें।",
+		"mobile.asks.progress.tally": "{total} में से {answered} के उत्तर दिए गए",
+		"mobile.asks.progress.type": "भेजने के लिए अपना उत्तर लिखें, या इसे छोड़ दें।",
+		"mobile.asks.send_answer": "उत्तर भेजें",
+		"mobile.asks.send_answers": "उत्तर भेजें",
 		"mobile.chrome.clear_search": "खोज साफ़ करें",
 		"mobile.chrome.close_conversations": "बातचीत बंद करें",
 		"mobile.chrome.composer.dismiss_keyboard": "कीबोर्ड छिपाएँ",
@@ -11021,6 +11132,20 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.account_routing.unsaved": "Ещё не сохранено.",
 		"mobile.agent_avatar.edit_hint": "Изменить это изображение можно в приложении для компьютера",
 		"mobile.agent_avatar.label": "Изображение агента",
+		"mobile.asks.decline": "Отклонить",
+		"mobile.asks.dismiss": "Убрать",
+		"mobile.asks.dismiss_open": "Убрать…",
+		"mobile.asks.dismiss_reason.chat": "Ответ дан в чате",
+		"mobile.asks.dismiss_reason.chat_note": "вы уже ответили в чате",
+		"mobile.asks.dismiss_reason.moot": "Больше не нужно",
+		"mobile.asks.dismiss_reason.moot_note": "агент больше не будет ждать ответа",
+		"mobile.asks.dismiss_title": "Убрать этот вопрос",
+		"mobile.asks.earlier": "Ранее",
+		"mobile.asks.progress.pick_or_type": "Выберите вариант или напишите свой, чтобы ответить.",
+		"mobile.asks.progress.tally": "Отвечено: {answered} из {total}",
+		"mobile.asks.progress.type": "Введите ответ или пропустите его, чтобы отправить.",
+		"mobile.asks.send_answer": "Отправить ответ",
+		"mobile.asks.send_answers": "Отправить ответы",
 		"mobile.chrome.clear_search": "Очистить поиск",
 		"mobile.chrome.close_conversations": "Закрыть список бесед",
 		"mobile.chrome.composer.dismiss_keyboard": "Скрыть клавиатуру",
@@ -12419,6 +12544,20 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.account_routing.unsaved": "ابھی محفوظ نہیں کیا گیا۔",
 		"mobile.agent_avatar.edit_hint": "یہ تصویر ڈیسک ٹاپ ایپ میں بدلیں",
 		"mobile.agent_avatar.label": "ایجنٹ کی تصویر",
+		"mobile.asks.decline": "انکار کریں",
+		"mobile.asks.dismiss": "خارج کریں",
+		"mobile.asks.dismiss_open": "خارج کریں…",
+		"mobile.asks.dismiss_reason.chat": "گفتگو میں جواب دے دیا",
+		"mobile.asks.dismiss_reason.chat_note": "آپ گفتگو میں پہلے ہی جواب دے چکے ہیں",
+		"mobile.asks.dismiss_reason.moot": "اب ضرورت نہیں",
+		"mobile.asks.dismiss_reason.moot_note": "اب جواب کا انتظار نہیں ہوگا",
+		"mobile.asks.dismiss_title": "یہ سوال خارج کریں",
+		"mobile.asks.earlier": "پہلے",
+		"mobile.asks.progress.pick_or_type": "جواب دینے کے لیے کوئی آپشن چنیں یا اپنا لکھیں۔",
+		"mobile.asks.progress.tally": "{total} میں سے {answered} کے جواب دیے گئے",
+		"mobile.asks.progress.type": "بھیجنے کے لیے اپنا جواب لکھیں، یا اسے چھوڑ دیں۔",
+		"mobile.asks.send_answer": "جواب بھیجیں",
+		"mobile.asks.send_answers": "جوابات بھیجیں",
 		"mobile.chrome.clear_search": "تلاش صاف کریں",
 		"mobile.chrome.close_conversations": "گفتگوئیں بند کریں",
 		"mobile.chrome.composer.dismiss_keyboard": "کی بورڈ بند کریں",
@@ -13817,6 +13956,20 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.account_routing.unsaved": "Chưa lưu.",
 		"mobile.agent_avatar.edit_hint": "Hãy đổi ảnh này trong ứng dụng máy tính",
 		"mobile.agent_avatar.label": "Ảnh của tác nhân",
+		"mobile.asks.decline": "Từ chối",
+		"mobile.asks.dismiss": "Bỏ qua",
+		"mobile.asks.dismiss_open": "Bỏ qua…",
+		"mobile.asks.dismiss_reason.chat": "Đã trả lời trong cuộc trò chuyện",
+		"mobile.asks.dismiss_reason.chat_note": "bạn đã trả lời trong cuộc trò chuyện",
+		"mobile.asks.dismiss_reason.moot": "Không còn cần nữa",
+		"mobile.asks.dismiss_reason.moot_note": "tác nhân sẽ không chờ câu trả lời nữa",
+		"mobile.asks.dismiss_title": "Bỏ qua câu hỏi này",
+		"mobile.asks.earlier": "Trước đó",
+		"mobile.asks.progress.pick_or_type": "Chọn một phương án hoặc tự nhập câu trả lời để trả lời.",
+		"mobile.asks.progress.tally": "Đã trả lời {answered} trên {total}",
+		"mobile.asks.progress.type": "Nhập câu trả lời hoặc bỏ qua để gửi.",
+		"mobile.asks.send_answer": "Gửi câu trả lời",
+		"mobile.asks.send_answers": "Gửi câu trả lời",
 		"mobile.chrome.clear_search": "Xóa tìm kiếm",
 		"mobile.chrome.close_conversations": "Đóng danh sách cuộc trò chuyện",
 		"mobile.chrome.composer.dismiss_keyboard": "Ẩn bàn phím",
@@ -15215,6 +15368,20 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.account_routing.unsaved": "尚未保存。",
 		"mobile.agent_avatar.edit_hint": "请在桌面应用中更改此头像",
 		"mobile.agent_avatar.label": "智能体头像",
+		"mobile.asks.decline": "拒绝",
+		"mobile.asks.dismiss": "忽略",
+		"mobile.asks.dismiss_open": "忽略……",
+		"mobile.asks.dismiss_reason.chat": "已在聊天中回答",
+		"mobile.asks.dismiss_reason.chat_note": "你已在对话中回复",
+		"mobile.asks.dismiss_reason.moot": "不再需要",
+		"mobile.asks.dismiss_reason.moot_note": "智能体不再等待回答",
+		"mobile.asks.dismiss_title": "忽略此问题",
+		"mobile.asks.earlier": "更早",
+		"mobile.asks.progress.pick_or_type": "选择一个选项或输入你自己的回答，即可回答。",
+		"mobile.asks.progress.tally": "已回答 {answered}/{total}",
+		"mobile.asks.progress.type": "输入你的回答或跳过，即可发送。",
+		"mobile.asks.send_answer": "发送回答",
+		"mobile.asks.send_answers": "发送回答",
 		"mobile.chrome.clear_search": "清除搜索",
 		"mobile.chrome.close_conversations": "关闭对话列表",
 		"mobile.chrome.composer.dismiss_keyboard": "收起键盘",

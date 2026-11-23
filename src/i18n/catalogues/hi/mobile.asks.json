@@ -1,0 +1,16 @@
+{
+	"mobile.asks.send_answer": "उत्तर भेजें",
+	"mobile.asks.send_answers": "उत्तर भेजें",
+	"mobile.asks.decline": "अस्वीकार करें",
+	"mobile.asks.dismiss": "हटाएँ",
+	"mobile.asks.dismiss_open": "हटाएँ…",
+	"mobile.asks.dismiss_title": "यह सवाल हटाएँ",
+	"mobile.asks.dismiss_reason.moot": "अब ज़रूरत नहीं",
+	"mobile.asks.dismiss_reason.moot_note": "एजेंट अब जवाब का इंतज़ार नहीं करेगा",
+	"mobile.asks.dismiss_reason.chat": "चैट में जवाब दिया",
+	"mobile.asks.dismiss_reason.chat_note": "आप पहले ही बातचीत में जवाब दे चुके हैं",
+	"mobile.asks.earlier": "पहले",
+	"mobile.asks.progress.tally": "{total} में से {answered} के उत्तर दिए गए",
+	"mobile.asks.progress.pick_or_type": "जवाब देने के लिए एक विकल्प चुनें या अपना लिखें।",
+	"mobile.asks.progress.type": "भेजने के लिए अपना उत्तर लिखें, या इसे छोड़ दें।"
+}

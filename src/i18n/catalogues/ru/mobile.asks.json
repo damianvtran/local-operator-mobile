@@ -1,0 +1,16 @@
+{
+	"mobile.asks.send_answer": "Отправить ответ",
+	"mobile.asks.send_answers": "Отправить ответы",
+	"mobile.asks.decline": "Отклонить",
+	"mobile.asks.dismiss": "Убрать",
+	"mobile.asks.dismiss_open": "Убрать…",
+	"mobile.asks.dismiss_title": "Убрать этот вопрос",
+	"mobile.asks.dismiss_reason.moot": "Больше не нужно",
+	"mobile.asks.dismiss_reason.moot_note": "агент больше не будет ждать ответа",
+	"mobile.asks.dismiss_reason.chat": "Ответ дан в чате",
+	"mobile.asks.dismiss_reason.chat_note": "вы уже ответили в чате",
+	"mobile.asks.earlier": "Ранее",
+	"mobile.asks.progress.tally": "Отвечено: {answered} из {total}",
+	"mobile.asks.progress.pick_or_type": "Выберите вариант или напишите свой, чтобы ответить.",
+	"mobile.asks.progress.type": "Введите ответ или пропустите его, чтобы отправить."
+}

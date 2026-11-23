@@ -1,0 +1,16 @@
+{
+	"mobile.asks.send_answer": "جواب بھیجیں",
+	"mobile.asks.send_answers": "جوابات بھیجیں",
+	"mobile.asks.decline": "انکار کریں",
+	"mobile.asks.dismiss": "خارج کریں",
+	"mobile.asks.dismiss_open": "خارج کریں…",
+	"mobile.asks.dismiss_title": "یہ سوال خارج کریں",
+	"mobile.asks.dismiss_reason.moot": "اب ضرورت نہیں",
+	"mobile.asks.dismiss_reason.moot_note": "اب جواب کا انتظار نہیں ہوگا",
+	"mobile.asks.dismiss_reason.chat": "گفتگو میں جواب دے دیا",
+	"mobile.asks.dismiss_reason.chat_note": "آپ گفتگو میں پہلے ہی جواب دے چکے ہیں",
+	"mobile.asks.earlier": "پہلے",
+	"mobile.asks.progress.tally": "{total} میں سے {answered} کے جواب دیے گئے",
+	"mobile.asks.progress.pick_or_type": "جواب دینے کے لیے کوئی آپشن چنیں یا اپنا لکھیں۔",
+	"mobile.asks.progress.type": "بھیجنے کے لیے اپنا جواب لکھیں، یا اسے چھوڑ دیں۔"
+}

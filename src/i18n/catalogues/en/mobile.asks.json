@@ -1,0 +1,16 @@
+{
+	"mobile.asks.send_answer": "Send answer",
+	"mobile.asks.send_answers": "Send answers",
+	"mobile.asks.decline": "Decline",
+	"mobile.asks.dismiss": "Dismiss",
+	"mobile.asks.dismiss_open": "Dismiss…",
+	"mobile.asks.dismiss_title": "Dismiss this question",
+	"mobile.asks.dismiss_reason.moot": "No longer needed",
+	"mobile.asks.dismiss_reason.moot_note": "stop waiting on it",
+	"mobile.asks.dismiss_reason.chat": "Answered in chat",
+	"mobile.asks.dismiss_reason.chat_note": "you already replied in the conversation",
+	"mobile.asks.earlier": "Earlier",
+	"mobile.asks.progress.tally": "{answered} of {total} answered",
+	"mobile.asks.progress.pick_or_type": "Pick an option or type your own to answer.",
+	"mobile.asks.progress.type": "Type your answer, or skip it, to send."
+}
