@@ -226,8 +226,13 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	 *  the mock relay gains the `start-targets*` worlds, `GET /api/start-targets`
 	 *  and the start route's `agent`/`team` handling. Source identity only — no
 	 *  U-08 scene, assertion or threshold changed here; not rendered evidence. */
+	/* Re-pinned 2026-11-22 for PR #372 (`$skill` autocomplete): the mock relay
+	 *  advertises the top-level `skill_invocation` capability, serves
+	 *  `GET /api/skills` and answers `expand_skills` with a receipt, and the
+	 *  `skills*` scenarios exist. Source identity only — no U-08 scene,
+	 *  assertion or threshold changed; not rendered evidence. */
 	"tools/mock-relay/relay.ts":
-		"ec4fcc4a6157d2e3a8da0c3e16295ff03356bb9e12393836992bb2e979b3a10c",
+		"e3fb44f1f76176d2d99b365ffe7e3185814b1cbe7caf40d40f82da912dad832a",
 	/* Re-pinned 2026-10-29 after merging main's session-health work into the French
 	 * wave: `src` and `app` carry that surface plus the French catalogues and the
 	 * per-render copy modules, and the readiness/matrix/scenario helpers moved with
@@ -255,7 +260,7 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	 *  and the start route's `agent`/`team` handling. Source identity only — no
 	 *  U-08 scene, assertion or threshold changed here; not rendered evidence. */
 	"tools/mock-relay/scenarios.ts":
-		"dd89609b1d545f9bc77a7626dba2631a91349500a3c06fc0a022b464434476b2",
+		"2eaedf683f7fde0b29feb1128877044b201906f3f6496a7dfa844fa9e871e8bc",
 	"tools/mock-relay/shape.ts":
 		"0ef0c342578ffaf4a7067d4427f10a999740152d6a56ec2da63d75697f08fb5b",
 	/* The startup evidence helper the fixture's relay imports. It has been loaded by
