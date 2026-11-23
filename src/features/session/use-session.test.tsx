@@ -155,6 +155,36 @@ it("retries an open stream that only sends keepalives, then clears recovery on a
 	}
 });
 
+it("lets a replacement finish a consistently slow first projection", async () => {
+	vi.useFakeTimers();
+	const { attempts } = transport();
+	const probe = mount();
+	try {
+		await probe.show("slow-a");
+		const seed = frame("slow-a");
+		const split = Math.floor(seed.length / 2);
+		await act(async () => attempts[0]?.send(seed.slice(0, split)));
+		await advance(RECONNECT_DEADLINE_MS);
+		expect(probe.read().connection.id).toBe("C2");
+		expect(probe.read().projection).toBeNull();
+		expect(attempts[0]?.signal?.aborted).toBe(true);
+		await advance(RECONNECT_BACKOFF_MIN_MS);
+		await act(async () => attempts[1]?.send(seed.slice(0, split)));
+		await advance(RECONNECT_DEADLINE_MS + 100); // split-chunks=5100 loopback
+		expect(probe.read().connection.id).toBe("C2");
+		expect(attempts[1]?.signal?.aborted).toBe(false);
+		await act(async () => attempts[1]?.send(seed.slice(split)));
+		expect(attempts).toHaveLength(2);
+		expect(probe.read().projection?.session_id).toBe("slow-a");
+		expect(probe.read().content).toBe("transcript");
+		expect(probe.read().connection.id).toBeNull();
+		await advance(2 * RECONNECT_DEADLINE_MS);
+		expect(attempts[1]?.signal?.aborted).toBe(false);
+	} finally {
+		await probe.close();
+	}
+});
+
 it("retires A's stream and deadline when switching to B", async () => {
 	vi.useFakeTimers();
 	const { attempts } = transport();
@@ -180,24 +210,42 @@ it("retires A's stream and deadline when switching to B", async () => {
 it("backs off repeated unseeded opens and stops on a typed authentication failure", async () => {
 	vi.useFakeTimers();
 	const { attempts, requests } = transport((attempt) =>
-		attempt < 3 ? 200 : 401,
+		attempt < 5 ? 200 : 401,
 	);
 	const probe = mount();
 	try {
 		await probe.show("refused-a");
 		await advance(RECONNECT_DEADLINE_MS + RECONNECT_BACKOFF_MIN_MS);
 		expect(requests).toEqual(["refused-a", "refused-a"]);
-		await advance(RECONNECT_DEADLINE_MS);
+		await advance(2 * RECONNECT_DEADLINE_MS - 1);
+		await act(async () => attempts[1]?.send(": keepalive\n\n"));
+		expect(attempts[1]?.signal?.aborted).toBe(false);
+		await advance(1);
 		expect(attempts[1]?.signal?.aborted).toBe(true);
 		await advance(2 * RECONNECT_BACKOFF_MIN_MS - 1);
 		expect(requests).toHaveLength(2);
 		await advance(1);
 		expect(requests).toHaveLength(3);
+		// After 5 s and 10 s budgets, the third doubles to 20 s and
+		// the fourth caps at the existing 35 s SSE watchdog window, not 40 s.
+		for (const [index, budget, backoff] of [
+			[2, 20_000, 4_000],
+			[3, 35_000, 8_000],
+		] as const) {
+			await advance(budget - 2);
+			await act(async () => attempts[index]?.send(": keepalive\n\n"));
+			await advance(1);
+			expect(attempts[index]?.signal?.aborted).toBe(false);
+			await advance(1);
+			expect(attempts[index]?.signal?.aborted).toBe(true);
+			await advance(backoff);
+			expect(requests).toHaveLength(index + 2);
+		}
 		expect(probe.read().error?.kind).toBe("relay-unauthorized");
 		expect(probe.read().content).toBe("recovery");
 		expect(probe.read().link).toBe("stopped");
 		await advance(5 * RECONNECT_DEADLINE_MS);
-		expect(requests).toHaveLength(3);
+		expect(requests).toHaveLength(5);
 	} finally {
 		await probe.close();
 	}

@@ -243,7 +243,8 @@ describe("a 401 on resume is not held", () => {
 
 /* Hoisted: the lint wants regex literals compiled once. */
 const HELD_TIMER_CALL = /heldTimer\(/g;
-const DEADLINE_HELD = /heldTimer\(resumeClock\.current, RECONNECT_DEADLINE_MS/;
+const DEADLINE_HELD =
+	/heldTimer\(\s*resumeClock\.current\s*,\s*RECONNECT_DEADLINE_MS\s*,/;
 const REFUSAL_DIRECT =
 	/if \(isTransient\(streamError\)\) \{[\s\S]*?return;\n\t{5}\}\n\t{5}sessions\.getState\(\)\.endStream\(sessionId\);\n\t{5}setError\(streamError\);/;
 

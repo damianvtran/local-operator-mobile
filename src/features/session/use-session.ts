@@ -53,6 +53,7 @@ import {
 } from "@/features/session/supplements";
 import type { ImageBytes, RelayError } from "@/relay";
 import { createRefusalGrace, isSilentGatewayWait } from "@/relay/refusal-grace";
+import { STREAM_SILENCE_MS } from "@/relay/sse";
 import { readEntry } from "@/state";
 import { isUsable } from "@/state/connection-store";
 import type { WarmScope } from "@/state/warm-cache";
@@ -414,10 +415,14 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 		const grace = createRefusalGrace();
 		let retireStream: (() => void) | null = null;
 		let retryTimer: ReturnType<typeof setTimeout> | null = null;
+		// Widen only for missed seeds on this owner. HTTP/route failures still
+		// count for backoff but are not evidence that a body needs more time.
+		let missedSeeds = 0;
 		const scheduleRetry = (
 			missedProjection: boolean,
 			retryAfterMs?: number,
 		) => {
+			if (missedProjection) missedSeeds += 1;
 			recovering.current = true;
 			setFacts((current) => ({
 				...current,
@@ -475,6 +480,7 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 					projectionOwner.current = owner;
 					lastFrameAt.current = Date.now();
 					grace.healthy(lastFrameAt.current);
+					missedSeeds = 0;
 					retries.current = 0;
 					/* The first frame after a return. Decided BEFORE the frame is
 					 * applied, against what the reader holds: a frame that reaches back
@@ -529,21 +535,41 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 					cancelDeadline = null;
 					if (status.state === "connecting" || status.state === "open") {
 						const opened = status.state === "open";
-						// A body can send keepalives forever without a projection. Give it
-						// the existing snapshot window *after* headers, without shortening
-						// the HTTP open deadline or intercepting a typed refusal before headers.
+						const openedAt = Date.now();
+						// Give the first stalled body a quick retry, then widen the next
+						// body's seed window so retrying can't starve a consistently slow
+						// projection. Cap it at the existing SSE silence budget, but do
+						// not renew it on keepalives as the byte watchdog does.
+						const seedBudget = Math.min(
+							RECONNECT_DEADLINE_MS * 2 ** missedSeeds,
+							STREAM_SILENCE_MS,
+						);
+						const retryUnseeded = () => {
+							if (!isCurrent()) return;
+							retireStream?.();
+							sessions.getState().endStream(sessionId);
+							scheduleRetry(true);
+						};
 						cancelDeadline = heldTimer(
 							resumeClock.current,
 							RECONNECT_DEADLINE_MS,
 							() => {
 								if (!isCurrent()) return;
-								if (!opened) {
-									setFacts((current) => ({ ...current, overdue: true }));
+								setFacts((current) => ({ ...current, overdue: true }));
+								// Before HTTP headers, this is presentation only: let the
+								// transport handle timeouts and typed refusals.
+								if (!opened) return;
+								const elapsed = Math.max(
+									RECONNECT_DEADLINE_MS,
+									Date.now() - openedAt,
+								);
+								const remaining = seedBudget - elapsed;
+								if (remaining <= 0) {
+									retryUnseeded();
 									return;
 								}
-								retireStream?.();
-								sessions.getState().endStream(sessionId);
-								scheduleRetry(true);
+								const timer = setTimeout(retryUnseeded, remaining);
+								cancelDeadline = () => clearTimeout(timer);
 							},
 						);
 					}
@@ -597,7 +623,10 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 			};
 			stream.connection.start();
 		};
-		reconnectRef.current = connect;
+		reconnectRef.current = () => {
+			missedSeeds = 0;
+			connect();
+		};
 		connect();
 		return () => {
 			active = false;
