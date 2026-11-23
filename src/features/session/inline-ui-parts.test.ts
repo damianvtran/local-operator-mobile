@@ -37,6 +37,19 @@ it("uses exact UTF-16 offsets and retains provider order at identical offsets", 
 	]);
 });
 
+it("accepts the Core projection after a lone CR without allowing a CRLF split", () => {
+	// Core retains the original CR before the widget and inserts another CR
+	// after it, so the splice cannot turn this boundary into a CRLF interior.
+	const [rich] = withInlineUi(wire(message([placement(5)], "Hi😀\r\rBye")), [
+		row,
+	]);
+	expect(rich?.[LIVE_INLINE_UI]).toEqual([
+		{ kind: "markdown", text: "Hi😀\r" },
+		{ kind: "ui", value: bar },
+		{ kind: "markdown", text: "\rBye" },
+	]);
+});
+
 it.each([
 	undefined,
 	{ version: 2, text: "", widgets: [placement(0)] },

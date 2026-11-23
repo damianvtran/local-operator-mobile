@@ -2,9 +2,10 @@
 import { createContext, useContext, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
+import { useLocaleFrame } from "@/features/auth/connection-provider";
 import type { InlineChart } from "@/features/session/inline-chart-model";
 import type { InlineUi } from "@/features/session/inline-ui-parts";
-import { t } from "@/i18n";
+import { activeLocale, t } from "@/i18n";
 import { useTokenColor } from "@/ui/appearance";
 import { InlineChartPlot } from "./inline-chart";
 
@@ -97,10 +98,13 @@ function ChartDisclosure({
 	const [expanded, setExpanded] = useState(false);
 	const markReaderResize = useContext(ChartDataResizeContext);
 	const ink = useTokenColor("ink-muted");
+	// Transcript rows are memoized: subscribe here so the label and plot update
+	// together without re-keying the row, closing the data, or moving focus.
+	useLocaleFrame();
 	const label = t("mobile.session.inline_chart_data");
 	return (
 		<>
-			<InlineChartPlot chart={chart} />
+			<InlineChartPlot chart={chart} locale={activeLocale()} />
 			{/* Secondary detail stays local to the plot, not a modal. Selection
 			 * still copies exact data even before this disclosure is opened. */}
 			<Pressable

@@ -16,7 +16,6 @@ import {
 	type InlineChart,
 	inlineChartModel,
 } from "@/features/session/inline-chart-model";
-import { activeLocale } from "@/i18n";
 import { useTheme } from "@/ui/appearance";
 import { useTextScale } from "@/ui/text-scale-provider";
 import type { ColorRole } from "@/ui/tokens.gen";
@@ -197,10 +196,12 @@ function CartesianPlot({
 	model,
 	colors,
 	chart,
+	locale,
 }: {
 	model: Extract<Model, { kind: "cartesian" }>;
 	colors: Palette;
 	chart: InlineChart;
+	locale: string;
 }) {
 	const id = useMarkId();
 	const [width, setWidth] = useState(0);
@@ -217,7 +218,6 @@ function CartesianPlot({
 	const pw = x1 - x0;
 	const x = (n: number) => x0 + n * pw;
 	const y = (n: number) => y1 - n * (y1 - y0);
-	const locale = activeLocale();
 	const zero = model.left.zero;
 	const xZero = model.xAxis?.zero;
 	const percent = chart.type === "series" && chart.mode === "percent";
@@ -536,7 +536,13 @@ function CartesianPlot({
 	);
 }
 
-export function InlineChartPlot({ chart }: { chart: InlineChart }) {
+export function InlineChartPlot({
+	chart,
+	locale,
+}: {
+	chart: InlineChart;
+	locale: string;
+}) {
 	const model = useMemo(() => inlineChartModel(chart), [chart]);
 	const {
 		active: { colors },
@@ -552,7 +558,12 @@ export function InlineChartPlot({ chart }: { chart: InlineChart }) {
 			{model.kind === "pie" ? (
 				<PiePlot model={model} colors={colors} />
 			) : (
-				<CartesianPlot model={model} colors={colors} chart={chart} />
+				<CartesianPlot
+					model={model}
+					colors={colors}
+					chart={chart}
+					locale={locale}
+				/>
 			)}
 		</View>
 	);
