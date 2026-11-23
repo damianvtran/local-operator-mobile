@@ -94,7 +94,7 @@
 	"mobile.session.outbox.composer_stopped": "Предыдущее сообщение перестало отправляться. Повторите или отбросьте его выше, чтобы отправить это.",
 	"mobile.session.outbox.composer_discarding": "Предыдущее сообщение отбрасывается. Это можно будет отправить через мгновение.",
 	"mobile.session.sheet_title.commands": "слэш-команды",
-	"mobile.session.sheet_title.attach": "Прикрепить",
+	"mobile.session.sheet_title.attach": "Добавить изображение",
 	"mobile.session.diagram.label": "Диаграмма {type}",
 	"mobile.session.diagram.label_titled": "Диаграмма {type}: {title}",
 	"mobile.session.diagram.copied": "скопировано",

@@ -93,7 +93,23 @@ vi.mock("react-native", async () => {
 		className?: string;
 		style?: unknown;
 		testID?: string;
-	}) => createElement("div", { ...hostProps(rest), ref }, children);
+		accessible?: boolean;
+		accessibilityRole?: string;
+		onTouchMove?: unknown;
+	}) => {
+		/* The iOS selection wrapper is a plain View that reads its hold from raw
+		 *  touches (`@/ui/touch-press`; a Pressable there stopped a table inside
+		 *  from scrolling). `onTouchMove` marks it, and it is recorded beside the
+		 *  Pressables so the accessibility contract below still covers it. */
+		if (rest.onTouchMove !== undefined) {
+			host.pressables.push({
+				accessible: rest.accessible,
+				accessibilityRole: rest.accessibilityRole,
+				longPress: true,
+			});
+		}
+		return createElement("div", { ...hostProps(rest), ref }, children);
+	};
 	return {
 		Text: text,
 		View: view,
@@ -846,16 +862,18 @@ describe("iOS VoiceOver reach inside a selectable answer", () => {
 			createElement(Markdown, { text: ANSWER }),
 		);
 		const [wrapper, ...inner] = host.pressables;
-		// The outermost Pressable is the selection wrapper: a hold, no role, and
+		// The outermost entry is the selection wrapper (a touch-driven View, not a
+		// Pressable, so a table inside can scroll): a hold, no role, and
 		// explicitly NOT one accessibility element.
 		expect(wrapper).toEqual({
 			accessible: false,
 			accessibilityRole: undefined,
 			longPress: true,
 		});
-		// The code block's copy control stays its own accessible button.
+		// The code block's copy control stays its own accessible button (a
+		// touch-driven View on iOS, `ScrollSafePressable`, so a wide block scrolls).
 		expect(inner).toEqual([
-			{ accessible: undefined, accessibilityRole: "button", longPress: true },
+			{ accessible: true, accessibilityRole: "button", longPress: true },
 		]);
 		expect(markup).toContain('role="link"');
 		expect(host.links.map((link) => link.label)).toEqual(["Reuters"]);

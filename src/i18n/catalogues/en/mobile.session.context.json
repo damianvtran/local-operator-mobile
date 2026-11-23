@@ -381,7 +381,7 @@
 	},
 	"mobile.session.sheet_title.attach": {
 		"role": "heading",
-		"note": "Title of the bottom sheet that lists attachment sources in the composer (Photo Library, Files and Paste image on iOS and Android; Choose image and Paste image on web). The verb 'attach' used as a title. Capitalise the first letter, like the Model and Effort sheet titles; scripts without letter case need no change. ~16 characters. No placeholders."
+		"note": "Title of the bottom sheet that lists image sources in the composer (Photo Library, Take Photo, Image from Files and Paste Image on iOS and Android; Choose Image and Paste Image on web). It says what the sheet adds — an image — because the relay accepts images only, so 'Attach' promised files it cannot take. Title case like the Model and Effort sheet titles; scripts without letter case need no change. ~16 characters. No placeholders."
 	},
 	"mobile.session.diagram.label": {
 		"role": "meta",

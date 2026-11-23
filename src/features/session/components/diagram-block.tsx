@@ -41,6 +41,7 @@ import { useTheme } from "@/ui/appearance";
 import { estimatedColumnWidth } from "@/ui/column";
 import { LTR_TEXT } from "@/ui/direction";
 import { TOUCH_FLOOR } from "@/ui/layout";
+import { ScrollSafePressable } from "@/ui/scroll-safe-pressable";
 import { DiagramSvgView } from "./diagram-svg-view";
 
 /**
@@ -255,7 +256,7 @@ function DiagramBlockView({
 					/>
 				</Pressable>
 			</View>
-			<Pressable
+			<ScrollSafePressable
 				accessibilityRole={ROLE.button}
 				accessibilityLabel={label}
 				accessibilityHint={t("mobile.session.diagram.open_hint")}
@@ -281,7 +282,7 @@ function DiagramBlockView({
 						{drawing}
 					</View>
 				)}
-			</Pressable>
+			</ScrollSafePressable>
 			{viewing ? (
 				<Suspense fallback={null}>
 					<DiagramViewer

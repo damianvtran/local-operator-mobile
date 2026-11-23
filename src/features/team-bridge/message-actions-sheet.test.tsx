@@ -109,6 +109,10 @@ vi.mock("react-native", async (importOriginal) => {
 		},
 	};
 });
+// Textarea wraps its field with the native image-paste wrapper; Node cannot load it.
+vi.mock("expo-paste-input", () => ({
+	TextInputWrapper: ({ children }: { children?: ReactNode }) => children,
+}));
 vi.mock("expo-clipboard", () => ({
 	setStringAsync: async (value: string) => {
 		rec.clipboard.push(value);
