@@ -78,6 +78,7 @@ describe("stored model selection over the real relay client", () => {
 					op: "prompt",
 					command_id: expect.any(String),
 					text: "continue here",
+					inline_ui: true,
 				},
 			},
 		]);

@@ -231,7 +231,7 @@ const NAMESPACES = [
 		name: "mobile.session",
 		messages: session,
 		context: sessionContext,
-		expected: 103, // feat/jump-to-latest +2: the "Jump to latest" chip's full and narrow labels (100 + 2 = 102), and +1 for its round-1 remediation's arrow-free accessible name (jump_to_latest_name); PR #353 +1: composer.settings_not_applied (99 + 1 = 100); feat/pele-diagrams +8: the mermaid diagram block (label, titled label, open hint, copy, copied marker, could-not-draw notice, viewer name, viewer close) (91 + 8 = 99); O3-a +2: the commands and attach sheet titles; PR #275 +8: background sending (outbox) — waiting / exhausted / discarded captions, Retry, Discard, and three composer hints (wait, stopped, discarding) (81 + 2 + 8 = 91); +3: Title-case sheet titles (visual audit D14); +1: newest-edge gap notice; +1: reload hint; +1: newest-refresh failure copy; +1: explicit history reload; +7: lazy history states; +1: default-closed reasoning disclosure; +1: retry-attempt storage receipt; +1: definitely-not-sent storage receipt; +3: the ended-session chip hints (TestFlight 578); +9: the pending echo; +16: session route literals keyed by the app/ scan (subagent screen, empty states, find, chip errors, retained notice); +2: the user message's Show more / Show less (iOS build 836); +15: scanner-blind expression literals (context tray, scroll cues, video title, fallback names, region labels, back-to labels); +1: the new-conversation "not confirmed" caption (PR #256 Q3)
+		expected: 104, // PR #376 +1: inline_chart_data (103 + 1 = 104); feat/jump-to-latest +2: the "Jump to latest" chip's full and narrow labels (100 + 2 = 102), and +1 for its round-1 remediation's arrow-free accessible name (jump_to_latest_name); PR #353 +1: composer.settings_not_applied (99 + 1 = 100); feat/pele-diagrams +8: the mermaid diagram block (label, titled label, open hint, copy, copied marker, could-not-draw notice, viewer name, viewer close) (91 + 8 = 99); O3-a +2: the commands and attach sheet titles; PR #275 +8: background sending (outbox) — waiting / exhausted / discarded captions, Retry, Discard, and three composer hints (wait, stopped, discarding) (81 + 2 + 8 = 91); +3: Title-case sheet titles (visual audit D14); +1: newest-edge gap notice; +1: reload hint; +1: newest-refresh failure copy; +1: explicit history reload; +7: lazy history states; +1: default-closed reasoning disclosure; +1: retry-attempt storage receipt; +1: definitely-not-sent storage receipt; +3: the ended-session chip hints (TestFlight 578); +9: the pending echo; +16: session route literals keyed by the app/ scan (subagent screen, empty states, find, chip errors, retained notice); +2: the user message's Show more / Show less (iOS build 836); +15: scanner-blind expression literals (context tray, scroll cues, video title, fallback names, region labels, back-to labels); +1: the new-conversation "not confirmed" caption (PR #256 Q3)
 	},
 	{
 		/* The relay's own two namespaces, under its own keys. They are here rather
@@ -646,10 +646,11 @@ describe("the English catalogues", () => {
 		 * home work list: +5 mobile.home.work.* keys, −2 pool chips
 		 * (suggestion.phone_access, suggestion.last_turn): 1377 + 3 = 1380,
 		 * home 92 → 95. */
-		/* Attach-sheet rows (design consult 2026-11-22): + mobile.composer_input
-		 * paste.empty_ios (the sheet's Paste row on iOS names both remedies):
-		 * 1380 + 1 = 1381, counted over all 26 English JSON catalogues. */
-		expect(total).toBe(1381);
+		/* Attach-sheet rows add mobile.composer_input.paste.empty_ios (#367),
+		 * and the chart data disclosure adds one mobile.session key (#376).
+		 * Both belong in the independent inventory: 1380 + 1 + 1 = 1382,
+		 * counted over all 26 JSON catalogues in each shipped locale. */
+		expect(total).toBe(1382);
 	});
 
 	it("lists every catalogue file this suite checks", () => {

@@ -464,6 +464,8 @@ export interface SessionProjection {
 	 * (`supplementsFromWire`); an older relay omits the key entirely.
 	 */
 	supplements?: Record<string, Record<string, unknown>>;
+	/** Negotiated sibling keyed by assistant row id; validate in the viewer. */
+	inline_ui?: unknown;
 }
 
 /* --------------------------------------------------------------- session list */
@@ -837,6 +839,8 @@ export interface HistoryResponse {
 	has_more: boolean;
 	/** Existing relay archive/decode failure; never an empty retained beginning. */
 	unavailable?: string;
+	/** Same optional presentation as a live projection, scoped to this page. */
+	inline_ui?: unknown;
 }
 
 export interface SlashCommand {

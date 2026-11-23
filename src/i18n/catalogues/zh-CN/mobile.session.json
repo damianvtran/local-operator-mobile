@@ -1,5 +1,6 @@
 {
 	"mobile.session.conversation_details": "对话详情",
+	"mobile.session.inline_chart_data": "图表数据",
 	"mobile.session.chip.model_default": "默认",
 	"mobile.session.chip.model_unknown": "未知",
 	"mobile.session.status_tray.hint": "打开工作状态行、任务和子智能体",

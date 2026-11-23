@@ -33,6 +33,7 @@ import type { Json } from "../lib/json.ts";
 import { isRecord } from "../lib/json.ts";
 import type { FixtureCorpus } from "./fixtures.ts";
 import { repoRoot } from "./fixtures.ts";
+import { type InlineUiFixture, inlineChartWorld } from "./inline-charts.ts";
 import type { TranscribeAnswer } from "./transcribe.ts";
 import { syntheticSessionId } from "./wire.ts";
 
@@ -98,6 +99,8 @@ export interface FixtureOverride {
  * must not leak into the next run of the same scenario.
  */
 export interface ScenarioWorld {
+	/** Synthetic rich parts, exposed only on negotiated reads for this session. */
+	inlineUi?: InlineUiFixture;
 	/** Session id → projection. An empty object is "no conversations at all". */
 	projections?: Record<string, SessionProjection>;
 	/**
@@ -1111,6 +1114,13 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 			"S15/menu-open",
 		],
 		() => idleWorld(),
+	);
+
+	add(
+		"inline-charts",
+		"One transcript with a literal code fence and negotiated charts, including four series modes.",
+		[],
+		() => inlineChartWorld(liveIdle),
 	);
 
 	add(
