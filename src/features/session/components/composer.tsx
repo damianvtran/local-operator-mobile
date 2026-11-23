@@ -2632,7 +2632,9 @@ export const Composer = ({
 					 *  (the card opens, the keyboard comes up) with the caret at the
 					 *  END of the draft. It is a sibling AFTER the one Textarea, so the
 					 *  field stays mounted across card and pill. Compaction is off for
-					 *  a screen reader, so this never stands in front of one. */}
+					 *  a screen reader, so this never stands in front of one. Its edges are
+					 *  logical (`start`/`end`): it is a full-bleed cover, not an anchor, so it
+					 *  spans the field row in either direction. */}
 					{shrunkPill ? (
 						<Pressable
 							accessible={false}
@@ -2641,8 +2643,8 @@ export const Composer = ({
 								position: "absolute",
 								top: 0,
 								bottom: 0,
-								left: 0,
-								right: 0,
+								start: 0,
+								end: 0,
 							}}
 							onPress={() => {
 								setRestoreCaretAt(draft.length);

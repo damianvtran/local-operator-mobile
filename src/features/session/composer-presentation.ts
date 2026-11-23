@@ -312,6 +312,9 @@ export const composerShellRadius = (progress: number, base: number) => {
  * so every frame after the first render was dropped and the pill stayed at the
  * card's 12 pt (measured: first painted pixel at x = 24 px at 2x). The two longhand
  * keys are real CSS and real RN, and the margin is symmetric so RTL needs nothing.
+ * They are allowlisted in `src/i18n/__tests__/physical-edges.test.ts` by the same
+ * reason: Reanimated's web path emits `marginStart` as a CSS `marginStart`, which
+ * is not a property, so the logical spelling would be dropped on web.
  *
  * `"worklet"`: called from `useAnimatedStyle` (see `morphPillRadius`).
  */
