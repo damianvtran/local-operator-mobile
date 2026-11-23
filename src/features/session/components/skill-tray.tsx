@@ -33,8 +33,14 @@ import { ROLE, SURFACE, skillTrayRowId } from "@/ui/a11y";
 import { TOUCH_FLOOR } from "@/ui/layout";
 import { cx } from "@/ui/variants";
 
-/** At most three and a half rows before the tray scrolls. */
-export const SKILL_TRAY_MAX_PT = Math.round(TOUCH_FLOOR * 3.5);
+/** The list's own vertical padding (`py-1` on the content container, 4 pt a side). */
+const TRAY_PADDING_PT = 8;
+
+/** At most three and a half ROWS before the tray scrolls. The padding is part of
+ *  the budget: capping at 3.5 × row alone left only 18 pt of the fourth row after
+ *  the 4 pt top pad (design round 1, D1) — glyph tips, not a half row. */
+export const SKILL_TRAY_MAX_PT =
+	Math.round(TOUCH_FLOOR * 3.5) + TRAY_PADDING_PT;
 
 export type SkillTrayProps = {
 	/** The matched rows, already filtered and ordered by the hook. */

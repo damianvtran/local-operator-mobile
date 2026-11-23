@@ -64,7 +64,8 @@ describe("SkillTray", () => {
 		const scroll = nodes.find((e) => props(e).keyboardShouldPersistTaps);
 		expect(props(scroll).keyboardShouldPersistTaps).toBe("handled");
 		expect(props(scroll).style).toEqual({ maxHeight: SKILL_TRAY_MAX_PT });
-		expect(SKILL_TRAY_MAX_PT).toBe(Math.round(TOUCH_FLOOR * 3.5));
+		/* 3.5 rows PLUS the list's 8 pt of padding: the fourth row shows ~26 pt (D1). */
+		expect(SKILL_TRAY_MAX_PT).toBe(Math.round(TOUCH_FLOOR * 3.5) + 8);
 		expect(nodes.map((e) => props(e).testID)).toContain(SURFACE.skillTray);
 	});
 	it("one row per skill with `$name` and its description", () => {
