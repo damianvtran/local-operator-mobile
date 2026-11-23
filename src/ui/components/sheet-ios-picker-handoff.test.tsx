@@ -29,6 +29,21 @@ import { act, createElement, type ReactNode, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+/* `Sheet` imports reanimated and gesture-handler; Node has neither (see the
+ * shared reduction's own note). */
+vi.mock("react-native-reanimated", async () => {
+	const { reanimatedModuleMock } = await import(
+		"@/testing/native-gesture-mocks"
+	);
+	return reanimatedModuleMock();
+});
+vi.mock("react-native-gesture-handler", async () => {
+	const { gestureHandlerModuleMock } = await import(
+		"@/testing/native-gesture-mocks"
+	);
+	return gestureHandlerModuleMock();
+});
+
 const native = vi.hoisted(() => ({
 	events: [] as string[],
 	isPresented: false,

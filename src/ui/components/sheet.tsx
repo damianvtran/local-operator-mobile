@@ -1,5 +1,5 @@
 import { X } from "lucide-react-native";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
 	AccessibilityInfo,
 	Animated,
@@ -14,6 +14,18 @@ import {
 	useWindowDimensions,
 	View,
 } from "react-native";
+import {
+	Gesture,
+	GestureDetector,
+	GestureHandlerRootView,
+} from "react-native-gesture-handler";
+import Animated2, {
+	runOnJS,
+	useAnimatedStyle,
+	useSharedValue,
+	withSpring,
+	withTiming,
+} from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Defs, LinearGradient, Rect, Stop } from "react-native-svg";
 import { ScopedVariables } from "uniwind";
@@ -43,6 +55,12 @@ import {
 } from "@/ui/modal-exit";
 import { effectiveDuration, parseCubicBezier } from "@/ui/motion";
 import { sheetKeyboardLift, sheetKeyboardRoom } from "@/ui/sheet-keyboard";
+import {
+	resistResizeDrag,
+	type SheetResizeSize,
+	settleResize,
+	sheetResizeSizes,
+} from "@/ui/sheet-resize";
 import { useTextScale } from "@/ui/text-scale-provider";
 import { DURATIONS, EASINGS } from "@/ui/tokens.gen";
 import {
@@ -197,6 +215,24 @@ export type SheetProps = {
 	 *  design round 1 D7). */
 	titleLines?: 1 | 2;
 	testID?: string;
+	/**
+	 * Two sizes, Medium and Large, dragged between from the header (the grab bar
+	 * goes in with it). OFF by default: a sheet that opts in is the exception, so
+	 * every other sheet keeps the height its detent gives it and the rule in
+	 * docs/design/components.md § 8 holds for all of them.
+	 *
+	 * Resize, never dismiss: past either size the surface resists and springs
+	 * back, because closing a sheet discards a typed answer (ADR 0005 § 2). Close
+	 * stays the scrim, the Close control and Escape/back.
+	 */
+	resizable?: boolean;
+	/**
+	 * The platform's own way of putting the keyboard away from the scrolling
+	 * body: iOS's `interactive` follows the finger, Android's `on-drag` waits for
+	 * the drag to end. Opt-in, and only meaningful with `resizable` in practice —
+	 * a sheet whose body is a short form has nothing to drag.
+	 */
+	keyboardDismissMode?: "none" | "on-drag" | "interactive";
 };
 
 export const Sheet = ({
@@ -214,6 +250,8 @@ export const Sheet = ({
 	pinned,
 	titleLines = 1,
 	testID,
+	resizable = false,
+	keyboardDismissMode,
 }: SheetProps) => {
 	const titleRef = useRef<Text>(null);
 	/* The scrim's DOM node, read only by the web focus guard below. */
@@ -432,6 +470,119 @@ export const Sheet = ({
 					detentContentHeight ?? Number.POSITIVE_INFINITY,
 					Math.max(0, keyboardRoom - chrome),
 				);
+
+	/* ── THE OPT-IN RESIZE (`resizable`) ─────────────────────────────────────
+	 * Two sizes, Medium and Large, dragged between from the header. The body's
+	 * HEIGHT is what animates and the footer never moves, so a taller sheet grows
+	 * its content region instead of sliding Answer/Decline off the bottom edge
+	 * (docs/design/components.md § 8; the arithmetic is in `@/ui/sheet-resize`).
+	 *
+	 * The gesture lives INSIDE the `Modal` and gets its own
+	 * `GestureHandlerRootView`: a native `Modal` is a separate root view on iOS,
+	 * so touches inside it never reach a handler root mounted at the app root
+	 * (react-native-gesture-handler's "Usage with modals"). It is mounted per
+	 * sheet and only when a sheet opts in — `app/_layout.tsx` is shared with other
+	 * lanes, and a root there would not reach these touches anyway. */
+	/* Medium is its ceiling while this is a fixed two-size sheet; the "hug the
+	 *  content when it is shorter" half of the spec reads the measured body height
+	 *  in the same argument, which the ask panel supplies. */
+	const bodyCeiling =
+		keyboardRoom === null
+			? Number.POSITIVE_INFINITY
+			: Math.max(0, keyboardRoom - chrome);
+	const resizeSizes = sheetResizeSizes({
+		capHeight,
+		chrome,
+		contentHeight: Number.POSITIVE_INFINITY,
+		floor: MIN_CONTENT_HEIGHT,
+		ceiling: bodyCeiling,
+	});
+	const [resizeSize, setResizeSize] = useState<SheetResizeSize>("medium");
+	const resizeBody = useSharedValue(resizeSizes.medium);
+	const resizeDragStart = useSharedValue(0);
+	const resizeMin = useSharedValue(resizeSizes.medium);
+	const resizeMax = useSharedValue(resizeSizes.large);
+	/* A SHARED value, not a ref: the pan's worklets write it on the UI thread, and
+	 *  a React ref is not readable there. */
+	const resizeDragging = useSharedValue(false);
+	/* The JS side of a snap. A worklet cannot call `haptic` or set state, so the
+	 *  release hands the settled size back here — and the tick fires only when the
+	 *  size actually changed, once per snap. */
+	const resizeSizeRef = useRef<SheetResizeSize>("medium");
+	const applySettledSize = useCallback((next: SheetResizeSize) => {
+		if (resizeSizeRef.current === next) return;
+		resizeSizeRef.current = next;
+		haptic("selection");
+		setResizeSize(next);
+	}, []);
+	useEffect(() => {
+		if (!resizable) return;
+		resizeMin.value = resizeSizes.medium;
+		resizeMax.value = resizeSizes.large;
+		/* Mid-drag the finger owns the height: a measurement or a keyboard frame
+		 *  landing between begin and end would otherwise jump the sheet under it. */
+		if (resizeDragging.value) return;
+		resizeBody.value = withSpring(
+			resizeSize === "large" ? resizeSizes.large : resizeSizes.medium,
+			{ damping: 28, stiffness: 300 },
+		);
+	}, [
+		resizable,
+		resizeSize,
+		resizeSizes.medium,
+		resizeSizes.large,
+		resizeBody,
+		resizeMin,
+		resizeMax,
+		resizeDragging,
+	]);
+	const resizePan = Gesture.Pan()
+		/* 8 pt of vertical travel starts it and 20 pt sideways cancels it, so a
+		 *  chiefly-horizontal move never resizes the sheet (spec 3.2). */
+		.minDistance(8)
+		.failOffsetX([-20, 20])
+		.onBegin(() => {
+			"worklet";
+			resizeDragging.value = true;
+			resizeDragStart.value = resizeBody.value;
+		})
+		.onUpdate((event) => {
+			"worklet";
+			resizeBody.value = resistResizeDrag({
+				height: resizeDragStart.value - event.translationY,
+				min: resizeMin.value,
+				max: resizeMax.value,
+			});
+		})
+		.onEnd((event) => {
+			"worklet";
+			const settled = settleResize({
+				height: resizeBody.value,
+				velocityY: event.velocityY,
+				min: resizeMin.value,
+				max: resizeMax.value,
+			});
+			/* A release past an end still lands ON that end, never past it: past
+			 *  Medium the sheet springs BACK, it does not close (spec 3.2, Ben's
+			 *  answer to a-5712: "resist, stay open"). */
+			const target = settled === "large" ? resizeMax.value : resizeMin.value;
+			resizeBody.value = reduceMotion
+				? withTiming(target, { duration: 120 })
+				: withSpring(target, {
+						damping: 28,
+						stiffness: 300,
+						velocity: -event.velocityY,
+					});
+			resizeDragging.value = false;
+			runOnJS(applySettledSize)(settled);
+		})
+		.onFinalize(() => {
+			"worklet";
+			resizeDragging.value = false;
+		});
+	const resizeBodyStyle = useAnimatedStyle(() => ({
+		height: resizeBody.value,
+	}));
 	/* The home indicator is behind the keyboard while it is up, so its inset is
 	 *  not spent under the last row (the composer's #219 rule, `composerOuterGap`). */
 	/*  Keyed on the OVERLAP, not `visible` (review R1-n1 / design D3): iOS's hide
@@ -516,6 +667,70 @@ export const Sheet = ({
 		scrim.addEventListener("focusin", onFocusIn);
 		return () => scrim.removeEventListener("focusin", onFocusIn);
 	}, [shown, focusTitle]);
+
+	/* `Animated.ScrollView` only when the height is driven per frame: a sheet that
+	 *  did not opt in keeps the plain `ScrollView` it always had. */
+	const Body = resizable ? Animated2.ScrollView : ScrollView;
+	const grabColour = useTokenColor("ink-muted");
+	const ModalRoot = resizable ? GestureHandlerRootView : View;
+	/* GestureDetector is a wrapper, so a non-resizable sheet renders the row alone:
+	 *  every other sheet keeps exactly the tree it had. */
+	const headerRow = (
+		<View
+			className="flex-row items-center gap-2 px-4 py-3"
+			onLayout={(event) => setHeaderHeight(event.nativeEvent.layout.height)}
+		>
+			{resizable ? (
+				/* The grab bar is the visible half of the size control (36×5 pt, 6 pt
+				 *  from the top). Absolutely positioned inside the row's own padding, so
+				 *  the header's MEASURED height — the chrome the cap spends — does not
+				 *  move, and pointer-events are off because the whole row is the drag
+				 *  zone: a second target there would only take the touch away from it. */
+				<View
+					testID={CONTROL.sheetGrabBar}
+					style={{
+						/* The style form, not the prop: RNW deprecates the prop. */
+						pointerEvents: "none",
+						position: "absolute",
+						top: 6,
+						left: 0,
+						right: 0,
+						alignItems: "center",
+					}}
+				>
+					<View
+						style={{
+							width: 36,
+							height: 5,
+							borderRadius: 3,
+							backgroundColor: grabColour,
+							opacity: 0.4,
+						}}
+					/>
+				</View>
+			) : null}
+			<Heading
+				ref={titleRef}
+				tabIndex={focusTitle ? -1 : undefined}
+				level={2}
+				className="flex-1 text-title text-ink"
+				/* ONE LINE, the app's truncation idiom (36 call sites, the rows
+				 * themselves included): at 200 % on a 320 pt phone the WRAPPED
+				 * title was the sheet's single biggest chrome block — 81 pt of a
+				 * 525 pt surface (design D63-1) — and a single-line title that
+				 * ellipsizes keeps its full accessible name. */
+				numberOfLines={titleLines}
+			>
+				{title}
+			</Heading>
+			<IconButton
+				accessibilityLabel={t("mobile.common.close")}
+				testID={CONTROL.sheetClose}
+				onPress={onClose}
+				icon={({ color, size }) => <X color={color} size={size} />}
+			/>
+		</View>
+	);
 
 	return (
 		/* The scope publishes this sheet as the HOST of anything a modal is raised
@@ -603,333 +818,324 @@ export const Sheet = ({
 				 *  applied one level down; on native it merely re-provides the same
 				 *  context. */}
 				<ScopedVariables variables={variables}>
-					{/* Same rule as `Dialog`: the modal root is a separate root, so the
-					 *  direction is re-applied here or a sheet opened in an Urdu session keeps
-					 *  its leading/trailing chrome on the English edges. */}
-					<DirectionView
-						className="flex-1 justify-end"
-						/* Inert from the close on: the exit keeps this mounted, and a
-						 *  second tap must not land on a sheet that is leaving (R2). */
-						pointerEvents={exitPointerEvents(visible)}
-						onLayout={(event) =>
-							setColumnHeight(event.nativeEvent.layout.height)
-						}
-					>
-						{/*
-						 * THE SCRIM IS DRAWN ONLY WHEN THIS SHEET IS THE ONE DIM. Hosted
-						 * by a surface that already dims the screen (the conversations
-						 * drawer), this stays exactly what it also always was — the
-						 * topmost PRESS LAYER, so a tap outside still closes the sheet —
-						 * and paints no dim of its own (design round 5, D7/D8/D9: the
-						 * hand-over between two dimmers flashed the strip undimmed for
-						 * 40-89 ms on close, dipped to 0.570 on open and pulsed to 0.91).
-						 * `opacity` stays 1 rather than animating: there is no dim here
-						 * to fade, and a faded press layer would swallow presses while
-						 * invisible.
-						 *
-						 * What keeps the audit's overlap rule quiet is NOT this layer's
-						 * transparency — round 6 claimed that and CI disproved it (six
-						 * `U-08` FAILs on `S15/menu-open`). `isGhost` is
-						 * `clippedAway || (ariaHidden && !ownInk)`, so an interactive,
-						 * non-aria-hidden box stays in the pair set however transparent it
-						 * is; the host's layer leaves it instead, by stopping being a
-						 * control while this modal owns the dismiss.
-						 */}
-						<Animated.View
-							style={{ opacity: drawsDim ? scrimFade : 1 }}
-							className="absolute inset-0"
+					{/* The gesture root has to be INSIDE the modal (see the resize block
+					 *  above); `View` for every sheet that did not opt in, so nothing else
+					 *  changes at all. */}
+					<ModalRoot style={{ flex: 1 }}>
+						{/* Same rule as `Dialog`: the modal root is a separate root, so the
+						 *  direction is re-applied here or a sheet opened in an Urdu session keeps
+						 *  its leading/trailing chrome on the English edges. */}
+						<DirectionView
+							className="flex-1 justify-end"
+							/* Inert from the close on: the exit keeps this mounted, and a
+							 *  second tap must not land on a sheet that is leaving (R2). */
+							pointerEvents={exitPointerEvents(visible)}
+							onLayout={(event) =>
+								setColumnHeight(event.nativeEvent.layout.height)
+							}
 						>
-							<Pressable
-								ref={scrimRef}
-								className="flex-1"
-								style={{
-									backgroundColor: drawsDim ? scrimColour : "transparent",
-								}}
-								accessibilityRole={ROLE.button}
-								accessibilityLabel={t("mobile.common.close")}
-								// The labelled close button remains available; a picker's scrim is
-								// pointer-only so initial focus never starts on a duplicate Close.
-								accessible={!focusTitle}
-								accessibilityElementsHidden={focusTitle}
-								importantForAccessibility={
-									focusTitle ? "no-hide-descendants" : "auto"
-								}
-								tabIndex={focusTitle ? -1 : 0}
-								testID={CONTROL.sheetScrim}
-								onPress={onClose}
-							/>
-						</Animated.View>
-
-						<Animated.View
-							/* THE SURFACE IS THE DIALOG. `accessibilityViewIsModal` on the
-							 *  Modal keeps the app behind it out of the tree, but nothing
-							 *  named the dialog itself: a reader entered a surface whose
-							 *  heading was just the first text node. `role` (not
-							 *  `accessibilityRole` — RN's AccessibilityRole has no dialog)
-							 *  plus the title gives it the accessible name the title is
-							 *  already showing. */
-							role={ROLE.dialog}
-							aria-label={title}
-							className={SHEET_SURFACE_CLASS}
-							style={{
-								...shadow,
-								/* THE SIDE BANDS, for the same reason the bottom one below is spent on
-								 *  the scroll content: a bottom sheet is full-bleed, so the moment the notch
-								 *  moves to an edge — landscape — its title AND its close control paint
-								 *  inside the unsafe band. Measured at iphone-15-landscape (insets 59/59,
-								 *  resolved by the capture rig): the title's left edge is x = 17, and the
-								 *  close control's right edge reaches x = 828 of 844.
-								 *
-								 *  The padding rides on the SURFACE, which carries the fill, so the sheet
-								 *  stays full-bleed behind the band and only its content is inset — the
-								 *  shape `Screen` uses (it pads its root, not its children). It is NOT
-								 *  `ConversationsDrawer`'s widen-and-pad: that spends the inset out of a
-								 *  FIXED-width panel's outer geometry, and a full-viewport surface has no
-								 *  outer geometry left to widen. */
-								paddingLeft: insets.left,
-								paddingRight: insets.right,
-								transform: [
-									{
-										translateY: rise.interpolate({
-											inputRange: [0, 1],
-											outputRange: [40, 0],
-										}),
-									},
-								],
-							}}
-						>
-							<View
-								className="flex-row items-center gap-2 px-4 py-3"
-								onLayout={(event) =>
-									setHeaderHeight(event.nativeEvent.layout.height)
-								}
+							{/*
+							 * THE SCRIM IS DRAWN ONLY WHEN THIS SHEET IS THE ONE DIM. Hosted
+							 * by a surface that already dims the screen (the conversations
+							 * drawer), this stays exactly what it also always was — the
+							 * topmost PRESS LAYER, so a tap outside still closes the sheet —
+							 * and paints no dim of its own (design round 5, D7/D8/D9: the
+							 * hand-over between two dimmers flashed the strip undimmed for
+							 * 40-89 ms on close, dipped to 0.570 on open and pulsed to 0.91).
+							 * `opacity` stays 1 rather than animating: there is no dim here
+							 * to fade, and a faded press layer would swallow presses while
+							 * invisible.
+							 *
+							 * What keeps the audit's overlap rule quiet is NOT this layer's
+							 * transparency — round 6 claimed that and CI disproved it (six
+							 * `U-08` FAILs on `S15/menu-open`). `isGhost` is
+							 * `clippedAway || (ariaHidden && !ownInk)`, so an interactive,
+							 * non-aria-hidden box stays in the pair set however transparent it
+							 * is; the host's layer leaves it instead, by stopping being a
+							 * control while this modal owns the dismiss.
+							 */}
+							<Animated.View
+								style={{ opacity: drawsDim ? scrimFade : 1 }}
+								className="absolute inset-0"
 							>
-								<Heading
-									ref={titleRef}
-									tabIndex={focusTitle ? -1 : undefined}
-									level={2}
-									className="flex-1 text-title text-ink"
-									/* ONE LINE, the app's truncation idiom (36 call sites, the rows
-									 * themselves included): at 200 % on a 320 pt phone the WRAPPED
-									 * title was the sheet's single biggest chrome block — 81 pt of a
-									 * 525 pt surface (design D63-1) — and a single-line title that
-									 * ellipsizes keeps its full accessible name. */
-									numberOfLines={titleLines}
-								>
-									{title}
-								</Heading>
-								<IconButton
+								<Pressable
+									ref={scrimRef}
+									className="flex-1"
+									style={{
+										backgroundColor: drawsDim ? scrimColour : "transparent",
+									}}
+									accessibilityRole={ROLE.button}
 									accessibilityLabel={t("mobile.common.close")}
-									testID={CONTROL.sheetClose}
+									// The labelled close button remains available; a picker's scrim is
+									// pointer-only so initial focus never starts on a duplicate Close.
+									accessible={!focusTitle}
+									accessibilityElementsHidden={focusTitle}
+									importantForAccessibility={
+										focusTitle ? "no-hide-descendants" : "auto"
+									}
+									tabIndex={focusTitle ? -1 : 0}
+									testID={CONTROL.sheetScrim}
 									onPress={onClose}
-									icon={({ color, size }) => <X color={color} size={size} />}
 								/>
-							</View>
-							{pinned === undefined ? null : (
-								<View
-									/* The hairline is the pinned region's edge (design D1): rows scroll
-									 *  up UNDER it, and without a line a provider label cut mid-glyph
-									 *  under the field read as a rendering fault — the footer's own
-									 *  boundary, mirrored. */
-									className="px-4 border-b border-hairline"
-									testID={SURFACE.sheetPinned}
-									onLayout={(event) =>
-										setPinnedHeight(event.nativeEvent.layout.height)
-									}
-								>
-									{pinned}
-								</View>
-							)}
-							<ScrollView
-								testID={SURFACE.sheetBody}
-								/* A row tapped while the keyboard is up is picked in ONE tap. The
-								 *  default (`never`) spends the first tap dismissing the keyboard,
-								 *  which in a search sheet reads as "the row didn't respond". A tap
-								 *  on empty body space still dismisses it (`handled`). */
-								keyboardShouldPersistTaps="handled"
-								/* A sheet with a `pinned` slot is a search over its body, so it HOLDS
-								 *  its cap instead of hugging its content (design D2): the surface is
-								 *  bottom-anchored (to the keyboard, while it is up), so a hugging body
-								 *  moved the field the reader is typing in by every result a keystroke
-								 *  removed — 59 → ≈272 pt for one query on a 430×932 phone. Sheets
-								 *  without one keep hugging. The cap is held with the keyboard down
-								 *  too: the `content` detent (`SHEET_DETENTS.content`, 0.6) still
-								 *  yields a cap, so a narrowed query keeps the sheet at that height
-								 *  after the keyboard is dismissed — the field stays put, and the
-								 *  held height never exceeds the detent. */
-								style={
-									maxContentHeight === undefined
-										? undefined
-										: pinned === undefined
-											? { maxHeight: maxContentHeight }
-											: {
-													maxHeight: maxContentHeight,
-													minHeight: maxContentHeight,
-												}
-								}
-								contentContainerClassName="px-4"
-								/* `pb-6` (24) plus the safe-area inset, computed rather than spelled
-								 *  as a class so the indicator's height rides the DEVICE, and the model /
-								 *  effort / slash sheets are corrected by the same line. With a pinned
-								 *  footer the inset belongs to the FOOTER (it is the last thing drawn),
-								 *  so the body keeps only the gutters — double-spending it would leave a
-								 *  dead band between the last field and the action. */
-								contentContainerStyle={{
-									paddingBottom: footer === undefined ? 24 + bottomInset : 16,
+							</Animated.View>
+
+							<Animated.View
+								/* THE SURFACE IS THE DIALOG. `accessibilityViewIsModal` on the
+								 *  Modal keeps the app behind it out of the tree, but nothing
+								 *  named the dialog itself: a reader entered a surface whose
+								 *  heading was just the first text node. `role` (not
+								 *  `accessibilityRole` — RN's AccessibilityRole has no dialog)
+								 *  plus the title gives it the accessible name the title is
+								 *  already showing. */
+								role={ROLE.dialog}
+								aria-label={title}
+								className={SHEET_SURFACE_CLASS}
+								style={{
+									...shadow,
+									/* THE SIDE BANDS, for the same reason the bottom one below is spent on
+									 *  the scroll content: a bottom sheet is full-bleed, so the moment the notch
+									 *  moves to an edge — landscape — its title AND its close control paint
+									 *  inside the unsafe band. Measured at iphone-15-landscape (insets 59/59,
+									 *  resolved by the capture rig): the title's left edge is x = 17, and the
+									 *  close control's right edge reaches x = 828 of 844.
+									 *
+									 *  The padding rides on the SURFACE, which carries the fill, so the sheet
+									 *  stays full-bleed behind the band and only its content is inset — the
+									 *  shape `Screen` uses (it pads its root, not its children). It is NOT
+									 *  `ConversationsDrawer`'s widen-and-pad: that spends the inset out of a
+									 *  FIXED-width panel's outer geometry, and a full-viewport surface has no
+									 *  outer geometry left to widen. */
+									paddingLeft: insets.left,
+									paddingRight: insets.right,
+									transform: [
+										{
+											translateY: rise.interpolate({
+												inputRange: [0, 1],
+												outputRange: [40, 0],
+											}),
+										},
+									],
 								}}
-								/* The three readings the cut-edge fade is earned from (its own
-								 *  comment on `syncBodyCue`): the viewport, the content, and the scroll
-								 *  position. A ref, not state — the state they collapse to is the one
-								 *  boolean below. */
-								onLayout={(event) => {
-									scrollFacts.current.viewportH =
-										event.nativeEvent.layout.height;
-									syncBodyCue();
-								}}
-								onContentSizeChange={(_width, height) => {
-									scrollFacts.current.contentH = height;
-									syncBodyCue();
-								}}
-								onScroll={(event) => {
-									scrollFacts.current.y = event.nativeEvent.contentOffset.y;
-									syncBodyCue();
-								}}
-								scrollEventThrottle={16}
 							>
-								{children}
-							</ScrollView>
-							{footer === undefined ? null : (
-								<View
-									className={cx(
-										"px-4 pt-3",
-										/* The divider is the cut region's CLOSE, paired with the fade below:
-										 * the fade fades the body's last partial row into the surface, and
-										 * the hairline traces where content stops being scrollable — the
-										 * pair is the boundary cue design D63-1 asked for. */
-										"border-t border-hairline",
-									)}
-									onLayout={(event) =>
-										setFooterHeight(event.nativeEvent.layout.height)
+								{resizable ? (
+									<GestureDetector gesture={resizePan}>
+										{headerRow}
+									</GestureDetector>
+								) : (
+									headerRow
+								)}
+								{pinned === undefined ? null : (
+									<View
+										/* The hairline is the pinned region's edge (design D1): rows scroll
+										 *  up UNDER it, and without a line a provider label cut mid-glyph
+										 *  under the field read as a rendering fault — the footer's own
+										 *  boundary, mirrored. */
+										className="px-4 border-b border-hairline"
+										testID={SURFACE.sheetPinned}
+										onLayout={(event) =>
+											setPinnedHeight(event.nativeEvent.layout.height)
+										}
+									>
+										{pinned}
+									</View>
+								)}
+								<Body
+									testID={SURFACE.sheetBody}
+									/* A row tapped while the keyboard is up is picked in ONE tap. The
+									 *  default (`never`) spends the first tap dismissing the keyboard,
+									 *  which in a search sheet reads as "the row didn't respond". A tap
+									 *  on empty body space still dismisses it (`handled`). */
+									keyboardShouldPersistTaps="handled"
+									/* Opt-in (the ask panel's Other field): the platform's own
+									 *  dismissal, so a swipe down on the body puts the keyboard away
+									 *  — iOS follows the finger, Android waits for the drag to end. */
+									keyboardDismissMode={keyboardDismissMode}
+									/* A sheet with a `pinned` slot is a search over its body, so it HOLDS
+									 *  its cap instead of hugging its content (design D2): the surface is
+									 *  bottom-anchored (to the keyboard, while it is up), so a hugging body
+									 *  moved the field the reader is typing in by every result a keystroke
+									 *  removed — 59 → ≈272 pt for one query on a 430×932 phone. Sheets
+									 *  without one keep hugging. The cap is held with the keyboard down
+									 *  too: the `content` detent (`SHEET_DETENTS.content`, 0.6) still
+									 *  yields a cap, so a narrowed query keeps the sheet at that height
+									 *  after the keyboard is dismissed — the field stays put, and the
+									 *  held height never exceeds the detent. */
+									style={
+										resizable
+											? resizeBodyStyle
+											: maxContentHeight === undefined
+												? undefined
+												: pinned === undefined
+													? { maxHeight: maxContentHeight }
+													: {
+															maxHeight: maxContentHeight,
+															minHeight: maxContentHeight,
+														}
 									}
-									style={{ paddingBottom: 24 + bottomInset }}
+									contentContainerClassName="px-4"
+									/* `pb-6` (24) plus the safe-area inset, computed rather than spelled
+									 *  as a class so the indicator's height rides the DEVICE, and the model /
+									 *  effort / slash sheets are corrected by the same line. With a pinned
+									 *  footer the inset belongs to the FOOTER (it is the last thing drawn),
+									 *  so the body keeps only the gutters — double-spending it would leave a
+									 *  dead band between the last field and the action. */
+									contentContainerStyle={{
+										paddingBottom: footer === undefined ? 24 + bottomInset : 16,
+									}}
+									/* The three readings the cut-edge fade is earned from (its own
+									 *  comment on `syncBodyCue`): the viewport, the content, and the scroll
+									 *  position. A ref, not state — the state they collapse to is the one
+									 *  boolean below. */
+									onLayout={(event) => {
+										scrollFacts.current.viewportH =
+											event.nativeEvent.layout.height;
+										syncBodyCue();
+									}}
+									onContentSizeChange={(_width, height) => {
+										scrollFacts.current.contentH = height;
+										syncBodyCue();
+									}}
+									onScroll={(event) => {
+										scrollFacts.current.y = event.nativeEvent.contentOffset.y;
+										syncBodyCue();
+									}}
+									scrollEventThrottle={16}
 								>
-									{footer}
-								</View>
-							)}
-							{pinned !== undefined && pinnedHeight > 0 && topCue ? (
-								/* The footer fade's mirror under the pinned region (design D1):
-								 *  solid at the hairline, transparent toward the content, shown only
-								 *  while rows have scrolled up under it. The header's measured height
-								 *  (its seed for the one frame before `onLayout`) places it. */
+									{children}
+								</Body>
+								{footer === undefined ? null : (
+									<View
+										className={cx(
+											"px-4 pt-3",
+											/* The divider is the cut region's CLOSE, paired with the fade below:
+											 * the fade fades the body's last partial row into the surface, and
+											 * the hairline traces where content stops being scrollable — the
+											 * pair is the boundary cue design D63-1 asked for. */
+											"border-t border-hairline",
+										)}
+										onLayout={(event) =>
+											setFooterHeight(event.nativeEvent.layout.height)
+										}
+										style={{ paddingBottom: 24 + bottomInset }}
+									>
+										{footer}
+									</View>
+								)}
+								{pinned !== undefined && pinnedHeight > 0 && topCue ? (
+									/* The footer fade's mirror under the pinned region (design D1):
+									 *  solid at the hairline, transparent toward the content, shown only
+									 *  while rows have scrolled up under it. The header's measured height
+									 *  (its seed for the one frame before `onLayout`) places it. */
+									<View
+										pointerEvents="none"
+										aria-hidden
+										testID={SURFACE.sheetPinnedFade}
+										style={{
+											position: "absolute",
+											left: insets.left,
+											right: insets.right,
+											top:
+												(headerHeight > 0 ? headerHeight : CHROME_SEED_HEADER) +
+												pinnedHeight,
+											height: SHEET_BODY_FADE,
+										}}
+									>
+										<Svg width="100%" height="100%">
+											<Defs>
+												<LinearGradient
+													id={topFadeId}
+													x1="0%"
+													y1="0%"
+													x2="0%"
+													y2="100%"
+												>
+													<Stop
+														key="far"
+														offset="0"
+														stopColor={ground}
+														stopOpacity={1}
+													/>
+													<Stop
+														key="near"
+														offset="1"
+														stopColor={ground}
+														stopOpacity={0}
+													/>
+												</LinearGradient>
+											</Defs>
+											<Rect
+												width="100%"
+												height="100%"
+												fill={`url(#${topFadeId})`}
+											/>
+										</Svg>
+									</View>
+								) : null}
+								{footer !== undefined && footerHeight > 0 && bodyCue ? (
+									/* The cut-edge cue (design D63-1): a band of the sheet's own ground
+									 *  over the bottom of the scrolling body, transparent at the content
+									 *  edge and solid at the footer edge, so a partially drawn row reads as
+									 *  "more below" instead of as a rendering fault. Truthful by
+									 *  construction: shown only while the body overflows and is not
+									 *  scrolled to its end. */
+									<View
+										pointerEvents="none"
+										aria-hidden
+										testID={SURFACE.sheetBodyFade}
+										style={{
+											position: "absolute",
+											left: insets.left,
+											right: insets.right,
+											bottom: footerHeight,
+											height: SHEET_BODY_FADE,
+										}}
+									>
+										<Svg width="100%" height="100%">
+											<Defs>
+												<LinearGradient
+													id={fadeId.current}
+													x1="0%"
+													y1="0%"
+													x2="0%"
+													y2="100%"
+												>
+													<Stop
+														key="near"
+														offset="0"
+														stopColor={ground}
+														stopOpacity={0}
+													/>
+													<Stop
+														key="far"
+														offset="1"
+														stopColor={ground}
+														stopOpacity={1}
+													/>
+												</LinearGradient>
+											</Defs>
+											<Rect
+												width="100%"
+												height="100%"
+												fill={`url(#${fadeId.current})`}
+											/>
+										</Svg>
+									</View>
+								) : null}
+							</Animated.View>
+							{/* The keyboard's footprint, under the bottom-anchored surface: the
+							 *  column is `justify-end`, so this lifts the surface's bottom edge to
+							 *  the keyboard's top. A spacer, not a margin on the surface, because
+							 *  the surface's transform runs on the native driver and a layout
+							 *  property cannot share that node's animation. */}
+							{keyboardLift > 0 ? (
 								<View
 									pointerEvents="none"
-									aria-hidden
-									testID={SURFACE.sheetPinnedFade}
-									style={{
-										position: "absolute",
-										left: insets.left,
-										right: insets.right,
-										top:
-											(headerHeight > 0 ? headerHeight : CHROME_SEED_HEADER) +
-											pinnedHeight,
-										height: SHEET_BODY_FADE,
-									}}
-								>
-									<Svg width="100%" height="100%">
-										<Defs>
-											<LinearGradient
-												id={topFadeId}
-												x1="0%"
-												y1="0%"
-												x2="0%"
-												y2="100%"
-											>
-												<Stop
-													key="far"
-													offset="0"
-													stopColor={ground}
-													stopOpacity={1}
-												/>
-												<Stop
-													key="near"
-													offset="1"
-													stopColor={ground}
-													stopOpacity={0}
-												/>
-											</LinearGradient>
-										</Defs>
-										<Rect
-											width="100%"
-											height="100%"
-											fill={`url(#${topFadeId})`}
-										/>
-									</Svg>
-								</View>
+									testID={SURFACE.sheetKeyboardSpacer}
+									style={{ height: keyboardLift }}
+								/>
 							) : null}
-							{footer !== undefined && footerHeight > 0 && bodyCue ? (
-								/* The cut-edge cue (design D63-1): a band of the sheet's own ground
-								 *  over the bottom of the scrolling body, transparent at the content
-								 *  edge and solid at the footer edge, so a partially drawn row reads as
-								 *  "more below" instead of as a rendering fault. Truthful by
-								 *  construction: shown only while the body overflows and is not
-								 *  scrolled to its end. */
-								<View
-									pointerEvents="none"
-									aria-hidden
-									testID={SURFACE.sheetBodyFade}
-									style={{
-										position: "absolute",
-										left: insets.left,
-										right: insets.right,
-										bottom: footerHeight,
-										height: SHEET_BODY_FADE,
-									}}
-								>
-									<Svg width="100%" height="100%">
-										<Defs>
-											<LinearGradient
-												id={fadeId.current}
-												x1="0%"
-												y1="0%"
-												x2="0%"
-												y2="100%"
-											>
-												<Stop
-													key="near"
-													offset="0"
-													stopColor={ground}
-													stopOpacity={0}
-												/>
-												<Stop
-													key="far"
-													offset="1"
-													stopColor={ground}
-													stopOpacity={1}
-												/>
-											</LinearGradient>
-										</Defs>
-										<Rect
-											width="100%"
-											height="100%"
-											fill={`url(#${fadeId.current})`}
-										/>
-									</Svg>
-								</View>
-							) : null}
-						</Animated.View>
-						{/* The keyboard's footprint, under the bottom-anchored surface: the
-						 *  column is `justify-end`, so this lifts the surface's bottom edge to
-						 *  the keyboard's top. A spacer, not a margin on the surface, because
-						 *  the surface's transform runs on the native driver and a layout
-						 *  property cannot share that node's animation. */}
-						{keyboardLift > 0 ? (
-							<View
-								pointerEvents="none"
-								testID={SURFACE.sheetKeyboardSpacer}
-								style={{ height: keyboardLift }}
-							/>
-						) : null}
-					</DirectionView>
+						</DirectionView>
+					</ModalRoot>
 				</ScopedVariables>
 			</Modal>
 		</ModalScopeContext.Provider>

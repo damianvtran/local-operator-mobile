@@ -262,6 +262,8 @@ export const CONTROL = {
 	// z ladder allows no more), so their parts are unambiguous without a
 	// discriminator; the surface itself is named by whichever screen opens it.
 	sheetClose: "sheet-close",
+	/** The resizable sheet's two-size control: a drag target AND a tap toggle. */
+	sheetGrabBar: "sheet-grab-bar",
 	sheetScrim: "sheet-scrim",
 	dialogConfirm: "dialog-confirm",
 	dialogCancel: "dialog-cancel",

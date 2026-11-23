@@ -25,6 +25,21 @@ import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { SheetProps } from "@/ui/components/sheet";
 
+/* `Sheet` imports reanimated and gesture-handler; Node has neither (see the
+ * shared reduction's own note). */
+vi.mock("react-native-reanimated", async () => {
+	const { reanimatedModuleMock } = await import(
+		"@/testing/native-gesture-mocks"
+	);
+	return reanimatedModuleMock();
+});
+vi.mock("react-native-gesture-handler", async () => {
+	const { gestureHandlerModuleMock } = await import(
+		"@/testing/native-gesture-mocks"
+	);
+	return gestureHandlerModuleMock();
+});
+
 const rec = vi.hoisted(() => ({
 	events: [] as string[],
 	/** The last `Animated.parallel`'s completion callback. The entry uses one
