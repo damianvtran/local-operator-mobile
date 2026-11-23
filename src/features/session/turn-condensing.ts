@@ -40,7 +40,7 @@
  * THE BAR STANDS FOR WORK, NEVER FOR WHAT THE READER IS OWED. Two kinds of row
  * stay on screen beside the bar in EVERY turn, prose or tool
  * (`staysVisibleOutsideTurnBar`):
- *   - every assistant message that hands something over (`isHandoverProse`: has
+ *   - every assistant message that hands something over (`isHandoverContent`: has
  *     content, no `calls_tools`), however long it is and whether or not more
  *     work followed it. A turn that answered and was then continued — a steer,
  *     a hub reply, a wake, the todo guardrail's "stop, then more work" — used to
@@ -106,6 +106,10 @@ import {
 	latchFoldedIds,
 	MEDIA_ARTIFACT_TOOLS,
 } from "@/features/session/fold-model";
+import {
+	type DisplayTranscriptEntry,
+	LIVE_INLINE_UI,
+} from "@/features/session/live-inline-ui";
 import {
 	bridgeReceiptLabel,
 	canonicalRowKey,
@@ -244,8 +248,8 @@ function isUnhandledErrorNotice(entry: TranscriptEntry): boolean {
 }
 
 /**
- * An assistant row that HANDS something over: it has content (text, images or
- * files) and does not declare calls of its own. Mid-turn narration ("Reading
+ * An assistant row that HANDS something over: it has content (text, images,
+ * files, or a validated widget) and does not declare calls of its own. Mid-turn narration ("Reading
  * the ledger first.") carries `calls_tools` and is work commentary the bar may
  * stand for; a message without calls is what the reader asked for, however
  * long it is and whether or not a later message closes the turn.
@@ -255,10 +259,16 @@ function isUnhandledErrorNotice(entry: TranscriptEntry): boolean {
  * The relay web client keeps the same rows on screen (`isFinalResponse`,
  * `condense-segments.ts` in local-operator).
  */
-const isHandoverProse = (entry: TranscriptEntry): boolean =>
+const isWidgetHandover = (entry: DisplayTranscriptEntry): boolean =>
+	entry.kind === "assistant" &&
+	!hasExplicitCallsTools(entry) &&
+	entry[LIVE_INLINE_UI] !== undefined;
+
+const isHandoverContent = (entry: DisplayTranscriptEntry): boolean =>
 	entry.kind === "assistant" &&
 	!hasExplicitCallsTools(entry) &&
 	(entry.text.length > 0 ||
+		entry[LIVE_INLINE_UI] !== undefined ||
 		entry.images.length > 0 ||
 		(entry.files?.length ?? 0) > 0);
 
@@ -270,7 +280,7 @@ const isHandoverProse = (entry: TranscriptEntry): boolean =>
 export function staysVisibleOutsideTurnBar(entry: TranscriptEntry): boolean {
 	if (isUnhandledErrorNotice(entry)) return true;
 	if (entry.kind === "user" || entry.kind === "steer") return true;
-	if (isHandoverProse(entry)) return true;
+	if (isHandoverContent(entry)) return true;
 	if (entry.kind === "compaction") return true;
 	if (entry.kind === "tool") {
 		if (MEDIA_ARTIFACT_TOOLS.has(entry.tool_name.trim().toLowerCase())) {
@@ -291,7 +301,7 @@ export function staysVisibleOutsideTurnBar(entry: TranscriptEntry): boolean {
  * The index of the turn's closing row, or `null` when the turn has none.
  *
  * Eligible closings:
- *  - a completed assistant message (`entryComplete`, non-empty text or images,
+ *  - a completed assistant message (`entryComplete`, handover content,
  *    and not declaring owed `calls_tools`);
  *  - a settled `no_reply` quiet-turn close (`isQuietCloseEntry`) when no
  *    unhandled error notice ended the turn.
@@ -312,14 +322,7 @@ function closingAnswerIndex(
 		}
 		if (STATEMENT_KINDS.has(entry.kind)) continue;
 		if (isQuietCloseEntry(entry)) return index + 1;
-		return entry.kind === "assistant" &&
-			(entry.text.length > 0 ||
-				entry.images.length > 0 ||
-				(entry.files?.length ?? 0) > 0) &&
-			entryComplete(entry) &&
-			!hasExplicitCallsTools(entry)
-			? index
-			: null;
+		return isHandoverContent(entry) && entryComplete(entry) ? index : null;
 	}
 	return null;
 }
@@ -595,6 +598,27 @@ export function condensePlan(input: CondenseInput): CondensePlan {
 			view.bar = facts;
 			view.hiddenIds = spanIds;
 			const barId = turnBarId(turn.key);
+			// Keep the bar and its frozen work facts. A later validated overlay
+			// can turn a previously blank member into part of the answer, which
+			// must surface without reopening the turn's work.
+			if (latchedTurn) {
+				const widgetIds = new Set<string>();
+				for (let at = turn.start + 1; at <= turn.end; at += 1) {
+					const row = entries[at];
+					if (row && isWidgetHandover(row)) {
+						widgetIds.add(row.id);
+						widgetIds.add(canonicalRowKey(row));
+					}
+				}
+				if (widgetIds.size) {
+					view.hiddenIds = spanIds.filter((id, i) => {
+						const canonical = latchedTurn.canonicalIds?.[i];
+						return (
+							!widgetIds.has(id) && (!canonical || !widgetIds.has(canonical))
+						);
+					});
+				}
+			}
 			if (!open) {
 				items.push({
 					kind: "bar",
@@ -613,8 +637,8 @@ export function condensePlan(input: CondenseInput): CondensePlan {
 					const row = entries[at];
 					if (
 						row === undefined ||
-						hidden.has(row.id) ||
-						hidden.has(canonicalRowKey(row))
+						(!isWidgetHandover(row) &&
+							(hidden.has(row.id) || hidden.has(canonicalRowKey(row))))
 					) {
 						continue;
 					}
@@ -1628,9 +1652,10 @@ export function groupPhrases(group: QuietGroup): string[] {
  * the streaming anchor, find and the offset table keep addressing it; text
  * arriving on a streaming row turns it back into ordinary prose.
  */
-export function isBlankAssistantEntry(entry: TranscriptEntry): boolean {
+export function isBlankAssistantEntry(entry: DisplayTranscriptEntry): boolean {
 	return (
 		entry.kind === "assistant" &&
+		entry[LIVE_INLINE_UI] === undefined &&
 		entry.text.trim() === "" &&
 		entry.images.length === 0 &&
 		(entry.videos?.length ?? 0) === 0 &&

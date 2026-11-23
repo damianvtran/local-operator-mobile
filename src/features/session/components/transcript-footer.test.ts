@@ -55,6 +55,11 @@ vi.mock("@/features/session/components/transcript-edge-fades", () => ({
 vi.mock("@/features/session/components/transcript-row", () => ({
 	TranscriptRow: () => null,
 }));
+/* Rows are null here, so keep the resize provider's shape without loading the
+ * chart renderer (native SVG). The chart's mounted test drives its consumer. */
+vi.mock("@/features/session/components/inline-ui-preview", async () => ({
+	ChartDataResizeContext: (await import("react")).createContext(null),
+}));
 vi.mock("@/features/session/components/turn-bar", () => ({
 	TurnBar: () => null,
 }));

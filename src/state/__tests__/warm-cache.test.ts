@@ -5,9 +5,16 @@
  */
 import { describe, expect, it, vi } from "vitest";
 
-import type { SessionListFrame, SessionProjection } from "../../contracts";
+import type {
+	SessionListFrame,
+	SessionProjection,
+	TranscriptEntry,
+} from "../../contracts";
 import { parsePayload } from "../../contracts";
+import { HistoryWindow } from "../../features/session/history-window";
+import { LIVE_INLINE_UI } from "../../features/session/live-inline-ui";
 import { loadFixture } from "../../testing/fixtures";
+import { createProjectionStore } from "../projection-store";
 import {
 	createWarmCache,
 	memoryWarmStore,
@@ -58,6 +65,75 @@ describe("warm cache", () => {
 		const { version: _a, ...want } = frame;
 		const { version: _b, ...got } = back?.projection ?? frame;
 		expect(got).toEqual(want);
+	});
+
+	it("does not copy negotiated presentation into the warm snapshot", async () => {
+		const store = memoryWarmStore();
+		const cache = createWarmCache(store, { warn: quiet() });
+		const frame = projection();
+		expect(
+			await cache.saveSession(A, "s1", {
+				...frame,
+				inline_ui: { version: 1, messages: { a: { text: "Sidecar basis" } } },
+			}),
+		).toBe(true);
+		const back = (await cache.loadSession(A, "s1"))?.projection;
+		expect(back?.transcript).toEqual(frame.transcript);
+		expect(back?.inline_ui).toBeUndefined();
+	});
+
+	it("warms an empty conversation but cannot overwrite fetched charts or win a pending HTTP read", async () => {
+		const frame = projection();
+		const row = {
+			...frame.transcript[0],
+			id: "chart",
+			kind: "assistant",
+			text: "",
+		} as TranscriptEntry;
+		const payload = { type: "bar", title: "Readings", data: [["Mon", 7]] };
+		const rich = {
+			version: 1,
+			messages: {
+				chart: { version: 1, text: "", widgets: [{ offset: 0, payload }] },
+			},
+		};
+		const cache = createWarmCache(memoryWarmStore(), { warn: quiet() });
+		await cache.saveSession(A, frame.session_id, {
+			...frame,
+			transcript: [row],
+			inline_ui: rich,
+		});
+		const warm = (await cache.loadSession(A, frame.session_id))?.projection;
+		if (!warm) throw new Error("Expected a hydrated warm frame");
+		const store = createProjectionStore();
+		expect(store.getState().hydrate(frame.session_id, warm)).toBe(true);
+		const hydrated =
+			store.getState().entries[frame.session_id]?.projection ?? null;
+		const newWindow = () =>
+			new HistoryWindow(
+				async () => ({ entries: [row], has_more: false, inline_ui: rich }),
+				() => {},
+			);
+		const newestFirst = newWindow();
+		await newestFirst.load(true);
+		newestFirst.seedFromCache(hydrated);
+		expect(newestFirst.visibleRows[0]?.[LIVE_INLINE_UI]).toMatchObject([
+			{ kind: "ui", value: payload },
+		]);
+
+		const inFlight = newWindow();
+		const pending = inFlight.load(true);
+		inFlight.seedFromCache(hydrated);
+		expect(inFlight.visibleRows[0]?.text).toBe("");
+		expect(inFlight.visibleRows[0]?.[LIVE_INLINE_UI]).toBeUndefined();
+		await pending;
+		expect(inFlight.visibleRows[0]?.[LIVE_INLINE_UI]).toMatchObject([
+			{ kind: "ui", value: payload },
+		]);
+		// A real full frame still replaces an overlapping HTTP row, even
+		// when negotiation no longer returns a widget for it.
+		inFlight.accept({ ...frame, transcript: [row], inline_ui: undefined });
+		expect(inFlight.visibleRows[0]?.[LIVE_INLINE_UI]).toBeUndefined();
 	});
 
 	it("round-trips the session list", async () => {

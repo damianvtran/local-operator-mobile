@@ -23,6 +23,12 @@ import {
 import Svg, { Defs, LinearGradient, Rect, Stop } from "react-native-svg";
 import { DiagramBlock } from "@/features/session/components/diagram-block";
 import {
+	type InlineUiData,
+	InlineUiPreview,
+	inlineUiData,
+	inlineUiPlainText,
+} from "@/features/session/components/inline-ui-preview";
+import {
 	type HostSelection,
 	SelectableMessage,
 	useTextSelection,
@@ -34,11 +40,13 @@ import {
 } from "@/features/session/components/stream-fade";
 import { GroupInsetContext } from "@/features/session/components/trace-rail";
 import { isDiagramBlock } from "@/features/session/diagram-source";
+import type { AssistantPart } from "@/features/session/inline-ui-parts";
 import {
 	type Block,
 	blocksPlainText,
 	type InlineSpan,
 	parseInline,
+	parseMarkdown,
 	TABLE_BORDER_PT,
 	tableColumnWidths,
 	tableFadeGeometry,
@@ -830,14 +838,18 @@ const HEADING_CLASS: Record<number, string> = {
 	3: "text-body-lg font-medium text-ink",
 };
 
+type MessageBlock = Block | { kind: "inline-ui"; data: InlineUiData };
+
 export const Markdown = memo(function Markdown({
 	text,
 	host,
+	assistantParts,
 	streaming = false,
 	arrival = null,
 	motion = null,
 }: {
 	text: string;
+	assistantParts?: readonly AssistantPart[];
 	/** A host that owns the long-press (Team Bridge's actions sheet); see
 	 *  `HostSelection`. Pass a memoised object: this component is `memo`. */
 	host?: HostSelection;
@@ -845,24 +857,52 @@ export const Markdown = memo(function Markdown({
 	arrival?: StreamArrival | null;
 	motion?: object | null;
 }) {
+	// The sidecar's prose and widget positions belong to a different source
+	// from the legacy `text` that arrival tracks. Never use its offsets or
+	// opacity wrappers for widgets: a stream settle must leave the figure,
+	// disclosure focus and selected text mounted in place.
+	const rich = useMemo(
+		() =>
+			assistantParts?.flatMap<MessageBlock>((part) =>
+				part.kind === "markdown"
+					? parseMarkdown(part.text)
+					: [{ kind: "inline-ui", data: inlineUiData(part.value) }],
+			),
+		[assistantParts],
+	);
 	const previous = useRef<MarkdownFrame | null>(null);
 	const old = previous.current;
-	const frame = useMemo(
-		() => parseMarkdownFrame(text, streaming, previous.current),
-		[streaming, text],
+	const source = useMemo(
+		() => rich ?? parseMarkdownFrame(text, streaming, previous.current),
+		[rich, streaming, text],
 	);
+	const frame = Array.isArray(source) ? null : source;
 	useLayoutEffect(() => {
 		previous.current = frame;
 	}, [frame]);
-	const { blocks } = frame;
+	const blocks = Array.isArray(source) ? source : source.blocks;
 	const from =
-		!arrival || arrival.sealed || motion === null ? null : arrival.previousText;
+		!frame || !arrival || arrival.sealed || motion === null
+			? null
+			: arrival.previousText;
 	const oldBlocks = from !== null && old?.text === from ? old.blocks : null;
 	// A single update can grow prose and insert a card. Its raw source start,
 	// not equality of the preceding rendered block, decides whether it is new.
 	// A delimiter that adopts older source is not a birth.
 	const boundary = from === "" || oldBlocks ? from?.length : undefined;
-	const plainText = useCallback(() => blocksPlainText(blocks), [blocks]);
+	const plainText = useCallback(
+		() =>
+			!Array.isArray(source)
+				? blocksPlainText(source.blocks)
+				: source
+						.map((block) =>
+							block.kind === "inline-ui"
+								? inlineUiPlainText(block.data)
+								: blocksPlainText([block]),
+						)
+						.join("\n\n"),
+		[source],
+	);
 	return (
 		/* The whole answer is ONE selection surface, so a drag can run across
 		 *  paragraphs, lists and code (iOS mode; `selectable-message.tsx`). */
@@ -879,8 +919,10 @@ export const Markdown = memo(function Markdown({
 			 * value. The gap is the `between-components` tier, desktop parity. */}
 			<View className="gap-3">
 				{blocks.map((block, index) => {
+					if (block.kind === "inline-ui")
+						return <InlineUiPreview key={index} data={block.data} />;
 					const prior = oldBlocks?.[index];
-					const start = frame.starts[index];
+					const start = frame?.starts[index];
 					const born =
 						boundary !== undefined && start !== undefined && start >= boundary;
 					const appendFrom =
@@ -898,7 +940,7 @@ export const Markdown = memo(function Markdown({
 							block={block}
 							appendFrom={appendFrom}
 							birth={born ? motion : null}
-							motion={motion}
+							motion={frame ? motion : null}
 						/>
 					);
 				})}

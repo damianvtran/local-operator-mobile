@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { TranscriptEntry } from "@/contracts";
+import type { AssistantPart } from "@/features/session/inline-ui-parts";
 import { useStreamArrival } from "@/features/session/stream-arrival";
 import { installDomShim } from "@/testing/dom-shim";
 
@@ -18,6 +19,11 @@ const host = vi.hoisted(() => ({
 	}[],
 	open: vi.fn(async (_url: string) => undefined),
 	copies: [] as (() => void)[],
+	disclosure: null as {
+		node: HTMLButtonElement;
+		expanded: boolean;
+		press: () => void;
+	} | null,
 	/* Every Pressable's accessibility contract, in mount order (PR #233 R1, M1). */
 	pressables: [] as {
 		accessible?: boolean;
@@ -111,11 +117,17 @@ vi.mock("react-native", async () => {
 		Pressable: ({
 			children,
 			onLongPress,
+			onPress,
 			accessible,
 			accessibilityRole,
+			"aria-expanded": expanded,
+			accessibilityLabel,
 		}: {
 			children: ReactNode;
 			onLongPress?: () => void;
+			onPress?: () => void;
+			"aria-expanded"?: boolean;
+			accessibilityLabel?: string;
 			accessible?: boolean;
 			accessibilityRole?: string;
 		}) => {
@@ -125,7 +137,20 @@ vi.mock("react-native", async () => {
 				accessibilityRole,
 				longPress: onLongPress !== undefined,
 			});
-			return view({ children });
+			return expanded !== undefined
+				? createElement(
+						"button",
+						{
+							"aria-expanded": expanded,
+							"aria-label": accessibilityLabel,
+							ref: (node: HTMLButtonElement | null) => {
+								if (node && onPress)
+									host.disclosure = { node, expanded, press: onPress };
+							},
+						},
+						children,
+					)
+				: view({ children });
 		},
 		Platform: {
 			get OS() {
@@ -144,8 +169,12 @@ vi.mock("react-native-svg", async () => {
 		createElement("svg", null, children);
 	return {
 		default: node,
+		Circle: node,
 		Defs: node,
+		Line: node,
 		LinearGradient: node,
+		Path: node,
+		Polyline: node,
 		Rect: node,
 		Stop: node,
 	};
@@ -153,7 +182,10 @@ vi.mock("react-native-svg", async () => {
 vi.mock("expo-clipboard", () => ({
 	setStringAsync: vi.fn(async () => undefined),
 }));
-vi.mock("@/ui/appearance", () => ({ useTokenColor: () => "#ffffff" }));
+vi.mock("@/ui/appearance", () => ({
+	useTokenColor: () => "#ffffff",
+	useTheme: () => ({ active: { colors: {} } }),
+}));
 vi.mock("@/ui/direction", () => ({
 	useIsRTL: () => false,
 	LTR_TEXT: { writingDirection: "ltr" },
@@ -165,6 +197,7 @@ vi.mock("@/features/session/table-scroll-hook", () => ({
 	forcedTableScroll: () => null,
 }));
 
+import { inlineUiData, inlineUiPlainText } from "./inline-ui-preview";
 import { Markdown } from "./markdown";
 
 function nodeText(node: Node): string {
@@ -234,6 +267,9 @@ function webMount() {
 			});
 			return node;
 		},
+		// React uses the namespace factory for the mocked SVG plot element.
+		createElementNS: (_namespace: string, tag: string) =>
+			doc.createElement(tag),
 		getSelection: () => ({
 			isCollapsed: chosen.length === 0,
 			rangeCount: chosen.length === 0 ? 0 : 1,
@@ -265,11 +301,17 @@ function webMount() {
 		dom,
 		fades,
 		root,
-		draw: async (text: string, previousText?: string, streaming = true) =>
+		draw: async (
+			text: string,
+			previousText?: string,
+			streaming = true,
+			assistantParts?: readonly AssistantPart[],
+		) =>
 			act(async () =>
 				root.render(
 					createElement(Markdown, {
 						text,
+						assistantParts,
 						streaming,
 						arrival:
 							previousText === undefined
@@ -428,6 +470,9 @@ it("retires cancelled and skipped block births when Reduce Motion is turned off"
 
 import { GroupInsetContext } from "./trace-rail";
 
+const INLINE_UI_ORDER =
+	/Before 😀[\s\S]*Daily counts[\s\S]*Monday[\s\S]*17[\s\S]*After the grid/;
+
 describe("rendered assistant markdown dispatch", () => {
 	beforeEach(() => {
 		host.links = [];
@@ -435,6 +480,91 @@ describe("rendered assistant markdown dispatch", () => {
 		host.pressables = [];
 		host.open.mockClear();
 	});
+	it("places typed blocks between exact prose and never interprets a literal lop-ui fence", () => {
+		const legacy = '```lop-ui\n{"title":"Source code"}\n```';
+		const unnegotiated = renderToStaticMarkup(
+			createElement(Markdown, { text: legacy }),
+		);
+		expect(unnegotiated).toContain("lop-ui");
+		expect(unnegotiated).toContain("&quot;title&quot;:&quot;Source code&quot;");
+		const markup = renderToStaticMarkup(
+			createElement(Markdown, {
+				text: legacy,
+				assistantParts: [
+					{ kind: "markdown", text: "Before 😀\n" },
+					{
+						kind: "ui",
+						value: {
+							type: "spreadsheet",
+							title: "Daily counts",
+							columns: ["Day", "Count"],
+							rows: [["Monday", 17]],
+						},
+					},
+					{ kind: "markdown", text: "\nAfter the grid" },
+				],
+			}),
+		);
+		expect(markup).toMatch(INLINE_UI_ORDER);
+		expect(markup).not.toContain("Source code");
+	});
+
+	it("adds one accessible disclosure without visually repeating the exact grid", () => {
+		const value = {
+			type: "series" as const,
+			mode: "dual" as const,
+			title: "Mixed units",
+			labels: ["Monday"],
+			unit: "items",
+			rightUnit: "ms",
+			series: [
+				{ label: "Volume", values: [17009], axis: "left" as const },
+				{ label: "Latency", values: [-12.375], axis: "right" as const },
+			],
+		};
+		const markup = renderToStaticMarkup(
+			createElement(Markdown, {
+				text: "Legacy",
+				assistantParts: [{ kind: "ui", value }],
+			}),
+		);
+		expect(markup).toContain('aria-expanded="false"');
+		expect(markup).toContain('aria-label="Chart data · Mixed units"');
+		expect(markup).not.toContain("-12.375");
+		expect(inlineUiPlainText(inlineUiData(value))).toBe(
+			"Mixed units\n\tVolume\tLatency\nMonday\t17009 items\t-12.375 ms",
+		);
+	});
+
+	it("keeps a negotiated chart open and unfaded through the matching final", async () => {
+		await withWebMount(async ({ container, draw, fades }) => {
+			const seed = "Existing prose.";
+			const parts: AssistantPart[] = [
+				{ kind: "markdown", text: seed },
+				{
+					kind: "ui",
+					value: { type: "bar", title: "Readings", data: [["Exact", 1.765]] },
+				},
+			];
+			const legacy = `${seed}\n\nLegacy chart listing`;
+			await draw(seed);
+			await draw(legacy, seed, true, parts);
+			const disclosure = host.disclosure;
+			if (!disclosure) throw new Error("Missing mounted chart disclosure");
+			expect(disclosure.expanded).toBe(false);
+			await act(async () => disclosure.press());
+			expect(host.disclosure?.expanded).toBe(true);
+
+			// Real SSE decoding can reconstruct the sidecar on the final frame.
+			await draw(legacy, undefined, false, structuredClone(parts));
+			expect(host.disclosure?.node).toBe(disclosure.node);
+			expect(host.disclosure?.expanded).toBe(true);
+			expect(nodeText(container)).toContain("1.765");
+			expect(nodeText(container)).not.toContain("Legacy chart listing");
+			expect(fades).toHaveLength(0);
+		});
+	});
+
 	it.each([
 		"[Reuters](https://www.reuters.com/world/)",
 		"- **[Reuters](https://www.reuters.com/world/)**",
