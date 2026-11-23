@@ -66,9 +66,12 @@ import { SessionRow } from "@/features/sessions/session-row";
 import {
 	arrangeSidebar,
 	DEFAULT_SIDEBAR_VIEW,
+	drawnGroupBy,
 	hiddenSectionCount,
 	isEmptiedByView,
+	isSectionGroup,
 	type SidebarGroup,
+	type SidebarSectionKey,
 } from "@/features/sessions/sidebar-view";
 import { SIDEBAR_SECTION_LABEL } from "@/features/sessions/sidebar-view-controls";
 import { SidebarViewButton } from "@/features/sessions/sidebar-view-sheet";
@@ -584,9 +587,54 @@ export const ConversationsPane = ({
 	/* The desktop's arrangement (TestFlight 906): the reader's order, grouping and
 	 *  clock, applied to the search's result — `sidebar-view.ts` owns every rule. */
 	const { view: sidebarView, setView: setSidebarView } = useSidebarView();
+	/* The tag grouping's group order is the registry's own (`GET /api/tags`), so
+	 *  the pane reads the catalogue while that grouping is on screen — the same
+	 *  read the tags sheet makes, keyed the same way on the connection's
+	 *  identity so an incidental render does not re-fetch it. Nothing WAITS on
+	 *  this read: `arrangeSidebar` falls back to first-seen order while it is in
+	 *  flight or failed, and a tag it never names still gets a group. */
+	const drawnGrouping = drawnGroupBy(sidebarView, tagsAssignable);
+	const [tagOrder, setTagOrder] = useState<readonly string[] | undefined>(
+		undefined,
+	);
+	const connectionIdentity = useConnectionState(
+		(state) => `${state.phase}:${state.revision}`,
+	);
+	const relayRef = useRef(relay);
+	relayRef.current = relay;
+	useEffect(() => {
+		/* `connectionIdentity` is a TRIGGER, not a value this body reads: a new
+		 *  route or a phase change is "a new relay, re-read its catalogue". */
+		void connectionIdentity;
+		if (drawnGrouping !== "tag") return;
+		const client = relayRef.current();
+		if (client === null) return;
+		let cancelled = false;
+		client
+			.tags()
+			.then((answer) => {
+				if (cancelled) return;
+				setTagOrder(
+					[...answer.tags]
+						.sort((a, b) => a.order - b.order)
+						.map((tag) => tag.id),
+				);
+			})
+			.catch(() => {
+				// First-seen order is the fallback; the list never blocks on this.
+				if (!cancelled) setTagOrder(undefined);
+			});
+		return () => {
+			cancelled = true;
+		};
+	}, [drawnGrouping, connectionIdentity]);
 	const groups = useMemo(
-		() => arrangeSidebar(filtered, sidebarView, now),
-		[filtered, sidebarView, now],
+		() =>
+			arrangeSidebar(filtered, sidebarView, now, {
+				tagsAvailable: tagsAssignable,
+				tagOrder,
+			}),
+		[filtered, sidebarView, now, tagsAssignable, tagOrder],
 	);
 	/* `language` is a dependency because these items hold RENDERED COPY: each
 	 *  section header's label is a `t()` reading taken inside `buildItems`, at call
@@ -603,7 +651,7 @@ export const ConversationsPane = ({
 	 *  section switched off in Settings does not just vanish (D2). Both read the
 	 *  search's result, so a search that matched nothing keeps its own state. */
 	const emptiedByView = isEmptiedByView(filtered, groups);
-	const hiddenSections = hiddenSectionCount(sidebarView);
+	const hiddenSections = hiddenSectionCount(sidebarView, tagsAssignable);
 	/* Does any row in THIS list draw a picture? Then every row reserves the picture's
 	 *  width for its title, so the list's titles share one left edge instead of
 	 *  stepping in and out between pictured and plain rows (design review round 1,
@@ -702,7 +750,18 @@ export const ConversationsPane = ({
 				/* The ROW owns the gutter (design D8): the list has no padding of its
 				 *  own, so a header carries the same 16 pt the rows' `px-4` does. */
 				<View className="px-4">
-					<SectionHeader label={item.label} testID={item.testID} />
+					{item.composed === true ? (
+						<TagGroupHeader
+							label={item.label}
+							accessibilityLabel={item.accessibilityLabel ?? item.label}
+						/>
+					) : (
+						<SectionHeader
+							label={item.label}
+							testID={item.testID}
+							accessibilityLabel={item.accessibilityLabel}
+						/>
+					)}
 				</View>
 			) : item.kind === "divider" ? (
 				/* A hairline inside the row gutter, not a heading: `In one list` stays one
@@ -724,6 +783,7 @@ export const ConversationsPane = ({
 					surfaceClassName={surfaceClassName}
 					homeDirectory={homeDirectory}
 					tagsAssignable={tagsAssignable}
+					showTags={sidebarView.showTags}
 					onActivate={onRowActivate}
 					onLongPress={onRowLongPress}
 				/>
@@ -736,6 +796,7 @@ export const ConversationsPane = ({
 			onRowActivate,
 			onRowLongPress,
 			sidebarView.basis,
+			sidebarView.showTags,
 			surfaceClassName,
 			tagsAssignable,
 		],
@@ -1179,9 +1240,50 @@ function loadFailed(
 }
 
 type Item =
-	| { kind: "header"; key: string; label: string; testID?: string }
+	| {
+			kind: "header";
+			key: string;
+			label: string;
+			testID?: string;
+			/** A longer spoken name when the painted label is composed (a tag
+			 *  group's `{name} · {count}`), so the heading is a sentence to a
+			 *  screen reader rather than a dot and a bare number. */
+			accessibilityLabel?: string;
+			/** The label splices the reader's tag name to a count, so its
+			 *  paragraph base must come from the page (`SectionHeader.labelDir`). */
+			composed?: boolean;
+	  }
 	| { kind: "divider"; key: string }
 	| { kind: "row"; key: string; session: SessionSummary; section: string };
+
+/**
+ * A tag group's heading: the reader's tag name and the group's count, spliced.
+ *
+ * A COMPONENT so it can own `useComposedDir()` and the pane's hoisted
+ * `renderItem` keeps one identity across pane renders (perf audit P11); the
+ * composed label's base comes from the page, as `SectionHeader` requires, and
+ * the spoken name says "conversations" rather than reading a dot.
+ */
+const TagGroupHeader = ({
+	label,
+	accessibilityLabel,
+}: {
+	label: string;
+	accessibilityLabel: string;
+}) => {
+	const composedDir = useComposedDir();
+	return (
+		<SectionHeader
+			label={label}
+			labelDir={composedDir}
+			accessibilityLabel={accessibilityLabel}
+		/>
+	);
+};
+
+/** The spoken name of a tag group: "Research, 4 conversations". */
+const tagGroupAnnouncement = (name: string, count: number): string =>
+	t("mobile.sidebar.tag_group.announcement", { name, count });
 
 /** Module-level so the list never sees a new extractor (perf audit P11). */
 /** The pill's field: fills the capsule's height (the capsule owns the touch
@@ -1195,11 +1297,11 @@ const SEARCH_FIELD_STYLE: TextStyle = {
 const itemKey = (item: Item): string => item.key;
 
 /**
- * The flat list the pane renders: section headings and rows, in the order
- * `arrangeSidebar` decided (this function never re-sorts). An empty section
+ * The flat list the pane renders: section and tag headings and rows, in the
+ * order `arrangeSidebar` decided (this function never re-sorts). An empty group
  * contributes no heading; the flat grouping is one list with no heading at all.
  */
-const SECTION_TEST_ID: Record<Exclude<SidebarGroup["key"], "all">, string> = {
+const SECTION_TEST_ID: Record<SidebarSectionKey, string> = {
 	pinned: REGION.sidebarSectionPinned,
 	running: REGION.sidebarSectionRunning,
 	today: REGION.sidebarSectionToday,
@@ -1210,7 +1312,29 @@ const SECTION_TEST_ID: Record<Exclude<SidebarGroup["key"], "all">, string> = {
 function buildItems(groups: readonly SidebarGroup[]): Item[] {
 	const items: Item[] = [];
 	for (const group of groups) {
-		if (group.key !== "all") {
+		if (group.tag !== undefined) {
+			/* A tag group: "{name} · {count}", spoken as "{name}, N conversations". */
+			items.push({
+				kind: "header",
+				key: `h-${group.key}`,
+				label: `${group.tag.name} · ${group.tag.count}`,
+				accessibilityLabel: tagGroupAnnouncement(
+					group.tag.name,
+					group.tag.count,
+				),
+				composed: true,
+			});
+		} else if (group.key === "untagged") {
+			/* Untagged is a catalogue word, never composed on its own; it is spoken
+			 *  with the group's count like the tag headings beside it. */
+			const label = t("mobile.sidebar.section.untagged");
+			items.push({
+				kind: "header",
+				key: `h-${group.key}`,
+				label,
+				accessibilityLabel: tagGroupAnnouncement(label, group.rows.length),
+			});
+		} else if (isSectionGroup(group)) {
 			items.push({
 				kind: "header",
 				key: `h-${group.key}`,

@@ -27,6 +27,10 @@
 		"role": "button",
 		"note": "Grouping option: one list with no section headings. Desktop: ui.chat.sidebar_view.one_list."
 	},
+	"mobile.sidebar.group.tag": {
+		"role": "button",
+		"note": "Grouping option: one group per tag, pinned conversations first and untagged last. Only offered on a relay with the tag registry. Desktop: ui.chat.sidebar_view.tag."
+	},
 	"mobile.sidebar.time_basis": {
 		"role": "heading",
 		"note": "Label of the choice of which clock the sections, the row times and the order read. Desktop: ui.chat.sidebar_view.time_basis."
@@ -51,6 +55,14 @@
 		"role": "help",
 		"note": "One sentence under the 'Show ended sessions' switch: turning it off never hides a pinned or running conversation."
 	},
+	"mobile.sidebar.show_tags": {
+		"role": "button",
+		"note": "Switch label: whether each conversation row paints its tag line in the drawer. On by default; a relay without the tag routes never shows the switch."
+	},
+	"mobile.sidebar.show_tags_hint": {
+		"role": "help",
+		"note": "One sentence under the 'Show tags' switch: turning the line off does not remove anything, because the tags sheet in each conversation's long-press menu still assigns them."
+	},
 	"mobile.sidebar.sections": {
 		"role": "heading",
 		"note": "Label of the list of switches that show or hide each drawer section. Desktop: ui.chat.sidebar_view.sections."
@@ -74,6 +86,14 @@
 	"mobile.sidebar.section.older": {
 		"role": "heading",
 		"note": "Drawer section heading for everything older than this week. Desktop: ui.chat.sidebar_view.section.older."
+	},
+	"mobile.sidebar.section.untagged": {
+		"role": "heading",
+		"note": "Drawer section heading under the Tag grouping for conversations whose primary tag is unset. Not a switch label; the tag grouping has no per-section switches."
+	},
+	"mobile.sidebar.tag_group.announcement": {
+		"role": "meta",
+		"note": "Screen-reader name of a tag group's heading. {name} is the operator's own tag name (or the word Untagged) and must not be translated here; the ICU plural says how many conversations the group holds and keeps the `#` placeholder."
 	},
 	"mobile.sidebar.more_settings": {
 		"role": "button",

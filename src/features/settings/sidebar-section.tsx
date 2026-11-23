@@ -1,6 +1,8 @@
 import { View } from "react-native";
 
+import { useListState } from "@/features/auth/connection-provider";
 import { SidebarViewControls } from "@/features/sessions/sidebar-view-controls";
+import { canAssignSessionTags } from "@/features/sessions/tags";
 import { useSidebarView } from "@/features/sessions/use-sidebar-view";
 import { t } from "@/i18n";
 import { REGION } from "@/ui/a11y";
@@ -22,6 +24,10 @@ export const SidebarSettingsSection = ({
 	onLayoutY?: (y: number) => void;
 }) => {
 	const { view, setView } = useSidebarView();
+	/* The same gate the drawer's sheet uses (`canAssignSessionTags`): the tag
+	 *  controls belong to a relay that has the tag routes. */
+	const capabilities = useListState((state) => state.capabilities);
+	const tagsAvailable = canAssignSessionTags(capabilities);
 	return (
 		<View
 			className="gap-3"
@@ -29,7 +35,12 @@ export const SidebarSettingsSection = ({
 			onLayout={(event) => onLayoutY?.(event.nativeEvent.layout.y)}
 		>
 			<SectionHeader label={t("mobile.sidebar.settings_heading")} />
-			<SidebarViewControls view={view} onChange={setView} scope="settings" />
+			<SidebarViewControls
+				view={view}
+				onChange={setView}
+				scope="settings"
+				tagsAvailable={tagsAvailable}
+			/>
 		</View>
 	);
 };
