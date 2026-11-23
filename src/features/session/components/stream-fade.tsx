@@ -104,11 +104,16 @@ export function StreamBlock({
 	children: ReactNode;
 	initialOpacity?: number;
 }) {
-	// The birth carries paint parameters as well as identity. Reinterpreting an
-	// open fence into another block type later must not restart its animation.
-	const [born] = useState(() => ({ motion: birth, initialOpacity }));
-	if (born.motion === null) return children;
-	const active = born.motion === motion ? born.motion : null;
+	const [born, setBorn] = useState<{
+		motion: object | null;
+		initialOpacity: number;
+	} | null>(() => (birth === null ? null : { motion: birth, initialOpacity }));
+	if (!born) return children;
+	// An open fence can start as prose. Retire that dimmer paint when it
+	// becomes code without remounting the wrapper or replaying either fade.
+	const samePaint = born.initialOpacity === initialOpacity;
+	if (!samePaint && born.motion !== null) setBorn({ ...born, motion: null });
+	const active = samePaint && born.motion === motion ? born.motion : null;
 	return Platform.OS === "web" ? (
 		<WebFade active={active} initialOpacity={born.initialOpacity}>
 			{children}

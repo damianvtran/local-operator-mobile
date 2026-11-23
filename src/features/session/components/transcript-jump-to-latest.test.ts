@@ -57,6 +57,9 @@ const host = vi.hoisted(() => ({
 	 *  the position where it was cannot pull a reader. */
 	writes: [] as number[],
 }));
+/* This host exercises list/anchor policy, not platform accessibility or paint.
+ * Answer the preference at the same appearance boundary as the footer test. */
+vi.mock("@/ui/appearance", () => ({ useReducedMotion: () => true }));
 vi.mock("react-native", async () => {
 	const React = await import("react");
 	const passthrough = ({ children }: { children?: React.ReactNode }) =>

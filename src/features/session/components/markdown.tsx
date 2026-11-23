@@ -169,9 +169,10 @@ function InlineSuffix({
 
 type SuffixSplit = { span: number; start: number; end: number; value: string };
 
-function selectedSuffix(node: Node | null): boolean {
-	const selection = node?.ownerDocument?.getSelection();
-	if (!node || !selection || selection.isCollapsed) return false;
+function selectionIntersects(node: Node | null): boolean {
+	if (!node?.isConnected) return false;
+	const selection = node.ownerDocument?.getSelection();
+	if (!selection || selection.isCollapsed) return false;
 	for (let index = 0; index < selection.rangeCount; index += 1) {
 		if (selection.getRangeAt(index).intersectsNode(node)) return true;
 	}
@@ -198,7 +199,8 @@ const Inline = memo(function Inline({
 		split: SuffixSplit | null;
 	} | null>(null);
 	const nodeRef = useRef<Text>(null);
-	const node = nodeRef.current as unknown as Node | null;
+	const splitSpan =
+		(nodeRef.current as unknown as Node | null)?.parentNode ?? null;
 	const [, releaseSelection] = useState(false);
 	const old = previous.current;
 	let fresh: SuffixSplit | null = null;
@@ -243,9 +245,9 @@ const Inline = memo(function Inline({
 			};
 		}
 	}
-	// A matching final frame cancels paint, but deleting the wrapper would
-	// collapse a live DOM Range inside it. Hold at most one split per Inline,
-	// only until the selection leaves; later arrivals never accumulate wrappers.
+	// Flattening replaces the unanimated prefix text node too. A Range anywhere
+	// in the split's parent span owns its identity, independently of paint.
+	// Hold only the affected split, and only until the selection leaves.
 	const priorSplit = old?.split;
 	const priorSpan = priorSplit ? old?.spans[priorSplit.span] : undefined;
 	const sameSpan = priorSplit ? spans[priorSplit.span] : undefined;
@@ -256,7 +258,7 @@ const Inline = memo(function Inline({
 		sameSpan &&
 		SAME_STYLE(priorSpan, sameSpan) &&
 		sameSpan.text.startsWith(priorSpan.text.slice(0, priorSplit.end)) &&
-		selectedSuffix(node)
+		selectionIntersects(splitSpan)
 			? priorSplit
 			: null;
 	const split = fresh ?? held;
@@ -264,14 +266,14 @@ const Inline = memo(function Inline({
 		previous.current = { text, spans, split };
 	}, [spans, split, text]);
 	useLayoutEffect(() => {
-		const doc = node?.ownerDocument;
+		const doc = splitSpan?.ownerDocument;
 		if (!held || !doc) return;
 		const release = () => {
-			if (!selectedSuffix(node)) releaseSelection((value) => !value);
+			if (!selectionIntersects(splitSpan)) releaseSelection((value) => !value);
 		};
 		doc.addEventListener("selectionchange", release);
 		return () => doc.removeEventListener("selectionchange", release);
-	}, [held, node]);
+	}, [held, splitSpan]);
 	const { selectionColor, accessibility, leafSelectable } = useTextSelection();
 	return (
 		<Text

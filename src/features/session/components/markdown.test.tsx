@@ -155,6 +155,13 @@ function nodeText(node: Node): string {
 	return node.nodeValue ?? Array.from(node.childNodes, nodeText).join("");
 }
 
+function ownsNode(owner: Node, child: Node): boolean {
+	for (let node: Node | null = child; node; node = node.parentNode) {
+		if (node === owner) return true;
+	}
+	return false;
+}
+
 async function withWebMount(
 	work: (host: ReturnType<typeof webMount>) => Promise<void>,
 ) {
@@ -180,7 +187,7 @@ function webMount() {
 		options?: number | KeyframeAnimationOptions;
 	}[] = [];
 	const listeners = new Set<EventListenerOrEventListenerObject>();
-	let chosen: Node | null = null;
+	let chosen: Node[] = [];
 	const create = doc.createElement.bind(doc);
 	const add = doc.addEventListener.bind(doc);
 	const remove = doc.removeEventListener.bind(doc);
@@ -190,6 +197,9 @@ function webMount() {
 			Object.assign(node, {
 				tagName: tag.toUpperCase(),
 				nodeName: tag.toUpperCase(),
+			});
+			Object.defineProperty(node, "isConnected", {
+				get: () => ownsNode(container, node),
 			});
 			// React's single-text fast path writes textContent, whereas the basic
 			// shim only stores a string. Give that path an inspectable text node.
@@ -209,10 +219,13 @@ function webMount() {
 			return node;
 		},
 		getSelection: () => ({
-			isCollapsed: chosen === null,
-			rangeCount: chosen === null ? 0 : 1,
+			isCollapsed: chosen.length === 0,
+			rangeCount: chosen.length === 0 ? 0 : 1,
+			// The shim has no live Range. Model endpoint ancestry here; the
+			// browser replay checks actual Range endpoints, offsets and text.
 			getRangeAt: () => ({
-				intersectsNode: (node: Node) => chosen?.parentNode === node,
+				intersectsNode: (node: Node) =>
+					chosen.some((endpoint) => ownsNode(node, endpoint)),
 			}),
 		}),
 		addEventListener(
@@ -250,12 +263,12 @@ function webMount() {
 					}),
 				),
 			),
-		select: (node: Node) => {
-			chosen = node;
+		select: (...nodes: Node[]) => {
+			chosen = nodes;
 		},
 		clearSelection: async () =>
 			act(async () => {
-				chosen = null;
+				chosen = [];
 				for (const listener of listeners) {
 					if (typeof listener === "function")
 						listener(new Event("selectionchange"));
@@ -264,31 +277,65 @@ function webMount() {
 	};
 }
 
-it("keeps the selected live suffix node across a matching final and releases its wrapper on deselection", async () => {
-	await withWebMount(
-		async ({ container, draw, fades, select, clearSelection }) => {
-			const seed = "Existing prose.";
-			const text = `${seed} Select these words.`;
-			await draw(seed);
-			await draw(text, seed);
-			expect(fades).toHaveLength(1);
-			const fade = fades[0];
-			const selected = fade?.node.firstChild ?? fade?.node.childNodes[0];
-			if (!fade || !selected) throw new Error("Missing selectable suffix node");
-			const { node, cancel } = fade;
-			expect(nodeText(selected)).toBe(" Select these words.");
-			select(selected);
-			await draw(text, undefined, false);
-			expect(cancel).toHaveBeenCalledOnce();
-			expect(fades).toHaveLength(1);
-			expect(selected.parentNode).toBe(node);
-			expect(node.parentNode).not.toBeNull();
-			expect(nodeText(container)).toBe(text);
-			await clearSelection();
-			expect(node.parentNode).toBeNull();
-			expect(nodeText(container)).toBe(text);
-		},
-	);
+it.each(["prefix", "suffix", "crossing", "unrelated"])(
+	"handles %s selection across a matching final without replaying the fade",
+	async (selection) => {
+		await withWebMount(
+			async ({ container, draw, fades, select, clearSelection }) => {
+				const seed = "Existing prose.";
+				const text = `${seed} Select these words.`;
+				await draw(seed);
+				await draw(text, seed);
+				expect(fades).toHaveLength(1);
+				const fade = fades[0];
+				const span = fade?.node.parentNode;
+				const prefix = span?.childNodes[0];
+				const suffix = fade?.node.childNodes[0];
+				if (!fade || !span || !prefix || !suffix)
+					throw new Error("Missing selectable split nodes");
+				const { node, cancel } = fade;
+				expect(nodeText(prefix)).toBe(seed);
+				expect(nodeText(suffix)).toBe(" Select these words.");
+				if (selection === "unrelated") select(container);
+				else if (selection === "prefix") select(prefix);
+				else if (selection === "suffix") select(suffix);
+				else select(prefix, suffix);
+				await draw(text, undefined, false);
+				expect(cancel).toHaveBeenCalledOnce();
+				expect(fades).toHaveLength(1);
+				expect(nodeText(container)).toBe(text);
+				if (selection === "unrelated") {
+					expect(node.parentNode).toBeNull();
+				} else {
+					expect(prefix.parentNode).toBe(span);
+					expect(suffix.parentNode).toBe(node);
+					expect(node.parentNode).toBe(span);
+				}
+				await clearSelection();
+				expect(node.parentNode).toBeNull();
+				expect(nodeText(container)).toBe(text);
+			},
+		);
+	},
+);
+
+it("cancels prose paint when an open fence becomes code without restarting or replacing the wrapper", async () => {
+	await withWebMount(async ({ draw, fades }) => {
+		const seed = "Existing paragraph.";
+		const prose = `${seed}\n\n\x60\x60`;
+		const code = `${prose}\x60sh\nprintf adopted\n\x60\x60\x60`;
+		await draw(seed);
+		await draw(prose, seed);
+		expect(fades).toHaveLength(1);
+		const fade = fades[0];
+		if (!fade) throw new Error("Missing prose fade");
+		expect(fade.keyframes).toEqual([{ opacity: 0.55 }, { opacity: 1 }]);
+		await draw(code, prose);
+		expect(fade.cancel).toHaveBeenCalledOnce();
+		expect(fades).toHaveLength(1);
+		expect(fade.node.isConnected).toBe(true);
+		expect(nodeText(fade.node)).toContain("printf adopted");
+	});
 });
 
 it("fades code from fresh source even if the preceding paragraph grows, without fading replay or adopted source", async () => {
