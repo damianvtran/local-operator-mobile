@@ -26,6 +26,13 @@ const voiceAt = (start: DictationSnapshot) => {
 		get phase() {
 			return state.phase;
 		},
+		sendMode:
+			start.phase === "recording" || start.phase === "transcribing"
+				? ("live" as const)
+				: null,
+		finishAndSend: () => {
+			calls.push("finishAndSend");
+		},
 		line: () => dictationStatusLine(state),
 		calls,
 		cancelForSend: () => {
@@ -72,8 +79,33 @@ describe("the home send and a resting mic line", () => {
 		expect(voice.line()).toBe("");
 	});
 
-	it("still drops a live take at the tap and keeps saying so after admission", () => {
+	it("sends a recording as 'transcribe and send' instead of dropping it", () => {
 		const voice = voiceAt({ phase: "recording", outcome: null });
+		const start = coordinator();
+		sendFromHome(voice, start.send);
+		// The take is finished and its words sent once they land; nothing is
+		// discarded, so no "Voice input discarded." and no direct send of the draft.
+		expect(voice.calls).toEqual(["finishAndSend"]);
+		expect(voice.line()).toBe("Recording");
+		start.admit();
+		expect(voice.calls).toEqual(["finishAndSend"]);
+	});
+
+	it("does nothing for a press already waiting for its transcript", () => {
+		const voice = {
+			...voiceAt({ phase: "transcribing", outcome: null }),
+			sendMode: "pending" as const,
+		};
+		let sent = 0;
+		sendFromHome(voice, () => {
+			sent += 1;
+		});
+		expect(sent).toBe(0);
+		expect(voice.calls).toEqual([]);
+	});
+
+	it("still drops a take that has not started recording, and says so", () => {
+		const voice = voiceAt({ phase: "starting", outcome: null });
 		const start = coordinator();
 		sendFromHome(voice, start.send);
 		expect(voice.calls).toEqual(["cancelForSend"]);

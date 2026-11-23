@@ -97,13 +97,20 @@ let sessions = 0;
 
 function fakeClient() {
 	const commands: Record<string, unknown>[] = [];
-	const transcribe = { body: JSON.stringify({ text: "", path: "" }) };
+	const transcribe = {
+		body: JSON.stringify({ text: "", path: "" }),
+		/** Held open by a test that needs the transcription to still be in flight. */
+		gate: null as Promise<void> | null,
+	};
 	const client = {
 		command(_sessionId: string, body: Record<string, unknown>) {
 			commands.push(body);
 			return Promise.resolve({ ok: true, detail: "queued" });
 		},
-		transcribe: async () => ({ status: 200, text: transcribe.body }),
+		transcribe: async () => {
+			await transcribe.gate;
+			return { status: 200, text: transcribe.body };
+		},
 	} as unknown as RelayEndpoints;
 	return { client, commands, transcribe };
 }
@@ -239,5 +246,204 @@ describe("a resting mic line in the session composer (issue #323)", () => {
 		expect(c().voice.status).toBe(DICTATION_OUTCOME_COPY.added);
 		await act(async () => c().setDraft("run the tests twice"));
 		expect(c().voice.status).toBe("");
+	});
+});
+
+/** A fake microphone that records one take of synthetic audio. */
+const recordTake = () => {
+	mic.start = () => ({
+		stop: async () => ({
+			uri: "file:///synthetic/take.m4a",
+			name: "take.m4a",
+			mimeType: "audio/mp4",
+			durationMs: 1200,
+		}),
+		cancel: async () => undefined,
+		level: () => null,
+	});
+};
+
+const startRecording = async () => {
+	await act(async () => c().voice.press());
+	await settle();
+	expect(c().voice.phase).toBe("recording");
+};
+
+describe("Stop and Send while recording (Ben, 2026-11-22)", () => {
+	it("Stop transcribes into the box and sends nothing", async () => {
+		const { client, commands, transcribe } = fakeClient();
+		transcribe.body = JSON.stringify({ text: "run the tests", path: "x" });
+		recordTake();
+		await mount(client);
+		await startRecording();
+		// The mic slot's ✓ is the press that stops.
+		await act(async () => c().voice.press());
+		await settle();
+		expect(c().draft).toBe("run the tests");
+		expect(commands).toHaveLength(0);
+	});
+
+	it("leaves no visible line after a transcript lands, only the announcement", async () => {
+		const { client, transcribe } = fakeClient();
+		transcribe.body = JSON.stringify({ text: "run the tests", path: "x" });
+		recordTake();
+		await mount(client);
+		await startRecording();
+		await act(async () => c().voice.press());
+		await settle();
+		// The announcement is still said (a screen reader hears it) ...
+		expect(c().voice.status).toBe(DICTATION_OUTCOME_COPY.added);
+		// ... but the composer is told it is `added`, which draws no row.
+		expect(c().voice.outcome).toBe("added");
+	});
+
+	it("keeps Send live on an empty draft while recording, labelled for what it does", async () => {
+		const { client } = fakeClient();
+		recordTake();
+		await mount(client);
+		expect(c().controls.primary.disabled).toBe(true);
+		await startRecording();
+		expect(c().controls.primary.disabled).toBe(false);
+		expect(c().controls.primary.accessibilityLabel).toBe("Transcribe and send");
+	});
+
+	it("Send transcribes the take and sends the words at once", async () => {
+		const { client, commands, transcribe } = fakeClient();
+		transcribe.body = JSON.stringify({ text: "run the tests", path: "x" });
+		recordTake();
+		await mount(client);
+		await startRecording();
+		await act(async () => c().send());
+		await settle();
+		expect(commands).toHaveLength(1);
+		expect(commands[0]).toMatchObject({ op: "prompt", text: "run the tests" });
+		// Dictated, and said so for the provenance annotation.
+		expect(commands[0]).toHaveProperty("input_mode");
+		expect(c().voice.phase).toBe("idle");
+		expect(c().voice.sendMode).toBeNull();
+		// A message that left carries no resting "Transcript added" with it.
+		expect(c().voice.status).toBe("");
+	});
+
+	it("Send joins the words to what was already typed and sends the whole", async () => {
+		const { client, commands, transcribe } = fakeClient();
+		transcribe.body = JSON.stringify({ text: "twice", path: "x" });
+		recordTake();
+		await mount(client, "run the tests");
+		await startRecording();
+		await act(async () => c().send());
+		await settle();
+		expect(commands).toHaveLength(1);
+		expect(commands[0]).toMatchObject({ text: "run the tests twice" });
+	});
+
+	it("is inert while its transcript is on the way, and a second tap sends nothing twice", async () => {
+		const { client, commands, transcribe } = fakeClient();
+		transcribe.body = JSON.stringify({ text: "run the tests", path: "x" });
+		let release = () => {};
+		transcribe.gate = new Promise<void>((resolve) => {
+			release = resolve;
+		});
+		recordTake();
+		await mount(client);
+		await startRecording();
+		await act(async () => c().send());
+		await settle();
+		expect(c().voice.phase).toBe("transcribing");
+		expect(c().voice.sendMode).toBe("pending");
+		expect(c().controls.primary.disabled).toBe(true);
+		await act(async () => c().send());
+		await act(async () => release());
+		await settle();
+		expect(commands).toHaveLength(1);
+	});
+
+	it("Send tapped while the Stop transcription is still running sends when it lands", async () => {
+		const { client, commands, transcribe } = fakeClient();
+		transcribe.body = JSON.stringify({ text: "run the tests", path: "x" });
+		let release = () => {};
+		transcribe.gate = new Promise<void>((resolve) => {
+			release = resolve;
+		});
+		recordTake();
+		await mount(client);
+		await startRecording();
+		await act(async () => c().voice.press());
+		await settle();
+		expect(c().voice.phase).toBe("transcribing");
+		expect(c().voice.sendMode).toBe("live");
+		await act(async () => c().send());
+		expect(commands).toHaveLength(0);
+		await act(async () => release());
+		await settle();
+		expect(commands).toHaveLength(1);
+		expect(commands[0]).toMatchObject({ text: "run the tests" });
+	});
+
+	it("× while waiting sends nothing and says nothing", async () => {
+		const { client, commands, transcribe } = fakeClient();
+		transcribe.body = JSON.stringify({ text: "run the tests", path: "x" });
+		let release = () => {};
+		transcribe.gate = new Promise<void>((resolve) => {
+			release = resolve;
+		});
+		recordTake();
+		await mount(client);
+		await startRecording();
+		await act(async () => c().send());
+		await settle();
+		await act(async () => c().voice.cancel());
+		await act(async () => release());
+		await settle();
+		expect(commands).toHaveLength(0);
+		expect(c().draft).toBe("");
+		expect(c().voice.sendMode).toBeNull();
+		expect(c().voice.status).toBe("");
+	});
+
+	it("puts the words in the box and sends nothing when the box was edited meanwhile", async () => {
+		const { client, commands, transcribe } = fakeClient();
+		transcribe.body = JSON.stringify({ text: "twice", path: "x" });
+		let release = () => {};
+		transcribe.gate = new Promise<void>((resolve) => {
+			release = resolve;
+		});
+		recordTake();
+		await mount(client, "run the tests");
+		await startRecording();
+		await act(async () => c().send());
+		await settle();
+		await act(async () => c().setDraft("run the tests please"));
+		await act(async () => release());
+		await settle();
+		expect(commands).toHaveLength(0);
+		expect(c().draft).toBe("run the tests please twice");
+		expect(c().voice.sendMode).toBeNull();
+	});
+
+	it("never sends a transcript that would make the box a slash command", async () => {
+		const { client, commands, transcribe } = fakeClient();
+		transcribe.body = JSON.stringify({ text: "/clear", path: "x" });
+		recordTake();
+		await mount(client);
+		await startRecording();
+		await act(async () => c().send());
+		await settle();
+		expect(commands).toHaveLength(0);
+		expect(c().draft).toBe("/clear");
+		expect(c().voice.sendMode).toBeNull();
+	});
+
+	it("sends nothing for a blank transcript and says it did not catch it", async () => {
+		const { client, commands, transcribe } = fakeClient();
+		transcribe.body = JSON.stringify({ text: "  ", path: "" });
+		recordTake();
+		await mount(client);
+		await startRecording();
+		await act(async () => c().send());
+		await settle();
+		expect(commands).toHaveLength(0);
+		expect(c().voice.status).toBe(DICTATION_OUTCOME_COPY.empty);
+		expect(c().voice.sendMode).toBeNull();
 	});
 });

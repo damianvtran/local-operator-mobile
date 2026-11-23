@@ -267,6 +267,11 @@ export interface ComposerControlInput {
 	 *  failure sentence read it, and because an ended session suppresses the
 	 *  aborted-turn Resume affordance (the health sheet owns Resume now). */
 	ended: boolean;
+	/** A dictation is in flight and the primary is its "transcribe and send": an
+	 *  empty draft is NOT a reason to disable it (the words are not in the box
+	 *  yet). `"pending"`: that press is waiting for its transcript, so the primary
+	 *  is inert. Every other reason to disable still applies. */
+	dictation?: "live" | "pending" | null;
 }
 
 /**
@@ -298,12 +303,14 @@ export const composerControls = (
 	 *  action that brings the session back. The reader is told what a send does
 	 *  by the placeholder, not by a dead control. */
 	const cached = input.cached === true;
+	const dictation = input.dictation ?? null;
 	const disabled =
 		input.connected === false ||
 		cached ||
 		input.sending ||
 		blocked ||
-		!hasContent;
+		dictation === "pending" ||
+		(!hasContent && dictation === null);
 	return {
 		primary: {
 			kind: input.streaming ? "steer" : "send",
@@ -311,14 +318,20 @@ export const composerControls = (
 			// different command". The word lives in the accessible label, not on the
 			// face, because a 96 pt "Steer" pill squeezed the field at 320 pt until its
 			// placeholder broke mid-word (captured frame, iphone-se).
-			label: input.sending ? "…" : "↑",
+			label: input.sending || dictation === "pending" ? "…" : "↑",
 			op,
 			disabled,
 			accessibilityLabel: input.sending
 				? "Sending"
-				: input.streaming
-					? "Steer the running turn"
-					: "Send message",
+				: dictation === "pending"
+					? "Sending recording"
+					: dictation === "live"
+						? input.streaming
+							? "Transcribe and steer"
+							: "Transcribe and send"
+						: input.streaming
+							? "Steer the running turn"
+							: "Send message",
 		},
 		stopVisible: input.streaming && input.connected !== false && !cached,
 		sending: input.sending,

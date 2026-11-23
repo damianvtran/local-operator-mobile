@@ -39,14 +39,18 @@ import { dictate } from "@/stt/dictate";
 import { joinDraft, MAX_RECORDING_MS } from "@/stt/dictation";
 import { forcedDictation, forcedLevels } from "@/stt/dictation-hook";
 import {
+	type DictatedSend,
 	type DictationEvent,
+	type DictationOutcome,
 	type DictationPhase,
 	type DictationSnapshot,
+	dictatedSendState,
 	dictationStatusLine,
 	IDLE_DICTATION,
 	mayStartDictation,
 	pressRoute,
 	reduceDictation,
+	transcriptSendable,
 } from "@/stt/dictation-machine";
 import {
 	createMeterStore,
@@ -87,6 +91,18 @@ export interface DictationState {
 	 *  the only "nothing to say" and is reserved for a resting machine with no
 	 *  outcome. */
 	status: string;
+	/** The resting outcome behind `status`, or `null` while a take is live or
+	 *  nothing is said. The composer reads it to keep `added` out of sight. */
+	outcome: DictationOutcome | null;
+	/** What Send does right now: `"live"` transcribes the take and sends it,
+	 *  `"pending"` is that press waiting for its transcript. `null` is the
+	 *  ordinary send. */
+	sendMode: DictatedSend;
+	/** The transcript of a "transcribe and send" press has landed in the draft:
+	 *  the host sends it from an effect (the draft it must send is only the
+	 *  current one after the render that holds the transcript) and then calls
+	 *  `ackSend`. */
+	sendReady: boolean;
 	/** The recording meter's live history, oldest first, each a `[0, 1]` bar height.
 	 *  Read by the meter component alone (through `useSyncExternalStore`), never by
 	 *  React state, so a level change does not re-render the field. */
@@ -95,6 +111,13 @@ export interface DictationState {
 	press: () => void;
 	/** The reader's own discard: stop and delete, send NO request, say nothing. */
 	cancel: () => void;
+	/** Send while recording (or transcribing): stop, transcribe, append the words
+	 *  and then send them — the relay's "send recording". Nothing is sent if the
+	 *  transcript is blank, the box changed meanwhile, or it would be a slash
+	 *  command; the words stay in the box. */
+	finishAndSend: () => void;
+	/** The host has taken `sendReady`: clears it and the pending press. */
+	ackSend: () => void;
 	/** A send/steer took the composer: abort, discard, and SAY SO (U2). */
 	cancelForSend: () => void;
 	/** The reader edited the draft: end a resting line, leave a live take alone
@@ -116,6 +139,14 @@ export interface DictationInput {
 	onError: (sentence: string) => void;
 	/** A `401` was raised by the transport: the shared reload rule is the caller's. */
 	onUnauthorized?: (error: unknown) => void;
+	/** The draft's CURRENT text, read at the "transcribe and send" press and again
+	 *  when the transcript lands: a draft that moved in between was edited by the
+	 *  reader, and what they typed was never part of the press. Absent: not
+	 *  checked. */
+	readDraft?: () => string;
+	/** Whether a whole draft would be sent as a slash command (a transcript must
+	 *  not run one). Absent: nothing is one. */
+	isSlashCommand?: (draft: string) => boolean;
 }
 
 export const useDictation = (input: DictationInput): DictationState => {
@@ -126,6 +157,8 @@ export const useDictation = (input: DictationInput): DictationState => {
 		onTranscript,
 		onError,
 		onUnauthorized,
+		readDraft,
+		isSlashCommand,
 	} = input;
 
 	const micVisible = useMemo(
@@ -203,6 +236,24 @@ export const useDictation = (input: DictationInput): DictationState => {
 	onErrorRef.current = onError;
 	const onUnauthorizedRef = useRef(onUnauthorized);
 	onUnauthorizedRef.current = onUnauthorized;
+	const readDraftRef = useRef(readDraft);
+	readDraftRef.current = readDraft;
+	const isSlashCommandRef = useRef(isSlashCommand);
+	isSlashCommandRef.current = isSlashCommand;
+
+	/* "Transcribe and send". `sendRequestRef` is the press (and the draft it saw);
+	 * `sendPending` is what the Send control reads (inert until the press settles);
+	 * `sendReady` is the hand-off to the host's effect. Three pieces because they
+	 * are read by three different consumers, and ONE `endSendRequest` ends all of
+	 * them, so no exit can leave Send inert. */
+	const sendRequestRef = useRef<{ draft: string | null } | null>(null);
+	const [sendPending, setSendPending] = useState(false);
+	const [sendReady, setSendReady] = useState(false);
+	const endSendRequest = useCallback(() => {
+		sendRequestRef.current = null;
+		setSendPending(false);
+		setSendReady(false);
+	}, []);
 
 	/** Feed one event to the machine and publish the result. Returns the transition
 	 *  so a caller can read the effects it still has to perform. */
@@ -238,6 +289,7 @@ export const useDictation = (input: DictationInput): DictationState => {
 		if (recording === null) {
 			/* Nothing was captured — a stop that produced no file is the same reader
 			 * outcome as an empty transcript (D2's sentence). */
+			endSendRequest();
 			dispatch({ type: "settle", outcome: "empty" });
 			return;
 		}
@@ -266,19 +318,38 @@ export const useDictation = (input: DictationInput): DictationState => {
 			 * own line (if any) has already been set. */
 			if (run !== runIdRef.current) return;
 			if (outcome.kind === "transcript") {
+				const request = sendRequestRef.current;
+				const before = readDraftRef.current?.() ?? null;
 				onTranscriptRef.current(outcome.text, outcome.path);
+				if (request !== null) {
+					/* The words are in the box either way. Whether they are also SENT is
+					 * decided against the draft the press saw, and the send itself runs in
+					 * the host's effect, against the render that holds the transcript. */
+					const sendable = transcriptSendable({
+						transcript: outcome.text,
+						draftAtPress: request.draft,
+						draftAtLanding: before,
+						joined: joinDraft(before ?? "", outcome.text),
+						isSlashCommand: isSlashCommandRef.current ?? (() => false),
+					});
+					if (sendable) setSendReady(true);
+					else endSendRequest();
+				}
 				/* U3: the completion announcement. It is the machine's outcome rather
 				 * than a second notice state, so it rides the same polite row the live
 				 * states use. */
 				dispatch({ type: "settle", outcome: "added" });
 			} else if (outcome.kind === "empty") {
+				endSendRequest();
 				dispatch({ type: "settle", outcome: "empty" });
 			} else {
+				endSendRequest();
 				dispatch({ type: "settle", outcome: null });
 				onErrorRef.current(outcome.sentence);
 			}
 		} catch (cause) {
 			if (run !== runIdRef.current) return;
+			endSendRequest();
 			dispatch({ type: "settle", outcome: null });
 			/* Only the `clear-all` (401) arm reaches here; `dictate` turns every other
 			 * failure into a sentence. The caller's own handler owns the reload rule. */
@@ -286,7 +357,7 @@ export const useDictation = (input: DictationInput): DictationState => {
 		} finally {
 			if (abortRef.current === controller) abortRef.current = null;
 		}
-	}, [clearTimers, dispatch, endpoints]);
+	}, [clearTimers, dispatch, endSendRequest, endpoints]);
 
 	const openMic = useCallback(async () => {
 		/* The permission is asked HERE, at the press — never at first launch. */
@@ -343,9 +414,11 @@ export const useDictation = (input: DictationInput): DictationState => {
 		const active = activeRef.current;
 		activeRef.current = null;
 		if (active !== null) void active.cancel();
+		/* A discarded take cannot be sent. */
+		endSendRequest();
 		meter.set([]);
 		setSeconds(0);
-	}, [clearTimers, meter]);
+	}, [clearTimers, endSendRequest, meter]);
 
 	const press = useCallback(() => {
 		const phase = snapshotRef.current.phase;
@@ -392,6 +465,21 @@ export const useDictation = (input: DictationInput): DictationState => {
 		discardLive();
 	}, [discardLive, dispatch]);
 
+	const finishAndSend = useCallback(() => {
+		const phase = snapshotRef.current.phase;
+		if (phase !== "recording" && phase !== "transcribing") return;
+		if (sendRequestRef.current !== null) return;
+		sendRequestRef.current = { draft: readDraftRef.current?.() ?? null };
+		setSendPending(true);
+		/* While transcribing the stop already happened; the press only rides the
+		 * transcript that is on its way. */
+		if (phase === "recording") void stopAndTranscribe();
+	}, [stopAndTranscribe]);
+
+	const ackSend = useCallback(() => {
+		endSendRequest();
+	}, [endSendRequest]);
+
 	const cancelForSend = useCallback(() => {
 		/* `sending` is passed through and ignored by the machine: this is the SEND
 		 * path, not a second gate on the mic. */
@@ -436,12 +524,40 @@ export const useDictation = (input: DictationInput): DictationState => {
 		phase: forced?.phase ?? snapshot.phase,
 		seconds,
 		status: dictationStatusLine(forced ?? snapshot),
+		outcome: (forced ?? snapshot).outcome,
+		sendMode: dictatedSendState({
+			phase: forced?.phase ?? snapshot.phase,
+			sendPending,
+		}),
+		sendReady,
 		meter,
 		press,
 		cancel,
+		finishAndSend,
+		ackSend,
 		cancelForSend,
 		clearOutcome,
 	};
+};
+
+/**
+ * The host half of "transcribe and send": once the transcript is in the draft,
+ * send it. An effect, not a call from the hook, because the send reads the draft
+ * of the render it runs in — a call made in the same tick as the append would
+ * send the draft from before the transcript. `send` is the host's own send, so
+ * every refusal it has (a send in flight, an unresolved instruction) leaves the
+ * words in the box like any other send would.
+ */
+export const useDictatedSend = (
+	voice: Pick<DictationState, "sendReady" | "ackSend">,
+	send: () => void,
+): void => {
+	const { sendReady, ackSend } = voice;
+	useEffect(() => {
+		if (!sendReady) return;
+		ackSend();
+		send();
+	}, [sendReady, ackSend, send]);
 };
 
 /**
@@ -486,6 +602,7 @@ export const useHomeDictation = (input: {
 			setDraftRef.current(joined);
 		},
 		onError: input.onError,
+		readDraft: () => draftRef.current,
 	});
 };
 

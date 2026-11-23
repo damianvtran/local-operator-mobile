@@ -257,6 +257,67 @@ export function reduceDictation(
 	}
 }
 
+/**
+ * What the composer's Send does with a dictation in flight (Ben, 2026-11-22: the
+ * relay's "send recording" carried into the app).
+ *
+ * - `"live"`: a take is recording or being transcribed. Send STOPS it, transcribes
+ *   it and sends the words in one press, instead of throwing the speech away
+ *   (the `send` event's discard, which remains for every OTHER way a message
+ *   leaves: a slash pick, a retry, a send from `starting`).
+ * - `"pending"`: that press is waiting for its transcript. Send is inert, so a
+ *   second tap cannot reach anything else.
+ * - `null`: no dictation involved; Send is the ordinary send.
+ */
+export type DictatedSend = "live" | "pending" | null;
+
+export const dictatedSendState = (input: {
+	phase: DictationPhase;
+	sendPending: boolean;
+}): DictatedSend =>
+	input.sendPending
+		? "pending"
+		: input.phase === "recording" || input.phase === "transcribing"
+			? "live"
+			: null;
+
+/**
+ * Whether the dictation row is on screen: a live take, or a resting line the
+ * reader must act on or read ("Didn't catch that", the set-up and permission
+ * lines, "Voice input discarded.").
+ *
+ * `added` is NOT one: the words appearing in the field are the visible proof, and
+ * the bordered "Transcript added" box held the card open until the next keystroke
+ * (Ben, 2026-11-22: "it never disappears. I don't know if we need that"). It is
+ * still ANNOUNCED — `dictationStatusLine` returns it for the polite live region,
+ * which the composer keeps mounted but out of sight.
+ */
+export const dictationRowShown = (state: DictationSnapshot): boolean =>
+	state.phase !== "idle" ||
+	(state.outcome !== null && state.outcome !== "added");
+
+/**
+ * Whether a transcript that landed for a "transcribe and send" press may be sent
+ * as the message. Refusals keep the words in the box for the reader to check and
+ * send themselves — nothing is lost, only not sent:
+ *
+ * - blank: nothing to send (the empty line answers instead);
+ * - the box changed during the wait: those edits were never part of the press
+ *   (the relay's `dictatedDraftIntact`);
+ * - the box would now be a slash command: speech must not run `/anything`.
+ */
+export const transcriptSendable = (input: {
+	transcript: string;
+	draftAtPress: string | null;
+	draftAtLanding: string | null;
+	/** The whole box once the transcript is appended. */
+	joined: string;
+	isSlashCommand: (draft: string) => boolean;
+}): boolean =>
+	input.transcript.trim() !== "" &&
+	input.draftAtPress === input.draftAtLanding &&
+	!input.isSlashCommand(input.joined.trim());
+
 /** The copy the outcome lines own. The first three sentences are design §2.5's,
  *  verbatim; the two refusals are the error line's former copy, verbatim. */
 export const DICTATION_OUTCOME_COPY = {

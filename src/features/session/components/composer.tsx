@@ -112,7 +112,7 @@ import {
 import type { DictationState } from "@/features/session/use-dictation";
 import { t } from "@/i18n";
 import { formatDuration } from "@/stt/dictation";
-import { MIC_HINT, micLabel } from "@/stt/dictation-machine";
+import { dictationRowShown, MIC_HINT, micLabel } from "@/stt/dictation-machine";
 import {
 	CONTROL,
 	composerAttachmentId,
@@ -152,6 +152,13 @@ import {
  *  LIVE dictation (a phase) rather than a settled outcome. Both are read from the
  *  machine's own snapshot; the row is one height either way (design §2.5 D3). */
 const rowIsLive = (phase: DictationState["phase"]): boolean => phase !== "idle";
+
+/** Whether the dictation row is on screen at all: a live take, or a resting line
+ *  the reader must read or act on. NOT `added` ("Transcript added"): the words in
+ *  the field say so, the box stayed until the next keystroke, and it still reaches
+ *  a screen reader through the hidden live region below. */
+const rowIsShown = (voice: DictationState): boolean =>
+	dictationRowShown({ phase: voice.phase, outcome: voice.outcome });
 
 /** Out of the layout and out of sight, still in the accessibility tree: the
  *  web's `sr-only` box. Used for the recording row's status word (design D3). */
@@ -947,10 +954,10 @@ export const Composer = ({
 				{voice.status}
 			</Text>
 		);
-	/* A function of where ✓ goes: on the row, or MOVED to the controls row's
-	 * trailing slot when the card is open only for dictation (`controlsTrailing`,
-	 * UX round 2, U7) — never both, which would be D2's two finish controls. */
-	const dictationControls = (finishOnRow: boolean) =>
+	/* The row's own controls: meter, clock and ✕. ✓ is NOT here: it lives in the
+	 * controls row's mic slot (see `mic`), so there is one finish control and it
+	 * is where the mic was (D2; UX round 2, U7, now for every card). */
+	const dictationControls = () =>
 		voice === null ? null : (
 			<>
 				{voice.phase === "recording" ? (
@@ -1015,7 +1022,6 @@ export const Composer = ({
 						testID={CONTROL.composerDictationCancel}
 					/>
 				) : null}
-				{voice.phase === "recording" && finishOnRow ? dictationFinish : null}
 			</>
 		);
 
@@ -1088,7 +1094,7 @@ export const Composer = ({
 		focused,
 		draft,
 		attachments: images.length,
-		dictation: !!voice && (rowIsLive(voice.phase) || voice.status !== ""),
+		dictation: !!voice && rowIsShown(voice),
 		stop: controls.stopVisible,
 		error: !!error || !!retainedMessage || !!notice,
 		keyboard: keyboardVisible,
@@ -1316,10 +1322,7 @@ export const Composer = ({
 	const COMPOSER_PAD = 8;
 	/* The same condition the row itself renders under, so the reserve and the row cannot
 	 *  disagree. `mb-2` is its bottom margin. */
-	const dictationShowing =
-		voice !== null &&
-		micShown &&
-		(rowIsLive(voice.phase) || voice.status !== "");
+	const dictationShowing = voice !== null && micShown && rowIsShown(voice);
 	const DICTATION_ROW_MARGIN_PX = 8;
 	/* The vertical padding the root actually paints: `pt-1 pb-1` in the short-landscape
 	 *  form, and `pt-2` plus the inset-paying bottom padding everywhere else. The
@@ -2084,7 +2087,12 @@ export const Composer = ({
 	 *  exactly what ✓ does read as a different action (design D2 / UX U4). It
 	 *  returns, dimmed, while transcribing so the slot does not blink twice. */
 	const mic =
-		voice === null || voice.phase === "recording" ? null : voice.micVisible ? (
+		voice === null ? null : voice.phase === "recording" ? (
+			/* ✓ takes the mic's own slot while recording, whatever the card is open
+			 * for: the spot that starts a take stops it, and Send stays beside it as
+			 * "transcribe and send". */
+			dictationFinish
+		) : voice.micVisible ? (
 			/* The voice mic: the relay says voice input can run here AND this build
 			 * can record (`voice.micVisible`). */
 			<IconButton
@@ -2270,9 +2278,7 @@ export const Composer = ({
 			    outcome does not shrink the row below the two-line states — the jump the
 			    design round measured (D1). */
 	const dictationRow =
-		voice !== null &&
-		micShown &&
-		(rowIsLive(voice.phase) || voice.status !== "") ? (
+		voice !== null && micShown && rowIsShown(voice) ? (
 			<View
 				className={cx(
 					"mb-2 rounded-sm border px-3",
@@ -2294,14 +2300,14 @@ export const Composer = ({
 						{dictationStatus}
 						<View className="flex-row items-center gap-2">
 							{dictationDot}
-							{dictationControls(trailing !== "finish")}
+							{dictationControls()}
 						</View>
 					</>
 				) : (
 					<>
 						{dictationDot}
 						{dictationStatus}
-						{dictationControls(trailing !== "finish")}
+						{dictationControls()}
 					</>
 				)}
 			</View>
@@ -2405,6 +2411,20 @@ export const Composer = ({
 					<View className="flex-row items-center">{mic ?? actionCluster}</View>
 				)}
 			</View>
+			{/* "Transcript added" is announced, not drawn: this keeps the polite live
+			    region (design §2.5/U3) mounted and out of sight when the row is not
+			    on screen. It ends with the next edit or send like any resting line,
+			    but it holds nothing open, so it cannot sit in a box. */}
+			{voice !== null && voice.outcome === "added" && !rowIsShown(voice) ? (
+				<Text
+					role={ROLE.status}
+					accessibilityLiveRegion={LIVE_REGION.polite}
+					style={VISUALLY_HIDDEN}
+					testID={SURFACE.composerDictationStatus}
+				>
+					{voice.status}
+				</Text>
+			) : null}
 			{dictationRow}
 			{presentation.expanded ? (
 				<View
@@ -2429,7 +2449,7 @@ export const Composer = ({
 							 *  empty card the ✓ takes the mic's own slot — the spot a
 							 *  tap-to-toggle reader taps again (UX round 2, U7). It still
 							 *  MOVES there from the dictation row, never copied. */}
-							{trailing === "finish" ? dictationFinish : mic}
+							{mic}
 							{actionCluster}
 						</>
 					) : (
@@ -2442,9 +2462,7 @@ export const Composer = ({
 							{trailing === "actions" ? (
 								actionCluster
 							) : (
-								<View className={COMPOSER_ACTION_CLUSTER}>
-									{trailing === "finish" ? dictationFinish : mic}
-								</View>
+								<View className={COMPOSER_ACTION_CLUSTER}>{mic}</View>
 							)}
 						</>
 					)}

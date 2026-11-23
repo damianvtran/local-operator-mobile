@@ -96,7 +96,10 @@ import {
 } from "@/features/session/composer";
 import { heldTimer } from "@/features/session/resume-hold";
 import { deviceOnline } from "@/features/session/runtime";
-import { useHomeDictation } from "@/features/session/use-dictation";
+import {
+	useDictatedSend,
+	useHomeDictation,
+} from "@/features/session/use-dictation";
 import { ConversationsPane } from "@/features/sessions/conversations-pane";
 import { sessionLocation } from "@/features/sessions/session-navigation";
 import { inboxBadgeCount } from "@/features/sessions/session-projection";
@@ -819,6 +822,26 @@ export default function Home({
 		[setImages],
 	);
 
+	/* The home's mic (TestFlight 578): the same dictation machine as a session's,
+	 *  landing the transcript in this draft. Transcription is the computer's own
+	 *  STT, so it needs only the active relay, not a session. */
+	const voice = useHomeDictation({
+		endpoints: client,
+		capabilities,
+		draft,
+		setDraft,
+		onError: setComposerError,
+	});
+	/* The reader's OWN draft writes — typing and a suggestion pick — end a resting
+	 *  mic line (#323). A pick fills exactly the empty draft a failed start leaves,
+	 *  so it must not keep the line under the text (round 3). The transcript
+	 *  append stays on the bare `setDraft` above: it is what "Transcript added"
+	 *  announces. */
+	const editDraft = (text: string) => {
+		voice.clearOutcome();
+		setDraft(text);
+	};
+
 	/** The folder the next start names: the live selection's, else the held one.
 	 *  One expression for the chip's text, its spoken label and the sheet's ✓. */
 	const startFolder = startup.snapshot.selection?.cwd ?? homeDirectory;
@@ -842,8 +865,20 @@ export default function Home({
 				 * otherwise, and the word lives in the accessible label. */
 				label: "↑",
 				op: "prompt",
-				disabled: draft.trim() === "" && images.length === 0,
-				accessibilityLabel: starting ? "Queue message" : "Send message",
+				/* "Transcribe and send" is live while a take records or transcribes: the
+				 * words are not in the draft yet. A press already waiting is inert. */
+				disabled:
+					voice.sendMode === "pending" ||
+					(draft.trim() === "" &&
+						images.length === 0 &&
+						voice.sendMode === null),
+				accessibilityLabel: starting
+					? "Queue message"
+					: voice.sendMode === "pending"
+						? "Sending recording"
+						: voice.sendMode === "live"
+							? "Transcribe and send"
+							: "Send message",
 			},
 			stopVisible: running,
 			sending: false,
@@ -857,7 +892,15 @@ export default function Home({
 		}),
 		/* See the trigger note above: `t()` reads the locale live, so the rendered
 		 * sentence must be recomputed when `language` changes. */
-		[connected, draft, images.length, starting, running, language],
+		[
+			connected,
+			draft,
+			images.length,
+			starting,
+			running,
+			language,
+			voice.sendMode,
+		],
 	);
 
 	/* `language` IS a dependency now: the two "nothing chosen" states show a catalogue
@@ -945,25 +988,10 @@ export default function Home({
 		});
 	};
 
-	/* The home's mic (TestFlight 578): the same dictation machine as a session's,
-	 *  landing the transcript in this draft. Transcription is the computer's own
-	 *  STT, so it needs only the active relay, not a session. */
-	const voice = useHomeDictation({
-		endpoints: client,
-		capabilities,
-		draft,
-		setDraft,
-		onError: setComposerError,
-	});
-	/* The reader's OWN draft writes — typing and a suggestion pick — end a resting
-	 *  mic line (#323). A pick fills exactly the empty draft a failed start leaves,
-	 *  so it must not keep the line under the text (round 3). The transcript
-	 *  append stays on the bare `setDraft` above: it is what "Transcript added"
-	 *  announces. */
-	const editDraft = (text: string) => {
-		voice.clearOutcome();
-		setDraft(text);
-	};
+	/* "Transcribe and send": once the words are in the draft, send it — the plain
+	 * send, because the press is `pending` by now and `sendFromHome` ignores a
+	 * pending press on purpose. */
+	useDictatedSend(voice, () => send(voice.clearOutcome));
 
 	/* Keep the latest coordinator behind a stable callback: a pending drawer
 	 * dismissal must not focus an old draft after Home re-renders. The provider

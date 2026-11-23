@@ -200,6 +200,71 @@ describe("the send/steer morph", () => {
 	});
 });
 
+describe("Send while dictating is 'transcribe and send' (Ben, 2026-11-22)", () => {
+	const base = {
+		hasDraft: false,
+		hasImages: false,
+		sending: false,
+		envelopePending: false,
+		ended: false,
+	};
+
+	it("is live on an empty draft, because the words are not in the box yet", () => {
+		const live = composerControls({
+			...base,
+			streaming: false,
+			dictation: "live",
+		});
+		expect(live.primary.disabled).toBe(false);
+		expect(live.primary.accessibilityLabel).toBe("Transcribe and send");
+	});
+
+	it("steers, and says so, while a turn runs", () => {
+		const live = composerControls({
+			...base,
+			streaming: true,
+			dictation: "live",
+		});
+		expect(live.primary.op).toBe("steer");
+		expect(live.primary.accessibilityLabel).toBe("Transcribe and steer");
+		// The stop-turn control is untouched: Send never becomes an interrupt.
+		expect(live.stopVisible).toBe(true);
+	});
+
+	it("is inert while its transcript is on the way", () => {
+		const pending = composerControls({
+			...base,
+			hasDraft: true,
+			streaming: false,
+			dictation: "pending",
+		});
+		expect(pending.primary.disabled).toBe(true);
+		expect(pending.primary.label).toBe("…");
+		expect(pending.primary.accessibilityLabel).toBe("Sending recording");
+	});
+
+	it.each([
+		["a send in flight", { sending: true }],
+		["an unresolved instruction", { envelopePending: true }],
+		["a dropped connection", { connected: false }],
+		["a cached frame", { cached: true }],
+	])("stays disabled for %s", (_name, extra) => {
+		const live = composerControls({
+			...base,
+			...extra,
+			streaming: false,
+			dictation: "live",
+		});
+		expect(live.primary.disabled).toBe(true);
+	});
+
+	it("changes nothing when no dictation is involved", () => {
+		const idle = composerControls({ ...base, streaming: false });
+		expect(idle.primary.disabled).toBe(true);
+		expect(idle.primary.accessibilityLabel).toBe("Send message");
+	});
+});
+
 describe("an acknowledgement clears the draft only when it IS the draft", () => {
 	it("clears when the acknowledged bytes are what the reader sees", () => {
 		expect(

@@ -155,15 +155,15 @@ export const keyboardOverlap = (hostBottom: number, keyboardTop: number) =>
  *   under the same finger (UX round 1, U2). A start or permission failure keeps
  *   this too, because it rests on the dictation row, not the error line
  *   (`DictationOutcome`, D6/U6/Q4).
- * - `finish` while RECORDING on that card: the toolbar mic is hidden then (D2,
- *   one finish control), and a reader used to tap-to-toggle taps the same spot
- *   again, so ✓ moves from the dictation row to here rather than leaving a
- *   disabled Send in its place (UX round 2, U7). It MOVES, it is not copied —
- *   two "Finish and transcribe" controls is the D2 defect again.
+ * - `actions` also while RECORDING, on that card too: Send is live then
+ *   ("transcribe and send", the relay's "send recording"), so it must not leave
+ *   the row. The ✓ that finishes the take sits in the mic's slot wherever the
+ *   card is open (`mic` renders it), so the same spot starts and stops a take and
+ *   nothing slides under the finger.
  *
  * A value rather than a ternary in the JSX so a test can pin the decision.
  */
-export type ControlsTrailing = "actions" | "mic" | "finish";
+export type ControlsTrailing = "actions" | "mic";
 export const controlsTrailing = (input: {
 	/** The card would be the collapsed pill without the dictation. */
 	openForDictationOnly: boolean;
@@ -171,11 +171,9 @@ export const controlsTrailing = (input: {
 	/** A mic (usable or set-up) renders at all. */
 	micShown: boolean;
 }): ControlsTrailing =>
-	!input.openForDictationOnly || !input.micShown
+	!input.openForDictationOnly || !input.micShown || input.recording
 		? "actions"
-		: input.recording
-			? "finish"
-			: "mic";
+		: "mic";
 
 /**
  * The pill's radius for a painted height: half of it, so every resting pill is a

@@ -62,6 +62,7 @@ import {
 import { stopTurn, useTurnStopping } from "@/features/session/turn-stop";
 import {
 	type DictationState,
+	useDictatedSend,
 	useDictation,
 } from "@/features/session/use-dictation";
 import { isStoredSettingsRefusal } from "@/features/session/use-stored-model";
@@ -462,6 +463,8 @@ export const useComposer = (input: {
 		onUnauthorized: (cause) => {
 			if (isRelayError(cause)) setError(receiptForError(cause).message);
 		},
+		readDraft: () => draftRef.current,
+		isSlashCommand: (text) => parseSlashDraft(text) !== null,
 	});
 	const cancelDictationForSend = voice.cancelForSend;
 	const clearDictationOutcome = voice.clearOutcome;
@@ -764,12 +767,27 @@ export const useComposer = (input: {
 		],
 	);
 
-	const send = useCallback(() => {
+	const finishDictationAndSend = voice.finishAndSend;
+	const dictationSendMode = voice.sendMode;
+	const sendNow = useCallback(() => {
 		/* Belt and braces with the disabled primary: a keyboard submit or a stale
 		 * press handler must not reach the relay against a cached frame either. */
 		if (cached) return;
 		void runSend(chooseOp(streaming));
 	}, [runSend, streaming, cached]);
+	const send = useCallback(() => {
+		/* Send while dictating is "transcribe and send" (the relay's "send
+		 * recording"), not a send of whatever the box holds with the take thrown
+		 * away. A press that is already waiting for its words is inert. */
+		if (dictationSendMode !== null) {
+			if (dictationSendMode === "live") finishDictationAndSend();
+			return;
+		}
+		sendNow();
+	}, [sendNow, dictationSendMode, finishDictationAndSend]);
+	/* The words are sent by the plain send, not by `send`: by then the press is
+	 * `pending`, which `send` deliberately ignores. */
+	useDictatedSend(voice, sendNow);
 
 	const retry = useCallback(() => {
 		void (async () => {
@@ -1162,8 +1180,10 @@ export const useComposer = (input: {
 				envelopePending: retained !== null,
 				outboxPhase: outboxEntry?.phase ?? null,
 				ended,
+				dictation: voice.sendMode,
 			}),
 		[
+			voice.sendMode,
 			streaming,
 			draft,
 			images.length,

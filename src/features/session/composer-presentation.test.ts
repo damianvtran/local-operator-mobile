@@ -243,8 +243,8 @@ describe("the controls row's trailing slot (UX U2 / U7, design D2)", () => {
 		expect(at(true, false)).toBe("mic");
 	});
 
-	it("puts ✓ there while recording rather than a disabled Send (U7)", () => {
-		expect(at(true, true)).toBe("finish");
+	it("keeps Send beside the take while recording: it is 'transcribe and send'", () => {
+		expect(at(true, true)).toBe("actions");
 	});
 
 	it("falls back to Stop/Send when no mic renders at all", () => {
@@ -252,12 +252,12 @@ describe("the controls row's trailing slot (UX U2 / U7, design D2)", () => {
 		expect(at(true, true, false)).toBe("actions");
 	});
 
-	it("moves ✓ rather than copying it: one finish control (D2)", () => {
+	it("has ONE finish control, in the mic's slot rather than on the row (D2)", () => {
 		const COMPOSER = read("src/features/session/components/composer.tsx");
-		expect(COMPOSER).toContain(
-			'voice.phase === "recording" && finishOnRow ? dictationFinish : null',
-		);
-		expect(COMPOSER).toContain('dictationControls(trailing !== "finish")');
+		// The row no longer places ✓ at all; the mic slot renders it while recording.
+		expect(COMPOSER).not.toContain("finishOnRow");
+		expect(COMPOSER).toContain("dictationFinish\n");
+		expect(COMPOSER).toContain('voice.phase === "recording" ? (');
 		expect(
 			COMPOSER.match(/testID=\{CONTROL\.composerDictationFinish\}/g),
 		).toHaveLength(1);

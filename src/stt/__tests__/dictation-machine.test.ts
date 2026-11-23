@@ -4,6 +4,8 @@ import {
 	DICTATION_OUTCOME_COPY,
 	type DictationEvent,
 	type DictationSnapshot,
+	dictatedSendState,
+	dictationRowShown,
 	dictationStatusLine,
 	IDLE_DICTATION,
 	MIC_HINT,
@@ -11,6 +13,7 @@ import {
 	micLabel,
 	pressRoute,
 	reduceDictation,
+	transcriptSendable,
 } from "@/stt/dictation-machine";
 
 /** Run one event and return the transition, asserting nothing jumped a state the
@@ -354,5 +357,73 @@ describe("a resting line ends when the reader moves on (issue #323)", () => {
 			state: IDLE_DICTATION,
 			effects: [],
 		});
+	});
+});
+
+describe("what a landed transcript leaves on screen", () => {
+	it("draws no row for 'Transcript added', and still announces it", () => {
+		const added: DictationSnapshot = { phase: "idle", outcome: "added" };
+		expect(dictationRowShown(added)).toBe(false);
+		expect(dictationStatusLine(added)).toBe("Transcript added");
+	});
+
+	it.each([
+		"empty",
+		"discarded",
+		"unavailable",
+		"blocked",
+		"mic-failed",
+	] as const)(
+		"keeps the %s line on screen: the reader must read or act on it",
+		(outcome) => {
+			expect(dictationRowShown({ phase: "idle", outcome })).toBe(true);
+		},
+	);
+
+	it("shows the row for every live phase and not at rest", () => {
+		for (const phase of ["starting", "recording", "transcribing"] as const)
+			expect(dictationRowShown({ phase, outcome: null })).toBe(true);
+		expect(dictationRowShown(IDLE_DICTATION)).toBe(false);
+	});
+});
+
+describe("Send while dictating", () => {
+	it("is a transcribe-and-send only for a take that has audio or is on the wire", () => {
+		const at = (phase: DictationSnapshot["phase"], sendPending = false) =>
+			dictatedSendState({ phase, sendPending });
+		expect(at("recording")).toBe("live");
+		expect(at("transcribing")).toBe("live");
+		// Nothing is recorded yet: the ordinary send (which drops the press) applies.
+		expect(at("starting")).toBeNull();
+		expect(at("idle")).toBeNull();
+		// A press waiting for its words is inert, whatever phase it is in.
+		expect(at("transcribing", true)).toBe("pending");
+		expect(at("idle", true)).toBe("pending");
+	});
+
+	const sendable = (over: Partial<Parameters<typeof transcriptSendable>[0]>) =>
+		transcriptSendable({
+			transcript: "run the tests",
+			draftAtPress: "",
+			draftAtLanding: "",
+			joined: "run the tests",
+			isSlashCommand: (draft) => draft.startsWith("/"),
+			...over,
+		});
+
+	it("sends a transcript into an untouched box", () => {
+		expect(sendable({})).toBe(true);
+	});
+
+	it("does not send a blank transcript", () => {
+		expect(sendable({ transcript: "  \n" })).toBe(false);
+	});
+
+	it("does not send when the box changed during the wait", () => {
+		expect(sendable({ draftAtPress: "a", draftAtLanding: "ab" })).toBe(false);
+	});
+
+	it("does not send speech that would run a slash command", () => {
+		expect(sendable({ transcript: "/clear", joined: "/clear" })).toBe(false);
 	});
 });
