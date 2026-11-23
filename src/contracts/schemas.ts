@@ -96,6 +96,9 @@ import type {
 	SessionProjection,
 	SessionSummary,
 	SessionTagsResponse,
+	SkillEntry,
+	SkillExpansionReceipt,
+	SkillsResponse,
 	SlashCommand,
 	StartTargetsResponse,
 	SttCapability,
@@ -1015,6 +1018,8 @@ export const sessionProjectionSchema = z.looseObject({
 	supplements: z
 		.record(z.string(), z.record(z.string(), z.unknown()))
 		.optional(),
+	/** Optional viewer presentation; malformed bytes must not reject the frame. */
+	inline_ui: z.unknown().optional(),
 });
 
 /* ----------------------------------------------------- conversation tags */
@@ -1063,6 +1068,14 @@ export const sessionTagsResponseSchema = z.looseObject({
  *  `capabilitiesSchema` — absence is the older relay, and it must never become
  *  a defaulted `{available: true}`. */
 export const sessionTagsCapabilitySchema = z.looseObject({
+	available: z.boolean(),
+});
+
+/** The `$skill` capability (SKM-D3), a TOP-LEVEL key of the capabilities block
+ *  and NOT `remote_sessions.skill_invocation`, which is the separate "remote
+ *  sessions can expand" flag. Three things travel under it: the catalogue route,
+ *  the `expand_skills` body flag and the receipt's `skills` block. */
+export const skillInvocationCapabilitySchema = z.looseObject({
 	available: z.boolean(),
 });
 
@@ -1319,6 +1332,11 @@ export const capabilitiesSchema = z.looseObject({
 	 *  defaulted: absence is an older relay whose routes do not exist, while a
 	 *  default `{available: true}` would advertise controls that 404. */
 	session_tags: sessionTagsCapabilitySchema.optional(),
+	/** The `$skill` picker's licence (local-operator SKM-D3). Optional and never
+	 *  defaulted, like `session_tags`: an older relay DROPS `expand_skills`
+	 *  silently, which on the wire looks exactly like a skill that did not fire,
+	 *  so absence must read as "no `$` affordance at all". */
+	skill_invocation: skillInvocationCapabilitySchema.optional(),
 	/** The start route's capability (`docs/design/mobile-start-receipts.md`
 	 *  "Capability"). Optional and never defaulted: absence is a relay that
 	 *  predates the contract. `effort: true` is the ONLY licence to put `effort`
@@ -1626,6 +1644,7 @@ export const historyResponseSchema = z.looseObject({
 	entries: z.array(transcriptEntrySchema),
 	has_more: z.boolean(),
 	unavailable: z.string().optional(),
+	inline_ui: z.unknown().optional(),
 });
 
 export const slashCommandSchema = z.looseObject({
@@ -1637,6 +1656,29 @@ export const slashCommandSchema = z.looseObject({
 
 export const commandsResponseSchema = z.looseObject({
 	commands: z.array(slashCommandSchema),
+});
+
+/** One row of `GET /api/skills?session_id=`. The relay sorts by name and caps
+ *  the list; `hidden` marks a skill whose `hide` frontmatter suppresses
+ *  automatic selection (the picker still offers it: being typed is exactly the
+ *  case `hide` leaves open). `hidden` is optional so a relay that omits it is
+ *  read as "not hidden" rather than refusing the whole catalogue. */
+export const skillEntrySchema = z.looseObject({
+	name: nonEmpty,
+	description: z.string(),
+	hidden: z.boolean().default(false),
+});
+
+export const skillsResponseSchema = z.looseObject({
+	skills: z.array(skillEntrySchema),
+});
+
+/** The additive `skills` block a prompt/steer receipt carries when the relay
+ *  honoured `expand_skills`: names WITHOUT the `$`. Absent on a relay that does
+ *  not expand. */
+export const skillExpansionReceiptSchema = z.looseObject({
+	attached: z.array(z.string()),
+	skipped: z.array(z.string()),
 });
 
 export const modelEntrySchema = z.looseObject({
@@ -1744,6 +1786,7 @@ export const apiErrorSchema = z.looseObject({
 export const commandAckSchema = z.looseObject({
 	ok: z.literal(true),
 	detail: z.string(),
+	skills: skillExpansionReceiptSchema.optional(),
 });
 
 /** `GET /api/sessions/{id}/supplements/{digest}/document` — one stored turn
@@ -1887,6 +1930,7 @@ export const commandOpSchema = z.discriminatedUnion("op", [
 		images: z.array(promptImageSchema).optional(),
 		input_mode: inputModeSchema.optional(),
 		input_path: z.string().max(96).optional(),
+		expand_skills: z.boolean().optional(),
 	}),
 	z.looseObject({
 		op: z.literal("steer"),
@@ -1895,6 +1939,7 @@ export const commandOpSchema = z.discriminatedUnion("op", [
 		images: z.array(promptImageSchema).optional(),
 		input_mode: inputModeSchema.optional(),
 		input_path: z.string().max(96).optional(),
+		expand_skills: z.boolean().optional(),
 	}),
 	z.looseObject({ op: z.literal("abort") }),
 	z.looseObject({
@@ -2316,6 +2361,7 @@ export const SCHEMAS = {
 	subagentRow: subagentRowSchema,
 	subagentDetail: subagentDetailSchema,
 	commands: commandsResponseSchema,
+	skills: skillsResponseSchema,
 	models: modelsResponseSchema,
 	/** One entry, for the ranked-array fixture: `models.ranked.json` is a bare array
 	 *  captured from `/api/models`, so it is validated element by element. */
@@ -2499,6 +2545,7 @@ type WireMirror = {
 	history: HistoryResponse;
 	subagentDetail: SubagentDetail;
 	commands: CommandsResponse;
+	skills: SkillsResponse;
 	models: ModelsResponse;
 	directories: Directories;
 	startTargets: StartTargetsResponse;
@@ -2759,6 +2806,9 @@ export type {
 	SessionProjection,
 	SessionSummary,
 	SessionTagsResponse,
+	SkillEntry,
+	SkillExpansionReceipt,
+	SkillsResponse,
 	SlashCommand,
 	StartTargetsResponse,
 	SttCapability,

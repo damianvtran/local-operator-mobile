@@ -43,7 +43,7 @@ import Animated, {
 	useSharedValue,
 	withTiming,
 } from "react-native-reanimated";
-import type { PromptImage } from "@/contracts";
+import type { PromptImage, SkillEntry } from "@/contracts";
 import { useClipboardImageOffer } from "@/features/session/attach-clipboard";
 import { createAttachmentSheetHandoff } from "@/features/session/attach-handoff";
 import { attachLocksWhilePicking } from "@/features/session/attach-latch";
@@ -54,6 +54,10 @@ import {
 } from "@/features/session/attach-rule";
 import type { ComposerChip } from "@/features/session/chip-labels";
 import { AttachSheet } from "@/features/session/components/attach-sheet";
+import {
+	SkillTray,
+	type SkillTrayProps,
+} from "@/features/session/components/skill-tray";
 import { ComposerStateMarkers } from "@/features/session/components/state-markers";
 import {
 	attachmentLabel,
@@ -100,6 +104,11 @@ import {
 	subscribeKeyboardFrame,
 	useKeyboardFrame,
 } from "@/features/session/keyboard-frame";
+import {
+	type SkillTrayFrame,
+	shouldRevealSkillTray,
+	trayHeightCanChange,
+} from "@/features/session/skills/skill-state";
 import type { DictationState } from "@/features/session/use-dictation";
 import { t } from "@/i18n";
 import { formatDuration } from "@/stt/dictation";
@@ -123,6 +132,7 @@ import {
 	Textarea,
 } from "@/ui/components";
 import { ChromeSurface } from "@/ui/components/chrome-surface";
+import type { TextareaProps } from "@/ui/components/textarea";
 import { TEXT_END_CLASS, useIsRTL } from "@/ui/direction";
 import { TOUCH_FLOOR } from "@/ui/layout";
 import {
@@ -254,6 +264,21 @@ type WebListener =
  * navigation, and the only path that clears it is a definitive acknowledgement of
  * the bytes it actually shows.
  */
+/** What the session screen hands the composer for the `$skill` tray. `rows` is
+ *  the tray's content (empty = closed); the rest is the field's caret reporting,
+ *  which the hook needs to know WHICH token the caret is in. */
+export type ComposerSkills = Pick<
+	SkillTrayProps,
+	"onPick" | "onHold" | "onRelease"
+> & {
+	rows: readonly SkillEntry[];
+	onSelectionChange: TextareaProps["onSelectionChange"];
+	/** A ONE-SHOT caret placement after a pick, else undefined. */
+	selection: TextareaProps["selection"];
+	onFocus: () => void;
+	onBlur: () => void;
+};
+
 export type ComposerProps = {
 	controls: ComposerControls;
 	draft: string;
@@ -267,6 +292,10 @@ export type ComposerProps = {
 	/** A web paste event's image file. Only the web build can raise the event;
 	 *  the listener that reads it lives here, the read lives with the host. */
 	onPasteFile: (file: File) => void;
+	/** Images pasted INTO the message field on iOS/Android: `file://` copies the
+	 *  field's native wrapper wrote (`paste-image-field.tsx`). The read lives with
+	 *  the host, like `onAttach`'s. */
+	onPasteImages: (uris: string[]) => void;
 	attaching?: boolean;
 	/** Called on every Attach press, before the sheet opens. The owner abandons
 	 *  a pick still in flight: on native Attach stays pressable while picking,
@@ -380,6 +409,11 @@ export type ComposerProps = {
 	/** A leading `/` opens the sheet; `null` keeps it shut. */
 	slashQuery: string | null;
 	slashSheet: React.ReactNode;
+	/** The `$skill` list and the field plumbing it needs (`use-skills.ts`).
+	 *  Absent keeps the field exactly as before: the HOME composer passes nothing,
+	 *  because a new chat has no session id to ask `GET /api/skills` about yet;
+	 *  Team Bridge has its own composer and its own `@` strip. */
+	skills?: ComposerSkills;
 	/** A handle to the field, for the one caller that focuses it by name (the
 	 *  home's New chat). The third mechanical prop beyond the spec's two chips:
 	 *  § 4.3 requires New chat to focus the composer, and focus needs a ref. */
@@ -706,6 +740,7 @@ export const Composer = ({
 	onRemoveImage,
 	onAttach,
 	onPasteFile,
+	onPasteImages,
 	attaching = false,
 	onAttachOpen,
 	voice = null,
@@ -739,6 +774,7 @@ export const Composer = ({
 	identityRow = null,
 	slashQuery,
 	slashSheet,
+	skills,
 	fieldRef,
 	compact = null,
 	limit = null,
@@ -1526,6 +1562,24 @@ export const Composer = ({
 		if (noticeKey === "|") return;
 		extrasScrollRef.current?.scrollTo({ y: 0, animated: false });
 	}, [noticeKey]);
+	/* The `$skill` tray is the extras' LAST child, so in the capped (compact)
+	 *  scroller it can open below the fold. Declared AFTER the notice reset so a
+	 *  commit that does both ends on the tray: the reader is typing into it. The
+	 *  decision is `shouldRevealSkillTray`; a rows-grew commit also arms
+	 *  `revealOnGrowth`, because the scroller has not laid the new rows out yet
+	 *  when this effect runs and would scroll to the OLD end. */
+	const trayRows = skills?.rows.length ?? 0;
+	const trayCapped = extrasMaxHeight !== undefined;
+	const trayFrame = useRef<SkillTrayFrame>({ rows: 0, capped: false });
+	const revealOnGrowth = useRef(false);
+	useEffect(() => {
+		const next = { rows: trayRows, capped: trayCapped };
+		const reveal = shouldRevealSkillTray(trayFrame.current, next);
+		revealOnGrowth.current =
+			reveal && trayHeightCanChange(trayFrame.current.rows, trayRows);
+		trayFrame.current = next;
+		if (reveal) extrasScrollRef.current?.scrollToEnd({ animated: false });
+	}, [trayRows, trayCapped]);
 	const failureNotice =
 		feedback.retainedText !== null || feedback.errorText !== null ? (
 			<View
@@ -1616,7 +1670,14 @@ export const Composer = ({
 			    is read before the control that is pressed. */}
 			{images.length > 0 ? (
 				<View className="pb-2">
-					<ScrollView horizontal showsHorizontalScrollIndicator={false}>
+					{/* "handled": with the keyboard up (a field paste leaves it up) the
+					    first tap on a chip's remove badge dismissed the keyboard and only
+					    the second removed the chip (QA round 2, Q1). */}
+					<ScrollView
+						horizontal
+						showsHorizontalScrollIndicator={false}
+						keyboardShouldPersistTaps="handled"
+					>
 						<View className="flex-row gap-1.5">
 							{images.map((image, index) => (
 								<View key={`${index}-${image.mime_type}`} className="relative">
@@ -1728,6 +1789,17 @@ export const Composer = ({
 				>
 					{controls.disabledReason}
 				</Text>
+			) : null}
+			{/* The `$skill` list sits LAST in the extras, directly above the field it
+			    edits, and inside the card so the composer's geometry budget already
+			    accounts for its height (`extrasHeight`). */}
+			{skills && skills.rows.length > 0 ? (
+				<SkillTray
+					rows={skills.rows}
+					onPick={skills.onPick}
+					onHold={skills.onHold}
+					onRelease={skills.onRelease}
+				/>
 			) : null}
 		</>
 	);
@@ -2314,8 +2386,17 @@ export const Composer = ({
 							if (canSendRef.current) sendRef.current();
 						}}
 						fieldRef={inputRef}
-						onFocus={() => setFocused(true)}
-						onBlur={() => setFocused(false)}
+						onPasteImages={onPasteImages}
+						onFocus={() => {
+							setFocused(true);
+							skills?.onFocus();
+						}}
+						onBlur={() => {
+							setFocused(false);
+							skills?.onBlur();
+						}}
+						onSelectionChange={skills?.onSelectionChange}
+						selection={skills?.selection}
 						testID={CONTROL.composerInput}
 					/>
 				</View>
@@ -2494,9 +2575,13 @@ export const Composer = ({
 						style={{ flexGrow: 0, flexShrink: 0, maxHeight: extrasMaxHeight }}
 						showsVerticalScrollIndicator={Platform.OS !== "web"}
 						scrollEnabled={extrasMaxHeight !== undefined}
-						onContentSizeChange={(_width, height) =>
-							setExtrasHeight(Math.round(height))
-						}
+						onContentSizeChange={(_width, height) => {
+							setExtrasHeight(Math.round(height));
+							if (revealOnGrowth.current) {
+								revealOnGrowth.current = false;
+								extrasScrollRef.current?.scrollToEnd({ animated: false });
+							}
+						}}
 						nestedScrollEnabled
 						keyboardShouldPersistTaps="handled"
 					>

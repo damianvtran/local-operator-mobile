@@ -308,7 +308,7 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 			(before) => {
 				if (!endpoints || !sameProjectionOwner(owner, currentIdentity.current))
 					return Promise.reject(new Error("History is unavailable."));
-				return endpoints.history(sessionId, { before });
+				return endpoints.history(sessionId, { before, inlineUi: true });
 			},
 			() => historyChanged((revision) => revision + 1),
 			// A hole left by a background, a network change or a stream reconnect
@@ -451,6 +451,7 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 			let pendingAttemptSeed = true;
 			setError(null);
 			const stream = endpoints.sessionStream(sessionId, {
+				inlineUi: true,
 				// Read per connect, not per effect: a stream opened before the first
 				// live list frame declares on its next reconnect (`steer-journal-order.ts`).
 				steerJournalOrder: steerJournalOrderDeclared(listStore.getState()),
@@ -849,7 +850,10 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 	const projection = entry.projection;
 	/** The frame on screen is the warm cache's, not a live one. */
 	const hydrated = entry.hydrated === true;
-	if (ownsProjection) historyWindow.accept(projection);
+	if (ownsProjection) {
+		if (hydrated) historyWindow.seedFromCache(projection);
+		else historyWindow.accept(projection);
+	}
 	/* Turn end is a save moment: the conversation's shape just settled. A
 	 * hydrated frame never counts as running, so it can neither trigger this nor
 	 * offer the composer a "steer" for a turn that may long be over. */

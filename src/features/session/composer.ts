@@ -21,6 +21,10 @@
 import type { PromptImage } from "@/contracts";
 import type { AttachSource, PasteVia } from "@/features/session/attach-rule";
 import { healthCopy, healthResumeCopy } from "@/features/session/health-copy";
+import {
+	SKILLS_TOO_LARGE,
+	skillsTooLargeMessage,
+} from "@/features/session/skills/skill-send";
 import { t } from "@/i18n";
 import type { ContinuationOp, RelayError } from "@/relay";
 import { SendPreparationError } from "@/relay/send-command";
@@ -183,11 +187,19 @@ export const attachFailureLine = (source: AttachSource): string =>
  * and "Copy an image" sends the reader after something they already did (UX
  * review round 1, U3). Android has no paste prompt, so a chip miss there is the
  * image having gone, which `pasteEmpty` already says.
+ *
+ * The sheet's Paste row on iOS (2026-11-22 design consult): an empty answer is
+ * either an empty clipboard or a refusal, and the reader cannot tell which, so
+ * the line names both remedies — copy an image, and choose Allow Paste if the
+ * system asks (`paste.empty_ios`). `pasteEmpty` was true but left a reader who
+ * had just refused the prompt with only "copy an image".
  */
-export const pasteNothingLine = (via: PasteVia, os: string): string =>
-	via === "offer" && os === "ios"
+export const pasteNothingLine = (via: PasteVia, os: string): string => {
+	if (os !== "ios") return composerCopy().pasteEmpty;
+	return via === "offer"
 		? t("mobile.composer_input.paste.denied")
-		: composerCopy().pasteEmpty;
+		: t("mobile.composer_input.paste.empty_ios");
+};
 
 /* ------------------------------------------------------------------- the op */
 
@@ -386,25 +398,31 @@ export const receiptForError = (
 	 * surfacing it was a shipped first impression of a failure (U3). A class with no
 	 * relay-supplied sentence gets the product's words instead.
 	 */
+	/* A skill set over the relay's body budget is a REFUSAL WITH A REMEDY, not a
+	 * transient failure. Keyed on the wire's typed code, so the sentence survives
+	 * the relay rewording its own prose, and localized rather than the relay's
+	 * English `error` string. */
 	const message =
-		/* The two relay-supplied fields, filtered the way the error layer's own
-		 * accessor filters them (`relay/errors.ts` `displayableMessage`): trimmed,
-		 * EMPTY rejected, and markup rejected. `??` alone was weaker than the rule
-		 * this cites — it does not fall through on `""`, and an HTML body
-		 * (`<html><body>502 Bad Gateway</body></html>`) is an ordinary relay answer
-		 * the accessor's docblock names explicitly.
-		 *
-		 * Deliberately NOT the accessor itself: it falls back to `error.message`, and
-		 * for this path the fallback is the composer's OWN sentence for the op — a
-		 * receipt that reads "Load failed" was a shipped first impression (U3). The
-		 * banner's copy is a different question from a receipt's, so it is a
-		 * different call. */
-		[error.detail, error.serverError]
-			.map((value) => value?.trim() ?? "")
-			.find((value) => value !== "" && !value.startsWith("<")) ??
-		(op === "steer" || error.kind === "ambiguous-delivery"
-			? composerCopy().steerError
-			: composerCopy().continuationError);
+		error.code === SKILLS_TOO_LARGE
+			? skillsTooLargeMessage()
+			: /* The two relay-supplied fields, filtered the way the error layer's own
+				 * accessor filters them (`relay/errors.ts` `displayableMessage`): trimmed,
+				 * EMPTY rejected, and markup rejected. `??` alone was weaker than the rule
+				 * this cites — it does not fall through on `""`, and an HTML body
+				 * (`<html><body>502 Bad Gateway</body></html>`) is an ordinary relay answer
+				 * the accessor's docblock names explicitly.
+				 *
+				 * Deliberately NOT the accessor itself: it falls back to `error.message`, and
+				 * for this path the fallback is the composer's OWN sentence for the op — a
+				 * receipt that reads "Load failed" was a shipped first impression (U3). The
+				 * banner's copy is a different question from a receipt's, so it is a
+				 * different call. */
+				([error.detail, error.serverError]
+					.map((value) => value?.trim() ?? "")
+					.find((value) => value !== "" && !value.startsWith("<")) ??
+				(op === "steer" || error.kind === "ambiguous-delivery"
+					? composerCopy().steerError
+					: composerCopy().continuationError));
 	if (error.envelope === "clear-all") return { kind: "sign-out", message };
 	if (error.envelope === "keep") return { kind: "ambiguous", message };
 	return { kind: "rejected", message };

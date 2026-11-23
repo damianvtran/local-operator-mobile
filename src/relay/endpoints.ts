@@ -52,6 +52,8 @@ export interface HistoryPage {
 	 *  entries immediately older than it. Omitted means the tail. */
 	before?: string;
 	limit?: number;
+	/** Viewer capability; command reconciliation does not need overlays. */
+	inlineUi?: boolean;
 }
 
 export interface SearchRequest {
@@ -1044,6 +1046,7 @@ export class RelayEndpoints {
 			path: `/api/sessions/${encodeURIComponent(sessionId)}/history${query({
 				before: page.before,
 				limit: wireLimit(page.limit, HISTORY_LIMIT),
+				inline_ui: page.inlineUi ? 1 : undefined,
 			})}`,
 		});
 	}
@@ -1276,6 +1279,20 @@ export class RelayEndpoints {
 	/** The off-terminal slash vocabulary, TUI chrome excluded. */
 	async commands(): Promise<Payload<"commands">> {
 		return this.http.json("commands", { method: "GET", path: "/api/commands" });
+	}
+
+	/**
+	 * `GET /api/skills?session_id=` — the `$name` vocabulary for ONE conversation
+	 * (discovery walks up from the session's own directory, so it is never
+	 * relay-wide). Sorted by name by the relay; **render it in the order given**.
+	 * Only meaningful when `capabilities.skill_invocation.available`; an unknown
+	 * id is a `404 unknown_session`, which the caller reads as "no tray".
+	 */
+	async skills(sessionId: string): Promise<Payload<"skills">> {
+		return this.http.json("skills", {
+			method: "GET",
+			path: `/api/skills${query({ session_id: sessionId })}`,
+		});
 	}
 
 	/** The model catalogue. **The array order is the ranking** — render it as
@@ -1546,10 +1563,17 @@ export class RelayEndpoints {
 		 * refuse a malformed op with a prose `422`, and a client that can produce one
 		 * has a bug it should hear about at the call site rather than in a toast. */
 		const validated = parsePayload("commandOp", body);
+		// Renderer capability, not a command option or a stored draft field.
+		// Inject at the common send boundary so cold starts, queued retries and
+		// steers all advertise the same viewer without changing command identity.
+		const payload =
+			validated.op === "prompt" || validated.op === "steer"
+				? { ...validated, inline_ui: true }
+				: validated;
 		return this.http.json("commandAck", {
 			method: "POST",
 			path: `/api/sessions/${encodeURIComponent(sessionId)}/command`,
-			body: validated,
+			body: payload,
 			timeoutMs: options.timeoutMs,
 		});
 	}
@@ -1762,12 +1786,14 @@ export class RelayEndpoints {
 		options: Omit<SseConnectionOptions, "open"> & {
 			signal?: AbortSignal;
 			steerJournalOrder?: boolean;
+			inlineUi?: boolean;
 		},
 	): RelayStream {
-		const { steerJournalOrder, ...connection } = options;
+		const { steerJournalOrder, inlineUi, ...connection } = options;
 		return this.stream(
 			`/api/sessions/${encodeURIComponent(sessionId)}/events${query({
 				steer_journal_order: steerJournalOrder ? "1" : undefined,
+				inline_ui: inlineUi ? 1 : undefined,
 			})}`,
 			connection,
 		);

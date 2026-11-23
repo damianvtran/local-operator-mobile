@@ -100,6 +100,7 @@ import {
 import { RemoteSessionGate } from "@/features/session/remote-session-gate";
 import { sessionSupplementsAvailable } from "@/features/session/remote-supplements";
 import { sessionChipLabels } from "@/features/session/session-chips";
+import { useSkills } from "@/features/session/skills/use-skills";
 import { sessionFactsFrom } from "@/features/session/state-marker";
 import { createScrollPresence } from "@/features/session/transcript-presence";
 import { useAsksSheet } from "@/features/session/use-asks-sheet";
@@ -305,7 +306,14 @@ function Session() {
 			ownerLabel === null,
 		ended: headerHealth(runtime.projection, runtime.link) === "ended",
 	});
+	/* The `$skill` licence for THIS conversation: the relay's top-level
+	 *  `capabilities.skill_invocation` (absent = an older relay = no `$`), already
+	 *  withheld for a remote conversation by `sessionCapabilities`. One value feeds
+	 *  the tray, the catalogue fetch and the `expand_skills` flag, so they cannot
+	 *  disagree. */
+	const skillsAvailable = capabilities.skill_invocation?.available === true;
 	const composer = useComposer({
+		expandSkills: skillsAvailable,
 		beforeSend: storedModel.prepare,
 		sessionId,
 		source: runtime.source,
@@ -326,6 +334,17 @@ function Session() {
 			ownerLabel !== null && !controlPolicy.allows("slash")
 				? remoteOwnerOnlyCopy(ownerLabel)
 				: null,
+	});
+	/* The `$skill` tray: catalogue fetched once per session, caret read from the
+	 *  field, a pick rewrites only the token. A leading `/` belongs to the slash
+	 *  sheet (one caret, one list). */
+	const skills = useSkills({
+		sessionId,
+		endpoints: runtime.source.endpoints,
+		available: skillsAvailable,
+		text: composer.draft,
+		setText: composer.setDraft,
+		slashDraft: draftSlashQuery(composer.draft) !== null,
 	});
 	/* Stop is withheld when the relay does not forward `abort`: every Stop on this
 	 *  screen (composer ■, pinned line, image-gen Cancel) reads this one gate. */
@@ -1923,11 +1942,22 @@ function Session() {
 						testID={SURFACE.sessionComposer}
 						controls={composerControls}
 						draft={composer.draft}
-						onDraftChange={composer.setDraft}
+						onDraftChange={skills.onChangeText}
+						skills={{
+							rows: skills.rows,
+							onPick: skills.pick,
+							onHold: skills.hold,
+							onRelease: skills.release,
+							onSelectionChange: skills.onSelectionChange,
+							selection: skills.selection,
+							onFocus: skills.onFocus,
+							onBlur: skills.onBlur,
+						}}
 						images={composer.images}
 						onRemoveImage={composer.removeImage}
 						onAttach={composer.attach}
 						onPasteFile={composer.pasteFile}
+						onPasteImages={composer.pasteImages}
 						attaching={composer.attaching}
 						onAttachOpen={composer.abandonAttach}
 						voice={composer.voice}

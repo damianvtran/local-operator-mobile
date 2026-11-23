@@ -13,7 +13,11 @@ import {
 } from "@/connection/startup-authorization";
 
 import type { Capabilities, PromptImage, SlashCommand } from "@/contracts";
-import { readImageFrom, readWebImageFile } from "@/features/session/attach";
+import {
+	readImageFrom,
+	readPastedImages,
+	readWebImageFile,
+} from "@/features/session/attach";
 import { createAttachLatch } from "@/features/session/attach-latch";
 import type { AttachSource, PasteVia } from "@/features/session/attach-rule";
 import {
@@ -45,6 +49,10 @@ import {
 } from "@/features/session/pending-echo";
 import type { SessionRelaySource } from "@/features/session/relay-source";
 import { sendSlashCommand } from "@/features/session/send-slash";
+import {
+	skippedSkillsNotice,
+	wantsSkillExpansion,
+} from "@/features/session/skills/skill-send";
 import {
 	parseSlashDraft,
 	slashQuery,
@@ -112,6 +120,8 @@ export interface ComposerState {
 	 *  hands the raw file here so the read and its failure copy live beside the
 	 *  pickers' own. */
 	pasteFile: (file: File) => void;
+	/** Images pasted into the message field on a phone (`paste-image-field.tsx`). */
+	pasteImages: (uris: string[]) => void;
 	/** A picker is open or an image is being read. */
 	attaching: boolean;
 	/** Attach was pressed: a pick still in flight is not on screen, so it stops
@@ -183,6 +193,10 @@ export const useComposer = (input: {
 	 *  `/command` is refused with this sentence and NOTHING is sent, instead of
 	 *  a guaranteed `409 remote_unsupported`. The draft is kept. */
 	slashRefusal?: null | string;
+	/** The relay licenses `$skill` expansion for THIS conversation
+	 *  (`capabilities.skill_invocation` and a local conversation). Off, no send
+	 *  ever carries `expand_skills`. */
+	expandSkills?: boolean;
 	/** An adopted provisional editor keeps its identity while this host adds the
 	 * normal session actions, dictation and slash controls around it. */
 	editor?: {
@@ -199,6 +213,7 @@ export const useComposer = (input: {
 	// `useCallback` below it pointless.
 	const { sessionId, source, streaming, ended, capabilities, onSent } = input;
 	const slashRefusal = input.slashRefusal ?? null;
+	const expandSkills = input.expandSkills === true;
 	const cached = input.cached === true;
 	const beforeSend = input.beforeSend;
 	const endpoints = source.endpoints;
@@ -285,6 +300,11 @@ export const useComposer = (input: {
 	const inFlight = useRef(false);
 	const [error, setError] = useState<string | null>(null);
 	const [notice, setNotice] = useState<string | null>(null);
+	/* Whether the notice painted is the skipped-skill receipt. It describes the
+	 * message just SENT, so the first keystroke of the next draft clears it —
+	 * left up, it would read as a statement about the new draft. A ref: it gates a
+	 * clear and never renders. */
+	const skipNotice = useRef(false);
 	const [attaching, setAttaching] = useState(false);
 	/* Busy from a pick's start until it settles; only a pick the attach
 	 *  handoff's fallback launched can be released early (`attach-latch.ts`). */
@@ -453,6 +473,10 @@ export const useComposer = (input: {
 	const editDraft = useCallback(
 		(text: string) => {
 			clearDictationOutcome();
+			if (skipNotice.current) {
+				skipNotice.current = false;
+				setNotice(null);
+			}
 			setDraft(text);
 		},
 		[clearDictationOutcome, setDraft],
@@ -510,6 +534,7 @@ export const useComposer = (input: {
 			setSendMark((at) => at + 1);
 			setError(null);
 			setNotice(null);
+			skipNotice.current = false;
 			try {
 				await beforeSend?.();
 				if (parsed !== null) {
@@ -543,6 +568,13 @@ export const useComposer = (input: {
 					op,
 					text: trimmed,
 					...(payloadImages ? { images: payloadImages } : {}),
+					...(wantsSkillExpansion({
+						available: expandSkills,
+						text: trimmed,
+						slash: parsed !== null,
+					})
+						? { expand_skills: true }
+						: {}),
 					onHeld: (envelope) => {
 						sentBody = {
 							text: envelope.text,
@@ -641,6 +673,13 @@ export const useComposer = (input: {
 					 * rapid steering stays silent (UX round 1, U2). */
 					setNotice(earlierWentThroughNotice());
 				}
+				/* AFTER the chain above: what the message CONTAINS outranks the
+				 * "your edit is still here" line, and the send went either way. */
+				const skippedNotice = skippedSkillsNotice(result.skills);
+				if (skippedNotice !== null) {
+					skipNotice.current = true;
+					setNotice(skippedNotice);
+				}
 				onSent?.();
 			} catch (failure) {
 				/* The op this send carried, so a failed steer is never worded as a
@@ -721,6 +760,7 @@ export const useComposer = (input: {
 			echoDraft,
 			slashRefusal,
 			beforeSend,
+			expandSkills,
 		],
 	);
 
@@ -771,6 +811,9 @@ export const useComposer = (input: {
 					op: held.op,
 					text: held.text,
 					...(held.images ? { images: held.images } : {}),
+					/* From the ENVELOPE: a retry asks for the expansion the first attempt
+					 * asked for, or it would send the literal text. */
+					...(held.expand_skills === true ? { expand_skills: true } : {}),
 					/* A retry paints its row too, under the SAME id — the replayed
 					 * envelope's — and moves the draft only when the visible draft is
 					 * that envelope's body (the failed send handed it back untouched). */
@@ -812,6 +855,11 @@ export const useComposer = (input: {
 					setImages([]);
 				} else {
 					setNotice(earlierWentThroughNotice());
+				}
+				const skippedNotice = skippedSkillsNotice(result.skills);
+				if (skippedNotice !== null) {
+					skipNotice.current = true;
+					setNotice(skippedNotice);
 				}
 			} catch (failure) {
 				const receipt = isRelayError(failure)
@@ -1006,6 +1054,28 @@ export const useComposer = (input: {
 		[attachLatch, setImages],
 	);
 
+	/** Images pasted INTO the message field on a phone: the same latch, strip and
+	 *  failure copy as `attach`, from `file://` copies the field's wrapper wrote. */
+	const pasteImages = useCallback(
+		(uris: string[]) => {
+			void (async () => {
+				const endAttach = attachLatch.begin();
+				setError(null);
+				try {
+					const pasted = await readPastedImages(uris);
+					if (!endAttach.current()) return;
+					setImages((current) => [...current, ...pasted]);
+				} catch {
+					if (!endAttach.current()) return;
+					setError(composerCopy().attachError);
+				} finally {
+					endAttach();
+				}
+			})();
+		},
+		[attachLatch, setImages],
+	);
+
 	/** The web paste EVENT's file. Same failure copy as the pickers, same strip
 	 *  as its destination: the event and the sheet's Paste row are two doors into
 	 *  one attachment path. */
@@ -1132,6 +1202,7 @@ export const useComposer = (input: {
 		dismissError: () => setError(null),
 		attach,
 		pasteFile,
+		pasteImages,
 		attaching,
 		abandonAttach: attachLatch.abandon,
 		retained,

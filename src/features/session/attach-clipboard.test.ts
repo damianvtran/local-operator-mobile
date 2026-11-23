@@ -142,17 +142,24 @@ describe("what an empty paste says, per door (UX review round 1, U3)", () => {
 	it("names the iOS denial on the chip, which is only offered while an image is there", () => {
 		const line = pasteNothingLine("offer", "ios");
 		expect(line).toBe(
-			"Paste wasn’t allowed. Tap the paperclip, then Paste image, and choose “Allow Paste”.",
+			"Paste wasn’t allowed. Tap the paste button again and choose “Allow Paste”.",
 		);
 		// Not the sheet's line: "Copy an image" sends the reader after an image
 		// they already copied.
 		expect(line).not.toBe(composerCopy().pasteEmpty);
 	});
 
-	it("keeps the outcome-only line for the sheet's Paste row and for Android", () => {
-		// The sheet cannot tell an empty clipboard from a denial; Android has no
-		// paste prompt, so a chip miss there is the image having gone.
-		expect(pasteNothingLine("sheet", "ios")).toBe(composerCopy().pasteEmpty);
+	it("names both remedies for the sheet's Paste row on iOS, where an empty clipboard and a refusal look the same", () => {
+		const line = pasteNothingLine("sheet", "ios");
+		expect(line).toBe(
+			"No image was pasted. Copy an image, then choose “Allow Paste” if asked.",
+		);
+		expect(line).not.toBe(composerCopy().pasteEmpty);
+	});
+
+	it("keeps the outcome-only line for Android and the web", () => {
+		// Android and the web have no paste prompt, so a miss there is the image
+		// having gone.
 		expect(pasteNothingLine("offer", "android")).toBe(
 			composerCopy().pasteEmpty,
 		);

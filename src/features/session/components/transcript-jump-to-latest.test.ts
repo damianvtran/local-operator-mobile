@@ -181,6 +181,11 @@ vi.mock("@/features/session/components/transcript-edge-fades", () => ({
 vi.mock("@/features/session/components/transcript-row", () => ({
 	TranscriptRow: () => null,
 }));
+/* The null rows cannot open a chart; leave the provider in the tree without
+ * importing native SVG into this anchor/tail-policy harness. */
+vi.mock("@/features/session/components/inline-ui-preview", async () => ({
+	ChartDataResizeContext: (await import("react")).createContext(null),
+}));
 vi.mock("@/features/session/components/turn-bar", () => ({
 	TurnBar: () => null,
 }));

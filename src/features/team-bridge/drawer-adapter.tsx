@@ -181,9 +181,9 @@ const bridgePane: WorkspaceDrawerBridgeAdapter["bridgePane"] = (props) => (
  * rather than a back arrow into a list that is not under it.
  *
  * SWIPE-BACK. The session screen sets no `gestureEnabled` override and adds no
- * edge-swipe-to-drawer (`app/(app)/_layout.tsx` is one `Stack` with only
- * `headerShown: false`), so the bridge thread mirrors it exactly and keeps the
- * stack's default. The list is kept out from under the thread instead: every
+ * edge-swipe-to-drawer (`app/(app)/_layout.tsx` is one `Stack` on the shared
+ * `STACK_SCREEN_OPTIONS`, so back is the left-edge swipe), so the bridge thread
+ * mirrors it exactly and keeps the stack's default. The list is kept out from under the thread instead: every
  * open from a Team Bridge route REPLACES (`useOpenTarget`), so the thread's
  * back gesture returns to wherever Team Bridge was entered from (Home), never
  * to the channel list — the same place a session's back gesture goes.

@@ -1,5 +1,6 @@
 {
 	"mobile.session.conversation_details": "对话详情",
+	"mobile.session.inline_chart_data": "图表数据",
 	"mobile.session.chip.model_default": "默认",
 	"mobile.session.chip.model_unknown": "未知",
 	"mobile.session.status_tray.hint": "打开工作状态行、任务和子智能体",
@@ -93,7 +94,7 @@
 	"mobile.session.outbox.composer_stopped": "上一条消息已停止发送。请在上方重试或放弃它，再发送这一条。",
 	"mobile.session.outbox.composer_discarding": "正在放弃上一条消息。稍后即可发送这一条。",
 	"mobile.session.sheet_title.commands": "命令",
-	"mobile.session.sheet_title.attach": "添加附件",
+	"mobile.session.sheet_title.attach": "添加图片",
 	"mobile.session.diagram.label": "{type} 图表",
 	"mobile.session.diagram.label_titled": "{type} 图表：{title}",
 	"mobile.session.diagram.copied": "已复制",

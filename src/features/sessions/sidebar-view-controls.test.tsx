@@ -21,6 +21,8 @@ const host = vi.hoisted(() => ({
 	roles: new Map<string, string>(),
 	checked: new Map<string, boolean>(),
 	ariaChecked: new Map<string, boolean>(),
+	/** Each `Segmented`'s selected value, by the group's testID. */
+	groups: new Map<string, string>(),
 	hints: new Map<string, string | undefined>(),
 	/** Every string a `Text` printed: what is on screen, as opposed to read. */
 	texts: [] as string[],
@@ -72,9 +74,12 @@ vi.mock("@/ui/appearance", () => ({ useTokenColor: (role: string) => role }));
 vi.mock("@/ui/layout", () => ({ TOUCH_FLOOR: 44 }));
 vi.mock("@/ui/components/segmented", () => ({
 	Segmented: (props: {
+		value: string;
+		testID: string;
 		options: { value: string; testID: string }[];
 		onChange: (value: string) => void;
 	}) => {
+		host.groups.set(props.testID, props.value);
 		for (const option of props.options)
 			host.choices.set(option.testID, () => props.onChange(option.value));
 		return null;
@@ -103,17 +108,36 @@ const row = (id: string, extra: Partial<SessionSummary>): SessionSummary =>
 const ROWS = [
 	row("ended", { ended: true, mtime: NOON / 1000 - 60 }),
 	row("running", { streaming: true, created_at: NOON / 1000 - 600 }),
-	row("open", { mtime: NOON / 1000 - 120 }),
+	row("open", {
+		mtime: NOON / 1000 - 120,
+		tags: [{ id: "work", name: "Work" }],
+		primary: "work",
+	}),
 ];
 
 let current: View = DEFAULT_SIDEBAR_VIEW;
-function Harness({ scope }: { scope: "sheet" | "settings" }) {
-	const [view, setView] = useState<View>(DEFAULT_SIDEBAR_VIEW);
+let tagsOn = false;
+function Harness({
+	scope,
+	tagsAvailable = false,
+	initial = DEFAULT_SIDEBAR_VIEW,
+}: {
+	scope: "sheet" | "settings";
+	tagsAvailable?: boolean;
+	initial?: View;
+}) {
+	const [view, setView] = useState<View>(initial);
 	current = view;
-	return createElement(SidebarViewControls, { view, onChange: setView, scope });
+	tagsOn = tagsAvailable;
+	return createElement(SidebarViewControls, {
+		view,
+		onChange: setView,
+		scope,
+		tagsAvailable,
+	});
 }
 const drawn = () =>
-	arrangeSidebar(ROWS, current, NOON).map(
+	arrangeSidebar(ROWS, current, NOON, { tagsAvailable: tagsOn }).map(
 		(group) => `${group.key}:${group.rows.map((r) => r.session_id).join(",")}`,
 	);
 
@@ -127,6 +151,7 @@ beforeEach(() => {
 	host.roles.clear();
 	host.checked.clear();
 	host.ariaChecked.clear();
+	host.groups.clear();
 	host.hints.clear();
 	host.texts.length = 0;
 	host.os = "web";
@@ -188,6 +213,70 @@ describe("Settings → Sidebar", () => {
 
 		press(host.presses, CONTROL.settingsSidebarShowEnded);
 		expect(drawn()).toEqual(["today:open"]);
+	});
+});
+
+/* The tag view options (mobile sidebar tag view options, 2026-11-22). Both
+ * controls are RELAY-GATED, and the grouping's selected value is the DRAWN one
+ * so a stored `tag` never claims a mode the list is not drawing. */
+describe("the tag view options", () => {
+	it("draws the Tag grouping and the Show tags switch only on a relay that has tags", () => {
+		act(() =>
+			root.render(
+				createElement(Harness, { scope: "sheet", tagsAvailable: false }),
+			),
+		);
+		expect(host.choices.has(CONTROL.sidebarViewGroupTag)).toBe(false);
+		expect(host.presses.has(CONTROL.sidebarViewShowTags)).toBe(false);
+
+		act(() =>
+			root.render(
+				createElement(Harness, { scope: "settings", tagsAvailable: true }),
+			),
+		);
+		expect(host.choices.has(CONTROL.settingsSidebarGroupTag)).toBe(true);
+		expect(host.roles.get(CONTROL.settingsSidebarShowTags)).toBe("switch");
+		expect(host.checked.get(CONTROL.settingsSidebarShowTags)).toBe(true);
+		// The hint lives in Settings, under the switch (the Show ended pattern).
+		expect(host.texts).toContain("Tags stay in each conversation's menu.");
+	});
+
+	it("the Tag grouping writes and groups the list; Show tags writes its switch", () => {
+		act(() =>
+			root.render(
+				createElement(Harness, { scope: "sheet", tagsAvailable: true }),
+			),
+		);
+		expect(host.groups.get(CONTROL.sidebarViewGroup)).toBe("section");
+		press(host.choices, CONTROL.sidebarViewGroupTag);
+		expect(current.groupBy).toBe("tag");
+		expect(host.groups.get(CONTROL.sidebarViewGroup)).toBe("tag");
+		expect(drawn()).toEqual(["tag:work:open", "untagged:running,ended"]);
+
+		press(host.presses, CONTROL.sidebarViewShowTags);
+		expect(current.showTags).toBe(false);
+		expect(host.checked.get(CONTROL.sidebarViewShowTags)).toBe(false);
+		expect(host.ariaChecked.get(CONTROL.sidebarViewShowTags)).toBe(false);
+		press(host.presses, CONTROL.sidebarViewShowTags);
+		expect(current.showTags).toBe(true);
+	});
+
+	it("a stored Tag on a relay without tags selects Time section and is not rewritten", () => {
+		act(() =>
+			root.render(
+				createElement(Harness, {
+					scope: "settings",
+					tagsAvailable: false,
+					initial: { ...DEFAULT_SIDEBAR_VIEW, groupBy: "tag" },
+				}),
+			),
+		);
+		// The drawn grouping is what the control names…
+		expect(host.groups.get(CONTROL.settingsSidebarGroup)).toBe("section");
+		// …while a write of another field keeps the reader's stored Tag.
+		press(host.presses, CONTROL.settingsSidebarShowEnded);
+		expect(current.groupBy).toBe("tag");
+		expect(current.showEnded).toBe(false);
 	});
 });
 

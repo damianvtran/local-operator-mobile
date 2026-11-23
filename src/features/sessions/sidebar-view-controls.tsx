@@ -1,6 +1,7 @@
 import { Platform, Pressable, Switch, Text, View } from "react-native";
 
 import {
+	drawnGroupBy,
 	SIDEBAR_SECTIONS,
 	type SidebarBasis,
 	type SidebarGroupBy,
@@ -18,11 +19,18 @@ import { switchGeometry, switchRoles } from "@/ui/variants";
 
 /**
  * The drawer's view options, drawn once for two places: the compact sheet the
- * drawer's sliders icon opens (`scope: "sheet"` — order, grouping, ended), and
- * the Settings section (`scope: "settings"` — every option the phone has,
- * including the clock and the per-section switches). One component so the two
+ * drawer's sliders icon opens (`scope: "sheet"` — order, grouping, ended,
+ * tags), and the Settings section (`scope: "settings"` — every option the phone
+ * has, including the clock and the per-section switches). One component so the two
  * cannot drift in labels, order or behaviour; only the ids differ, because a
  * docked drawer and Settings can share a screen and an id is declared once.
+ *
+ * THE TAG CONTROLS ARE GATED ON THE RELAY (`tagsAvailable`, from
+ * `canAssignSessionTags`): an older relay has no tag routes, so both the Tag
+ * grouping and the Show tags switch would be controls that change nothing the
+ * reader can see. A stored `tag` still shows as its drawn answer —
+ * `drawnGroupBy` — while the stored value survives in the store for the next
+ * capable relay.
  *
  * Labels are the desktop's own words (`ui.chat.sidebar_view.*`), mirrored into
  * `mobile.sidebar.*`, so a reader who knows one surface reads the other.
@@ -44,7 +52,9 @@ const IDS = {
 		group: CONTROL.sidebarViewGroup,
 		section: CONTROL.sidebarViewGroupSection,
 		flat: CONTROL.sidebarViewGroupFlat,
+		tag: CONTROL.sidebarViewGroupTag,
 		showEnded: CONTROL.sidebarViewShowEnded,
+		showTags: CONTROL.sidebarViewShowTags,
 	},
 	settings: {
 		order: CONTROL.settingsSidebarOrder,
@@ -53,7 +63,9 @@ const IDS = {
 		group: CONTROL.settingsSidebarGroup,
 		section: CONTROL.settingsSidebarGroupSection,
 		flat: CONTROL.settingsSidebarGroupFlat,
+		tag: CONTROL.settingsSidebarGroupTag,
 		showEnded: CONTROL.settingsSidebarShowEnded,
+		showTags: CONTROL.settingsSidebarShowTags,
 	},
 } as const;
 
@@ -161,10 +173,14 @@ export const SidebarViewControls = ({
 	view,
 	onChange,
 	scope,
+	tagsAvailable,
 }: {
 	view: SidebarView;
 	onChange: (next: SidebarView) => void;
 	scope: "sheet" | "settings";
+	/** `session_tags.available`: draws the tag controls, and decides what a
+	 *  stored `tag` grouping shows as selected. */
+	tagsAvailable: boolean;
 }) => {
 	const ids = IDS[scope];
 	const full = scope === "settings";
@@ -196,7 +212,7 @@ export const SidebarViewControls = ({
 				<Segmented<SidebarGroupBy>
 					testID={ids.group}
 					label={t("mobile.sidebar.group_by")}
-					value={view.groupBy}
+					value={drawnGroupBy(view, tagsAvailable)}
 					onChange={(groupBy) => onChange({ ...view, groupBy })}
 					options={[
 						{
@@ -209,6 +225,15 @@ export const SidebarViewControls = ({
 							label: t("mobile.sidebar.group.one_list"),
 							testID: ids.flat,
 						},
+						...(tagsAvailable
+							? [
+									{
+										value: "tag" as const,
+										label: t("mobile.sidebar.group.tag"),
+										testID: ids.tag,
+									},
+								]
+							: []),
 					]}
 				/>
 			</View>
@@ -245,6 +270,15 @@ export const SidebarViewControls = ({
 				onChange={(showEnded) => onChange({ ...view, showEnded })}
 				testID={ids.showEnded}
 			/>
+			{tagsAvailable ? (
+				<SwitchRow
+					label={t("mobile.sidebar.show_tags")}
+					hint={full ? t("mobile.sidebar.show_tags_hint") : undefined}
+					value={view.showTags}
+					onChange={(showTags) => onChange({ ...view, showTags })}
+					testID={ids.showTags}
+				/>
+			) : null}
 			{full ? (
 				<View className="gap-1">
 					<GroupLabel label={t("mobile.sidebar.sections")} />
