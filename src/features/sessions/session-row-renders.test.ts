@@ -34,13 +34,19 @@ import { type DomShim, installDomShim } from "@/testing/dom-shim";
  * Node renderer with every row mounted.
  */
 
-const counts = vi.hoisted(() => ({ rows: 0, ids: [] as string[] }));
+const counts = vi.hoisted(() => ({
+	rows: 0,
+	ids: [] as string[],
+	/** The props the last `AgentListRow` was drawn with. */
+	props: null as Record<string, unknown> | null,
+}));
 
 vi.mock("@/features/agent-avatar/agent-avatar-view", () => ({
-	AgentListRow: (props: { title: string; testID: string }) => {
+	AgentListRow: (props: Record<string, unknown>) => {
 		counts.rows += 1;
-		counts.ids.push(props.testID);
-		return props.title;
+		counts.ids.push(props.testID as string);
+		counts.props = props;
+		return props.title as string;
 	},
 }));
 vi.mock("@/features/sessions/tag-line", () => ({
@@ -139,6 +145,7 @@ beforeEach(async () => {
 	await apply(frame());
 	counts.rows = 0;
 	counts.ids = [];
+	counts.props = null;
 });
 
 afterEach(async () => {
@@ -198,6 +205,38 @@ describe("sidebar rows per sessions frame", () => {
 		// Same objects, new order: React moves the keyed rows, it renders none.
 		expect(after[0]).toBe(before[9]);
 		expect(counts.rows).toBe(0);
+	});
+});
+
+describe("the row's tag line under the drawer's Show tags switch", () => {
+	/** One row, drawn straight, with the switch's value as its only variable. */
+	const draw = async (showTags: boolean) => {
+		await act(async () =>
+			root?.render(
+				createElement(SessionRow, {
+					session: summary(1),
+					section: "today",
+					selected: false,
+					now: 1_700_000_100_000,
+					reserveLeading: false,
+					tagsAssignable: true,
+					showTags,
+					onActivate: noop,
+					onLongPress: noop,
+				}),
+			),
+		);
+		return counts.props;
+	};
+
+	it("withholds the line and the announcement only when Show tags is off", async () => {
+		const on = await draw(true);
+		expect(on?.tagLine).toBeTruthy();
+		expect(on?.tagAnnouncement).toBe("Tags: work");
+
+		const off = await draw(false);
+		expect(off?.tagLine).toBeUndefined();
+		expect(off?.tagAnnouncement).toBeUndefined();
 	});
 });
 

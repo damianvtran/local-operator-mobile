@@ -62,6 +62,8 @@ import relayComposerContext from "@/i18n/catalogues/en/relay.composer.context.js
 import relayComposer from "@/i18n/catalogues/en/relay.composer.json";
 import healthContext from "@/i18n/catalogues/en/relay.health.context.json";
 import health from "@/i18n/catalogues/en/relay.health.json";
+import relaySkillsContext from "@/i18n/catalogues/en/relay.skills.context.json";
+import relaySkills from "@/i18n/catalogues/en/relay.skills.json";
 import relayTranscriptContext from "@/i18n/catalogues/en/relay.transcript.context.json";
 import relayTranscript from "@/i18n/catalogues/en/relay.transcript.json";
 
@@ -256,6 +258,16 @@ const NAMESPACES = [
 		expected: 3,
 	},
 	{
+		/* The relay's `$skill` picker vocabulary (tray label, hidden tag, the
+		 * skipped-skills notice, the too-large remedy), mirrored key for key from the
+		 * core (`local_operator/i18n/catalogues/<locale>/relay.skills.json`) so the
+		 * phone and relay web describe a `$skill` send in the same words. */
+		name: "relay.skills",
+		messages: relaySkills,
+		context: relaySkillsContext,
+		expected: 4,
+	},
+	{
 		/* The relay's transcript condensing and tool-fold vocabulary, mirrored key
 		 * for key from the core (`local_operator/i18n/catalogues/<locale>/relay.transcript.json`)
 		 * so completed-turn bars, tool folds and receipt labels speak the same words
@@ -292,7 +304,7 @@ const NAMESPACES = [
 		name: "mobile.sidebar",
 		messages: sidebar,
 		context: sidebarContext,
-		expected: 53, // On-device slice +2: the remote row's device line (row.on_device) and the screen-reader label separator (row_label.join) (51 + 2 = 53, counted over the en JSON). O3-c +9: the row's five status words (row_status.*) and four screen-reader label fragments (row_label.*) (42 + 9 = 51, counted over the en JSON). O3-b +15: the Tags sheet and row tag announcement (10) and the row's new marker and plural counts (5) (27 + 15 = 42, counted over the en JSON). PR #275 +2: the conversation row's outbox lines, sending and stopped (25 + 2 = 27)
+		expected: 58, // Sidebar tag view options (2026-11-22): +5 (group.tag, show_tags, show_tags_hint, section.untagged, tag_group.announcement) (53 + 5 = 58, counted over the en JSON). On-device slice +2: the remote row's device line (row.on_device) and the screen-reader label separator (row_label.join) (51 + 2 = 53, counted over the en JSON). O3-c +9: the row's five status words (row_status.*) and four screen-reader label fragments (row_label.*) (42 + 9 = 51, counted over the en JSON). O3-b +15: the Tags sheet and row tag announcement (10) and the row's new marker and plural counts (5) (27 + 15 = 42, counted over the en JSON). PR #275 +2: the conversation row's outbox lines, sending and stopped (25 + 2 = 27)
 	},
 	{
 		/* This app's own short chrome words the relay has no key for: the sidebar
@@ -646,11 +658,28 @@ describe("the English catalogues", () => {
 		 * home work list: +5 mobile.home.work.* keys, −2 pool chips
 		 * (suggestion.phone_access, suggestion.last_turn): 1377 + 3 = 1380,
 		 * home 92 → 95. */
+		/* Convergence of feat/sidebar-tag-view-options (5e1a1053) with main
+		 * cc5a5e5c: both chains kept; main's 1380 + this branch's 5
+		 * mobile.sidebar keys (the Tag grouping, Show tags and its hint,
+		 * Untagged, the group heading's spoken name) = 1385, derived by summing
+		 * the keys of all 26 merged en catalogue files (mobile.sidebar 58,
+		 * mobile.home 95, mobile.session 103). */
+		/* Attach-sheet rows (design consult 2026-11-22): + mobile.composer_input
+		 * paste.empty_ios (the sheet's Paste row on iOS names both remedies):
+		 * 1380 + 1 = 1381, counted over all 26 English JSON catalogues. */
+		/* Convergence with main 21e8f330 (#367): both chains above kept; 1381
+		 * + this branch's 5 mobile.sidebar keys = 1386, derived by summing the
+		 * keys of all 26 merged en catalogue files (mobile.sidebar 58,
+		 * mobile.home 95, mobile.session 103, mobile.composer_input 25). */
 		/* Attach-sheet rows add mobile.composer_input.paste.empty_ios (#367),
 		 * and the chart data disclosure adds one mobile.session key (#376).
 		 * Both belong in the independent inventory: 1380 + 1 + 1 = 1382,
 		 * counted over all 26 JSON catalogues in each shipped locale. */
-		expect(total).toBe(1382);
+		/* Convergence #3 with main dad9b786 (#376): main's 1382 + this branch's 5 mobile.sidebar keys = 1387. */
+		/* feat/session-skill-autocomplete: + the four mirrored relay.skills keys:
+		 * 1382 + 4 = 1386, the generated catalogue's own count over this tree. */
+		/* Convergence #4 with main 97045aa8 (#372): main's 1386 + this branch's 5 mobile.sidebar keys = 1391, derived by summing every top-level key of all 27 merged en catalogue files (mobile.sidebar 58); every shipped locale also sums to 1391. */
+		expect(total).toBe(1391);
 	});
 
 	it("lists every catalogue file this suite checks", () => {

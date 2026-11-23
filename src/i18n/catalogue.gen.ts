@@ -1041,6 +1041,7 @@ export type CatalogueKey =
 	| "mobile.sidebar.empty_by_view.next"
 	| "mobile.sidebar.empty_by_view.reset"
 	| "mobile.sidebar.group.one_list"
+	| "mobile.sidebar.group.tag"
 	| "mobile.sidebar.group.time_section"
 	| "mobile.sidebar.group_by"
 	| "mobile.sidebar.hidden_sections"
@@ -1070,11 +1071,15 @@ export type CatalogueKey =
 	| "mobile.sidebar.section.pinned"
 	| "mobile.sidebar.section.running"
 	| "mobile.sidebar.section.today"
+	| "mobile.sidebar.section.untagged"
 	| "mobile.sidebar.section.week"
 	| "mobile.sidebar.sections"
 	| "mobile.sidebar.settings_heading"
 	| "mobile.sidebar.show_ended"
 	| "mobile.sidebar.show_ended_hint"
+	| "mobile.sidebar.show_tags"
+	| "mobile.sidebar.show_tags_hint"
+	| "mobile.sidebar.tag_group.announcement"
 	| "mobile.sidebar.tags.announcement"
 	| "mobile.sidebar.tags.empty_headline"
 	| "mobile.sidebar.tags.empty_next"
@@ -1394,6 +1399,10 @@ export type CatalogueKey =
 	| "relay.health.quiet_detail"
 	| "relay.health.reconnecting"
 	| "relay.health.reconnecting_detail"
+	| "relay.skills.skipped"
+	| "relay.skills.too_large"
+	| "relay.skills.tray.hidden"
+	| "relay.skills.tray.label"
 	| "relay.transcript.composer.queued"
 	| "relay.transcript.fold.failed_label"
 	| "relay.transcript.fold.more"
@@ -2254,6 +2263,7 @@ export type NoParamKey =
 	| "mobile.sidebar.empty_by_view.next"
 	| "mobile.sidebar.empty_by_view.reset"
 	| "mobile.sidebar.group.one_list"
+	| "mobile.sidebar.group.tag"
 	| "mobile.sidebar.group.time_section"
 	| "mobile.sidebar.group_by"
 	| "mobile.sidebar.more_settings"
@@ -2274,11 +2284,14 @@ export type NoParamKey =
 	| "mobile.sidebar.section.pinned"
 	| "mobile.sidebar.section.running"
 	| "mobile.sidebar.section.today"
+	| "mobile.sidebar.section.untagged"
 	| "mobile.sidebar.section.week"
 	| "mobile.sidebar.sections"
 	| "mobile.sidebar.settings_heading"
 	| "mobile.sidebar.show_ended"
 	| "mobile.sidebar.show_ended_hint"
+	| "mobile.sidebar.show_tags"
+	| "mobile.sidebar.show_tags_hint"
 	| "mobile.sidebar.tags.empty_headline"
 	| "mobile.sidebar.tags.empty_next"
 	| "mobile.sidebar.tags.load_failed_body"
@@ -2539,6 +2552,9 @@ export type NoParamKey =
 	| "relay.health.quiet_detail"
 	| "relay.health.reconnecting"
 	| "relay.health.reconnecting_detail"
+	| "relay.skills.too_large"
+	| "relay.skills.tray.hidden"
+	| "relay.skills.tray.label"
 	| "relay.transcript.fold.failed_label"
 	| "relay.transcript.label.ask"
 	| "relay.transcript.label.job"
@@ -3566,6 +3582,7 @@ export type MessageParams = {
 	"mobile.sidebar.empty_by_view.next": NoParams;
 	"mobile.sidebar.empty_by_view.reset": NoParams;
 	"mobile.sidebar.group.one_list": NoParams;
+	"mobile.sidebar.group.tag": NoParams;
 	"mobile.sidebar.group.time_section": NoParams;
 	"mobile.sidebar.group_by": NoParams;
 	"mobile.sidebar.hidden_sections": { count: number };
@@ -3595,11 +3612,15 @@ export type MessageParams = {
 	"mobile.sidebar.section.pinned": NoParams;
 	"mobile.sidebar.section.running": NoParams;
 	"mobile.sidebar.section.today": NoParams;
+	"mobile.sidebar.section.untagged": NoParams;
 	"mobile.sidebar.section.week": NoParams;
 	"mobile.sidebar.sections": NoParams;
 	"mobile.sidebar.settings_heading": NoParams;
 	"mobile.sidebar.show_ended": NoParams;
 	"mobile.sidebar.show_ended_hint": NoParams;
+	"mobile.sidebar.show_tags": NoParams;
+	"mobile.sidebar.show_tags_hint": NoParams;
+	"mobile.sidebar.tag_group.announcement": { name: string | number; count: number };
 	"mobile.sidebar.tags.announcement": { names: string | number };
 	"mobile.sidebar.tags.empty_headline": NoParams;
 	"mobile.sidebar.tags.empty_next": NoParams;
@@ -3919,6 +3940,10 @@ export type MessageParams = {
 	"relay.health.quiet_detail": NoParams;
 	"relay.health.reconnecting": NoParams;
 	"relay.health.reconnecting_detail": NoParams;
+	"relay.skills.skipped": { names: string | number; count: number };
+	"relay.skills.too_large": NoParams;
+	"relay.skills.tray.hidden": NoParams;
+	"relay.skills.tray.label": NoParams;
 	"relay.transcript.composer.queued": { count: number };
 	"relay.transcript.fold.failed_label": NoParams;
 	"relay.transcript.fold.more": { count: number };
@@ -4967,6 +4992,7 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.sidebar.empty_by_view.next": "Turn sections or ended sessions back on, or reset the view.",
 	"mobile.sidebar.empty_by_view.reset": "Reset view",
 	"mobile.sidebar.group.one_list": "In one list",
+	"mobile.sidebar.group.tag": "Tag",
 	"mobile.sidebar.group.time_section": "Time section",
 	"mobile.sidebar.group_by": "Group by",
 	"mobile.sidebar.hidden_sections": "{count, plural, one {# section hidden} other {# sections hidden}}",
@@ -4996,11 +5022,15 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.sidebar.section.pinned": "Pinned",
 	"mobile.sidebar.section.running": "Running",
 	"mobile.sidebar.section.today": "Today",
+	"mobile.sidebar.section.untagged": "Untagged",
 	"mobile.sidebar.section.week": "This week",
 	"mobile.sidebar.sections": "Sections",
 	"mobile.sidebar.settings_heading": "Sidebar",
 	"mobile.sidebar.show_ended": "Show ended sessions",
 	"mobile.sidebar.show_ended_hint": "Pinned and running conversations always show.",
+	"mobile.sidebar.show_tags": "Show tags",
+	"mobile.sidebar.show_tags_hint": "Tags stay in each conversation's menu.",
+	"mobile.sidebar.tag_group.announcement": "{name}, {count, plural, one {# conversation} other {# conversations}}",
 	"mobile.sidebar.tags.announcement": "Tags: {names}",
 	"mobile.sidebar.tags.empty_headline": "No categories yet.",
 	"mobile.sidebar.tags.empty_next": "Created on desktop.",
@@ -5320,6 +5350,10 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"relay.health.quiet_detail": "This session on your computer has stopped responding — it may be busy or stuck. A send can show a failure and still arrive once it catches up. Retrying won't send it twice.",
 	"relay.health.reconnecting": "Reconnecting",
 	"relay.health.reconnecting_detail": "This phone lost its connection to your computer and keeps trying. The session may still be running there; sending may fail until the connection is back.",
+	"relay.skills.skipped": "Sent without {names} — {count, plural, one {that skill has} other {those skills have}} no content to attach.",
+	"relay.skills.too_large": "These skills are too large to send together. Remove one skill and send again.",
+	"relay.skills.tray.hidden": "hidden",
+	"relay.skills.tray.label": "Skills",
 	"relay.transcript.composer.queued": "{count, plural, one {# queued} other {# queued}}",
 	"relay.transcript.fold.failed_label": "Includes a failed action",
 	"relay.transcript.fold.more": "{count, plural, one {and # other action} other {and # other actions}}",
@@ -6353,6 +6387,7 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.sidebar.empty_by_view.next": { role: "help", note: "Second line of that empty state: names the ways back. 'Sections' are Pinned/Running/Today/This week/Older; 'ended sessions' is the Show ended sessions switch." },
 	"mobile.sidebar.empty_by_view.reset": { role: "button", note: "Action of that empty state: restores the default drawer view (every section shown, ended sessions shown, default order and grouping)." },
 	"mobile.sidebar.group.one_list": { role: "button", note: "Grouping option: one list with no section headings. Desktop: ui.chat.sidebar_view.one_list." },
+	"mobile.sidebar.group.tag": { role: "button", note: "Grouping option: one group per tag, pinned conversations first and untagged last. Only offered on a relay with the tag registry. Desktop: ui.chat.sidebar_view.tag." },
 	"mobile.sidebar.group.time_section": { role: "button", note: "Grouping option: headed sections Pinned, Running, Today, This week, Older. Desktop: ui.chat.sidebar_view.time_section." },
 	"mobile.sidebar.group_by": { role: "heading", note: "Label of the choice of how the drawer groups conversations. Desktop: ui.chat.sidebar_view.group_by." },
 	"mobile.sidebar.hidden_sections": { role: "status", note: "Quiet line at the top of the drawer's list when the reader has switched sections off in Settings → Sidebar; {count} is a number. Preserve ICU plural arms and #. Desktop: ui.chat.sidebar_view.hidden." },
@@ -6382,11 +6417,15 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.sidebar.section.pinned": { role: "heading", note: "Drawer section heading for conversations the reader pinned; also the switch label that shows or hides it. Desktop: ui.chat.sidebar_view.section.pinned." },
 	"mobile.sidebar.section.running": { role: "heading", note: "Drawer section heading for conversations with a turn in flight or waiting on the reader. Desktop: ui.chat.sidebar_view.section.running." },
 	"mobile.sidebar.section.today": { role: "heading", note: "Drawer section heading for conversations from this local calendar day. Desktop: ui.chat.sidebar_view.section.today." },
+	"mobile.sidebar.section.untagged": { role: "heading", note: "Drawer section heading under the Tag grouping for conversations whose primary tag is unset. Not a switch label; the tag grouping has no per-section switches." },
 	"mobile.sidebar.section.week": { role: "heading", note: "Drawer section heading for conversations from the last six calendar days, not today. Desktop: ui.chat.sidebar_view.section.week." },
 	"mobile.sidebar.sections": { role: "heading", note: "Label of the list of switches that show or hide each drawer section. Desktop: ui.chat.sidebar_view.sections." },
 	"mobile.sidebar.settings_heading": { role: "heading", note: "Heading of the Settings section holding every drawer (sidebar) view option." },
 	"mobile.sidebar.show_ended": { role: "button", note: "Switch label: whether conversations whose session has ended stay in the drawer. Phone-only setting; on by default." },
 	"mobile.sidebar.show_ended_hint": { role: "help", note: "One sentence under the 'Show ended sessions' switch: turning it off never hides a pinned or running conversation." },
+	"mobile.sidebar.show_tags": { role: "button", note: "Switch label: whether each conversation row paints its tag line in the drawer. On by default; a relay without the tag routes never shows the switch." },
+	"mobile.sidebar.show_tags_hint": { role: "help", note: "One sentence under the 'Show tags' switch: turning the line off does not remove anything, because the tags sheet in each conversation's long-press menu still assigns them." },
+	"mobile.sidebar.tag_group.announcement": { role: "meta", note: "Screen-reader name of a tag group's heading. {name} is the operator's own tag name (or the word Untagged) and must not be translated here; the ICU plural says how many conversations the group holds and keeps the `#` placeholder." },
 	"mobile.sidebar.tags.announcement": { role: "meta", note: "Screen-reader name of a conversation row's tag line. {names} is the operator's own category names joined with \", \" (user data, never translated). Keep the placeholder; the \"Tags\" word should match relay.chrome.row.tags." },
 	"mobile.sidebar.tags.empty_headline": { role: "heading", note: "Empty-state headline in the Tags sheet when no tag categories exist. Short sentence, keep under ~28 characters; shown at 200% text in a ~300 pt sheet. No placeholders." },
 	"mobile.sidebar.tags.empty_next": { role: "help", note: "Empty-state second line in the Tags sheet: categories are created in the desktop app, not on the phone. Very short (the 200% frame cut a longer line); keep under ~24 characters. No placeholders." },
@@ -6706,6 +6745,10 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"relay.health.quiet_detail": { role: "help", note: "Sheet body for the YELLOW 'Not answering' state when the session is reachable but has gone quiet (heartbeat_stale). True behaviour to keep: a send can report a failure yet still be delivered once the session catches up; retrying under the same command id is safe. Do not promise queueing or delivery." },
 	"relay.health.reconnecting": { role: "status", note: "Title of the sheet and accessible name of the YELLOW status dot when the PHONE's own connection is down (the computer may be fine). One short state word, no ellipsis. Translator budget: 16 cells (the core's own maxCells for this key at 24d328a19a); the native context schema has no maxCells field, so the number is recorded here." },
 	"relay.health.reconnecting_detail": { role: "help", note: "Sheet body for the reconnecting state. It is the PHONE's connection that is down; the session itself may still be running, and the phone keeps trying on its own. 'Sending may fail' is deliberate — never promise that messages wait or are queued." },
+	"relay.skills.skipped": { role: "status", note: "Mirrored verbatim from the core relay catalogue (local_operator/i18n/catalogues/en/relay.skills.json at bfa3df2ac). Notice after a message was sent: the listed skills had no content to attach, so the message went without them. {names} is a comma-separated list of $-prefixed skill names (technical tokens, never translated); {count} is how many. The message WAS sent." },
+	"relay.skills.too_large": { role: "status", note: "Mirrored verbatim from the core relay catalogue (local_operator/i18n/catalogues/en/relay.skills.json at bfa3df2ac). Error under the message field: the skills named in the draft are too large to send together, so nothing was sent and the draft is kept. States the remedy: remove one skill and send again." },
+	"relay.skills.tray.hidden": { role: "meta", note: "Mirrored verbatim from the core relay catalogue (local_operator/i18n/catalogues/en/relay.skills.json at bfa3df2ac). Small tag on a skill row whose author marked it as not offered automatically (frontmatter 'hide'); the skill is still listed because the user typed its name. One lowercase word, no punctuation." },
+	"relay.skills.tray.label": { role: "heading", note: "Mirrored verbatim from the core relay catalogue (local_operator/i18n/catalogues/en/relay.skills.json at bfa3df2ac). Accessible name of the list of skills docked above the message field while the user types a $name. The noun 'skills' as the product names them; no punctuation." },
 	"relay.transcript.composer.queued": { role: "status", note: "Mirrored from the core relay catalogue (local_operator/i18n/catalogues/en/relay.transcript.context.json; core role: composer queued prompt count). Restores the pre-redesign queued-prompt count; {count} is the number of prompts waiting, not tool calls." },
 	"relay.transcript.fold.failed_label": { role: "status", note: "Mirrored from the core relay catalogue (local_operator/i18n/catalogues/en/relay.transcript.context.json; core role: collapsed group accessible failure state). Screen-reader text accompanying the failure glyph; it does not claim a count." },
 	"relay.transcript.fold.more": { role: "meta", note: "Mirrored from the core relay catalogue (local_operator/i18n/catalogues/en/relay.transcript.context.json; core role: tool-fold overflow unit). Follows at most five count units and counts actions hidden by that display cap, not additional tool types." },
@@ -7753,6 +7796,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.sidebar.empty_by_view.next": "Vuelve a activar secciones o sesiones finalizadas, o restablece la vista.",
 		"mobile.sidebar.empty_by_view.reset": "Restablecer vista",
 		"mobile.sidebar.group.one_list": "En una lista",
+		"mobile.sidebar.group.tag": "Etiqueta",
 		"mobile.sidebar.group.time_section": "Sección temporal",
 		"mobile.sidebar.group_by": "Agrupar por",
 		"mobile.sidebar.hidden_sections": "{count, plural, one {# sección oculta} many {# de secciones ocultas} other {# secciones ocultas}}",
@@ -7782,11 +7826,15 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.sidebar.section.pinned": "Fijadas",
 		"mobile.sidebar.section.running": "En curso",
 		"mobile.sidebar.section.today": "Hoy",
+		"mobile.sidebar.section.untagged": "Sin etiqueta",
 		"mobile.sidebar.section.week": "Esta semana",
 		"mobile.sidebar.sections": "Secciones",
 		"mobile.sidebar.settings_heading": "Barra lateral",
 		"mobile.sidebar.show_ended": "Mostrar sesiones finalizadas",
 		"mobile.sidebar.show_ended_hint": "Las conversaciones fijadas y en curso siempre se muestran.",
+		"mobile.sidebar.show_tags": "Mostrar etiquetas",
+		"mobile.sidebar.show_tags_hint": "Las etiquetas siguen en el menú de cada conversación.",
+		"mobile.sidebar.tag_group.announcement": "{name}, {count, plural, one {# conversación} many {# de conversaciones} other {# conversaciones}}",
 		"mobile.sidebar.tags.announcement": "Etiquetas: {names}",
 		"mobile.sidebar.tags.empty_headline": "Aún no hay categorías.",
 		"mobile.sidebar.tags.empty_next": "Créalas en tu máquina.",
@@ -8106,6 +8154,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"relay.health.quiet_detail": "Esta sesión dejó de responder en tu máquina — puede que esté ocupada o atascada. Un mensaje puede aparecer como fallido y aun así llegar cuando la sesión se ponga al día. Reintentar no lo enviará dos veces.",
 		"relay.health.reconnecting": "Reconectando",
 		"relay.health.reconnecting_detail": "Este teléfono perdió la conexión con tu máquina y sigue intentando reconectarse. Puede que la sesión siga ejecutándose allí; un envío puede fallar hasta que vuelva la conexión.",
+		"relay.skills.skipped": "Enviado sin {names} — {count, plural, one {esa habilidad no tiene contenido que adjuntar} many {esas habilidades no tienen contenido que adjuntar} other {esas habilidades no tienen contenido que adjuntar}}.",
+		"relay.skills.too_large": "Estas habilidades son demasiado grandes para enviarlas juntas. Quita una habilidad y envía de nuevo.",
+		"relay.skills.tray.hidden": "oculta",
+		"relay.skills.tray.label": "Habilidades",
 		"relay.transcript.composer.queued": "{count, plural, one {# en cola} many {# en cola} other {# en cola}}",
 		"relay.transcript.fold.failed_label": "Incluye una acción fallida",
 		"relay.transcript.fold.more": "{count, plural, one {y # acción más} many {y # de acciones más} other {y # acciones más}}",
@@ -9137,6 +9189,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.sidebar.empty_by_view.next": "Réactivez des sections ou les sessions terminées, ou réinitialisez l’affichage.",
 		"mobile.sidebar.empty_by_view.reset": "Réinitialiser l’affichage",
 		"mobile.sidebar.group.one_list": "Une seule liste",
+		"mobile.sidebar.group.tag": "Tags",
 		"mobile.sidebar.group.time_section": "Section temporelle",
 		"mobile.sidebar.group_by": "Grouper par",
 		"mobile.sidebar.hidden_sections": "{count, plural, one {# section masquée} many {# de sections masquées} other {# sections masquées}}",
@@ -9166,11 +9219,15 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.sidebar.section.pinned": "Épinglées",
 		"mobile.sidebar.section.running": "En cours",
 		"mobile.sidebar.section.today": "Aujourd’hui",
+		"mobile.sidebar.section.untagged": "Sans tag",
 		"mobile.sidebar.section.week": "Cette semaine",
 		"mobile.sidebar.sections": "Sections",
 		"mobile.sidebar.settings_heading": "Barre latérale",
 		"mobile.sidebar.show_ended": "Afficher les sessions terminées",
 		"mobile.sidebar.show_ended_hint": "Les conversations épinglées et en cours restent toujours visibles.",
+		"mobile.sidebar.show_tags": "Afficher les tags",
+		"mobile.sidebar.show_tags_hint": "Les tags restent dans le menu de chaque conversation.",
+		"mobile.sidebar.tag_group.announcement": "{name}, {count, plural, one {# conversation} many {# de conversations} other {# conversations}}",
 		"mobile.sidebar.tags.announcement": "Tags : {names}",
 		"mobile.sidebar.tags.empty_headline": "Pas encore de catégorie.",
 		"mobile.sidebar.tags.empty_next": "À créer sur ordinateur.",
@@ -9490,6 +9547,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"relay.health.quiet_detail": "Sur votre ordinateur, cette session ne répond plus — elle est peut-être occupée ou bloquée. Un message peut être signalé en échec et arriver malgré tout quand elle aura rattrapé son retard. Réessayer ne l’enverra pas en double.",
 		"relay.health.reconnecting": "Reconnexion",
 		"relay.health.reconnecting_detail": "Ce téléphone a perdu la connexion avec votre ordinateur et continue d’essayer de se reconnecter. La session s’y exécute peut-être encore ; un envoi peut échouer tant que la connexion n’est pas rétablie.",
+		"relay.skills.skipped": "Envoyé sans {names} — {count, plural, one {cette compétence n’a pas de contenu à joindre} many {ces compétences n’ont pas de contenu à joindre} other {ces compétences n’ont pas de contenu à joindre}}.",
+		"relay.skills.too_large": "Ces compétences sont trop volumineuses pour être envoyées ensemble. Retirez-en une et renvoyez le message.",
+		"relay.skills.tray.hidden": "masquée",
+		"relay.skills.tray.label": "Compétences",
 		"relay.transcript.composer.queued": "{count, plural, one {# en attente} many {# en attente} other {# en attente}}",
 		"relay.transcript.fold.failed_label": "Contient une action en échec",
 		"relay.transcript.fold.more": "{count, plural, one {et # autre action} many {et # d’autres actions} other {et # autres actions}}",
@@ -10521,6 +10582,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.sidebar.empty_by_view.next": "खंड या समाप्त सत्र फिर से चालू करें, या दृश्य रीसेट करें।",
 		"mobile.sidebar.empty_by_view.reset": "दृश्य रीसेट करें",
 		"mobile.sidebar.group.one_list": "एक सूची में",
+		"mobile.sidebar.group.tag": "टैग",
 		"mobile.sidebar.group.time_section": "समय के खंड",
 		"mobile.sidebar.group_by": "समूह बनाएँ",
 		"mobile.sidebar.hidden_sections": "{count, plural, one {# खंड छिपा है} other {# खंड छिपे हैं}}",
@@ -10550,11 +10612,15 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.sidebar.section.pinned": "पिन किए हुए",
 		"mobile.sidebar.section.running": "चल रहे",
 		"mobile.sidebar.section.today": "आज",
+		"mobile.sidebar.section.untagged": "बिना टैग",
 		"mobile.sidebar.section.week": "इस हफ़्ते",
 		"mobile.sidebar.sections": "खंड",
 		"mobile.sidebar.settings_heading": "साइडबार",
 		"mobile.sidebar.show_ended": "समाप्त सत्र दिखाएँ",
 		"mobile.sidebar.show_ended_hint": "पिन की हुई और चल रही बातचीत हमेशा दिखती हैं।",
+		"mobile.sidebar.show_tags": "टैग दिखाएँ",
+		"mobile.sidebar.show_tags_hint": "टैग हर बातचीत के मेन्यू में रहते हैं।",
+		"mobile.sidebar.tag_group.announcement": "{name}, {count, plural, one {# बातचीत} other {# बातचीत}}",
 		"mobile.sidebar.tags.announcement": "टैग: {names}",
 		"mobile.sidebar.tags.empty_headline": "अभी कोई श्रेणी नहीं।",
 		"mobile.sidebar.tags.empty_next": "डेस्कटॉप ऐप में बनती हैं।",
@@ -10874,6 +10940,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"relay.health.quiet_detail": "आपके कंप्यूटर पर इस सत्र ने उत्तर देना बंद कर दिया है — शायद यह व्यस्त हो या अटक गया हो। भेजा गया संदेश विफल दिख सकता है, फिर भी सत्र के दोबारा उत्तर देने पर पहुँच सकता है। फिर से कोशिश करने पर भी यह दो बार नहीं पहुँचेगा।",
 		"relay.health.reconnecting": "फिर से कनेक्ट हो रहा",
 		"relay.health.reconnecting_detail": "इस फ़ोन का आपके कंप्यूटर से कनेक्शन टूट गया है और यह लगातार फिर से कनेक्ट होने की कोशिश कर रहा है। हो सकता है सत्र वहाँ अब भी चल रहा हो; कनेक्शन वापस आने तक संदेश भेजना विफल हो सकता है।",
+		"relay.skills.skipped": "{names} के बिना भेजा गया — {count, plural, one {उस कौशल में ऐसी कोई सामग्री नहीं है जिसे संलग्न किया जा सके} other {उन कौशलों में ऐसी कोई सामग्री नहीं है जिसे संलग्न किया जा सके}}।",
+		"relay.skills.too_large": "ये कौशल एक साथ भेजने के लिए बहुत बड़े हैं। एक कौशल हटाएँ और फिर से भेजें।",
+		"relay.skills.tray.hidden": "छिपा",
+		"relay.skills.tray.label": "कौशल",
 		"relay.transcript.composer.queued": "{count, plural, one {# कतार में} other {# कतार में}}",
 		"relay.transcript.fold.failed_label": "इसमें एक विफल क्रिया शामिल है",
 		"relay.transcript.fold.more": "{count, plural, one {और # अन्य क्रिया} other {और # अन्य क्रियाएँ}}",
@@ -11905,6 +11975,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.sidebar.empty_by_view.next": "Снова включите разделы или завершённые сеансы либо сбросьте вид.",
 		"mobile.sidebar.empty_by_view.reset": "Сбросить вид",
 		"mobile.sidebar.group.one_list": "Одним списком",
+		"mobile.sidebar.group.tag": "Тег",
 		"mobile.sidebar.group.time_section": "По времени",
 		"mobile.sidebar.group_by": "Группировать по",
 		"mobile.sidebar.hidden_sections": "{count, plural, one {скрыт # раздел} few {скрыто # раздела} many {скрыто # разделов} other {скрыто # раздела}}",
@@ -11934,11 +12005,15 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.sidebar.section.pinned": "Закреплённые",
 		"mobile.sidebar.section.running": "В работе",
 		"mobile.sidebar.section.today": "Сегодня",
+		"mobile.sidebar.section.untagged": "Без тега",
 		"mobile.sidebar.section.week": "На этой неделе",
 		"mobile.sidebar.sections": "Разделы",
 		"mobile.sidebar.settings_heading": "Боковая панель",
 		"mobile.sidebar.show_ended": "Показывать завершённые сеансы",
 		"mobile.sidebar.show_ended_hint": "Закреплённые и выполняющиеся беседы показываются всегда.",
+		"mobile.sidebar.show_tags": "Показывать теги",
+		"mobile.sidebar.show_tags_hint": "Теги остаются в меню каждой беседы.",
+		"mobile.sidebar.tag_group.announcement": "{name}, {count, plural, one {# беседа} few {# беседы} many {# бесед} other {# беседы}}",
 		"mobile.sidebar.tags.announcement": "Теги: {names}",
 		"mobile.sidebar.tags.empty_headline": "Категорий пока нет.",
 		"mobile.sidebar.tags.empty_next": "Создаются на компьютере.",
@@ -12258,6 +12333,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"relay.health.quiet_detail": "Эта сессия на компьютере перестала отвечать — возможно, она занята или зависла. Даже если отправка покажет ошибку, сообщение может дойти, когда сессия наверстает упущенное. Повторная попытка не отправит его дважды.",
 		"relay.health.reconnecting": "Переподключение",
 		"relay.health.reconnecting_detail": "Этот телефон потерял подключение к компьютеру и продолжает попытки переподключиться. Сессия там, возможно, всё ещё работает; пока подключение не восстановится, отправка может не пройти.",
+		"relay.skills.skipped": "Отправлено без {names} — {count, plural, one {у этого навыка нет содержимого для вложения} few {у этих навыков нет содержимого для вложения} many {у этих навыков нет содержимого для вложения} other {у этих навыков нет содержимого для вложения}}.",
+		"relay.skills.too_large": "Эти навыки слишком велики, чтобы отправить их вместе. Удалите один навык и отправьте снова.",
+		"relay.skills.tray.hidden": "скрыт",
+		"relay.skills.tray.label": "Навыки",
 		"relay.transcript.composer.queued": "{count, plural, one {# в очереди} few {# в очереди} many {# в очереди} other {# в очереди}}",
 		"relay.transcript.fold.failed_label": "Содержит неудачное действие",
 		"relay.transcript.fold.more": "{count, plural, one {и ещё # действие} few {и ещё # действия} many {и ещё # действий} other {и ещё # действия}}",
@@ -13289,6 +13368,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.sidebar.empty_by_view.next": "حصے یا ختم شدہ سیشن دوبارہ آن کریں، یا منظر ری سیٹ کریں۔",
 		"mobile.sidebar.empty_by_view.reset": "منظر ری سیٹ کریں",
 		"mobile.sidebar.group.one_list": "ایک فہرست میں",
+		"mobile.sidebar.group.tag": "ٹیگ",
 		"mobile.sidebar.group.time_section": "وقت کا حصہ",
 		"mobile.sidebar.group_by": "گروہ بندی",
 		"mobile.sidebar.hidden_sections": "{count, plural, one {# حصہ پوشیدہ ہے} other {# حصے پوشیدہ ہیں}}",
@@ -13318,11 +13398,15 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.sidebar.section.pinned": "پن شدہ",
 		"mobile.sidebar.section.running": "جاری",
 		"mobile.sidebar.section.today": "آج",
+		"mobile.sidebar.section.untagged": "بغیر ٹیگ",
 		"mobile.sidebar.section.week": "اس ہفتے",
 		"mobile.sidebar.sections": "حصے",
 		"mobile.sidebar.settings_heading": "سائیڈبار",
 		"mobile.sidebar.show_ended": "ختم شدہ سیشن دکھائیں",
 		"mobile.sidebar.show_ended_hint": "پن شدہ اور جاری گفتگو ہمیشہ دکھائی دیتی ہیں۔",
+		"mobile.sidebar.show_tags": "ٹیگ دکھائیں",
+		"mobile.sidebar.show_tags_hint": "ٹیگ ہر گفتگو کے مینیو میں رہتے ہیں۔",
+		"mobile.sidebar.tag_group.announcement": "{name}, {count, plural, one {# گفتگو} other {# گفتگوئیں}}",
 		"mobile.sidebar.tags.announcement": "ٹیگز: {names}",
 		"mobile.sidebar.tags.empty_headline": "ابھی کوئی زمرہ نہیں۔",
 		"mobile.sidebar.tags.empty_next": "ڈیسک ٹاپ پر بنتے ہیں۔",
@@ -13642,6 +13726,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"relay.health.quiet_detail": "آپ کے کمپیوٹر پر اس سیشن نے جواب دینا بند کر دیا ہے — شاید یہ مصروف ہو یا اٹک گیا ہو۔ بھیجا گیا پیغام ناکام دکھائی دے سکتا ہے، مگر سیشن کے پھر سے جواب دینے پر پہنچ بھی سکتا ہے۔ دوبارہ کوشش کرنے پر بھی یہ دو بار نہیں پہنچے گا۔",
 		"relay.health.reconnecting": "پھر منسلک ہو رہا",
 		"relay.health.reconnecting_detail": "اس فون کا آپ کے کمپیوٹر سے کنکشن ٹوٹ گیا ہے اور یہ مسلسل دوبارہ کوشش کر رہا ہے۔ ہو سکتا ہے سیشن وہاں اب بھی چل رہا ہو؛ کنکشن بحال ہونے تک پیغام بھیجنا ناکام ہو سکتا ہے۔",
+		"relay.skills.skipped": "{names} کے بغیر بھیجا گیا — {count, plural, one {اس مہارت میں ایسا کوئی مواد نہیں ہے جسے منسلک کیا جا سکے} other {ان مہارتوں میں ایسا کوئی مواد نہیں ہے جسے منسلک کیا جا سکے}}۔",
+		"relay.skills.too_large": "یہ مہارتیں ایک ساتھ بھیجنے کے لیے بہت بڑی ہیں۔ ایک مہارت ہٹا کر دوبارہ بھیجیں۔",
+		"relay.skills.tray.hidden": "پوشیدہ",
+		"relay.skills.tray.label": "مہارتیں",
 		"relay.transcript.composer.queued": "{count, plural, one {# قطار میں} other {# قطار میں}}",
 		"relay.transcript.fold.failed_label": "اس میں ناکام عمل شامل ہے",
 		"relay.transcript.fold.more": "{count, plural, one {اور # دوسرا عمل} other {اور # دیگر اعمال}}",
@@ -14673,6 +14761,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.sidebar.empty_by_view.next": "Bật lại các mục hoặc phiên đã kết thúc, hoặc đặt lại chế độ xem.",
 		"mobile.sidebar.empty_by_view.reset": "Đặt lại chế độ xem",
 		"mobile.sidebar.group.one_list": "Trong một danh sách",
+		"mobile.sidebar.group.tag": "Nhãn",
 		"mobile.sidebar.group.time_section": "Mục thời gian",
 		"mobile.sidebar.group_by": "Nhóm theo",
 		"mobile.sidebar.hidden_sections": "{count, plural, other {Đã ẩn # mục}}",
@@ -14702,11 +14791,15 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.sidebar.section.pinned": "Đã ghim",
 		"mobile.sidebar.section.running": "Đang chạy",
 		"mobile.sidebar.section.today": "Hôm nay",
+		"mobile.sidebar.section.untagged": "Không có nhãn",
 		"mobile.sidebar.section.week": "Tuần này",
 		"mobile.sidebar.sections": "Các mục",
 		"mobile.sidebar.settings_heading": "Thanh bên",
 		"mobile.sidebar.show_ended": "Hiện các phiên đã kết thúc",
 		"mobile.sidebar.show_ended_hint": "Các cuộc trò chuyện đã ghim và đang chạy luôn hiển thị.",
+		"mobile.sidebar.show_tags": "Hiện nhãn",
+		"mobile.sidebar.show_tags_hint": "Nhãn vẫn nằm trong menu của từng cuộc trò chuyện.",
+		"mobile.sidebar.tag_group.announcement": "{name}, {count, plural, other {# cuộc trò chuyện}}",
 		"mobile.sidebar.tags.announcement": "Nhãn: {names}",
 		"mobile.sidebar.tags.empty_headline": "Chưa có danh mục nào.",
 		"mobile.sidebar.tags.empty_next": "Tạo trên máy tính.",
@@ -15026,6 +15119,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"relay.health.quiet_detail": "Phiên này trên máy tính của bạn đã ngừng phản hồi — có thể đang bận hoặc bị treo. Có thể tin nhắn báo gửi thất bại nhưng vẫn được chuyển đến khi phiên bắt kịp. Thử lại sẽ không gửi tin nhắn hai lần.",
 		"relay.health.reconnecting": "Đang kết nối lại",
 		"relay.health.reconnecting_detail": "Điện thoại này đã mất kết nối với máy tính của bạn và đang liên tục thử lại. Phiên có thể vẫn đang chạy ở đó; gửi tin nhắn có thể không thành công cho đến khi kết nối trở lại.",
+		"relay.skills.skipped": "Đã gửi mà không kèm {names} — {count, plural, other {kỹ năng được liệt kê không có nội dung để đính kèm}}.",
+		"relay.skills.too_large": "Các kỹ năng này quá lớn để gửi cùng nhau. Bỏ một kỹ năng và gửi lại.",
+		"relay.skills.tray.hidden": "ẩn",
+		"relay.skills.tray.label": "Kỹ năng",
 		"relay.transcript.composer.queued": "{count, plural, other {# đang chờ}}",
 		"relay.transcript.fold.failed_label": "Có thao tác thất bại",
 		"relay.transcript.fold.more": "{count, plural, other {và # thao tác khác}}",
@@ -16057,6 +16154,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.sidebar.empty_by_view.next": "重新开启分区或已结束的会话，或重置视图。",
 		"mobile.sidebar.empty_by_view.reset": "重置视图",
 		"mobile.sidebar.group.one_list": "统一列表",
+		"mobile.sidebar.group.tag": "标签",
 		"mobile.sidebar.group.time_section": "时间分区",
 		"mobile.sidebar.group_by": "分组方式",
 		"mobile.sidebar.hidden_sections": "{count, plural, other {已隐藏#个分区}}",
@@ -16086,11 +16184,15 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.sidebar.section.pinned": "已置顶",
 		"mobile.sidebar.section.running": "运行中",
 		"mobile.sidebar.section.today": "今天",
+		"mobile.sidebar.section.untagged": "无标签",
 		"mobile.sidebar.section.week": "本周",
 		"mobile.sidebar.sections": "分区",
 		"mobile.sidebar.settings_heading": "侧边栏",
 		"mobile.sidebar.show_ended": "显示已结束的会话",
 		"mobile.sidebar.show_ended_hint": "已置顶和运行中的对话始终显示。",
+		"mobile.sidebar.show_tags": "显示标签",
+		"mobile.sidebar.show_tags_hint": "标签仍保留在每个对话的菜单中。",
+		"mobile.sidebar.tag_group.announcement": "{name}, {count, plural, other {# 个对话}}",
 		"mobile.sidebar.tags.announcement": "标签：{names}",
 		"mobile.sidebar.tags.empty_headline": "还没有标签类别。",
 		"mobile.sidebar.tags.empty_next": "需在桌面应用中创建。",
@@ -16410,6 +16512,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"relay.health.quiet_detail": "电脑上的此会话已停止响应——可能正忙或卡住了。发送可能显示失败，但会话重新响应后仍可能送达。重试也不会重复送达。",
 		"relay.health.reconnecting": "重连中",
 		"relay.health.reconnecting_detail": "此手机与电脑的连接已断开，正在不断尝试重连。会话可能仍在电脑上运行；重新连上之前，发送消息可能会失败。",
+		"relay.skills.skipped": "已发送，但未附带{names}——{count, plural, other {所列技能没有可附加的内容}}。",
+		"relay.skills.too_large": "这些技能太大，无法一起发送。移除一个技能后重新发送。",
+		"relay.skills.tray.hidden": "隐藏",
+		"relay.skills.tray.label": "技能",
 		"relay.transcript.composer.queued": "{count, plural, other {# 条已排队}}",
 		"relay.transcript.fold.failed_label": "包含失败的操作",
 		"relay.transcript.fold.more": "{count, plural, other {另有 # 项操作}}",
