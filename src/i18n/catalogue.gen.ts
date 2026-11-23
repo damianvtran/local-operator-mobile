@@ -87,8 +87,13 @@ export type CatalogueKey =
 	| "mobile.common.not_found.headline"
 	| "mobile.common.not_found.next"
 	| "mobile.common.not_found.title"
+	| "mobile.common.resize_panel"
 	| "mobile.common.save"
 	| "mobile.common.send"
+	| "mobile.common.size.large"
+	| "mobile.common.size.medium"
+	| "mobile.common.size.shorter"
+	| "mobile.common.size.taller"
 	| "mobile.common.try_again"
 	| "mobile.community.approvals.agent"
 	| "mobile.community.approvals.decline"
@@ -1475,8 +1480,13 @@ export type NoParamKey =
 	| "mobile.common.not_found.headline"
 	| "mobile.common.not_found.next"
 	| "mobile.common.not_found.title"
+	| "mobile.common.resize_panel"
 	| "mobile.common.save"
 	| "mobile.common.send"
+	| "mobile.common.size.large"
+	| "mobile.common.size.medium"
+	| "mobile.common.size.shorter"
+	| "mobile.common.size.taller"
 	| "mobile.common.try_again"
 	| "mobile.community.approvals.agent"
 	| "mobile.community.approvals.decline"
@@ -2628,8 +2638,13 @@ export type MessageParams = {
 	"mobile.common.not_found.headline": NoParams;
 	"mobile.common.not_found.next": NoParams;
 	"mobile.common.not_found.title": NoParams;
+	"mobile.common.resize_panel": NoParams;
 	"mobile.common.save": NoParams;
 	"mobile.common.send": NoParams;
+	"mobile.common.size.large": NoParams;
+	"mobile.common.size.medium": NoParams;
+	"mobile.common.size.shorter": NoParams;
+	"mobile.common.size.taller": NoParams;
 	"mobile.common.try_again": NoParams;
 	"mobile.community.approvals.agent": NoParams;
 	"mobile.community.approvals.decline": NoParams;
@@ -4038,8 +4053,13 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.common.not_found.headline": "That page does not exist.",
 	"mobile.common.not_found.next": "Go back to your sessions to carry on.",
 	"mobile.common.not_found.title": "Page not found",
+	"mobile.common.resize_panel": "Resize panel",
 	"mobile.common.save": "Save",
 	"mobile.common.send": "Send",
+	"mobile.common.size.large": "Large",
+	"mobile.common.size.medium": "Medium",
+	"mobile.common.size.shorter": "Shorter",
+	"mobile.common.size.taller": "Taller",
 	"mobile.common.try_again": "Try again",
 	"mobile.community.approvals.agent": "Agent",
 	"mobile.community.approvals.decline": "Don't post",
@@ -5433,8 +5453,13 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.common.not_found.headline": { role: "status", note: "Empty-state headline on the not-found screen. Sentence with a final full stop." },
 	"mobile.common.not_found.next": { role: "help", note: "Empty-state follow-up on the not-found screen, pointing to the session list. One sentence." },
 	"mobile.common.not_found.title": { role: "heading", note: "Header title of the screen shown for a route that does not exist. No final full stop." },
+	"mobile.common.resize_panel": { role: "button", note: "Screen-reader name of the grab bar that resizes a bottom sheet between its two sizes. It is an adjustable control, so the current size follows the name as the control's value ('Medium'/'Large') and 'Taller'/'Shorter' are its actions. Short noun phrase, no placeholders, no final full stop." },
 	"mobile.common.save": { role: "button", note: "Commits the edits made in the current sheet or form. A verb used as a label, no final full stop. LIMIT: says nothing about where it is saved or whether it is reversible; screens that must say so (for example a draft saved to one computer) use their own key." },
 	"mobile.common.send": { role: "button", note: "Sends the message the user has typed in the adjacent composer. A verb used as a label, no final full stop. LIMIT: a message to an agent, not a file transfer or a share; do not translate with a word meaning 'post publicly' or 'upload'." },
+	"mobile.common.size.large": { role: "meta", note: "The larger of a resizable sheet's two sizes, read as the control's current value and never shown as a button. One word; the pair with 'Medium' must read as two sizes of the same thing." },
+	"mobile.common.size.medium": { role: "meta", note: "The smaller of a resizable sheet's two sizes, read as the control's current value and never shown as a button. One word; the pair with 'Large' must read as two sizes of the same thing." },
+	"mobile.common.size.shorter": { role: "button", note: "The VoiceOver/TalkBack action that shrinks a resizable sheet from Large to Medium. Comparative adjective, no final full stop, no placeholders." },
+	"mobile.common.size.taller": { role: "button", note: "The VoiceOver/TalkBack action that grows a resizable sheet from Medium to Large. Comparative adjective, no final full stop, no placeholders." },
 	"mobile.common.try_again": { role: "button", note: "Re-runs the action that just failed, next to the error that reported it. An imperative used as a label, no final full stop. LIMIT: a retry of a failed read or write; never a reset and never a restart of the app or the connection." },
 	"mobile.community.approvals.agent": { role: "meta", note: "Badge on an agent approval card: the post would come from the user's agent." },
 	"mobile.community.approvals.decline": { role: "button", note: "Declines the agent post from the phone." },
@@ -6842,8 +6867,13 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.common.not_found.headline": "Esa página no existe.",
 		"mobile.common.not_found.next": "Vuelve a tus sesiones para continuar.",
 		"mobile.common.not_found.title": "Página no encontrada",
+		"mobile.common.resize_panel": "Cambiar el tamaño del panel",
 		"mobile.common.save": "Guardar",
 		"mobile.common.send": "Enviar",
+		"mobile.common.size.large": "Grande",
+		"mobile.common.size.medium": "Mediano",
+		"mobile.common.size.shorter": "Más bajo",
+		"mobile.common.size.taller": "Más alto",
 		"mobile.common.try_again": "Reintentar",
 		"mobile.community.approvals.agent": "Agente",
 		"mobile.community.approvals.decline": "No publicar",
@@ -8235,8 +8265,13 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.common.not_found.headline": "Cette page n’existe pas.",
 		"mobile.common.not_found.next": "Revenez à vos sessions pour continuer.",
 		"mobile.common.not_found.title": "Page introuvable",
+		"mobile.common.resize_panel": "Redimensionner le panneau",
 		"mobile.common.save": "Enregistrer",
 		"mobile.common.send": "Envoyer",
+		"mobile.common.size.large": "Grand",
+		"mobile.common.size.medium": "Moyen",
+		"mobile.common.size.shorter": "Plus bas",
+		"mobile.common.size.taller": "Plus haut",
 		"mobile.common.try_again": "Réessayer",
 		"mobile.community.approvals.agent": "Agent",
 		"mobile.community.approvals.decline": "Ne pas publier",
@@ -9628,8 +9663,13 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.common.not_found.headline": "वह पेज मौजूद नहीं है।",
 		"mobile.common.not_found.next": "आगे बढ़ने के लिए अपने सत्रों पर लौटें।",
 		"mobile.common.not_found.title": "पेज नहीं मिला",
+		"mobile.common.resize_panel": "पैनल का आकार बदलें",
 		"mobile.common.save": "सहेजें",
 		"mobile.common.send": "भेजें",
+		"mobile.common.size.large": "बड़ा",
+		"mobile.common.size.medium": "मध्यम",
+		"mobile.common.size.shorter": "कम ऊँचा",
+		"mobile.common.size.taller": "ज़्यादा ऊँचा",
 		"mobile.common.try_again": "फिर से कोशिश करें",
 		"mobile.community.approvals.agent": "एजेंट",
 		"mobile.community.approvals.decline": "पोस्ट न करें",
@@ -11021,8 +11061,13 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.common.not_found.headline": "Этой страницы не существует.",
 		"mobile.common.not_found.next": "Вернитесь к сессиям, чтобы продолжить.",
 		"mobile.common.not_found.title": "Страница не найдена",
+		"mobile.common.resize_panel": "Изменить размер панели",
 		"mobile.common.save": "Сохранить",
 		"mobile.common.send": "Отправить",
+		"mobile.common.size.large": "Большой",
+		"mobile.common.size.medium": "Средний",
+		"mobile.common.size.shorter": "Ниже",
+		"mobile.common.size.taller": "Выше",
 		"mobile.common.try_again": "Повторить",
 		"mobile.community.approvals.agent": "Агент",
 		"mobile.community.approvals.decline": "Не публиковать",
@@ -12414,8 +12459,13 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.common.not_found.headline": "یہ صفحہ موجود نہیں ہے۔",
 		"mobile.common.not_found.next": "جاری رکھنے کے لیے اپنے سیشنز میں واپس جائیں۔",
 		"mobile.common.not_found.title": "صفحہ نہیں ملا",
+		"mobile.common.resize_panel": "پینل کا سائز تبدیل کریں",
 		"mobile.common.save": "محفوظ کریں",
 		"mobile.common.send": "بھیجیں",
+		"mobile.common.size.large": "بڑا",
+		"mobile.common.size.medium": "درمیانہ",
+		"mobile.common.size.shorter": "کم اونچا",
+		"mobile.common.size.taller": "مزید اونچا",
 		"mobile.common.try_again": "دوبارہ کوشش کریں",
 		"mobile.community.approvals.agent": "ایجنٹ",
 		"mobile.community.approvals.decline": "پوسٹ نہ کریں",
@@ -13807,8 +13857,13 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.common.not_found.headline": "Trang đó không tồn tại.",
 		"mobile.common.not_found.next": "Quay lại danh sách phiên để tiếp tục.",
 		"mobile.common.not_found.title": "Không tìm thấy trang",
+		"mobile.common.resize_panel": "Đổi kích thước bảng",
 		"mobile.common.save": "Lưu",
 		"mobile.common.send": "Gửi",
+		"mobile.common.size.large": "Lớn",
+		"mobile.common.size.medium": "Vừa",
+		"mobile.common.size.shorter": "Thấp hơn",
+		"mobile.common.size.taller": "Cao hơn",
 		"mobile.common.try_again": "Thử lại",
 		"mobile.community.approvals.agent": "Tác nhân",
 		"mobile.community.approvals.decline": "Không đăng",
@@ -15200,8 +15255,13 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.common.not_found.headline": "此页面不存在。",
 		"mobile.common.not_found.next": "返回会话列表即可继续。",
 		"mobile.common.not_found.title": "找不到页面",
+		"mobile.common.resize_panel": "调整面板大小",
 		"mobile.common.save": "保存",
 		"mobile.common.send": "发送",
+		"mobile.common.size.large": "大",
+		"mobile.common.size.medium": "中等",
+		"mobile.common.size.shorter": "更低",
+		"mobile.common.size.taller": "更高",
 		"mobile.common.try_again": "重试",
 		"mobile.community.approvals.agent": "智能体",
 		"mobile.community.approvals.decline": "不发布",

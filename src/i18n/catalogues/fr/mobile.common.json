@@ -13,5 +13,10 @@
 	"mobile.common.copied": "Copié",
 	"mobile.common.copy_command_hint": "Copie la commande « {label} »",
 	"mobile.common.close": "Fermer",
-	"mobile.common.loading": "Chargement"
+	"mobile.common.loading": "Chargement",
+	"mobile.common.resize_panel": "Redimensionner le panneau",
+	"mobile.common.size.medium": "Moyen",
+	"mobile.common.size.large": "Grand",
+	"mobile.common.size.taller": "Plus haut",
+	"mobile.common.size.shorter": "Plus bas"
 }

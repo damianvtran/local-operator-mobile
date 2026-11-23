@@ -361,7 +361,24 @@ column's clipped foot at 360×780.
   opener.** The client stores the opener before moving focus.
 - **A control that answers the sheet may not scroll out of reach** — see the
   three-region rule in § 13.
-- **No drag gesture in v1.** A drag handle with no drag is worse than no handle.
+- **A sheet has no drag gesture BY DEFAULT.** A drag handle with no drag is worse
+  than no handle, so the plain `Sheet` — every sheet that does not ask otherwise —
+  keeps no handle and no drag.
+- **The one exception: a sheet may opt into `resizable`.** Then the grab bar has
+  a drag, and it RESIZES between two heights — Medium (the `content` detent's
+  fraction, hugging shorter content) and Large (the `full` detent's) — never a
+  dismissal. Past either end the surface resists (0.35, at most 48 pt) and
+  springs back, because a downward fling must not close a sheet holding a typed
+  answer. The body's height is what moves; the pinned footer never does, so the
+  verbs cannot slide off the edge. A tap on the bar toggles the two sizes, and
+  the bar is an adjustable control ("Resize panel", value Medium/Large, the one
+  action available at the current size) so the same choice is reachable without
+  a drag. The size is remembered in memory for the app run, never on disk. With
+  the keyboard up a header drag puts the keyboard away instead of resizing, and
+  the body fills the space between the safe top and the keyboard.
+
+  The ask sheet opts in (`AsksSheet`); every other sheet keeps the plain rule
+  above, and its tree is unchanged apart from one layout-neutral wrapper.
 
 ---
 

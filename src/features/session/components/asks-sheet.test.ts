@@ -77,7 +77,12 @@ describe("the asks sheet's Other door", () => {
 			at,
 			"the press must distinguish the two select modes",
 		).toBeGreaterThan(-1);
-		const toggle = SOURCE.slice(at, at + 240);
+		/* To the door's own `testID`, not a fixed window: the press carries notes
+		 *  that grow, and a shorter slice then fails on a comment rather than on
+		 *  the wiring it pins. */
+		const end = SOURCE.indexOf("testID={askOtherId(", at);
+		expect(end).toBeGreaterThan(at);
+		const toggle = SOURCE.slice(at, end);
 		expect(toggle).toContain("open: false");
 		expect(toggle).toContain("open: true");
 	});
