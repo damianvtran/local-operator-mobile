@@ -376,6 +376,10 @@ const css = (): string => {
 	out.push(
 		"\t * exist, which is the point: `bg-canvas` is a role, `bg-[#f2ede3]` is a bug.",
 	);
+	out.push("\t *");
+	out.push(
+		"\t * The theme-invariant roles are in the `@theme static` block below instead.",
+	);
 	out.push("\t */");
 	for (const role of varying) {
 		out.push("\t" + cssColour(role) + ": " + valueFor(role, "light") + ";");
@@ -472,7 +476,7 @@ const css = (): string => {
 	 * (`bg-scrim`) happened to use it. `useTokenColor("scrim")` is the opposite
 	 * case — it reads the value precisely because no class can — so the variable
 	 * vanished and Uniwind logged "We couldn't find your variable --color-scrim"
-	 * on every dev launch. `static` keeps the variable (and its utility) whether
+	 * once per JS runtime (its `warned` flag), i.e. on every dev launch. `static` keeps the variable (and its utility) whether
 	 * or not a class uses it.
 	 */
 	out.push("/*");

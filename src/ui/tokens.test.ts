@@ -306,7 +306,8 @@ describe("the colour variables Uniwind exposes to useCSSVariable", () => {
 	 * dropped. A theme-varying role survives because the `@layer theme` block
 	 * spells it out per theme; a theme-invariant one (the scrim) survives only if
 	 * it sits in an `@theme static` block. A role in neither made Uniwind log
-	 * "We couldn't find your variable --color-scrim" ~400 times per dev launch. */
+	 * "We couldn't find your variable --color-scrim" once per JS runtime (its
+	 * `warned` flag), i.e. on every dev launch. */
 	const css = readFileSync(new URL("./theme.css", import.meta.url), "utf8");
 	const rolesIn = (block: string): Set<string> =>
 		new Set([...block.matchAll(COLOUR_DECLARATION)].map((m) => m[1] ?? ""));

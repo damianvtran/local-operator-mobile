@@ -31,6 +31,8 @@
 	 * time; the values that actually apply are swapped per theme in the
 	 * @layer theme block below. A utility the kit does not define does not
 	 * exist, which is the point: `bg-canvas` is a role, `bg-[#f2ede3]` is a bug.
+	 *
+	 * The theme-invariant roles are in the `@theme static` block below instead.
 	 */
 	--color-canvas: #f2ede3;
 	--color-surface: #f7f5ee;

@@ -1,18 +1,18 @@
-import { createContext, useContext } from "react";
-import type {
-	WorkspaceDrawerBridgeAdapter,
-	WorkspaceDrawerController,
-	WorkspaceDrawerMode,
-} from "@/features/sessions/workspace-drawer.contract";
-
 /*
  * The drawer's context and its readers, apart from `workspace-drawer.tsx`.
  *
  * `ConversationsPane` reads the context and renders the mode bar, while the
  * provider renders `ConversationsDrawer`, which renders the pane. Kept in
  * `workspace-drawer.tsx` they made a require cycle (provider -> drawer -> pane
- * -> provider) that Metro warns about in dev. This module imports only types, so both sides depend on it and neither on the other.
+ * -> provider) that Metro warns about in dev. This module imports only types,
+ * so both sides depend on it and neither on the other.
  */
+import { createContext, useContext } from "react";
+import type {
+	WorkspaceDrawerBridgeAdapter,
+	WorkspaceDrawerController,
+	WorkspaceDrawerMode,
+} from "@/features/sessions/workspace-drawer.contract";
 
 export const WorkspaceDrawerContext = createContext<
 	| (WorkspaceDrawerController & {
