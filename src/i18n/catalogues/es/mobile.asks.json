@@ -21,7 +21,7 @@
 	"mobile.asks.unskip": "Responder esta pregunta",
 	"mobile.asks.choose_any": "Elige las que correspondan",
 	"mobile.asks.secret_notice": "Secreto: se envía directamente y no aparece en la transcripción",
-	"mobile.asks.secret_notice_saved": "Secreto: se envía directamente, no aparece en la transcripción y se guarda en el ordenador para reutilizarlo.",
+	"mobile.asks.secret_notice_saved": "Secreto: se envía directamente, no aparece en la transcripción y se guarda en el ordenador para reutilizarlo",
 	"mobile.asks.other_label": "Otro",
 	"mobile.asks.other_hint": "Escribe tu respuesta",
 	"mobile.asks.other_kept": "Tu texto se conserva, no se envía",

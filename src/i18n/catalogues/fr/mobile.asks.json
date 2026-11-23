@@ -21,7 +21,7 @@
 	"mobile.asks.unskip": "Répondre à cette question",
 	"mobile.asks.choose_any": "Choisissez tout ce qui s’applique",
 	"mobile.asks.secret_notice": "Secret : envoyé directement, non affiché dans la transcription",
-	"mobile.asks.secret_notice_saved": "Secret : envoyé directement, non affiché dans la transcription, et enregistré sur l’ordinateur pour être réutilisé.",
+	"mobile.asks.secret_notice_saved": "Secret : envoyé directement, non affiché dans la transcription, et enregistré sur l’ordinateur pour être réutilisé",
 	"mobile.asks.other_label": "Autre",
 	"mobile.asks.other_hint": "Saisissez votre réponse",
 	"mobile.asks.other_kept": "Votre texte est conservé, non envoyé",

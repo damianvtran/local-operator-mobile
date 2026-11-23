@@ -21,7 +21,7 @@
 	"mobile.asks.unskip": "回答这个问题",
 	"mobile.asks.choose_any": "可多选",
 	"mobile.asks.secret_notice": "机密：直接发送，不显示在记录中",
-	"mobile.asks.secret_notice_saved": "机密：直接发送，不显示在记录中，并保存在电脑上以便重复使用。",
+	"mobile.asks.secret_notice_saved": "机密：直接发送，不显示在记录中，并保存在电脑上以便重复使用",
 	"mobile.asks.other_label": "其他",
 	"mobile.asks.other_hint": "输入你的回答",
 	"mobile.asks.other_kept": "你的文字已保留，尚未发送",

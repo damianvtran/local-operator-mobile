@@ -21,7 +21,7 @@
 	"mobile.asks.unskip": "Answer this question",
 	"mobile.asks.choose_any": "Choose any that apply",
 	"mobile.asks.secret_notice": "Secret: sent directly, not shown in the transcript",
-	"mobile.asks.secret_notice_saved": "Secret: sent directly, not shown in the transcript, and saved on the computer for reuse.",
+	"mobile.asks.secret_notice_saved": "Secret: sent directly, not shown in the transcript, and saved on the computer for reuse",
 	"mobile.asks.other_label": "Other",
 	"mobile.asks.other_hint": "Type your answer",
 	"mobile.asks.other_kept": "Your text is kept, not sent",
