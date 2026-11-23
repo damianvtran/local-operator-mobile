@@ -107,6 +107,7 @@ import {
 import {
 	type SkillTrayFrame,
 	shouldRevealSkillTray,
+	trayHeightCanChange,
 } from "@/features/session/skills/skill-state";
 import type { DictationState } from "@/features/session/use-dictation";
 import { t } from "@/i18n";
@@ -1574,7 +1575,8 @@ export const Composer = ({
 	useEffect(() => {
 		const next = { rows: trayRows, capped: trayCapped };
 		const reveal = shouldRevealSkillTray(trayFrame.current, next);
-		revealOnGrowth.current = reveal && trayRows > trayFrame.current.rows;
+		revealOnGrowth.current =
+			reveal && trayHeightCanChange(trayFrame.current.rows, trayRows);
 		trayFrame.current = next;
 		if (reveal) extrasScrollRef.current?.scrollToEnd({ animated: false });
 	}, [trayRows, trayCapped]);

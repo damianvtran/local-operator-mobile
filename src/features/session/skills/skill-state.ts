@@ -184,3 +184,20 @@ export const shouldRevealSkillTray = (
 	next.capped &&
 	next.rows > 0 &&
 	(previous.rows === 0 || next.rows > previous.rows || !previous.capped);
+
+/**
+ * Rows after which the tray stops growing: `SKILL_TRAY_MAX_PT` is 3.5 rows plus
+ * padding, so a fourth row already fills it and more rows only scroll INSIDE the
+ * tray. Kept here (the tray module reaches `uniwind`, which Node tests cannot
+ * import); `skill-tray.tsx` documents the cap it derives from.
+ */
+export const SKILL_TRAY_GROWTH_ROWS = 4;
+
+/**
+ * Whether going from `previous` to `next` rows can change the tray's height,
+ * i.e. whether the extras scroller will report a new content size. Arming the
+ * post-layout scroll when it cannot would leave the flag set until some
+ * unrelated content-size change fired it and yanked the reader to the end.
+ */
+export const trayHeightCanChange = (previous: number, next: number): boolean =>
+	next > previous && previous < SKILL_TRAY_GROWTH_ROWS;

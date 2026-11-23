@@ -9,6 +9,7 @@ import {
 	type SkillDraft,
 	shouldRevealSkillTray,
 	skillView,
+	trayHeightCanChange,
 } from "./skill-state";
 
 const SKILLS: SkillEntry[] = [
@@ -168,5 +169,21 @@ describe("shouldRevealSkillTray", () => {
 		expect(shouldRevealSkillTray(frame(5, true), frame(2, true))).toBe(false);
 		expect(shouldRevealSkillTray(frame(3, true), frame(3, true))).toBe(false);
 		expect(shouldRevealSkillTray(frame(0, true), frame(0, true))).toBe(false);
+	});
+});
+
+describe("trayHeightCanChange", () => {
+	it("is true while the tray is still growing toward its cap", () => {
+		expect(trayHeightCanChange(0, 2)).toBe(true);
+		expect(trayHeightCanChange(1, 3)).toBe(true);
+		expect(trayHeightCanChange(3, 8)).toBe(true);
+	});
+	it("is false once the tray is full: more rows scroll inside it", () => {
+		expect(trayHeightCanChange(4, 5)).toBe(false);
+		expect(trayHeightCanChange(10, 40)).toBe(false);
+	});
+	it("is false when rows do not grow", () => {
+		expect(trayHeightCanChange(2, 2)).toBe(false);
+		expect(trayHeightCanChange(3, 1)).toBe(false);
 	});
 });
