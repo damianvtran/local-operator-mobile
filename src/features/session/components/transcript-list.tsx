@@ -1477,7 +1477,10 @@ export const TranscriptList = ({
 			scrollHold.current.endDrag();
 			presence?.setHeld(false);
 			/* `velocity` is points per MILLISECOND on both platforms (Android's is
-			 *  converted to dp in `ScrollEvent.kt`); the policy reads points/s. */
+			 *  converted to dp in `ScrollEvent.kt`); the policy reads points/s. Its
+			 *  SIGN is platform-dependent (iOS: the offset's rate; Android: the
+			 *  finger's, so opposite) and is not used: the policy takes the
+			 *  direction from the drag's own offset motion. */
 			compaction?.endDrag((event?.nativeEvent?.velocity?.y ?? 0) * 1000);
 		},
 		[presence, compaction, observeRest],

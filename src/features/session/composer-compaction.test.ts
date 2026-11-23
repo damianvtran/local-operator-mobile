@@ -137,6 +137,55 @@ describe("shrinking", () => {
 		}
 	});
 
+	/* The release velocity's SIGN is not the same fact on both platforms: iOS
+	 *  reports the offset's rate (positive toward the end, RCTScrollView.m) but
+	 *  Android the finger's (positive = finger down = offset falling,
+	 *  VelocityHelper.kt). The direction therefore comes from the drag's own
+	 *  offset motion, and these rows are the review's table. */
+	const IOS = 1;
+	const ANDROID = -1;
+	const bandFling = (offsets: readonly [number, number], velocity: number) => {
+		const c = createComposerCompaction();
+		c.noteOffset(offsets[0], 10, 700);
+		c.beginDrag(offsets[0]);
+		c.noteOffset(offsets[1], 2000 - offsets[1], 700);
+		c.endDrag(velocity);
+		return c.readShrunk();
+	};
+	const TOWARD = [1990, 1996] as const;
+	const AWAY = [1996, 1990] as const;
+
+	it("a fling toward the tail from the band does not shrink, on either platform's sign", () => {
+		/* iOS: toward is v > 0; Android: toward is v < 0. */
+		expect(bandFling(TOWARD, IOS * FLING_PT_PER_S * 3)).toBe(false);
+		expect(bandFling(TOWARD, ANDROID * FLING_PT_PER_S * 3)).toBe(false);
+	});
+
+	it("a fling away from the tail from the band shrinks, on either platform's sign", () => {
+		/* iOS: away is v < 0; Android: away is v > 0. */
+		expect(bandFling(AWAY, -IOS * FLING_PT_PER_S * 3)).toBe(true);
+		expect(bandFling(AWAY, -ANDROID * FLING_PT_PER_S * 3)).toBe(true);
+	});
+
+	it("decides the direction without the velocity's sign: the same drag answers the same at +v and -v", () => {
+		for (const offsets of [TOWARD, AWAY]) {
+			const speeds = [FLING_PT_PER_S, FLING_PT_PER_S * 3];
+			for (const v of speeds)
+				expect(bandFling(offsets, v), `${offsets} ${v}`).toBe(
+					bandFling(offsets, -v),
+				);
+		}
+		/* The magnitude is still read: a slow release is no fling at all. */
+		expect(bandFling(AWAY, FLING_PT_PER_S - 1)).toBe(false);
+		expect(bandFling(AWAY, -(FLING_PT_PER_S - 1))).toBe(false);
+	});
+
+	it("is wired: the list says the velocity's sign is platform-dependent and unused", () => {
+		const list = read("src/features/session/components/transcript-list.tsx");
+		expect(list).toContain("SIGN is platform-dependent");
+		expect(list).not.toContain("positive on both platforms");
+	});
+
 	it("ignores elastic overscroll at the tail: bounce is not travel", () => {
 		const c = createComposerCompaction();
 		c.beginDrag(2000);

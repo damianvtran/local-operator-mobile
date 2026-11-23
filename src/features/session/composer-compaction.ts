@@ -100,7 +100,8 @@ export type ComposerCompaction = {
 		viewportHeight?: number,
 	): void;
 	/** The finger lifted. `velocityPtPerS` is the release velocity (the list
-	 *  reports pt/ms; multiply by 1000), either sign. */
+	 *  reports pt/ms; multiply by 1000). Only its magnitude is read: its sign is
+	 *  platform-dependent (offset rate on iOS, finger rate on Android). */
 	endDrag(velocityPtPerS: number): void;
 	/** The list's glide after a release began or ended. */
 	setCoasting(coasting: boolean): void;
@@ -288,9 +289,12 @@ export function createComposerCompaction(
 			/* A fling TOWARD the tail from inside the band goes nowhere: shrinking
 			 *  there is a shape the dwell would undo 300 ms later. A fling AWAY from
 			 *  it that starts inside the band carries the reader off (QA Q3), so
-			 *  only the sign that is positive for an offset moving toward the end
-			 *  (RN's `velocity.y` on both platforms) is exempt. */
-			const towardTail = velocityPtPerS > 0 && distance <= TAIL_BAND_PT;
+			 *  only a toward-tail drag is exempt. "Toward" comes from the finger's own
+			 *  offset motion (`towardRun`), never from the velocity's sign: iOS
+			 *  reports the offset's rate (positive toward the end) but Android
+			 *  reports the finger's (positive = offset falling), so the sign means
+			 *  opposite things there. Only the magnitude is read from the velocity. */
+			const towardTail = towardRun > 0 && distance <= TAIL_BAND_PT;
 			if (
 				Math.abs(velocityPtPerS) >= FLING_PT_PER_S &&
 				scrollable &&

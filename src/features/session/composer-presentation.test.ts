@@ -583,6 +583,42 @@ describe("a blank draft and the dictation card (R2-2)", () => {
 		).toBe(false);
 	});
 
+	it("a blank draft changes the dead-Send question only, never the trailing slot (R3-2)", () => {
+		const blank = { ...taking, draft: " " };
+		/* The strict rule: ' ' is a draft, so the card is open for its own reasons
+		 *  and short landscape keeps its Send. */
+		const strict = openOnlyForDictation(blank);
+		expect(strict).toBe(false);
+		for (const recording of [false, true])
+			expect(
+				controlsTrailing({
+					openForDictationOnly: strict,
+					recording,
+					micShown: true,
+				}),
+				`recording ${recording}`,
+			).toBe("actions");
+		/* ...while the blank-aware rule still drops the pill's dead Send. */
+		expect(
+			dictationDropsSend({
+				openForDictationOnly: openOnlyForDictation(blank, {
+					blankIsEmpty: true,
+				}),
+				startedFromPill: true,
+			}),
+		).toBe(true);
+	});
+
+	it("is wired: the trailing slot reads the strict rule, the dead Send the blank-aware one", () => {
+		const component = read("src/features/session/components/composer.tsx");
+		expect(component).toContain(
+			"openForDictationOnly: openOnlyForDictation(presentationFacts),",
+		);
+		expect(component).toMatch(
+			/const openForDictationOnly = openOnlyForDictation\(presentationFacts, \{\s*blankIsEmpty: true,/,
+		);
+	});
+
 	it("ends with the take: a card left open by a blank draft alone keeps its layout", () => {
 		expect(
 			openOnlyForDictation(
@@ -654,10 +690,33 @@ describe("the pill's first-line cue (D1/U1)", () => {
 			component.indexOf("{pillBlank ? ("),
 		);
 		expect(cue).toContain("aria-hidden");
-		expect(cue).toContain('pointerEvents="none"');
+		expect(cue).toContain('pointerEvents: "none"');
+		expect(cue).not.toContain('pointerEvents="none"');
 		expect(cue).toContain("\\u2026");
 		/* One mounted field: the cue is a sibling, never a second Textarea. */
 		expect(component.split("<Textarea").length - 1).toBe(1);
+	});
+});
+
+describe("the cue sits beside the line it cuts, not beside Send (D2-1)", () => {
+	const component = read("src/features/session/components/composer.tsx");
+	const cue = component.slice(
+		component.indexOf("{pillCue ? ("),
+		component.indexOf("{pillBlank ? ("),
+	);
+
+	it("anchors the glyph at the leading edge of a box as wide as the reserve", () => {
+		expect(cue).toContain('alignItems: "flex-start"');
+		expect(cue).toContain(
+			"width: Math.ceil(PILL_ELLIPSIS_CUE_PT * effectiveScale)",
+		);
+		expect(cue).not.toContain('alignItems: "flex-end"');
+	});
+
+	it("keeps the field's paddingEnd equal to that box, so no text runs under the glyph", () => {
+		expect(component).toMatch(
+			/paddingEnd: Math\.ceil\(\s*PILL_ELLIPSIS_CUE_PT \* effectiveScale,\s*\)/,
+		);
 	});
 });
 
@@ -684,7 +743,8 @@ describe("a blank draft in the pill shows the placeholder (D5)", () => {
 			component.indexOf("THE PILL'S TAP TARGET"),
 		);
 		expect(blank).toContain("aria-hidden");
-		expect(blank).toContain('pointerEvents="none"');
+		expect(blank).toContain('pointerEvents: "none"');
+		expect(blank).not.toContain('pointerEvents="none"');
 		expect(blank).toContain("composerCopy().placeholder");
 		expect(component).toContain("value={draft}");
 	});

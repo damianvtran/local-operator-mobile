@@ -1218,8 +1218,12 @@ export const Composer = ({
 		openForDictationOnly,
 		startedFromPill: dictationFromPill,
 	});
+	/* The trailing slot reads the STRICT rule: a blank draft is a draft here. Only
+	 *  the pill's dead Send is a blank-aware question; where the card keeps its
+	 *  Send (short landscape's one row) a ' ' draft keeps `actions` through a take
+	 *  too, rather than putting the mic under a Send the reader can still reach. */
 	const trailing = controlsTrailing({
-		openForDictationOnly,
+		openForDictationOnly: openOnlyForDictation(presentationFacts),
 		recording: voice?.phase === "recording",
 		micShown,
 	});
@@ -2578,18 +2582,25 @@ export const Composer = ({
 					{/* THE PILL'S CUES (design D1/D5). Both are painted OVER the one field
 					 *  and touch nothing of it: not its value (a native input shows its
 					 *  placeholder only for an empty one, and the draft is never
-					 *  normalised), not its mount. `pointerEvents="none"` so a tap goes to
+					 *  normalised), not its mount. `pointerEvents: "none"` (a style: the prop is
+					 *  deprecated in RN 0.86) so a tap goes to
 					 *  the catcher below, `aria-hidden` because the field already carries
 					 *  the draft and the "…" is a typographic glyph, not copy. */}
 					{pillCue ? (
 						<View
 							aria-hidden
-							pointerEvents="none"
 							style={{
+								pointerEvents: "none",
 								position: "absolute",
 								top: 0,
 								bottom: 0,
 								end: 0,
+								/* The glyph sits at the LEADING edge of its reserve, beside the
+								 *  line it cuts off, not at the far end beside Send (D2-1). The
+								 *  box is as wide as the room the field keeps clear, so the
+								 *  glyph can never reach past it. */
+								width: Math.ceil(PILL_ELLIPSIS_CUE_PT * effectiveScale),
+								alignItems: "flex-start",
 								justifyContent: "center",
 							}}
 						>
@@ -2601,8 +2612,8 @@ export const Composer = ({
 					{pillBlank ? (
 						<View
 							aria-hidden
-							pointerEvents="none"
 							style={{
+								pointerEvents: "none",
 								position: "absolute",
 								top: 0,
 								bottom: 0,
