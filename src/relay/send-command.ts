@@ -48,7 +48,11 @@
  * are two instructions, not one double-tap.
  */
 
-import type { InputMode, PromptImage } from "../contracts";
+import type {
+	InputMode,
+	PromptImage,
+	SkillExpansionReceipt,
+} from "../contracts";
 import {
 	DispatchClosedError,
 	isDispatchWithdrawn,
@@ -92,6 +96,10 @@ export interface SendResult {
 	 *  "queued for the running turn" only for an instruction that really was
 	 *  admitted as a steer. */
 	op: ContinuationOp;
+	/** The receipt's `skills` block, present whenever the relay honoured
+	 *  `expand_skills` (even with both lists empty). `skipped` names (without `$`)
+	 *  are skills that had no content to attach: the message still went. */
+	skills?: SkillExpansionReceipt;
 }
 
 /**
@@ -154,6 +162,12 @@ export interface SendCommandInput {
 	 *  identity, so it is stored WITH the envelope and replayed on a retry. */
 	input_mode?: InputMode;
 	input_path?: string;
+	/** `true` asks the relay to expand `$name` mentions before delivery. Set only
+	 *  when the relay licenses it (`capabilities.skill_invocation`), the text
+	 *  carries `$` and the conversation is local. Part of the instruction's
+	 *  identity and stored WITH the envelope, so a retry asks for the same
+	 *  expansion. */
+	expand_skills?: boolean;
 	/** Called once the envelope is HELD and before the request goes out — the
 	 *  first moment the `command_id` exists. The composer paints its pending row
 	 *  here (`features/session/pending-echo.ts`), keyed by that id, because the id
@@ -214,6 +228,7 @@ function payloadKeyOf(input: SendCommandInput): string {
 		 * in how they were produced must not be joined as one instruction. */
 		input.input_mode ?? null,
 		input.input_path ?? null,
+		input.expand_skills === true,
 	]);
 }
 
@@ -373,7 +388,11 @@ async function runSend(input: SendCommandInput): Promise<SendResult> {
 				input.op,
 				input.text,
 				input.images,
-				{ input_mode: input.input_mode, input_path: input.input_path },
+				{
+					input_mode: input.input_mode,
+					input_path: input.input_path,
+					expand_skills: input.expand_skills,
+				},
 			);
 		}
 	} catch (cause) {
@@ -397,6 +416,7 @@ async function runSend(input: SendCommandInput): Promise<SendResult> {
 			 * annotation it was retained with, so a retry sends identical bytes. */
 			...(sent.input_mode !== undefined ? { input_mode: sent.input_mode } : {}),
 			...(sent.input_path !== undefined ? { input_path: sent.input_path } : {}),
+			...(sent.expand_skills === true ? { expand_skills: true } : {}),
 		};
 		/* The override is passed only when set, so every existing caller sees the
 		 * same two-argument call it always made. */
@@ -427,6 +447,7 @@ async function runSend(input: SendCommandInput): Promise<SendResult> {
 			reusedPreviousDraft: held.reused,
 			commandId: envelope.command_id,
 			op: envelope.op,
+			...(ack.skills !== undefined ? { skills: ack.skills } : {}),
 		};
 	} catch (cause) {
 		/* Anything that is not already a classified error is a transport failure:

@@ -1281,6 +1281,20 @@ export class RelayEndpoints {
 		return this.http.json("commands", { method: "GET", path: "/api/commands" });
 	}
 
+	/**
+	 * `GET /api/skills?session_id=` — the `$name` vocabulary for ONE conversation
+	 * (discovery walks up from the session's own directory, so it is never
+	 * relay-wide). Sorted by name by the relay; **render it in the order given**.
+	 * Only meaningful when `capabilities.skill_invocation.available`; an unknown
+	 * id is a `404 unknown_session`, which the caller reads as "no tray".
+	 */
+	async skills(sessionId: string): Promise<Payload<"skills">> {
+		return this.http.json("skills", {
+			method: "GET",
+			path: `/api/skills${query({ session_id: sessionId })}`,
+		});
+	}
+
 	/** The model catalogue. **The array order is the ranking** — render it as
 	 *  given; re-sorting it client-side throws away the server's answer. */
 	async models(): Promise<Payload<"models">> {

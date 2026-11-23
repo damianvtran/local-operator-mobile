@@ -1320,6 +1320,12 @@ export function createRelay(options: RelayOptions = {}) {
 				if (world.sessionTags !== undefined) {
 					capabilities.session_tags = { available: true };
 				}
+				/* The `$skill` licence, a TOP-LEVEL key (never `remote_sessions.
+				 *  skill_invocation`, which stays false). Present only when the
+				 *  scenario serves the picker: absence is an older relay. */
+				if (world.skills !== undefined) {
+					capabilities.skill_invocation = { available: true };
+				}
 				/* `agent`/`team` license the start fields AND the roster route
 				 *  (local-operator #4367); advertised only when the scenario serves
 				 *  a roster, so every other scenario stays an older relay. */
@@ -1902,6 +1908,39 @@ export function createRelay(options: RelayOptions = {}) {
 					return;
 				}
 			}
+			/* `expand_skills` is the relay's own flag: only a literal `true` expands,
+			 *  and a relay that does not serve the picker drops it silently (which on
+			 *  the wire looks exactly like a skill that did not fire). The receipt's
+			 *  `skills` block is present whenever expansion ran, even with both lists
+			 *  empty. The mock does not rewrite the text: what it can prove is the
+			 *  body the phone sent and the receipt it reads back. */
+			let skillsReceipt: { attached: string[]; skipped: string[] } | undefined;
+			if (body.expand_skills === true && world.skills !== undefined) {
+				if (world.skills.tooLarge === true) {
+					sendJson(res, 422, {
+						error: "the selected skills are too large to send together",
+						code: "skills_too_large",
+					});
+					return;
+				}
+				const mentioned = new Set(
+					[...String(body.text).matchAll(/(?:^|\s)\$([^\s$]+)/gu)].map(
+						(match) => match[1],
+					),
+				);
+				const known = world.skills.catalogue.filter((row) =>
+					mentioned.has(row.name),
+				);
+				const skipped = new Set(world.skills.skipped ?? []);
+				skillsReceipt = {
+					attached: known
+						.map((row) => row.name)
+						.filter((name) => !skipped.has(name)),
+					skipped: known
+						.map((row) => row.name)
+						.filter((name) => skipped.has(name)),
+				};
+			}
 			// Bound once, narrowed once: every later use (the ledger, the duplicate
 			// row) has to agree on which identity was admitted.
 			const commandId = String(body.command_id);
@@ -1964,8 +2003,19 @@ export function createRelay(options: RelayOptions = {}) {
 				});
 				return;
 			}
-			if (op === "steer") sendFixture(res, "command-steer-queued");
-			else sendFixture(res, "command-prompt-ok");
+			const ackFixture =
+				op === "steer" ? "command-steer-queued" : "command-prompt-ok";
+			if (skillsReceipt !== undefined) {
+				const base = fix.response(ackFixture);
+				sendFixture(res, ackFixture, {
+					json: {
+						...(base.json as Record<string, unknown>),
+						skills: skillsReceipt,
+					},
+				});
+				return;
+			}
+			sendFixture(res, ackFixture);
 			return;
 		}
 
@@ -2722,6 +2772,33 @@ export function createRelay(options: RelayOptions = {}) {
 
 		if (pathname === "/api/commands" && method === "GET") {
 			sendFixture(res, "commands");
+			return;
+		}
+		if (pathname === "/api/skills" && method === "GET") {
+			/* Absence is an older relay: the route does not exist. */
+			const skillRoutes = world.skills;
+			if (skillRoutes === undefined) {
+				sendJson(res, 404, errorBody("not found"));
+				return;
+			}
+			const id = url.searchParams.get("session_id") ?? "";
+			/* `unknown session` is a 404 with a code, not an empty list: the real
+			 *  relay tells "no such conversation" from "no skills" (daemon.py
+			 *  `api_skills`). */
+			if (!projectionFor(id)) {
+				sendJson(res, 404, {
+					error: "unknown session",
+					code: "unknown_session",
+				});
+				return;
+			}
+			if (skillRoutes.failCatalogue !== undefined) {
+				sendJson(res, skillRoutes.failCatalogue.status, {
+					error: skillRoutes.failCatalogue.error,
+				});
+				return;
+			}
+			sendJson(res, 200, { skills: skillRoutes.catalogue });
 			return;
 		}
 		if (pathname === "/api/directories" && method === "GET") {
@@ -4007,6 +4084,7 @@ export function createRelay(options: RelayOptions = {}) {
 		{ match: /^\/api\/sessions\/[^/]+$/, methods: ["GET", "HEAD"] },
 		{ match: /^\/api\/sessions$/, methods: ["GET", "HEAD"] },
 		{ match: /^\/api\/commands$/, methods: ["GET", "HEAD"] },
+		{ match: /^\/api\/skills$/, methods: ["GET", "HEAD"] },
 		{ match: /^\/api\/directories$/, methods: ["GET", "HEAD"] },
 		{ match: /^\/api\/models$/, methods: ["GET", "HEAD"] },
 		{ match: /^\/api\/projects$/, methods: ["GET", "HEAD", "POST"] },

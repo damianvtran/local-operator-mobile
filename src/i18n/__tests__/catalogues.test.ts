@@ -62,6 +62,8 @@ import relayComposerContext from "@/i18n/catalogues/en/relay.composer.context.js
 import relayComposer from "@/i18n/catalogues/en/relay.composer.json";
 import healthContext from "@/i18n/catalogues/en/relay.health.context.json";
 import health from "@/i18n/catalogues/en/relay.health.json";
+import relaySkillsContext from "@/i18n/catalogues/en/relay.skills.context.json";
+import relaySkills from "@/i18n/catalogues/en/relay.skills.json";
 import relayTranscriptContext from "@/i18n/catalogues/en/relay.transcript.context.json";
 import relayTranscript from "@/i18n/catalogues/en/relay.transcript.json";
 
@@ -254,6 +256,16 @@ const NAMESPACES = [
 		messages: relayComposer,
 		context: relayComposerContext,
 		expected: 3,
+	},
+	{
+		/* The relay's `$skill` picker vocabulary (tray label, hidden tag, the
+		 * skipped-skills notice, the too-large remedy), mirrored key for key from the
+		 * core (`local_operator/i18n/catalogues/<locale>/relay.skills.json`) so the
+		 * phone and relay web describe a `$skill` send in the same words. */
+		name: "relay.skills",
+		messages: relaySkills,
+		context: relaySkillsContext,
+		expected: 4,
 	},
 	{
 		/* The relay's transcript condensing and tool-fold vocabulary, mirrored key
@@ -664,7 +676,10 @@ describe("the English catalogues", () => {
 		 * Both belong in the independent inventory: 1380 + 1 + 1 = 1382,
 		 * counted over all 26 JSON catalogues in each shipped locale. */
 		/* Convergence #3 with main dad9b786 (#376): main's 1382 + this branch's 5 mobile.sidebar keys = 1387. */
-		expect(total).toBe(1387);
+		/* feat/session-skill-autocomplete: + the four mirrored relay.skills keys:
+		 * 1382 + 4 = 1386, the generated catalogue's own count over this tree. */
+		/* Convergence #4 with main 97045aa8 (#372): main's 1386 + this branch's 5 mobile.sidebar keys = 1391, derived by summing every top-level key of all 27 merged en catalogue files (mobile.sidebar 58); every shipped locale also sums to 1391. */
+		expect(total).toBe(1391);
 	});
 
 	it("lists every catalogue file this suite checks", () => {
