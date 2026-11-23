@@ -1535,12 +1535,12 @@ export const AsksSheet = ({
 								</Text>
 								{/* The id at the row's own foot — a WITHDRAWN ask has no other
 								 *  trace — on the state's line so the row keeps its 44 pt band.
-								 *  A hold on the row copies it. */}
+								 *  A hold on the row copies it. NO COPY MARK here (review round 1,
+								 *  N2): the row's tap opens it, so a `⧉` beside the id promised a
+								 *  button the tap does not honour; the open card's own foot is the
+								 *  control that carries it. */}
 								<Text className="font-mono text-mono-sm text-ink-muted">
 									{row.ask_id}
-								</Text>
-								<Text className="text-mono-sm text-ink-dim" aria-hidden>
-									⧉
 								</Text>
 							</View>
 						</View>

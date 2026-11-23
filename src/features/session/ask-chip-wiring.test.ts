@@ -69,20 +69,25 @@ describe("the session screen", () => {
 		expect(SCREEN).toContain("onRows={setSheetAskRows}");
 	});
 
-	it("opens the sheet ON the ask a chip names", () => {
+	it("opens the sheet ON the ask a chip names, only where the sheet can open", () => {
 		expect(SCREEN).toContain(
-			"useAskChipHostValue(chipFacts, asksSheet.openAt)",
+			"asksAnswerable ? asksSheet.openAt : NO_ASK_CHIP_OPEN,",
 		);
 	});
 });
 
 describe("the sheet hook", () => {
-	it("pins the ask a chip named, and prefers it over the policy's head ask", () => {
-		expect(HOOK).toContain("setPinned(askId);");
-		expect(HOOK).toContain("(pinned ??");
+	it("derives the expanded ask through the pure policy, so a pin only outlives a reader open", () => {
+		/* The behaviour — a leftover pin ignored by a policy open — is asserted in
+		 *  `asks-open-policy.test.ts`; this only checks the hook calls it (round 1,
+		 *  m5: the derivation moved out of string-greppable inline JS). */
+		expect(HOOK).toContain("initialOpenAskFor({");
+		expect(HOOK).toContain("origin: controller.openOrigin(),");
 	});
 
-	it("forgets the pin on every close and on a bar press", () => {
-		expect(HOOK.match(/setPinned\(null\);/g) ?? []).toHaveLength(2);
+	it("forgets the pin on every way out the hook itself drives", () => {
+		// open, close, readFailed, leave. Exits the controller runs alone are the
+		//  origin gate's job (m4b).
+		expect(HOOK.match(/setPinned\(null\);/g) ?? []).toHaveLength(4);
 	});
 });

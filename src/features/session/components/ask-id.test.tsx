@@ -56,11 +56,13 @@ const { AskIdChip, AskIdFoot } = await import(
 
 const render = (node: ReactNode) => renderToStaticMarkup(node);
 
-/** The handler the platform would call, taken from what the host was handed. */
+/** The handler the platform would call, taken from what the host was handed. A
+ * real gesture carries the event the chip's handler marks (`takeGesture`). */
+const gesture = () => ({ stopPropagation: vi.fn(), preventDefault: vi.fn() });
 const handler = (props: Record<string, unknown> | undefined, name: string) => {
 	const fn = props?.[name];
 	if (typeof fn !== "function") throw new Error(`no ${name} handler`);
-	return fn as () => void;
+	return fn as (event: ReturnType<typeof gesture>) => void;
 };
 
 const withHost = (
@@ -102,7 +104,7 @@ describe("AskIdChip", () => {
 		expect(markup).toContain(t("mobile.asks.chip.withdrawn"));
 	});
 
-	it("opens the ask a tap names", () => {
+	it("opens the ask a tap names, and takes the tap out of the message", () => {
 		const opened: string[] = [];
 		render(
 			withHost(
@@ -112,11 +114,15 @@ describe("AskIdChip", () => {
 			),
 		);
 		const chip = host.texts.get("ask-chip-a-745e");
-		handler(chip, "onPress")();
+		const event = gesture();
+		handler(chip, "onPress")(event);
 		expect(opened).toEqual(["a-745e"]);
+		// A nested control must not also fire the row's own actions (round 1, m2).
+		expect(event.stopPropagation).toHaveBeenCalledTimes(1);
+		expect(event.preventDefault).toHaveBeenCalledTimes(1);
 	});
 
-	it("copies the id on a hold, with a tick and a toast naming it", () => {
+	it("copies the id on a hold, with a tick and a toast naming it", async () => {
 		render(
 			withHost(
 				createElement(AskIdChip, { id: "a-745e" }),
@@ -125,8 +131,12 @@ describe("AskIdChip", () => {
 			),
 		);
 		const chip = host.texts.get("ask-chip-a-745e");
-		handler(chip, "onLongPress")();
-		expect(host.copied).toEqual(["a-745e"]);
+		const event = gesture();
+		handler(chip, "onLongPress")(event);
+		// The clipboard module is loaded on use, not on import (QA round 1, Q1), so
+		// the write lands after the dynamic import resolves.
+		await vi.waitFor(() => expect(host.copied).toEqual(["a-745e"]));
+		expect(event.stopPropagation).toHaveBeenCalledTimes(1);
 		expect(host.ticks).toEqual(["light"]);
 		expect(useUiStore.getState().toast?.message).toBe(
 			t("mobile.asks.chip.copied", { id: "a-745e" }),
@@ -142,7 +152,9 @@ describe("AskIdChip", () => {
 			t("mobile.asks.chip.unknown_label", { id: "a-9999" }),
 		);
 		expect(markup).not.toContain("●");
-		handler(chip, "onPress")();
+		const event = gesture();
+		handler(chip, "onPress")(event);
+		expect(event.stopPropagation).toHaveBeenCalledTimes(1);
 		expect(useUiStore.getState().toast?.message).toBe(
 			t("mobile.asks.chip.unknown_label", { id: "a-9999" }),
 		);
@@ -156,13 +168,13 @@ describe("AskIdFoot", () => {
 		useUiStore.setState({ toast: null });
 	});
 
-	it("copies the id it shows, under a name that says which id", () => {
+	it("copies the id it shows, under a name that says which id", async () => {
 		render(createElement(AskIdFoot, { askId: "a-e53b" }));
 		const box = host.texts.get("ask-id-copy-a-e53b");
 		expect(box?.accessibilityLabel).toBe(
 			t("mobile.asks.chip.copy_label", { id: "a-e53b" }),
 		);
-		handler(box, "onPress")();
-		expect(host.copied).toEqual(["a-e53b"]);
+		handler(box, "onPress")(gesture());
+		await vi.waitFor(() => expect(host.copied).toEqual(["a-e53b"]));
 	});
 });

@@ -13,7 +13,7 @@ import type { PendingAsk } from "@/contracts";
 import { blockingPending } from "@/features/session/asks";
 import {
 	createAsksAutoOpen,
-	expandTargetFor,
+	initialOpenAskFor,
 	outstandingAskIds,
 } from "@/features/session/asks-open-policy";
 import { sessions } from "@/features/session/runtime";
@@ -54,8 +54,9 @@ export interface AsksSheetInput {
 
 export interface AsksSheetControl {
 	visible: boolean;
-	/** The ask the sheet should open EXPANDED, or `null` (see `expandTargetFor`).
-	 *  Non-null only while the sheet is up because the POLICY opened it. */
+	/** The ask the sheet should open EXPANDED, or `null` (see `initialOpenAskFor`):
+	 *  the row a chip pinned for a READER open, or the head ask a POLICY open
+	 *  pre-expands. */
 	initialOpenAsk: string | null;
 	/** The conversation's own frame rows (`projection.asks`), on EVERY open. The
 	 *  sheet merges them into its aggregate keyed by ask id (see `drawnRows`) -
@@ -151,16 +152,20 @@ export const useAsksSheet = (input: AsksSheetInput): AsksSheetControl => {
 
 	/* The ask a chip named, for the NEXT opening: precedence over the policy's
 	 *  head ask (this was a press, so the policy's pre-expansion does not apply
-	 *  anyway), cleared on every close so a later auto-open does not inherit it. */
+	 *  anyway), cleared on every reader exit so a later auto-open does not inherit
+	 *  it — and read only for a `reader` open, because the exits this hook does not
+	 *  run (see `initialOpenAskFor`) must not leave it alive either. */
 	const [pinned, setPinned] = useState<string | null>(null);
 
 	/* The head question, for a sheet the POLICY raised. Derived per render from the
 	 * frame already in hand (not the sheet's own read) so the question is on the
 	 * first painted frame; the sheet reads it once, on the opening transition. */
-	const initialOpenAsk = visible
-		? (pinned ??
-			expandTargetFor(controller.openOrigin(), entry.projection?.asks))
-		: null;
+	const initialOpenAsk = initialOpenAskFor({
+		visible,
+		pinned,
+		origin: controller.openOrigin(),
+		asks: entry.projection?.asks,
+	});
 	/* The frame's own rows on EVERY open, not only a policy open: the sheet draws
 	 * them merged into the aggregate, keyed by ask id (`drawnRows`). Gated on the
 	 * sheet being up so a closed sheet does not re-render with every frame. */
@@ -273,7 +278,10 @@ export const useAsksSheet = (input: AsksSheetInput): AsksSheetControl => {
 	const readFailed = useCallback(
 		({ drawn }: { drawn: number }) => {
 			/* Not a close by the reader: no focus to restore (nothing had it) and
-			 * nothing to remember. The controller owns whether it applies. */
+			 * nothing to remember. The controller owns whether it applies. A pin left
+			 * by the chip is dropped here: the sheet it named is not the one that
+			 * will open next (m4b). */
+			setPinned(null);
 			controller.readFailed({ sessionId, drawn });
 		},
 		[controller, sessionId],
@@ -281,6 +289,10 @@ export const useAsksSheet = (input: AsksSheetInput): AsksSheetControl => {
 
 	const leave = useCallback(
 		(target: string, askIds: readonly string[]) => {
+			/* A navigation from inside the sheet is not a refusal of this
+			 * conversation's asks, but it does end the opening the chip pinned — a
+			 * later policy open must expand its own head ask (m4b). */
+			setPinned(null);
 			controller.navigated({ to: target, pending: askIds });
 		},
 		[controller],

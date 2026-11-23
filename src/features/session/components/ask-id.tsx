@@ -1,6 +1,10 @@
-import * as Clipboard from "expo-clipboard";
 import { useCallback } from "react";
-import { Pressable, Text, type TextStyle } from "react-native";
+import {
+	type GestureResponderEvent,
+	Pressable,
+	Text,
+	type TextStyle,
+} from "react-native";
 
 import { askChipOpen, askChipWord } from "@/features/session/ask-chip";
 import { useAskChipHost } from "@/features/session/ask-chip-host";
@@ -69,11 +73,42 @@ export const useCopyAskId = () => {
 	return useCallback(
 		(askId: string) => {
 			haptic("light");
-			void Clipboard.setStringAsync(askId);
+			/* THE CLIPBOARD MODULE IS LOADED ON USE, NOT ON IMPORT. `ask-id` is
+			 *  reached from every transcript row (through `ask-response-row`), and the
+			 *  suite's Node tests import `transcript-row` without a native-module
+			 *  registry: a top-level `expo-clipboard` import made three of them die at
+			 *  LOAD time with `__DEV__ is not defined` (PR #387 QA round 1, Q1). The
+			 *  app's own precedent is `attachment-source.ts`, which awaits the module
+			 *  at the moment of the paste. */
+			void import("expo-clipboard").then((Clipboard) =>
+				Clipboard.setStringAsync(askId),
+			);
 			showToast(t("mobile.asks.chip.copied", { id: askId }));
 		},
 		[showToast],
 	);
+};
+
+/**
+ * A nested control inside running prose takes its gesture OUT of the message
+ * before it acts: a tap on web is a DOM click that otherwise also reaches the
+ * transcript row's own actions, which is why the prose renderer's link handler
+ * makes the same two calls. The mark also keeps the gesture out of the row's JS
+ * handlers on native.
+ *
+ * A HOLD'S OTHER ACTION IS MARKED, NOT REMOVED, and that is stated rather than
+ * fixed (review round 1, m1). A hold on the chip copies the id; on iOS the row's
+ * raw-touch long-press can still enter selection mode under it, and on Android
+ * the parent's native `<Text selectable>` can eat the hold. Routing the hold
+ * through `useTextSelection().enter` — what `CodeBlockView` does — is NOT that
+ * fix here: inside a hosted message on Android that context's `enter` IS the
+ * message's long-press (the actions sheet), so it would add a second action
+ * instead of removing one. The check needs a real device, which this round did
+ * not have.
+ */
+const takeGesture = (event: GestureResponderEvent) => {
+	event.stopPropagation();
+	event.preventDefault();
 };
 
 /** An ask id quoted in an agent's prose. */
@@ -93,8 +128,14 @@ export const AskIdChip = ({ id }: { id: string }) => {
 			<Text
 				className="font-mono text-mono-sm text-ink-muted"
 				style={UNRESOLVED_UNDERLINE}
-				onLongPress={() => copy(id)}
-				onPress={() => showToast(t("mobile.asks.chip.unknown_label", { id }))}
+				onLongPress={(event) => {
+					takeGesture(event);
+					copy(id);
+				}}
+				onPress={(event) => {
+					takeGesture(event);
+					showToast(t("mobile.asks.chip.unknown_label", { id }));
+				}}
 				accessibilityRole={ROLE.button}
 				accessibilityLabel={t("mobile.asks.chip.unknown_label", { id })}
 				testID={askIdChipId(id)}
@@ -109,8 +150,14 @@ export const AskIdChip = ({ id }: { id: string }) => {
 	return (
 		<Text
 			className="font-mono text-mono-sm bg-elevated text-ink web:rounded-xs"
-			onPress={() => host.open(id)}
-			onLongPress={() => copy(id)}
+			onPress={(event) => {
+				takeGesture(event);
+				host.open(id);
+			}}
+			onLongPress={(event) => {
+				takeGesture(event);
+				copy(id);
+			}}
 			accessibilityRole={ROLE.button}
 			accessibilityLabel={
 				fact.question === ""

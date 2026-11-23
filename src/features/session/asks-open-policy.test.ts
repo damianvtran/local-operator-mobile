@@ -11,6 +11,7 @@ import {
 	drawnRows,
 	type Engagement,
 	expandTargetFor,
+	initialOpenAskFor,
 	isFreshFrame,
 	namesEveryOutstandingAsk,
 	OPEN_WINDOW_MS,
@@ -1804,5 +1805,56 @@ describe("issue #247 — the sheet draws the rows the app already holds", () => 
 		expect(view.ledger.isDismissed(SESSION)).toBe(true);
 		expect(view.see(fresh(PENDING))).toBe(false);
 		expect(view.controller.isOpenFor(SESSION)).toBe(false);
+	});
+});
+
+describe("M4b — a chip's pin only outlives the reader's own open", () => {
+	const asks = [ask({ ask_id: "a1" }), ask({ ask_id: "a2" })];
+
+	it("expands the ask a chip named", () => {
+		expect(
+			initialOpenAskFor({
+				visible: true,
+				pinned: "a2",
+				origin: "reader",
+				asks: asks,
+			}),
+		).toBe("a2");
+	});
+
+	it("ignores a pin left behind by an earlier opening when the policy raises the sheet", () => {
+		// The exits a chip's pin cannot see — a navigation from inside the sheet, a
+		// failed opening read, the controller re-pointed — leave the screen's pin
+		// state set; only a READER open may read it (round 1, m4b).
+		expect(
+			initialOpenAskFor({
+				visible: true,
+				pinned: "a2",
+				origin: "policy",
+				asks,
+			}),
+		).toBe("a1");
+	});
+
+	it("derives nothing while the sheet is down", () => {
+		expect(
+			initialOpenAskFor({
+				visible: false,
+				pinned: "a2",
+				origin: "reader",
+				asks: asks,
+			}),
+		).toBeNull();
+	});
+
+	it("keeps the collapsed walk for a press that named no ask", () => {
+		expect(
+			initialOpenAskFor({
+				visible: true,
+				pinned: null,
+				origin: "reader",
+				asks,
+			}),
+		).toBeNull();
 	});
 });

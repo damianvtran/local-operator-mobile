@@ -73,7 +73,30 @@ describe("askIdSegments", () => {
 			);
 	});
 
-	it("lifts the id out of an id prefixed by punctuation", () => {
+	it("refuses an id inside a URL, a path or a file name", () => {
+		for (const text of [
+			"https://x/a-745e",
+			"/tmp/a-745e",
+			"logs/a-745e",
+			"logs\\a-745e",
+			"src/a-745e.ts",
+			"a-745e.json",
+			"a-745e.tar.gz",
+			"v1.a-745e",
+		]) {
+			expect(askIdSegments(text)).toEqual([{ kind: "text", text }]);
+		}
+	});
+
+	it("still lifts an id whose sentence ends in a full stop", () => {
+		expect(askIdSegments("the old one, a-745e. withdrawn")).toEqual([
+			{ kind: "text", text: "the old one, " },
+			{ kind: "ask", id: "a-745e" },
+			{ kind: "text", text: ". withdrawn" },
+		]);
+	});
+
+	it("lifts the id out of an id prefixed by a non-edge colon", () => {
 		expect(askIdSegments("ask:a-745e")).toEqual([
 			{ kind: "text", text: "ask:" },
 			{ kind: "ask", id: "a-745e" },
@@ -101,6 +124,20 @@ describe("askChipWord", () => {
 				kind: "key",
 				key: `mobile.asks.chip.${status}`,
 			});
+	});
+
+	it("keeps a status that inherits from Object.prototype out of the catalogue", () => {
+		/* The runtime may invent a state, so a lookup by string must not find
+		 *  `constructor` or `toString` on the way (round 1, Q3). */
+		for (const status of [
+			"constructor",
+			"toString",
+			"hasOwnProperty",
+			"valueOf",
+			"__proto__",
+		]) {
+			expect(askChipWord(status)?.kind).toBe("literal");
+		}
 	});
 
 	it("passes an unknown state through in its own words rather than as a known one", () => {
@@ -177,6 +214,48 @@ describe("askChipFacts", () => {
 		expect(askChipFacts({}, "sid").size).toBe(0);
 		expect(askChipFacts({ frame: null, settled: null }, "sid").size).toBe(0);
 	});
+
+	it("does not let a stale sheet read call an ask open the live frame has dropped", () => {
+		/* The sheet reads only while visible and keeps its last read, so it can still
+		 *  say `open` for an ask the agent has since WITHDRAWN — which leaves the frame
+		 *  and writes no receipt. A live frame that lacks the id is the newer reading
+		 *  (M1). */
+		const facts = askChipFacts(
+			{
+				frame: [],
+				settled: [ask({ ask_id: "a-745e", session_id: "sid", status: "open" })],
+			},
+			"sid",
+		);
+		expect(facts.has("a-745e")).toBe(false);
+	});
+
+	it("still names a settled or withdrawn ask the frame no longer holds", () => {
+		const facts = askChipFacts(
+			{
+				frame: [ask({ ask_id: "a-1111" })],
+				settled: [
+					ask({ ask_id: "a-745e", session_id: "sid", status: "withdrawn" }),
+					ask({ ask_id: "a-e53b", session_id: "sid", status: "timed_out" }),
+				],
+			},
+			"sid",
+		);
+		expect(facts.get("a-745e")?.status).toBe("withdrawn");
+		expect(facts.get("a-e53b")?.status).toBe("timed_out");
+	});
+
+	it("keeps the sheet's open reading when the runtime publishes no frame at all", () => {
+		/* `null` is "this runtime has no asks projection", not "the frame is empty":
+		 *  the sheet's read is then the only source there is. */
+		const facts = askChipFacts(
+			{
+				settled: [ask({ ask_id: "a-745e", session_id: "sid", status: "open" })],
+			},
+			"sid",
+		);
+		expect(facts.get("a-745e")?.status).toBe("open");
+	});
 });
 
 describe("askChipSignature", () => {
@@ -191,6 +270,15 @@ describe("askChipSignature", () => {
 	it("changes when one id's state changes", () => {
 		const before = askChipFacts({ frame: [ask()] }, "sid");
 		const after = askChipFacts({ frame: [ask({ status: "answered" })] }, "sid");
+		expect(askChipSignature(before)).not.toBe(askChipSignature(after));
+	});
+
+	it("changes when only the question does, so the spoken question cannot go stale", () => {
+		const before = askChipFacts({ frame: [ask()] }, "sid");
+		const after = askChipFacts(
+			{ frame: [ask({ questions: [question("Which density?")] })] },
+			"sid",
+		);
 		expect(askChipSignature(before)).not.toBe(askChipSignature(after));
 	});
 });

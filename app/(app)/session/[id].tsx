@@ -162,6 +162,11 @@ import {
 } from "@/ui/size-class";
 import { useTextScale } from "@/ui/text-scale-provider";
 
+/** A chip's tap where the asks sheet cannot open. Stable at module scope so the
+ *  host's identity memo (`useAskChipHostValue`) is not broken by a new function
+ *  on every render. */
+const NO_ASK_CHIP_OPEN = () => {};
+
 /** The context-window fact, keyed as whole strings. The old inline version
  *  stitched `%` + "ctx"/"context" + "(est.)" onto a number, which no other
  *  language can order. `narrow` is the under-340 pt form (design round 2, D17:
@@ -543,7 +548,15 @@ function Session() {
 			),
 		[projection?.asks, runtime.entries, sheetAskRows, sessionId],
 	);
-	const chipHost = useAskChipHostValue(chipFacts, asksSheet.openAt);
+	/* A chip's tap is a door only where the sheet can open (review round 1, m4a): a
+	 *  relay that forwards no `ask_respond` has no answerable sheet (`asksOpen`),
+	 *  so opening the controller would do nothing now and pop a sheet later if the
+	 *  capability flipped. The chip still RESOLVES — its state word is true and
+	 *  useful — it just does not act. */
+	const chipHost = useAskChipHostValue(
+		chipFacts,
+		asksAnswerable ? asksSheet.openAt : NO_ASK_CHIP_OPEN,
+	);
 
 	/* The effort ladder, read once: the chip's availability and the sheet's rows are
 	 * the same fact, and an empty ladder means the selected model has no effort

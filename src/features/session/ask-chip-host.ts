@@ -30,11 +30,18 @@ export const AskChipHostContext = createContext<AskChipHost | null>(null);
  * Whether this surface draws chips at all.
  *
  * SEPARATE FROM THE HOST because it is read by the prose component itself: a
- * surface with no ask queue (a notification body, a Bridge message rendered
- * through the same renderer) must draw the agent's id as ordinary text, exactly
- * as it did before, rather than as a control that can do nothing. A boolean
- * changes at most once per mount, so reading it does not re-render prose when
- * the queue moves.
+ * surface with no ask queue (a notification body) must draw the agent's id as
+ * ordinary text, exactly as it did before, rather than as a control that can do
+ * nothing. A boolean changes at most once per mount, so reading it does not
+ * re-render prose when the queue moves.
+ *
+ * The transcript's provider wraps the WHOLE list, so an inbound Team Bridge body
+ * rendered by `tool-row.tsx` draws chips too and resolves them against THIS
+ * session's asks (review round 1, N5). That is deliberate and harmless in the
+ * only way it can be wrong: a peer's id that collides with one of this
+ * session's — ids are 2 random bytes, so 1 in 65536 — would open the local ask
+ * of that name. Scoping the provider to assistant rows was the alternative and
+ * would have to be repeated in every renderer that draws prose.
  */
 export const AskChipDrawnContext = createContext(false);
 
