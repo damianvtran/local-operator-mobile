@@ -237,13 +237,20 @@ describe("createTransitionTick", () => {
 		expect(SHEET).toContain(
 			"if (wasVisible.current !== visible) sheetTransitionTick();",
 		);
-		/* TWO, and they are different events: the transition gate above (one tick
-		 *  per visible change) and the resize snap's own `remember` (one tick per
-		 *  size change while the sheet is open — `sheet.tsx`'s `remember`, whose
-		 *  comment says why). The intent of this test is that no sheet's OPEN or
-		 *  CLOSE ticks outside the shared gate, which the snap does not break; a
-		 *  third haptic anywhere in the file is what this catches. */
-		expect(SHEET.match(/haptic\("selection"\)/g)).toHaveLength(2);
+		/* TWO, and each is named by its own call site, so a SWAP fails as well as a
+		 *  third: the transition gate above (one tick per visible change) and the
+		 *  resize snap inside `remember` (one tick per size change while the sheet
+		 *  is open — the comment there says why). The test's intent — no open or
+		 *  close ticks outside the shared gate — is what the first pin holds. */
+		const rememberBody = SHEET.slice(
+			SHEET.indexOf("const remember = useCallback("),
+			SHEET.indexOf("}, [resizeKey],"),
+		);
+		expect(rememberBody).not.toBe("");
+		expect(rememberBody.match(/haptic\("selection"\)/g)).toHaveLength(1);
+		expect(
+			SHEET.replace(rememberBody, "").match(/haptic\("selection"\)/g),
+		).toHaveLength(1);
 	});
 });
 

@@ -582,9 +582,16 @@ export const Sheet = ({
 	const snappedTarget = useRef<number | null>(null);
 	const remember = useCallback(
 		(next: SheetResizeSize, springTarget?: number) => {
-			snappedTarget.current = springTarget ?? null;
 			rememberResizeSize(resizeKey, next);
-			if (resizeSizeRef.current === next) return;
+			/* A release that lands on the size already chosen changes no state, so
+			 *  the sync effect never runs to consume the target: clearing it here
+			 *  is what keeps a stale value from skipping a LATER, needed spring
+			 *  (review r3 m-b). */
+			if (resizeSizeRef.current === next) {
+				snappedTarget.current = null;
+				return;
+			}
+			snappedTarget.current = springTarget ?? null;
 			resizeSizeRef.current = next;
 			haptic("selection");
 			setResizeSize(next);
@@ -953,83 +960,106 @@ export const Sheet = ({
 				 *  and the control never fired (measured in the evidence run: the tap
 				 *  "succeeded" at Medium and nothing moved).
 				 *
+				 *  TWO NODES, because the centring needs one. The header is a ROW, and
+				 *  in Yoga an absolute child with auto insets is placed on the MAIN
+				 *  axis by the PARENT's `justifyContent`, not by its own `alignSelf`:
+				 *  the single-node version put a 120 pt target at the row's start edge,
+				 *  over the title, so a tap on the title's first letters flipped the
+				 *  size (design r2 D9 -> r3 D10, measured in Yoga at 390 pt: frame
+				 *  left 16, centre 76, screen centre 195). The OUTER view spans the
+				 *  header and centres its children; the Pressable inside is the real
+				 *  44 × 120 target. `box-none` keeps the band's own space transparent to
+				 *  touches and to the accessibility tree, so the title stays tappable
+				 *  and readable outside the pill.
+				 *
 				 *  THE PRESSABLE IS A REAL 44 pt-TALL FRAME containing the pill, not a
 				 *  5 pt pill grown by `hitSlop`: hit slop does not grow the frame
 				 *  VoiceOver reads, so the adjustable control was announced 5 pt tall
 				 *  (design r1 D3 / review N2). The close button is a later sibling and
-				 *  stays on top of the band's right end. A tap toggles Medium/Large
+				 *  stays on top of the band's trailing end. `start`/`end` rather than
+				 *  `left`/`right`: the band mirrors with the page, and the physical-edge
+				 *  guard keeps its two documented uses. A tap toggles Medium/Large
 				 *  without a drag; the whole header row stays the drag zone; and a
 				 *  reader who cannot drag adjusts the same size from the VoiceOver /
 				 *  TalkBack action list (spec 3.6). */
-				<Pressable
-					accessibilityRole={ROLE.adjustable}
-					accessibilityLabel={t("mobile.common.resize_panel")}
-					accessibilityValue={{
-						text:
-							resizeSize === "large"
-								? t("mobile.common.size.large")
-								: t("mobile.common.size.medium"),
-					}}
-					/* Only the action that can happen at THIS size is offered: an
-					 *  "adjust up" already at Large is a control that does nothing
-					 *  (review r1 N1). */
-					accessibilityActions={
-						resizeSize === "large"
-							? [{ name: "decrement", label: t("mobile.common.size.shorter") }]
-							: [{ name: "increment", label: t("mobile.common.size.taller") }]
-					}
-					onAccessibilityAction={(event) => {
-						/* The same rule as the tap below: while the keyboard pins the
-						 *  body, this control does not write a size the reader cannot
-						 *  see change — it puts the keyboard away instead (UX r2 U9). */
-						if (keyboard.visible) {
-							Keyboard.dismiss();
-							return;
-						}
-						const action = event.nativeEvent.actionName;
-						if (action === "increment") remember("large");
-						if (action === "decrement") remember("medium");
-					}}
-					onPress={() => {
-						/* With the keyboard up the bar is not a size control: a tap there
-						 *  puts the keyboard away and writes nothing, so the size the
-						 *  reader chose with the keyboard down is not overwritten by a
-						 *  stray tap while they were typing (UX r1 U5). */
-						if (keyboard.visible) {
-							Keyboard.dismiss();
-							return;
-						}
-						remember(resizeSizeRef.current === "large" ? "medium" : "large");
-					}}
-					testID={CONTROL.sheetGrabBar}
+				<View
+					pointerEvents="box-none"
 					style={{
 						position: "absolute",
 						top: 0,
-						/* 44 pt tall and 120 pt wide, CENTRED on the pill: the target is
-						 *  real (design r1 D3) without making the whole header — the
-						 *  title included — a size toggle, or putting the adjustable
-						 *  control in VoiceOver's path before the heading (design r2
-						 *  D9). 120 pt keeps it ~80 pt clear of Close at 320 pt.
-						 *  No `left`/`right`: Yoga centres an absolutely positioned
-						 *  child with auto insets by `alignSelf`, which is also the
-						 *  direction-neutral spelling the physical-edge guard wants. */
-						alignSelf: "center",
-						width: 120,
+						start: 0,
+						end: 0,
 						height: 44,
 						alignItems: "center",
-						paddingTop: 6,
 					}}
 				>
-					<View
-						style={{
-							width: 36,
-							height: 5,
-							borderRadius: 3,
-							backgroundColor: grabColour,
-							opacity: 0.6,
+					<Pressable
+						accessibilityRole={ROLE.adjustable}
+						accessibilityLabel={t("mobile.common.resize_panel")}
+						accessibilityValue={{
+							text:
+								resizeSize === "large"
+									? t("mobile.common.size.large")
+									: t("mobile.common.size.medium"),
 						}}
-					/>
-				</Pressable>
+						/* Only the action that can happen at THIS size is offered: an
+						 *  "adjust up" already at Large is a control that does nothing
+						 *  (review r1 N1). */
+						accessibilityActions={
+							resizeSize === "large"
+								? [
+										{
+											name: "decrement",
+											label: t("mobile.common.size.shorter"),
+										},
+									]
+								: [{ name: "increment", label: t("mobile.common.size.taller") }]
+						}
+						onAccessibilityAction={(event) => {
+							/* The same rule as the tap below: while the keyboard pins the
+							 *  body, this control does not write a size the reader cannot
+							 *  see change — it puts the keyboard away instead (UX r2 U9). */
+							if (keyboard.visible) {
+								Keyboard.dismiss();
+								return;
+							}
+							const action = event.nativeEvent.actionName;
+							if (action === "increment") remember("large");
+							if (action === "decrement") remember("medium");
+						}}
+						onPress={() => {
+							/* With the keyboard up the bar is not a size control: a tap there
+							 *  puts the keyboard away and writes nothing, so the size the
+							 *  reader chose with the keyboard down is not overwritten by a
+							 *  stray tap while they were typing (UX r1 U5). */
+							if (keyboard.visible) {
+								Keyboard.dismiss();
+								return;
+							}
+							remember(resizeSizeRef.current === "large" ? "medium" : "large");
+						}}
+						testID={CONTROL.sheetGrabBar}
+						style={{
+							/* 44 × 120, centred by the wrapper above (design r3 D10): the target
+							 *  is real without making the title a size toggle. 120 pt keeps it
+							 *  ~80 pt clear of Close at 320 pt. */
+							width: 120,
+							height: 44,
+							alignItems: "center",
+							paddingTop: 6,
+						}}
+					>
+						<View
+							style={{
+								width: 36,
+								height: 5,
+								borderRadius: 3,
+								backgroundColor: grabColour,
+								opacity: 0.6,
+							}}
+						/>
+					</Pressable>
+				</View>
 			) : null}
 			<IconButton
 				accessibilityLabel={t("mobile.common.close")}
