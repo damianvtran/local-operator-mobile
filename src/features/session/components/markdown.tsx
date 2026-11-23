@@ -2,6 +2,7 @@
 import * as Clipboard from "expo-clipboard";
 import {
 	memo,
+	type ReactNode,
 	type RefObject,
 	useCallback,
 	useContext,
@@ -21,6 +22,9 @@ import {
 	View,
 } from "react-native";
 import Svg, { Defs, LinearGradient, Rect, Stop } from "react-native-svg";
+import { askIdSegments } from "@/features/session/ask-chip";
+import { askChipsDrawn } from "@/features/session/ask-chip-host";
+import { AskIdChip } from "@/features/session/components/ask-id";
 import { DiagramBlock } from "@/features/session/components/diagram-block";
 import {
 	type InlineUiData,
@@ -177,6 +181,71 @@ function InlineSuffix({
 
 type SuffixSplit = { span: number; start: number; end: number; value: string };
 
+/**
+ * One span's text, with any ask id in it drawn as a chip (`ask-id.tsx`).
+ *
+ * A RENDER FUNCTION, NOT A COMPONENT, because the string has to stay a
+ * STRING: a `<Text>`'s children are read as text by the platform (and by the
+ * tests that mount this renderer), and an element wrapper around an ordinary
+ * run turns a link's label into an object. Only a run that actually carries an
+ * id is sliced, and its plain parts stay plain strings.
+ *
+ * A CHIP IS ONLY DRAWN WHERE A SURFACE SAYS IT CAN ANSWER FOR THE ID
+ * (`AskChipDrawnContext`): every other surface that renders through this
+ * renderer — a notification body, a Bridge message — keeps the agent's id as
+ * ordinary text rather than a control that opens nothing.
+ *
+ * THE ANIMATED TAIL IS NOT SPLIT. The streaming suffix is inserted at a byte
+ * offset inside its span, and slicing that span into segments first would leave
+ * the suffix's own text to be re-derived from a different string; a live id is
+ * plain for the last frame of a stream and becomes a chip when the stream
+ * settles, which is exactly when the reader could press it.
+ */
+const spanBody = ({
+	span,
+	chips,
+	split,
+	nodeRef,
+	animate,
+}: {
+	span: InlineSpan;
+	chips: boolean;
+	split: SuffixSplit | null;
+	nodeRef: RefObject<Text | null>;
+	animate: boolean;
+}): ReactNode => {
+	if (split !== null) {
+		return (
+			<>
+				{span.text.slice(0, split.start)}
+				<InlineSuffix
+					key={split.end}
+					value={split.value}
+					nodeRef={nodeRef}
+					animate={animate}
+				/>
+				{span.text.slice(split.end)}
+			</>
+		);
+	}
+	if (!chips || span.href !== undefined) return span.text;
+	const segments = askIdSegments(span.text);
+	/* No id in this run: hand back the run itself, so an ordinary paragraph —
+	 *  and every link's label — is the string it always was. */
+	if (segments.every((segment) => segment.kind === "text")) return span.text;
+	return (
+		<>
+			{segments.map((segment, index) =>
+				segment.kind === "ask" ? (
+					<AskIdChip key={index} id={segment.id} />
+				) : (
+					segment.text
+				),
+			)}
+		</>
+	);
+};
+
 function selectionIntersects(node: Node | null): boolean {
 	if (!node?.isConnected) return false;
 	const selection = node.ownerDocument?.getSelection();
@@ -201,6 +270,7 @@ const Inline = memo(function Inline({
 	 *  same text: on a long answer that is the frame budget spent on work whose
 	 *  input did not change. */
 	const spans = useMemo(() => parseInline(text), [text]);
+	const chips = askChipsDrawn();
 	const previous = useRef<{
 		text: string;
 		spans: InlineSpan[];
@@ -318,20 +388,13 @@ const Inline = memo(function Inline({
 							: undefined
 					}
 				>
-					{split?.span === index ? (
-						<>
-							{span.text.slice(0, split.start)}
-							<InlineSuffix
-								key={split.end}
-								value={split.value}
-								nodeRef={nodeRef}
-								animate={fresh !== null}
-							/>
-							{span.text.slice(split.end)}
-						</>
-					) : (
-						span.text
-					)}
+					{spanBody({
+						span,
+						chips,
+						split: split?.span === index ? split : null,
+						nodeRef,
+						animate: fresh !== null,
+					})}
 				</Text>
 			))}
 		</Text>
