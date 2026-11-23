@@ -25,7 +25,7 @@
 	},
 	"mobile.chrome.clear_search": {
 		"role": "button",
-		"note": "Accessible name of the small × inside the sidebar's search field; it empties the search text. Shown only while the field has text. No final full stop."
+		"note": "Empties the search text. Used in three places: the accessible name of the small × inside the sidebar's search field (shown only while the field has text), and the visible button label under 'Nothing matches that.' in the sidebar's no-match empty state and on the Past sessions screen. Short imperative, no final full stop."
 	},
 	"mobile.chrome.close_conversations": {
 		"role": "button",

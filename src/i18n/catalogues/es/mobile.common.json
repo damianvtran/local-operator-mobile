@@ -14,6 +14,7 @@
 	"mobile.common.copy_command_hint": "Copia el comando “{label}”",
 	"mobile.common.close": "Cerrar",
 	"mobile.common.loading": "Cargando",
+	"mobile.common.no_matches": "No hay coincidencias.",
 	"mobile.common.resize_panel": "Cambiar el tamaño del panel",
 	"mobile.common.size.medium": "Mediano",
 	"mobile.common.size.large": "Grande",

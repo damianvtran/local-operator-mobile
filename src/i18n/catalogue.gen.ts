@@ -120,6 +120,7 @@ export type CatalogueKey =
 	| "mobile.common.copy_command_hint"
 	| "mobile.common.done"
 	| "mobile.common.loading"
+	| "mobile.common.no_matches"
 	| "mobile.common.not_found.action"
 	| "mobile.common.not_found.headline"
 	| "mobile.common.not_found.next"
@@ -714,6 +715,10 @@ export type CatalogueKey =
 	| "mobile.oauth.invalid"
 	| "mobile.oauth.received"
 	| "mobile.oauth.return"
+	| "mobile.past.empty_headline"
+	| "mobile.past.empty_next"
+	| "mobile.past.no_matches_next"
+	| "mobile.past.search_label"
 	| "mobile.projects.create.description"
 	| "mobile.projects.create.description_placeholder"
 	| "mobile.projects.create.name"
@@ -1084,6 +1089,11 @@ export type CatalogueKey =
 	| "mobile.sidebar.basis.created"
 	| "mobile.sidebar.basis.last_active"
 	| "mobile.sidebar.clock_hint"
+	| "mobile.sidebar.empty.no_route_headline"
+	| "mobile.sidebar.empty.no_route_next"
+	| "mobile.sidebar.empty.none_headline"
+	| "mobile.sidebar.empty.none_next"
+	| "mobile.sidebar.empty.search_next"
 	| "mobile.sidebar.empty_by_view.headline"
 	| "mobile.sidebar.empty_by_view.next"
 	| "mobile.sidebar.empty_by_view.reset"
@@ -1092,6 +1102,11 @@ export type CatalogueKey =
 	| "mobile.sidebar.group.time_section"
 	| "mobile.sidebar.group_by"
 	| "mobile.sidebar.hidden_sections"
+	| "mobile.sidebar.menu.move"
+	| "mobile.sidebar.menu.open"
+	| "mobile.sidebar.menu.pin"
+	| "mobile.sidebar.menu.tags"
+	| "mobile.sidebar.menu.unpin"
 	| "mobile.sidebar.more_settings"
 	| "mobile.sidebar.order.active_first"
 	| "mobile.sidebar.order.most_recent"
@@ -1551,6 +1566,7 @@ export type NoParamKey =
 	| "mobile.common.copy"
 	| "mobile.common.done"
 	| "mobile.common.loading"
+	| "mobile.common.no_matches"
 	| "mobile.common.not_found.action"
 	| "mobile.common.not_found.headline"
 	| "mobile.common.not_found.next"
@@ -2056,6 +2072,10 @@ export type NoParamKey =
 	| "mobile.oauth.invalid"
 	| "mobile.oauth.received"
 	| "mobile.oauth.return"
+	| "mobile.past.empty_headline"
+	| "mobile.past.empty_next"
+	| "mobile.past.no_matches_next"
+	| "mobile.past.search_label"
 	| "mobile.projects.create.description"
 	| "mobile.projects.create.description_placeholder"
 	| "mobile.projects.create.name"
@@ -2348,6 +2368,11 @@ export type NoParamKey =
 	| "mobile.sidebar.basis.created"
 	| "mobile.sidebar.basis.last_active"
 	| "mobile.sidebar.clock_hint"
+	| "mobile.sidebar.empty.no_route_headline"
+	| "mobile.sidebar.empty.no_route_next"
+	| "mobile.sidebar.empty.none_headline"
+	| "mobile.sidebar.empty.none_next"
+	| "mobile.sidebar.empty.search_next"
 	| "mobile.sidebar.empty_by_view.headline"
 	| "mobile.sidebar.empty_by_view.next"
 	| "mobile.sidebar.empty_by_view.reset"
@@ -2355,6 +2380,11 @@ export type NoParamKey =
 	| "mobile.sidebar.group.tag"
 	| "mobile.sidebar.group.time_section"
 	| "mobile.sidebar.group_by"
+	| "mobile.sidebar.menu.move"
+	| "mobile.sidebar.menu.open"
+	| "mobile.sidebar.menu.pin"
+	| "mobile.sidebar.menu.tags"
+	| "mobile.sidebar.menu.unpin"
 	| "mobile.sidebar.more_settings"
 	| "mobile.sidebar.order.active_first"
 	| "mobile.sidebar.order.most_recent"
@@ -2750,6 +2780,7 @@ export type MessageParams = {
 	"mobile.common.copy_command_hint": { label: string | number };
 	"mobile.common.done": NoParams;
 	"mobile.common.loading": NoParams;
+	"mobile.common.no_matches": NoParams;
 	"mobile.common.not_found.action": NoParams;
 	"mobile.common.not_found.headline": NoParams;
 	"mobile.common.not_found.next": NoParams;
@@ -3344,6 +3375,10 @@ export type MessageParams = {
 	"mobile.oauth.invalid": NoParams;
 	"mobile.oauth.received": NoParams;
 	"mobile.oauth.return": NoParams;
+	"mobile.past.empty_headline": NoParams;
+	"mobile.past.empty_next": NoParams;
+	"mobile.past.no_matches_next": NoParams;
+	"mobile.past.search_label": NoParams;
 	"mobile.projects.create.description": NoParams;
 	"mobile.projects.create.description_placeholder": NoParams;
 	"mobile.projects.create.name": NoParams;
@@ -3714,6 +3749,11 @@ export type MessageParams = {
 	"mobile.sidebar.basis.created": NoParams;
 	"mobile.sidebar.basis.last_active": NoParams;
 	"mobile.sidebar.clock_hint": NoParams;
+	"mobile.sidebar.empty.no_route_headline": NoParams;
+	"mobile.sidebar.empty.no_route_next": NoParams;
+	"mobile.sidebar.empty.none_headline": NoParams;
+	"mobile.sidebar.empty.none_next": NoParams;
+	"mobile.sidebar.empty.search_next": NoParams;
 	"mobile.sidebar.empty_by_view.headline": NoParams;
 	"mobile.sidebar.empty_by_view.next": NoParams;
 	"mobile.sidebar.empty_by_view.reset": NoParams;
@@ -3722,6 +3762,11 @@ export type MessageParams = {
 	"mobile.sidebar.group.time_section": NoParams;
 	"mobile.sidebar.group_by": NoParams;
 	"mobile.sidebar.hidden_sections": { count: number };
+	"mobile.sidebar.menu.move": NoParams;
+	"mobile.sidebar.menu.open": NoParams;
+	"mobile.sidebar.menu.pin": NoParams;
+	"mobile.sidebar.menu.tags": NoParams;
+	"mobile.sidebar.menu.unpin": NoParams;
 	"mobile.sidebar.more_settings": NoParams;
 	"mobile.sidebar.order.active_first": NoParams;
 	"mobile.sidebar.order.most_recent": NoParams;
@@ -4207,6 +4252,7 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.common.copy_command_hint": "Copies the {label} command",
 	"mobile.common.done": "Done",
 	"mobile.common.loading": "Loading",
+	"mobile.common.no_matches": "Nothing matches that.",
 	"mobile.common.not_found.action": "Back to sessions",
 	"mobile.common.not_found.headline": "That page does not exist.",
 	"mobile.common.not_found.next": "Go back to your sessions to carry on.",
@@ -4801,6 +4847,10 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.oauth.invalid": "This sign-in request was not accepted.",
 	"mobile.oauth.received": "Sign-in response received. Return to the app.",
 	"mobile.oauth.return": "Return to Local Operator",
+	"mobile.past.empty_headline": "No past conversations yet.",
+	"mobile.past.empty_next": "Conversations you have finished will be listed here, and you can pick one up again.",
+	"mobile.past.no_matches_next": "Search covers what was said as well as the titles, so a shorter word may match.",
+	"mobile.past.search_label": "Search past sessions",
 	"mobile.projects.create.description": "Description",
 	"mobile.projects.create.description_placeholder": "What this project is for",
 	"mobile.projects.create.name": "Name",
@@ -5171,6 +5221,11 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.sidebar.basis.created": "Created",
 	"mobile.sidebar.basis.last_active": "Last active",
 	"mobile.sidebar.clock_hint": "Dates and ordering follow the selected clock.",
+	"mobile.sidebar.empty.no_route_headline": "No computer is connected yet.",
+	"mobile.sidebar.empty.no_route_next": "This app drives the sessions on your own computer, so it needs one first.",
+	"mobile.sidebar.empty.none_headline": "No sessions yet.",
+	"mobile.sidebar.empty.none_next": "A session is one conversation with the agent on your machine. Start one and it will appear here.",
+	"mobile.sidebar.empty.search_next": "Search covers the loaded sessions' names, ids and folders.",
 	"mobile.sidebar.empty_by_view.headline": "Your view options hide every conversation.",
 	"mobile.sidebar.empty_by_view.next": "Turn sections or ended sessions back on, or reset the view.",
 	"mobile.sidebar.empty_by_view.reset": "Reset view",
@@ -5179,6 +5234,11 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.sidebar.group.time_section": "Time section",
 	"mobile.sidebar.group_by": "Group by",
 	"mobile.sidebar.hidden_sections": "{count, plural, one {# section hidden} other {# sections hidden}}",
+	"mobile.sidebar.menu.move": "Move or copy…",
+	"mobile.sidebar.menu.open": "Open",
+	"mobile.sidebar.menu.pin": "Pin to the top",
+	"mobile.sidebar.menu.tags": "Tags…",
+	"mobile.sidebar.menu.unpin": "Unpin",
 	"mobile.sidebar.more_settings": "More sidebar settings",
 	"mobile.sidebar.order.active_first": "Active first",
 	"mobile.sidebar.order.most_recent": "Most recent",
@@ -5613,7 +5673,7 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.asks.truncated": { role: "status", note: "Line above the list when the relay returned only the newest questions. Two sentences with final full stops." },
 	"mobile.asks.unskip": { role: "button", note: "Link shown after the reader skipped a question: takes the skip back so the question can be answered. No final full stop." },
 	"mobile.asks.urgent": { role: "meta", note: "Suffix after an ask's state line marking it urgent. Keep the leading middle dot. Capitalised after the dot (sentence-case rule); the relay web page's lowercase wording is a follow-up. No final full stop." },
-	"mobile.chrome.clear_search": { role: "button", note: "Accessible name of the small × inside the sidebar's search field; it empties the search text. Shown only while the field has text. No final full stop." },
+	"mobile.chrome.clear_search": { role: "button", note: "Empties the search text. Used in three places: the accessible name of the small × inside the sidebar's search field (shown only while the field has text), and the visible button label under 'Nothing matches that.' in the sidebar's no-match empty state and on the Past sessions screen. Short imperative, no final full stop." },
 	"mobile.chrome.close_conversations": { role: "button", note: "Accessible name (screen readers only, never shown) of two controls that both dismiss the conversations sidebar: the ✕ in the sidebar header and the dimmed page strip beside the open sidebar. 'Conversations' is the sidebar's list of chat sessions, not one conversation. Imperative, no final full stop." },
 	"mobile.chrome.composer.dismiss_keyboard": { role: "button", note: "Build389 shared composer context strip / exclusive home presentation. Preserve {count} plural and {host} parameters where present." },
 	"mobile.chrome.composer.more": { role: "button", note: "Build389 shared composer context strip / exclusive home presentation. Preserve {count} plural and {host} parameters where present." },
@@ -5649,7 +5709,8 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.common.copy_command_hint": { role: "help", note: "Screen-reader hint on the Copy button beside a command block. {label} is the block's own label, already translated (e.g. \"Install on the computer\") or a product name (\"Cloudflare\", \"ngrok\"). No final full stop." },
 	"mobile.common.done": { role: "button", note: "Closes a sheet whose choices already applied as the user made them; nothing is submitted by pressing it. A verb used as a label, no final full stop. LIMIT: not a save or submit action, which is 'Save'." },
 	"mobile.common.loading": { role: "status", note: "Screen-reader name announced for a loading skeleton placeholder on any screen. Status word, no trailing ellipsis; keep under ~16 characters. No placeholders." },
-	"mobile.common.not_found.action": { role: "button", note: "Button on the not-found screen that goes to the session list. Short, no final full stop." },
+	"mobile.common.no_matches": { role: "heading", note: "Headline of the empty state shown when a search finds nothing (the sidebar's conversation search and the Past sessions search). Plain statement, keep the final full stop. No placeholders." },
+	"mobile.common.not_found.action": { role: "button", note: "Button that goes back to the session list. Used on the not-found screen and as the action of the Past sessions screen's empty state ('No past conversations yet.'). Short, no final full stop." },
 	"mobile.common.not_found.headline": { role: "status", note: "Empty-state headline on the not-found screen. Sentence with a final full stop." },
 	"mobile.common.not_found.next": { role: "help", note: "Empty-state follow-up on the not-found screen, pointing to the session list. One sentence." },
 	"mobile.common.not_found.title": { role: "heading", note: "Header title of the screen shown for a route that does not exist. No final full stop." },
@@ -6243,6 +6304,10 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.oauth.invalid": { role: "status", note: "Generic body for malformed/wrong-state on-device callback request. Never reflect the URL or explain which secret field matched." },
 	"mobile.oauth.received": { role: "status", note: "On-device browser callback page after a validated HTTP callback, BEFORE token exchange. Do not claim the user is signed in. No code, state or identity appears." },
 	"mobile.oauth.return": { role: "button", note: "Link on on-device callback page. Returns to the installed Local Operator app using a package-targeted control URI with no OAuth payload. Keep brand Local Operator." },
+	"mobile.past.empty_headline": { role: "heading", note: "Headline of the Past sessions screen when the computer has no finished conversations. Plain statement, not an error." },
+	"mobile.past.empty_next": { role: "help", note: "Second line under 'No past conversations yet.': what will appear on this screen and that a conversation can be resumed from it." },
+	"mobile.past.no_matches_next": { role: "help", note: "Second line under 'Nothing matches that.' on the Past sessions screen: the search looks at the conversation text and titles, so trying a shorter word may find a match." },
+	"mobile.past.search_label": { role: "meta", note: "Visible label above the search field on the Past sessions screen, and the field's accessible name. The field has no placeholder, so this label alone says what it is for. It sits in a narrow column beside the Search button and may break onto two lines at large text: keep it short and breakable at a space. No final full stop." },
 	"mobile.projects.create.description": { role: "meta", note: "Label for an optional project description." },
 	"mobile.projects.create.description_placeholder": { role: "help", note: "Placeholder prompting an optional project description." },
 	"mobile.projects.create.name": { role: "meta", note: "Label for the project identifier field; the nearby help states its grammar." },
@@ -6613,6 +6678,11 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.sidebar.basis.created": { role: "button", note: "Clock option: when the conversation was started. Desktop: ui.chat.sidebar_view.created." },
 	"mobile.sidebar.basis.last_active": { role: "button", note: "Clock option: when the conversation last had activity. Desktop: ui.chat.sidebar_view.last_active." },
 	"mobile.sidebar.clock_hint": { role: "help", note: "One sentence under the clock choice explaining that it changes both the dates shown and the order. Desktop: ui.chat.sidebar_view.clock_hint." },
+	"mobile.sidebar.empty.no_route_headline": { role: "heading", note: "Headline of the sidebar's empty state when the phone is not connected to any computer. Plain statement, not an error." },
+	"mobile.sidebar.empty.no_route_next": { role: "help", note: "Second line under 'No computer is connected yet.': why a computer is needed. The button below it connects one." },
+	"mobile.sidebar.empty.none_headline": { role: "heading", note: "Headline of the sidebar's empty state when the connected computer has no conversations. A session is one conversation with the agent. Plain statement, not an error." },
+	"mobile.sidebar.empty.none_next": { role: "help", note: "Second line under 'No sessions yet.': what a session is and what to do next. The 'New chat' button below it starts one." },
+	"mobile.sidebar.empty.search_next": { role: "help", note: "Second line under 'Nothing matches that.' when the sidebar search finds no conversation. Explains what the search looks at: the names, ids and folders of the sessions already on screen. 'ids' are session identifiers." },
 	"mobile.sidebar.empty_by_view.headline": { role: "heading", note: "Empty-state headline in the drawer when conversations exist but the reader's view options (hidden sections, Show ended sessions off) hide every one of them. Not 'no conversations'." },
 	"mobile.sidebar.empty_by_view.next": { role: "help", note: "Second line of that empty state: names the ways back. 'Sections' are Pinned/Running/Today/This week/Older; 'ended sessions' is the Show ended sessions switch." },
 	"mobile.sidebar.empty_by_view.reset": { role: "button", note: "Action of that empty state: restores the default drawer view (every section shown, ended sessions shown, default order and grouping)." },
@@ -6621,6 +6691,11 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.sidebar.group.time_section": { role: "button", note: "Grouping option: headed sections Pinned, Running, Today, This week, Older. Desktop: ui.chat.sidebar_view.time_section." },
 	"mobile.sidebar.group_by": { role: "heading", note: "Label of the choice of how the drawer groups conversations. Desktop: ui.chat.sidebar_view.group_by." },
 	"mobile.sidebar.hidden_sections": { role: "status", note: "Quiet line at the top of the drawer's list when the reader has switched sections off in Settings → Sidebar; {count} is a number. Preserve ICU plural arms and #. Desktop: ui.chat.sidebar_view.hidden." },
+	"mobile.sidebar.menu.move": { role: "button", note: "Row in the long-press menu of a conversation: opens a sheet to move or copy the conversation to another computer. The ellipsis says another step follows; keep it." },
+	"mobile.sidebar.menu.open": { role: "button", note: "Last row in the long-press menu of a conversation: opens the conversation, the same as tapping its row. Verb, no final full stop." },
+	"mobile.sidebar.menu.pin": { role: "button", note: "Row in the long-press menu of a conversation in the sidebar: keeps this conversation at the top of the list. Short action, no final full stop." },
+	"mobile.sidebar.menu.tags": { role: "button", note: "Row in the long-press menu of a conversation: opens a sheet to assign the conversation's tags (categories created on desktop). The ellipsis says another step follows; keep it." },
+	"mobile.sidebar.menu.unpin": { role: "button", note: "Row in the long-press menu of a conversation that is already pinned: removes it from the top of the list. Short action, no final full stop." },
 	"mobile.sidebar.more_settings": { role: "button", note: "Link at the foot of the drawer's View options sheet that opens the full Sidebar section in Settings." },
 	"mobile.sidebar.order.active_first": { role: "button", note: "Order option: conversations with a turn running, or waiting on the reader, are lifted to the top; the rest follow newest first. Desktop: ui.chat.sidebar_view.active_first." },
 	"mobile.sidebar.order.most_recent": { role: "button", note: "Order option: one newest-first order over every conversation, nothing lifted. Desktop: ui.chat.sidebar_view.most_recent." },
@@ -7105,6 +7180,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.common.copy_command_hint": "Copia el comando “{label}”",
 		"mobile.common.done": "Hecho",
 		"mobile.common.loading": "Cargando",
+		"mobile.common.no_matches": "No hay coincidencias.",
 		"mobile.common.not_found.action": "Volver a las sesiones",
 		"mobile.common.not_found.headline": "Esa página no existe.",
 		"mobile.common.not_found.next": "Vuelve a tus sesiones para continuar.",
@@ -7699,6 +7775,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.oauth.invalid": "No se ha aceptado esta solicitud de inicio de sesión.",
 		"mobile.oauth.received": "Respuesta de inicio de sesión recibida. Vuelve a la aplicación.",
 		"mobile.oauth.return": "Volver a Local Operator",
+		"mobile.past.empty_headline": "Aún no hay conversaciones anteriores.",
+		"mobile.past.empty_next": "Aquí aparecerán las conversaciones que hayas terminado, y podrás reanudar cualquiera de ellas.",
+		"mobile.past.no_matches_next": "La búsqueda abarca lo que se dijo y los títulos, así que una palabra más corta puede dar resultado.",
+		"mobile.past.search_label": "Buscar sesiones anteriores",
 		"mobile.projects.create.description": "Descripción",
 		"mobile.projects.create.description_placeholder": "Para qué es este proyecto",
 		"mobile.projects.create.name": "Nombre",
@@ -8069,6 +8149,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.sidebar.basis.created": "Fecha de creación",
 		"mobile.sidebar.basis.last_active": "Última actividad",
 		"mobile.sidebar.clock_hint": "Las fechas y el orden siguen el reloj seleccionado.",
+		"mobile.sidebar.empty.no_route_headline": "Aún no hay ninguna máquina conectada.",
+		"mobile.sidebar.empty.no_route_next": "Esta app controla las sesiones de tu propia máquina, así que primero necesita una.",
+		"mobile.sidebar.empty.none_headline": "Aún no hay sesiones.",
+		"mobile.sidebar.empty.none_next": "Una sesión es una conversación con el agente en tu máquina. Inicia una y aparecerá aquí.",
+		"mobile.sidebar.empty.search_next": "La búsqueda abarca los nombres, ID y carpetas de las sesiones cargadas.",
 		"mobile.sidebar.empty_by_view.headline": "Tus opciones de vista ocultan todas las conversaciones.",
 		"mobile.sidebar.empty_by_view.next": "Vuelve a activar secciones o sesiones finalizadas, o restablece la vista.",
 		"mobile.sidebar.empty_by_view.reset": "Restablecer vista",
@@ -8077,6 +8162,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.sidebar.group.time_section": "Sección temporal",
 		"mobile.sidebar.group_by": "Agrupar por",
 		"mobile.sidebar.hidden_sections": "{count, plural, one {# sección oculta} many {# de secciones ocultas} other {# secciones ocultas}}",
+		"mobile.sidebar.menu.move": "Mover o copiar…",
+		"mobile.sidebar.menu.open": "Abrir",
+		"mobile.sidebar.menu.pin": "Fijar arriba",
+		"mobile.sidebar.menu.tags": "Etiquetas…",
+		"mobile.sidebar.menu.unpin": "Dejar de fijar",
 		"mobile.sidebar.more_settings": "Más ajustes de la barra lateral",
 		"mobile.sidebar.order.active_first": "Activos primero",
 		"mobile.sidebar.order.most_recent": "Más recientes",
@@ -8545,6 +8635,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.common.copy_command_hint": "Copie la commande « {label} »",
 		"mobile.common.done": "Terminé",
 		"mobile.common.loading": "Chargement",
+		"mobile.common.no_matches": "Aucun résultat.",
 		"mobile.common.not_found.action": "Retour aux sessions",
 		"mobile.common.not_found.headline": "Cette page n’existe pas.",
 		"mobile.common.not_found.next": "Revenez à vos sessions pour continuer.",
@@ -9139,6 +9230,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.oauth.invalid": "Cette demande de connexion n’a pas été acceptée.",
 		"mobile.oauth.received": "Réponse de connexion reçue. Revenez à l’application.",
 		"mobile.oauth.return": "Revenir à Local Operator",
+		"mobile.past.empty_headline": "Pas encore de conversation passée.",
+		"mobile.past.empty_next": "Les conversations que vous avez terminées apparaîtront ici, et vous pourrez en reprendre une.",
+		"mobile.past.no_matches_next": "La recherche porte sur ce qui a été dit et sur les titres, un mot plus court peut donc correspondre.",
+		"mobile.past.search_label": "Rechercher dans les sessions passées",
 		"mobile.projects.create.description": "Description",
 		"mobile.projects.create.description_placeholder": "À quoi sert ce projet",
 		"mobile.projects.create.name": "Nom",
@@ -9509,6 +9604,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.sidebar.basis.created": "Créée le",
 		"mobile.sidebar.basis.last_active": "Dernière activité",
 		"mobile.sidebar.clock_hint": "Les dates et l’ordre suivent l’horloge sélectionnée.",
+		"mobile.sidebar.empty.no_route_headline": "Aucun ordinateur n’est encore connecté.",
+		"mobile.sidebar.empty.no_route_next": "Cette app pilote les sessions de votre propre ordinateur, il lui en faut donc d’abord un.",
+		"mobile.sidebar.empty.none_headline": "Pas encore de session.",
+		"mobile.sidebar.empty.none_next": "Une session est une conversation avec l’agent sur votre ordinateur. Démarrez-en une et elle apparaîtra ici.",
+		"mobile.sidebar.empty.search_next": "La recherche porte sur le nom, l’ID et le dossier des sessions chargées.",
 		"mobile.sidebar.empty_by_view.headline": "Vos options d’affichage masquent toutes les conversations.",
 		"mobile.sidebar.empty_by_view.next": "Réactivez des sections ou les sessions terminées, ou réinitialisez l’affichage.",
 		"mobile.sidebar.empty_by_view.reset": "Réinitialiser l’affichage",
@@ -9517,6 +9617,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.sidebar.group.time_section": "Section temporelle",
 		"mobile.sidebar.group_by": "Grouper par",
 		"mobile.sidebar.hidden_sections": "{count, plural, one {# section masquée} many {# de sections masquées} other {# sections masquées}}",
+		"mobile.sidebar.menu.move": "Déplacer ou copier…",
+		"mobile.sidebar.menu.open": "Ouvrir",
+		"mobile.sidebar.menu.pin": "Épingler en haut",
+		"mobile.sidebar.menu.tags": "Gérer les tags…",
+		"mobile.sidebar.menu.unpin": "Désépingler",
 		"mobile.sidebar.more_settings": "Plus de paramètres de la barre latérale",
 		"mobile.sidebar.order.active_first": "Actives d’abord",
 		"mobile.sidebar.order.most_recent": "Plus récentes",
@@ -9985,6 +10090,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.common.copy_command_hint": "“{label}” वाली कमांड कॉपी करता है",
 		"mobile.common.done": "हो गया",
 		"mobile.common.loading": "लोड हो रहा है",
+		"mobile.common.no_matches": "कोई नतीजा नहीं मिला।",
 		"mobile.common.not_found.action": "सत्रों पर लौटें",
 		"mobile.common.not_found.headline": "वह पेज मौजूद नहीं है।",
 		"mobile.common.not_found.next": "आगे बढ़ने के लिए अपने सत्रों पर लौटें।",
@@ -10579,6 +10685,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.oauth.invalid": "यह साइन-इन अनुरोध स्वीकार नहीं किया गया।",
 		"mobile.oauth.received": "साइन-इन का जवाब मिल गया है। ऐप पर लौटें।",
 		"mobile.oauth.return": "Local Operator पर लौटें",
+		"mobile.past.empty_headline": "अभी कोई पिछली बातचीत नहीं।",
+		"mobile.past.empty_next": "आपकी पूरी की गई बातचीत यहाँ दिखेंगी, और आप उनमें से किसी को भी फिर से जारी रख सकते हैं।",
+		"mobile.past.no_matches_next": "खोज बातचीत के शब्दों और शीर्षकों, दोनों में होती है, इसलिए छोटा शब्द आज़माने पर नतीजा मिल सकता है।",
+		"mobile.past.search_label": "पिछले सत्र खोजें",
 		"mobile.projects.create.description": "विवरण",
 		"mobile.projects.create.description_placeholder": "यह प्रोजेक्ट किस लिए है",
 		"mobile.projects.create.name": "नाम",
@@ -10949,6 +11059,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.sidebar.basis.created": "बनने का समय",
 		"mobile.sidebar.basis.last_active": "आख़िरी गतिविधि",
 		"mobile.sidebar.clock_hint": "तारीख़ें और क्रम चुनी गई घड़ी के अनुसार हैं।",
+		"mobile.sidebar.empty.no_route_headline": "अभी कोई कंप्यूटर कनेक्ट नहीं है।",
+		"mobile.sidebar.empty.no_route_next": "यह ऐप आपके अपने कंप्यूटर के सत्र चलाता है, इसलिए पहले उसे एक कंप्यूटर चाहिए।",
+		"mobile.sidebar.empty.none_headline": "अभी कोई सत्र नहीं।",
+		"mobile.sidebar.empty.none_next": "सत्र आपके कंप्यूटर पर एजेंट के साथ एक बातचीत है। एक शुरू करें, वह यहाँ दिखेगा।",
+		"mobile.sidebar.empty.search_next": "खोज लोड किए गए सत्रों के नाम, आईडी और फ़ोल्डर में होती है।",
 		"mobile.sidebar.empty_by_view.headline": "आपके दृश्य विकल्प सभी बातचीत छिपा रहे हैं।",
 		"mobile.sidebar.empty_by_view.next": "खंड या समाप्त सत्र फिर से चालू करें, या दृश्य रीसेट करें।",
 		"mobile.sidebar.empty_by_view.reset": "दृश्य रीसेट करें",
@@ -10957,6 +11072,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.sidebar.group.time_section": "समय के खंड",
 		"mobile.sidebar.group_by": "समूह बनाएँ",
 		"mobile.sidebar.hidden_sections": "{count, plural, one {# खंड छिपा है} other {# खंड छिपे हैं}}",
+		"mobile.sidebar.menu.move": "ले जाएँ या कॉपी करें…",
+		"mobile.sidebar.menu.open": "खोलें",
+		"mobile.sidebar.menu.pin": "सबसे ऊपर पिन करें",
+		"mobile.sidebar.menu.tags": "टैग…",
+		"mobile.sidebar.menu.unpin": "पिन हटाएँ",
 		"mobile.sidebar.more_settings": "साइडबार की और सेटिंग्स",
 		"mobile.sidebar.order.active_first": "सक्रिय पहले",
 		"mobile.sidebar.order.most_recent": "सबसे हाल के",
@@ -11425,6 +11545,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.common.copy_command_hint": "Копирует команду «{label}»",
 		"mobile.common.done": "Готово",
 		"mobile.common.loading": "Загрузка",
+		"mobile.common.no_matches": "Ничего не найдено.",
 		"mobile.common.not_found.action": "К сессиям",
 		"mobile.common.not_found.headline": "Этой страницы не существует.",
 		"mobile.common.not_found.next": "Вернитесь к сессиям, чтобы продолжить.",
@@ -12019,6 +12140,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.oauth.invalid": "Этот запрос на вход не принят.",
 		"mobile.oauth.received": "Ответ для входа получен. Вернитесь в приложение.",
 		"mobile.oauth.return": "Вернуться в Local Operator",
+		"mobile.past.empty_headline": "Прошлых бесед пока нет.",
+		"mobile.past.empty_next": "Здесь появятся завершённые вами беседы, и любую из них можно будет возобновить.",
+		"mobile.past.no_matches_next": "Поиск идёт по тексту бесед и их названиям, поэтому может помочь слово покороче.",
+		"mobile.past.search_label": "Поиск по прошлым сессиям",
 		"mobile.projects.create.description": "Описание",
 		"mobile.projects.create.description_placeholder": "Для чего этот проект",
 		"mobile.projects.create.name": "Имя",
@@ -12389,6 +12514,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.sidebar.basis.created": "Создано",
 		"mobile.sidebar.basis.last_active": "Последняя активность",
 		"mobile.sidebar.clock_hint": "Даты и порядок зависят от выбранного отсчёта времени.",
+		"mobile.sidebar.empty.no_route_headline": "Компьютер пока не подключён.",
+		"mobile.sidebar.empty.no_route_next": "Приложение управляет сессиями на вашем собственном компьютере, поэтому сначала его нужно подключить.",
+		"mobile.sidebar.empty.none_headline": "Сессий пока нет.",
+		"mobile.sidebar.empty.none_next": "Сессия — это одна беседа с агентом на вашем компьютере. Начните новую, и она появится здесь.",
+		"mobile.sidebar.empty.search_next": "Поиск идёт по названиям, ID и папкам загруженных сессий.",
 		"mobile.sidebar.empty_by_view.headline": "Параметры вида скрывают все беседы.",
 		"mobile.sidebar.empty_by_view.next": "Снова включите разделы или завершённые сеансы либо сбросьте вид.",
 		"mobile.sidebar.empty_by_view.reset": "Сбросить вид",
@@ -12397,6 +12527,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.sidebar.group.time_section": "По времени",
 		"mobile.sidebar.group_by": "Группировать по",
 		"mobile.sidebar.hidden_sections": "{count, plural, one {скрыт # раздел} few {скрыто # раздела} many {скрыто # разделов} other {скрыто # раздела}}",
+		"mobile.sidebar.menu.move": "Переместить или скопировать…",
+		"mobile.sidebar.menu.open": "Открыть",
+		"mobile.sidebar.menu.pin": "Закрепить вверху",
+		"mobile.sidebar.menu.tags": "Теги…",
+		"mobile.sidebar.menu.unpin": "Открепить",
 		"mobile.sidebar.more_settings": "Другие настройки боковой панели",
 		"mobile.sidebar.order.active_first": "Сначала активные",
 		"mobile.sidebar.order.most_recent": "Сначала недавние",
@@ -12865,6 +13000,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.common.copy_command_hint": "یہ “{label}” والی کمانڈ کاپی کرتا ہے",
 		"mobile.common.done": "ہو گیا",
 		"mobile.common.loading": "لوڈ ہو رہا ہے",
+		"mobile.common.no_matches": "کوئی نتیجہ نہیں ملا۔",
 		"mobile.common.not_found.action": "سیشنز میں واپس جائیں",
 		"mobile.common.not_found.headline": "یہ صفحہ موجود نہیں ہے۔",
 		"mobile.common.not_found.next": "جاری رکھنے کے لیے اپنے سیشنز میں واپس جائیں۔",
@@ -13459,6 +13595,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.oauth.invalid": "یہ سائن اِن درخواست قبول نہیں کی گئی۔",
 		"mobile.oauth.received": "سائن اِن کا جواب موصول ہو گیا ہے۔ ایپ پر واپس جائیں۔",
 		"mobile.oauth.return": "Local Operator پر واپس جائیں",
+		"mobile.past.empty_headline": "ابھی کوئی گزشتہ گفتگو نہیں۔",
+		"mobile.past.empty_next": "آپ کی ختم کی ہوئی گفتگوئیں یہاں نظر آئیں گی، اور آپ ان میں سے کسی کو بھی دوبارہ جاری رکھ سکتے ہیں۔",
+		"mobile.past.no_matches_next": "تلاش گفتگو کے متن اور عنوانات دونوں میں ہوتی ہے، اس لیے چھوٹا لفظ آزمانے سے نتیجہ مل سکتا ہے۔",
+		"mobile.past.search_label": "گزشتہ سیشنز تلاش کریں",
 		"mobile.projects.create.description": "تفصیل",
 		"mobile.projects.create.description_placeholder": "یہ پروجیکٹ کس لیے ہے",
 		"mobile.projects.create.name": "نام",
@@ -13829,6 +13969,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.sidebar.basis.created": "تخلیق کا وقت",
 		"mobile.sidebar.basis.last_active": "آخری سرگرمی",
 		"mobile.sidebar.clock_hint": "تاریخیں اور ترتیب منتخب گھڑی کے مطابق ہیں۔",
+		"mobile.sidebar.empty.no_route_headline": "ابھی کوئی کمپیوٹر منسلک نہیں۔",
+		"mobile.sidebar.empty.no_route_next": "یہ ایپ آپ کے اپنے کمپیوٹر پر سیشنز چلاتی ہے، اس لیے پہلے ایک کمپیوٹر ضروری ہے۔",
+		"mobile.sidebar.empty.none_headline": "ابھی کوئی سیشن نہیں۔",
+		"mobile.sidebar.empty.none_next": "سیشن آپ کے کمپیوٹر پر ایجنٹ کے ساتھ ایک گفتگو ہے۔ ایک شروع کریں تو وہ یہاں نظر آئے گا۔",
+		"mobile.sidebar.empty.search_next": "تلاش لوڈ شدہ سیشنز کے نام، آئی ڈی اور فولڈرز میں ہوتی ہے۔",
 		"mobile.sidebar.empty_by_view.headline": "آپ کے منظر کے اختیارات تمام گفتگوئیں چھپا رہے ہیں۔",
 		"mobile.sidebar.empty_by_view.next": "حصے یا ختم شدہ سیشن دوبارہ آن کریں، یا منظر ری سیٹ کریں۔",
 		"mobile.sidebar.empty_by_view.reset": "منظر ری سیٹ کریں",
@@ -13837,6 +13982,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.sidebar.group.time_section": "وقت کا حصہ",
 		"mobile.sidebar.group_by": "گروہ بندی",
 		"mobile.sidebar.hidden_sections": "{count, plural, one {# حصہ پوشیدہ ہے} other {# حصے پوشیدہ ہیں}}",
+		"mobile.sidebar.menu.move": "منتقل یا کاپی کریں…",
+		"mobile.sidebar.menu.open": "کھولیں",
+		"mobile.sidebar.menu.pin": "سب سے اوپر پن کریں",
+		"mobile.sidebar.menu.tags": "ٹیگز…",
+		"mobile.sidebar.menu.unpin": "پن ہٹائیں",
 		"mobile.sidebar.more_settings": "سائیڈبار کی مزید ترتیبات",
 		"mobile.sidebar.order.active_first": "فعال پہلے",
 		"mobile.sidebar.order.most_recent": "تازہ ترین",
@@ -14305,6 +14455,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.common.copy_command_hint": "Sao chép lệnh “{label}”",
 		"mobile.common.done": "Xong",
 		"mobile.common.loading": "Đang tải",
+		"mobile.common.no_matches": "Không có kết quả phù hợp.",
 		"mobile.common.not_found.action": "Về danh sách phiên",
 		"mobile.common.not_found.headline": "Trang đó không tồn tại.",
 		"mobile.common.not_found.next": "Quay lại danh sách phiên để tiếp tục.",
@@ -14899,6 +15050,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.oauth.invalid": "Yêu cầu đăng nhập này không được chấp nhận.",
 		"mobile.oauth.received": "Đã nhận phản hồi đăng nhập. Hãy quay lại ứng dụng.",
 		"mobile.oauth.return": "Quay lại Local Operator",
+		"mobile.past.empty_headline": "Chưa có cuộc trò chuyện cũ nào.",
+		"mobile.past.empty_next": "Các cuộc trò chuyện bạn đã kết thúc sẽ hiện ở đây, và bạn có thể mở lại bất kỳ cuộc nào.",
+		"mobile.past.no_matches_next": "Tìm kiếm bao gồm cả nội dung trò chuyện lẫn tiêu đề, nên một từ ngắn hơn có thể sẽ khớp.",
+		"mobile.past.search_label": "Tìm kiếm phiên trước",
 		"mobile.projects.create.description": "Mô tả",
 		"mobile.projects.create.description_placeholder": "Mục đích của dự án này",
 		"mobile.projects.create.name": "Tên",
@@ -15269,6 +15424,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.sidebar.basis.created": "Ngày tạo",
 		"mobile.sidebar.basis.last_active": "Hoạt động gần nhất",
 		"mobile.sidebar.clock_hint": "Ngày và thứ tự tuân theo mốc thời gian đã chọn.",
+		"mobile.sidebar.empty.no_route_headline": "Chưa có máy tính nào được kết nối.",
+		"mobile.sidebar.empty.no_route_next": "Ứng dụng này điều khiển các phiên trên máy tính của chính bạn, nên trước tiên cần có một máy tính.",
+		"mobile.sidebar.empty.none_headline": "Chưa có phiên nào.",
+		"mobile.sidebar.empty.none_next": "Mỗi phiên là một cuộc trò chuyện với tác nhân trên máy tính của bạn. Hãy bắt đầu một phiên và phiên đó sẽ xuất hiện ở đây.",
+		"mobile.sidebar.empty.search_next": "Tìm kiếm trong tên, ID và thư mục của các phiên đã tải.",
 		"mobile.sidebar.empty_by_view.headline": "Tùy chọn hiển thị đang ẩn mọi cuộc trò chuyện.",
 		"mobile.sidebar.empty_by_view.next": "Bật lại các mục hoặc phiên đã kết thúc, hoặc đặt lại chế độ xem.",
 		"mobile.sidebar.empty_by_view.reset": "Đặt lại chế độ xem",
@@ -15277,6 +15437,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.sidebar.group.time_section": "Mục thời gian",
 		"mobile.sidebar.group_by": "Nhóm theo",
 		"mobile.sidebar.hidden_sections": "{count, plural, other {Đã ẩn # mục}}",
+		"mobile.sidebar.menu.move": "Di chuyển hoặc sao chép…",
+		"mobile.sidebar.menu.open": "Mở",
+		"mobile.sidebar.menu.pin": "Ghim lên đầu",
+		"mobile.sidebar.menu.tags": "Nhãn…",
+		"mobile.sidebar.menu.unpin": "Bỏ ghim",
 		"mobile.sidebar.more_settings": "Thêm cài đặt thanh bên",
 		"mobile.sidebar.order.active_first": "Đang hoạt động trước",
 		"mobile.sidebar.order.most_recent": "Mới nhất",
@@ -15745,6 +15910,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.common.copy_command_hint": "复制“{label}”命令",
 		"mobile.common.done": "完成",
 		"mobile.common.loading": "正在加载",
+		"mobile.common.no_matches": "没有匹配的结果。",
 		"mobile.common.not_found.action": "返回会话列表",
 		"mobile.common.not_found.headline": "此页面不存在。",
 		"mobile.common.not_found.next": "返回会话列表即可继续。",
@@ -16339,6 +16505,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.oauth.invalid": "未接受此登录请求。",
 		"mobile.oauth.received": "已收到登录响应。请返回应用。",
 		"mobile.oauth.return": "返回 Local Operator",
+		"mobile.past.empty_headline": "还没有历史对话。",
+		"mobile.past.empty_next": "你结束的对话会列在这里，之后可以随时恢复其中任意一个。",
+		"mobile.past.no_matches_next": "搜索范围包括对话内容和标题，换个更短的词可能就能找到。",
+		"mobile.past.search_label": "搜索历史会话",
 		"mobile.projects.create.description": "描述",
 		"mobile.projects.create.description_placeholder": "此项目的用途",
 		"mobile.projects.create.name": "名称",
@@ -16709,6 +16879,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.sidebar.basis.created": "创建时间",
 		"mobile.sidebar.basis.last_active": "最近活跃时间",
 		"mobile.sidebar.clock_hint": "日期与排序均以所选时间依据为准。",
+		"mobile.sidebar.empty.no_route_headline": "尚未连接电脑。",
+		"mobile.sidebar.empty.no_route_next": "此应用操控的是你自己电脑上的会话，因此需要先连接一台电脑。",
+		"mobile.sidebar.empty.none_headline": "还没有会话。",
+		"mobile.sidebar.empty.none_next": "会话就是你与电脑上智能体的一次对话。开始一个会话后，它就会显示在这里。",
+		"mobile.sidebar.empty.search_next": "搜索范围为已加载会话的名称、ID和文件夹。",
 		"mobile.sidebar.empty_by_view.headline": "你的视图选项隐藏了所有对话。",
 		"mobile.sidebar.empty_by_view.next": "重新开启分区或已结束的会话，或重置视图。",
 		"mobile.sidebar.empty_by_view.reset": "重置视图",
@@ -16717,6 +16892,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.sidebar.group.time_section": "时间分区",
 		"mobile.sidebar.group_by": "分组方式",
 		"mobile.sidebar.hidden_sections": "{count, plural, other {已隐藏#个分区}}",
+		"mobile.sidebar.menu.move": "移动或复制…",
+		"mobile.sidebar.menu.open": "打开",
+		"mobile.sidebar.menu.pin": "置顶",
+		"mobile.sidebar.menu.tags": "标签…",
+		"mobile.sidebar.menu.unpin": "取消置顶",
 		"mobile.sidebar.more_settings": "更多侧边栏设置",
 		"mobile.sidebar.order.active_first": "活跃优先",
 		"mobile.sidebar.order.most_recent": "最近优先",

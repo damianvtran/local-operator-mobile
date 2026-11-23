@@ -36,6 +36,8 @@ import notificationsContext from "@/i18n/catalogues/en/mobile.notifications.cont
 import notifications from "@/i18n/catalogues/en/mobile.notifications.json";
 import oauthContext from "@/i18n/catalogues/en/mobile.oauth.context.json";
 import oauth from "@/i18n/catalogues/en/mobile.oauth.json";
+import pastContext from "@/i18n/catalogues/en/mobile.past.context.json";
+import past from "@/i18n/catalogues/en/mobile.past.json";
 import projectsContext from "@/i18n/catalogues/en/mobile.projects.context.json";
 import projects from "@/i18n/catalogues/en/mobile.projects.json";
 import refusalContext from "@/i18n/catalogues/en/mobile.refusal.context.json";
@@ -121,7 +123,7 @@ const NAMESPACES = [
 		name: "mobile.common",
 		messages: common,
 		context: commonContext,
-		expected: 20, // O3-b +2: the shared sheet Close and skeleton Loading labels (13 + 2 = 15, counted over the en JSON). M3 S2b-1 +3: the command block's Copy / Copied / copy hint (10 + 3 = 13); +4: the not-found screen (app/ scan); +5 the resizable sheet's Resize panel / Medium / Large / Taller / Shorter (#378: 15 + 5 = 20)
+		expected: 21, // fix/session-list-nav-polish +1: the shared search empty-state headline "Nothing matches that." (20 + 1 = 21, counted over the merged en JSON). O3-b +2: the shared sheet Close and skeleton Loading labels (13 + 2 = 15, counted over the en JSON). M3 S2b-1 +3: the command block's Copy / Copied / copy hint (10 + 3 = 13); +4: the not-found screen (app/ scan); +5 the resizable sheet's Resize panel / Medium / Large / Taller / Shorter (#378: 15 + 5 = 20)
 	},
 	{
 		name: "mobile.composer_input",
@@ -150,6 +152,14 @@ const NAMESPACES = [
 		 *  for the pill, the "Start this chat with" sheet and its refusals, and 1
 		 *  from its round-1 remediation (`refused_connecting`, F2): 66 + 26. */
 		expected: 95,
+	},
+	{
+		/* The Past sessions screen: its search field's label and its empty
+		 *  states (fix/session-list-nav-polish). */
+		name: "mobile.past",
+		messages: past,
+		context: pastContext,
+		expected: 4, // review round 1: −1, the search placeholder dropped (operator ruling: the visible label stays, no duplicate hint) (5 − 1 = 4)
 	},
 	{
 		name: "mobile.projects",
@@ -316,7 +326,7 @@ const NAMESPACES = [
 		name: "mobile.sidebar",
 		messages: sidebar,
 		context: sidebarContext,
-		expected: 58, // Sidebar tag view options (2026-11-22): +5 (group.tag, show_tags, show_tags_hint, section.untagged, tag_group.announcement) (53 + 5 = 58, counted over the en JSON). On-device slice +2: the remote row's device line (row.on_device) and the screen-reader label separator (row_label.join) (51 + 2 = 53, counted over the en JSON). O3-c +9: the row's five status words (row_status.*) and four screen-reader label fragments (row_label.*) (42 + 9 = 51, counted over the en JSON). O3-b +15: the Tags sheet and row tag announcement (10) and the row's new marker and plural counts (5) (27 + 15 = 42, counted over the en JSON). PR #275 +2: the conversation row's outbox lines, sending and stopped (25 + 2 = 27)
+		expected: 68, // fix/session-list-nav-polish +10: the row long-press menu (5) and the drawer's empty states (5) (58 + 10 = 68, counted over the merged en JSON). Sidebar tag view options (2026-11-22): +5 (group.tag, show_tags, show_tags_hint, section.untagged, tag_group.announcement) (53 + 5 = 58, counted over the en JSON). On-device slice +2: the remote row's device line (row.on_device) and the screen-reader label separator (row_label.join) (51 + 2 = 53, counted over the en JSON). O3-c +9: the row's five status words (row_status.*) and four screen-reader label fragments (row_label.*) (42 + 9 = 51, counted over the en JSON). O3-b +15: the Tags sheet and row tag announcement (10) and the row's new marker and plural counts (5) (27 + 15 = 42, counted over the en JSON). PR #275 +2: the conversation row's outbox lines, sending and stopped (25 + 2 = 27)
 	},
 	{
 		/* This app's own short chrome words the relay has no key for: the sidebar

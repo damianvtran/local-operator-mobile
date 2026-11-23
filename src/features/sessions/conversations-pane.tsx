@@ -1,14 +1,20 @@
 import { useRouter } from "expo-router";
 import {
+	ArrowRightLeft,
 	CalendarClock,
 	ChevronRight,
 	FolderKanban,
 	History,
 	Inbox,
 	Library,
+	type LucideIcon,
+	MessageSquare,
+	Pin,
+	PinOff,
 	Search,
 	Settings,
 	SquarePen,
+	Tag,
 	X,
 } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -24,6 +30,7 @@ import {
 } from "react-native";
 import type { SessionSummary } from "@/contracts";
 import { avatarRefOf } from "@/features/agent-avatar/agent-avatar";
+import { ROW_AVATAR_PT } from "@/features/agent-avatar/agent-avatar-view";
 import {
 	DrawerComputerRow,
 	switcherFocusReturn,
@@ -44,14 +51,24 @@ import { NotificationsOffRow } from "@/features/notifications/notifications-off-
 import { listRefreshing } from "@/features/sessions/list-refreshing";
 import { SessionMoveSheet } from "@/features/sessions/move-sheet";
 import {
+	PANE_LOADING_BARS,
+	type PaneLoadingVariant,
+	paneLoadingVariant,
+} from "@/features/sessions/pane-loading";
+import {
 	pillCarriesStaleNote,
 	pillState,
 	showInListStale,
 } from "@/features/sessions/pill-state";
 import {
+	type RowMenuActionKey,
+	rowMenuActions,
+} from "@/features/sessions/row-menu";
+import {
 	createSearchEscape,
 	type KeyEventTarget,
 } from "@/features/sessions/search-escape";
+import { sectionHeaderIndentPt } from "@/features/sessions/section-indent";
 import { sessionLocation } from "@/features/sessions/session-navigation";
 import {
 	degradedNote,
@@ -87,7 +104,6 @@ import { CONTROL, EMPTY, REGION, ROLE, STATE_MARKER, SURFACE } from "@/ui/a11y";
 import { useKeyboardAppearance, useTokenColor } from "@/ui/appearance";
 import { Badge } from "@/ui/components/badge";
 import { Banner } from "@/ui/components/banner";
-import { Button } from "@/ui/components/button";
 import { ConnectionPill } from "@/ui/components/connection-pill";
 import { EmptyState } from "@/ui/components/empty-state";
 import { IconButton } from "@/ui/components/icon-button";
@@ -99,6 +115,7 @@ import { useComposedDir } from "@/ui/direction";
 import { sidebarFooterScrolls, TOUCH_FLOOR, useLayout } from "@/ui/layout";
 import { LARGE_TEXT_SCALE } from "@/ui/text-scale";
 import { useTextScale } from "@/ui/text-scale-provider";
+import { cx } from "@/ui/variants";
 
 /**
  * The conversations pane: the sessions list, where it lives now.
@@ -746,20 +763,30 @@ export const ConversationsPane = ({
 		({ item }: { item: Item }) =>
 			item.kind === "header" ? (
 				/* The ROW owns the gutter (design D8): the list has no padding of its
-				 *  own, so a header carries the same 16 pt the rows' `px-4` does. */
+				 *  own, so a header carries the same 16 pt the rows' `px-4` does —
+				 *  and then the rows' indicator slot, so the heading starts on the
+				 *  title column and the dots hang in the gutter beside it. */
 				<View className="px-4">
-					{item.composed === true ? (
-						<TagGroupHeader
-							label={item.label}
-							accessibilityLabel={item.accessibilityLabel ?? item.label}
-						/>
-					) : (
-						<SectionHeader
-							label={item.label}
-							testID={item.testID}
-							accessibilityLabel={item.accessibilityLabel}
-						/>
-					)}
+					<View
+						style={{
+							paddingStart: sectionHeaderIndentPt(
+								anyRowPictured ? ROW_AVATAR_PT : undefined,
+							),
+						}}
+					>
+						{item.composed === true ? (
+							<TagGroupHeader
+								label={item.label}
+								accessibilityLabel={item.accessibilityLabel ?? item.label}
+							/>
+						) : (
+							<SectionHeader
+								label={item.label}
+								testID={item.testID}
+								accessibilityLabel={item.accessibilityLabel}
+							/>
+						)}
+					</View>
 				</View>
 			) : item.kind === "divider" ? (
 				/* A hairline inside the row gutter, not a heading: `In one list` stays one
@@ -890,7 +917,7 @@ export const ConversationsPane = ({
 				 *    blurs, and only an Escape on an empty, unfocused field closes the
 				 *    drawer (`search-escape.ts`, Q1). Blurring KEEPS the query: the
 				 *    filtered list is what they were looking for, and `×` or the empty
-				 *    state's "Clear the search" undoes it.
+				 *    state's Clear search action undoes it.
 				 *  - The empty field states the page's direction (`useComposedDir`) so
 				 *    an RTL locale's placeholder sits on the right, as `Input` does. */}
 				<Pressable
@@ -1102,6 +1129,10 @@ export const ConversationsPane = ({
 							emptiedByView={emptiedByView}
 							onResetView={() => setSidebarView(DEFAULT_SIDEBAR_VIEW)}
 							waiting={routed && waiting}
+							loadingVariant={paneLoadingVariant(layout, {
+								largeText,
+								routes: pinnedRoutes,
+							})}
 							hasRoute={hasRoute}
 							query={query}
 							onClearSearch={() => setQuery("")}
@@ -1140,7 +1171,7 @@ export const ConversationsPane = ({
 				 *  (round 3, R14). */
 				testID={SURFACE.sessionMenuSheet}
 			>
-				<View className="gap-2 pb-4">
+				<View className="pb-4">
 					{/*
 					 * RECORDED, NOT FIXED (review round 4, U4): this sheet is the only route
 					 * to `Pin to the top`, and a held press is the only way to reach the
@@ -1151,56 +1182,50 @@ export const ConversationsPane = ({
 					 * beside the timestamp), which is a pane-wide change rather than a fix to
 					 * this sheet; recorded here because the alternative is that the next
 					 * reader re-derives it from the frames.
+					 *
+					 * An ACTION LIST, not a button stack (`row-menu.ts`): `Open` was the
+					 * sheet's green primary although tapping the row already opens it, so
+					 * the loudest control was the one action the reader did not hold the
+					 * row for. Every entry is one quiet row now, and `Open` comes last,
+					 * after a hairline that separates the row's own actions from leaving.
+					 *
+					 * Move is the OTHER half of what a conversation's row can do: a local
+					 * row can only reach the move sheet from here, and a remote row opens
+					 * that sheet on a TAP and never sees this menu (pinning refuses an id
+					 * with no local folder, so a menu that offered it for a peer row would
+					 * offer a dead control).
 					 */}
-					<Button
-						testID={CONTROL.sessionOpenCurrent}
-						label={menuTarget?.pinned ? "Unpin" : "Pin to the top"}
-						onPress={() => {
-							const target = menuTarget;
-							setMenuTarget(null);
-							if (target) void togglePin(target);
-						}}
-						variant="outline"
-					/>
-					{/* The move/offload entry: the OTHER half of what a conversation's row
-					 *  can do. A local row can only reach the move sheet from here; a
-					 *  remote row opens the sheet on a TAP and never sees this menu
-					 *  (pinning refuses an id with no local folder, so a menu that offered
-					 *  it for a peer row would offer a dead control). */}
-					<Button
-						testID={CONTROL.sessionMoveOpen}
-						label="Move or copy…"
-						onPress={() => {
-							const target = menuTarget;
-							setMenuTarget(null);
-							if (target) setMoveTarget(target);
-						}}
-						variant="outline"
-					/>
-					{/* Only a relay that advertises the routes gets the entry: an older
-					 *  relay has no `/api/sessions/{id}/tags`, and a control that 404s is
-					 *  the dead-control pattern this pane already rejects for move. */}
-					{tagsAssignable ? (
-						<Button
-							testID={CONTROL.sessionTagsAction}
-							label="Tags…"
-							onPress={() => {
-								const target = menuTarget;
-								setMenuTarget(null);
-								if (target) setTagTarget(target);
-							}}
-							variant="outline"
-						/>
-					) : null}
-					<Button
-						testID={CONTROL.sessionOpenPrevious}
-						label="Open"
-						onPress={() => {
-							const target = menuTarget;
-							setMenuTarget(null);
-							if (target) openSession(target);
-						}}
-					/>
+					{rowMenuActions({
+						pinned: menuTarget?.pinned === true,
+						tagsAssignable,
+					}).map((action) => (
+						<View key={action.key}>
+							{action.key === "open" ? (
+								<View className="mx-3 my-1 h-px bg-hairline" aria-hidden />
+							) : null}
+							<RowMenuItem
+								label={action.label}
+								testID={action.testID}
+								Icon={
+									action.key === "pin"
+										? menuTarget?.pinned
+											? PinOff
+											: Pin
+										: ROW_MENU_ICON[action.key]
+								}
+								ink={destinationInk}
+								onPress={() => {
+									const target = menuTarget;
+									setMenuTarget(null);
+									if (!target) return;
+									if (action.key === "pin") void togglePin(target);
+									else if (action.key === "move") setMoveTarget(target);
+									else if (action.key === "tags") setTagTarget(target);
+									else openSession(target);
+								}}
+							/>
+						</View>
+					))}
 				</View>
 			</Sheet>
 
@@ -1228,6 +1253,51 @@ export const ConversationsPane = ({
 		</View>
 	);
 };
+
+/** The menu's glyphs, by action. Pin's glyph follows the row's state, so it is
+ *  chosen at the call site. */
+const ROW_MENU_ICON: Record<Exclude<RowMenuActionKey, "pin">, LucideIcon> = {
+	move: ArrowRightLeft,
+	tags: Tag,
+	open: MessageSquare,
+};
+
+/** One entry of the row's long-press menu: the sheet-row idiom the computer
+ *  switcher's rows use (glyph, label, the platform touch floor, a colour step
+ *  when pressed), so the menu reads as a list of choices rather than a form. */
+const RowMenuItem = ({
+	label,
+	testID,
+	Icon,
+	ink,
+	onPress,
+}: {
+	label: string;
+	testID: string;
+	Icon: LucideIcon;
+	ink: string;
+	onPress: () => void;
+}) => (
+	<Pressable
+		accessibilityRole={ROLE.button}
+		accessibilityLabel={label}
+		testID={testID}
+		onPress={onPress}
+	>
+		{({ pressed }) => (
+			<View
+				className={cx(
+					"flex-row items-center gap-3 rounded-md px-3",
+					pressed ? "bg-row-hover" : "bg-transparent",
+				)}
+				style={{ minHeight: TOUCH_FLOOR }}
+			>
+				<Icon size={20} color={ink} aria-hidden />
+				<Text className="min-w-0 flex-1 text-body text-ink">{label}</Text>
+			</View>
+		)}
+	</Pressable>
+);
 
 /** True when the stream failed before any frame arrived: skeletons would be a
  *  promise, and an empty list would be a wrong answer. */
@@ -1366,15 +1436,20 @@ function buildItems(groups: readonly SidebarGroup[]): Item[] {
  * The three pane states that are not a list: loading, no route, and no sessions
  * — plus a search with no matches, which is its own state and says so.
  *
- * `waiting` renders three skeleton rows and carries the `sidebar/loading`
+ * `waiting` renders the skeleton rows and carries the `sidebar/loading`
  * marker, so the state is distinguishable from empty BY MACHINE as well as by
  * eye (R-2: the two frames were byte-identical, both markerless, and nothing
- * could tell them apart).
+ * could tell them apart). Three rows, or ONE on a short pane at large text
+ * (`pane-loading.ts`), where three and the scrolling footer did not both fit.
  */
+/** Stable keys for the loading rows; the variant takes a prefix. */
+const LOADING_ROW_KEYS = ["loading-0", "loading-1", "loading-2"] as const;
+
 const PaneEmpty = ({
 	emptiedByView,
 	onResetView,
 	waiting,
+	loadingVariant,
 	hasRoute,
 	query,
 	onClearSearch,
@@ -1384,6 +1459,7 @@ const PaneEmpty = ({
 	emptiedByView: boolean;
 	onResetView: () => void;
 	waiting: boolean;
+	loadingVariant: PaneLoadingVariant;
 	hasRoute: boolean;
 	query: string;
 	onClearSearch: () => void;
@@ -1397,9 +1473,11 @@ const PaneEmpty = ({
 				aria-hidden
 				testID={STATE_MARKER.sidebar.loading}
 			>
-				<Skeleton lines={1} ground="raised" />
-				<Skeleton lines={1} ground="raised" />
-				<Skeleton lines={1} ground="raised" />
+				{LOADING_ROW_KEYS.slice(0, PANE_LOADING_BARS[loadingVariant]).map(
+					(key) => (
+						<Skeleton key={key} lines={1} ground="raised" />
+					),
+				)}
 			</View>
 		);
 	}
@@ -1426,10 +1504,10 @@ const PaneEmpty = ({
 	if (query.trim().length > 0) {
 		return (
 			<EmptyState
-				headline="Nothing matches that."
-				next="Search covers the loaded sessions' names, ids and folders."
+				headline={t("mobile.common.no_matches")}
+				next={t("mobile.sidebar.empty.search_next")}
 				action={{
-					label: "Clear the search",
+					label: t("mobile.chrome.clear_search"),
 					/* A control that renders and does nothing when pressed is the defect this
 					 *  replaces: this shipped as `onPress: () => undefined`. The predicate is
 					 *  the one this branch renders on, passed through so the button's enabled
@@ -1445,10 +1523,10 @@ const PaneEmpty = ({
 	if (!hasRoute) {
 		return (
 			<EmptyState
-				headline="No computer is connected yet."
-				next="This app drives the sessions on your own computer, so it needs one first."
+				headline={t("mobile.sidebar.empty.no_route_headline")}
+				next={t("mobile.sidebar.empty.no_route_next")}
 				action={{
-					label: "Connect a computer",
+					label: t("mobile.chrome.home.connect"),
 					onPress: onConnect,
 					testID: CONTROL.sessionsConnectAction,
 				}}
@@ -1458,10 +1536,10 @@ const PaneEmpty = ({
 	}
 	return (
 		<EmptyState
-			headline="No sessions yet."
-			next="A session is one conversation with the agent on your machine. Start one and it will appear here."
+			headline={t("mobile.sidebar.empty.none_headline")}
+			next={t("mobile.sidebar.empty.none_next")}
 			action={{
-				label: "New chat",
+				label: t("mobile.chrome.new_chat"),
 				onPress: onNew,
 				testID: CONTROL.sessionsNewAction,
 			}}

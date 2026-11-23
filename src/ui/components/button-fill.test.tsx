@@ -11,19 +11,13 @@ import { type DomShim, installDomShim } from "@/testing/dom-shim";
  */
 const seen = vi.hoisted(() => ({
 	style: undefined as unknown,
-	pillClass: "",
+	pillStyle: undefined as unknown,
 }));
 vi.mock("react-native", () => ({
 	ActivityIndicator: () => null,
 	Text: ({ children }: { children?: ReactNode }) => children ?? null,
-	View: ({
-		children,
-		className,
-	}: {
-		children?: ReactNode;
-		className?: string;
-	}) => {
-		seen.pillClass = className ?? "";
+	View: ({ children, style }: { children?: ReactNode; style?: unknown }) => {
+		seen.pillStyle = style;
 		return children ?? null;
 	},
 	Pressable: ({
@@ -57,7 +51,7 @@ const render = (fill?: boolean) =>
 
 beforeEach(() => {
 	seen.style = undefined;
-	seen.pillClass = "";
+	seen.pillStyle = undefined;
 	dom = installDomShim();
 	root = createRoot(dom.container as Element);
 });
@@ -70,11 +64,11 @@ describe("Button fill", () => {
 	it("grows the pressable and the pill to the shared row's height", async () => {
 		await render(true);
 		expect(seen.style).toEqual({ flexGrow: 1 });
-		expect(seen.pillClass).toContain("flex-1");
+		expect(seen.pillStyle).toEqual({ flexGrow: 1 });
 	});
 	it("leaves every other button at its own height", async () => {
 		await render();
 		expect(seen.style).toBeUndefined();
-		expect(seen.pillClass).not.toContain("flex-1");
+		expect(seen.pillStyle).toBeUndefined();
 	});
 });

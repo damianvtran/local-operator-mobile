@@ -14,6 +14,7 @@
 	"mobile.common.copy_command_hint": "Copie la commande « {label} »",
 	"mobile.common.close": "Fermer",
 	"mobile.common.loading": "Chargement",
+	"mobile.common.no_matches": "Aucun résultat.",
 	"mobile.common.resize_panel": "Redimensionner le panneau",
 	"mobile.common.size.medium": "Moyen",
 	"mobile.common.size.large": "Grand",

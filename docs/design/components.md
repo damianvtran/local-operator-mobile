@@ -111,6 +111,14 @@ The one action affordance. Anything that **navigates** is a link, not a button.
 | `icon` | 44 square | 0 | 20 | — | Standard icon-only control |
 | `fab` | 56 square | 0 | 24 | — | The composer's send (§ 12) |
 
+**Fill.** `fill` lets a button take the height its container gives it: the
+target and the visible box grow into it instead of keeping the size's own
+height. Use it only where a button must match a neighbour whose height follows
+the reader's type — the Past screen's Search beside its field, whose caller sizes
+the container to the measured field so the pair match at 100 % and 200 %; and
+the ask footer's Send and Decline side by side, which stay one height when only
+one label wraps. It never shrinks a button below its size or the touch floor.
+
 ### Variants and their states
 
 | Variant | rest | pressed | disabled |
@@ -284,6 +292,11 @@ sheet, and the row state belongs to the row.
 
 Every state occupies the **same 12×12 box**, so every title starts at the same x
 forever. Indicators change colour, never geometry.
+
+A section header in the list starts on the **title column**, not at the row
+gutter: the indicator hangs in the gutter beside the title, so a section where no
+row carries a mark still lines its titles up under its heading
+(`sectionHeaderIndentPt`).
 
 The ladder, first match wins:
 

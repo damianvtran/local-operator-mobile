@@ -113,15 +113,20 @@ vi.mock("react-native", () => ({
 vi.mock("lucide-react-native", () => {
 	const Icon = () => null;
 	return {
+		ArrowRightLeft: Icon,
 		CalendarClock: Icon,
 		ChevronRight: Icon,
 		FolderKanban: Icon,
 		History: Icon,
 		Inbox: Icon,
 		Library: Icon,
+		MessageSquare: Icon,
+		Pin: Icon,
+		PinOff: Icon,
 		Search: Icon,
 		Settings: Icon,
 		SquarePen: Icon,
+		Tag: Icon,
 		X: Icon,
 	};
 });

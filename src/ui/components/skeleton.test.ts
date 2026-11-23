@@ -40,8 +40,10 @@ describe("the skeleton's ground", () => {
 
 	it("is passed as raised by every bar in the conversations pane's loading state", () => {
 		const pane = read("../../features/sessions/conversations-pane.tsx");
-		const loadingBars = pane.match(/<Skeleton lines=\{1\}[^/]*\/>/g) ?? [];
-		expect(loadingBars.length).toBeGreaterThanOrEqual(3);
+		/* One `<Skeleton>` mapped per row since the short-pane variant
+		 *  (`pane-loading.test.ts` pins how many rows each form draws). */
+		const loadingBars = pane.match(/<Skeleton[^/]*lines=\{1\}[^/]*\/>/g) ?? [];
+		expect(loadingBars.length).toBeGreaterThanOrEqual(1);
 		for (const bar of loadingBars) {
 			expect(bar, bar).toContain('ground="raised"');
 		}

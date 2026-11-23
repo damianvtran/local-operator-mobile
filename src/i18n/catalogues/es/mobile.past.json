@@ -1,0 +1,6 @@
+{
+	"mobile.past.search_label": "Buscar sesiones anteriores",
+	"mobile.past.empty_headline": "Aún no hay conversaciones anteriores.",
+	"mobile.past.empty_next": "Aquí aparecerán las conversaciones que hayas terminado, y podrás reanudar cualquiera de ellas.",
+	"mobile.past.no_matches_next": "La búsqueda abarca lo que se dijo y los títulos, así que una palabra más corta puede dar resultado."
+}

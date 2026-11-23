@@ -14,6 +14,7 @@
 	"mobile.common.copy_command_hint": "یہ “{label}” والی کمانڈ کاپی کرتا ہے",
 	"mobile.common.close": "بند کریں",
 	"mobile.common.loading": "لوڈ ہو رہا ہے",
+	"mobile.common.no_matches": "کوئی نتیجہ نہیں ملا۔",
 	"mobile.common.resize_panel": "پینل کا سائز تبدیل کریں",
 	"mobile.common.size.medium": "درمیانہ",
 	"mobile.common.size.large": "بڑا",
