@@ -36,6 +36,20 @@
  * rides along with every offset so that the dock's own height change can never
  * satisfy the rule that grows it back.
  *
+ * GROWING BACK NEEDS A RETURN. Settling in the tail band for the dwell is not
+ * enough on its own, or the resize that shrank the dock would grow it again. The
+ * reader has returned when EITHER they travelled `SHRINK_DISTANCE_PT` away and back
+ * in the card's frame, OR their last finger run moved at least `TOWARD_TAIL_MIN_PT`
+ * toward the tail (UX U2: a reader who drags up 30–80 pt and comes back must not be
+ * left in a pill). The run is read off the raw offset and only inside a drag, so
+ * neither the dock's resize nor the tail pin can feed it, and a nudge up and idle
+ * stays a pill: the reader is reading.
+ *
+ * NOTHING TO SCROLL, NOTHING TO SHRINK. A transcript that fits its viewport has no
+ * distance to travel, so a bounce or a fling on it never shrinks the dock (QA Q1).
+ * A fling toward the tail from inside the band goes nowhere and is ignored; one
+ * away from it carries the reader off and shrinks (QA Q3).
+ *
  * KNOWN LIMIT — ON WEB THE DOCK NEVER SHRINKS FROM SCROLLING. react-native-web
  * emits only `onScroll` (no drag or momentum events: see `transcript-presence.ts`),
  * so every web offset reads as one the app made. Accepted: the compaction is a
@@ -61,6 +75,14 @@ export const TAIL_BAND_PT = 16;
 /** The reader must stay inside the tail band this long, with no finger down and no
  *  glide, before the dock grows back. Long enough to ignore a pass-through. */
 export const TAIL_DWELL_MS = 150;
+/** A settle inside the tail band also grows the dock when the reader's LAST finger
+ *  run moved at least this far TOWARD the tail (offset increasing, overscroll
+ *  counted): they went to the end on purpose, however shallow the peek away was.
+ *  A nudge away and no return leaves the run at 0, so a reader who stops to read
+ *  stays a pill. A DESIGN VALUE like the rest, not a measurement: in the UX
+ *  review's simulated drag-away-and-return traces (2026-11-23) 12 and 8 left some
+ *  returning drags a pill and 6 did not. Tune it on TestFlight. */
+export const TOWARD_TAIL_MIN_PT = 6;
 /** The least time between two scroll-driven flips. A tap, a send, a jump or a pin
  *  is the reader's intent and is not held. */
 export const HOLD_MS = 300;
@@ -144,6 +166,19 @@ export function createComposerCompaction(
 	let flipViewport: number | null = null;
 	let adjusted = FAR_PT;
 	let peakAway = FAR_PT;
+	/* THE READER'S LAST RUN TOWARD THE TAIL (UX U2). The excursion rule above asks a
+	 *  reader who peeked 30–80 pt up to travel 24 pt away AND back before the dock
+	 *  returns, which left a reader who dragged up a little and came back in a pill.
+	 *  `towardRun` is how far the finger's current run has carried the RAW offset
+	 *  toward the tail since the last reversal or touch; it is judged on the raw
+	 *  offset, so the dock's own resize (which moves the viewport, not the offset)
+	 *  cannot feed it, and it only counts inside a drag, so the tail pin cannot
+	 *  either. */
+	let lastRawOffset: number | null = null;
+	let towardRun = 0;
+	/* Whether the list has anything to scroll: content taller than its viewport.
+	 *  Unknown until the first offset, and then it reads as scrollable. */
+	let scrollable = true;
 	/* `-Infinity`: nothing held until the first flip. */
 	let lastFlipAt = Number.NEGATIVE_INFINITY;
 	let dwellTimer: ReturnType<typeof setTimeout> | null = null;
@@ -175,9 +210,13 @@ export function createComposerCompaction(
 		if (!enabled || pinned) return;
 		set(true, true);
 	};
+	/* Settled at the tail: in the band AND the reader came back to it, either by
+	 *  travelling away and back in the card's frame, or by a finger run toward it. */
 	const atTail = (): boolean =>
 		distance <= TAIL_BAND_PT &&
-		(!shrunk || peakAway - adjusted >= SHRINK_DISTANCE_PT);
+		(!shrunk ||
+			peakAway - adjusted >= SHRINK_DISTANCE_PT ||
+			towardRun >= TOWARD_TAIL_MIN_PT);
 	/** Arm or drop the dwell: shrunk, inside the band, finger up, no glide. */
 	const evaluateDwell = (): void => {
 		if (!shrunk || dragging || coasting || !atTail()) {
@@ -209,10 +248,16 @@ export function createComposerCompaction(
 			 *  reliably delivered first. */
 			coasting = false;
 			dragStart = withoutOverscroll(offsetY, distance);
+			lastRawOffset = offsetY;
+			towardRun = 0;
 			clearDwell();
 		},
 		noteOffset(offsetY, distanceToTail, viewportHeight) {
 			distance = distanceToTail;
+			/* offset + distance is content − viewport, whatever the overscroll: the
+			 *  scrollable range, negative when everything already fits. A bounce on
+			 *  a short transcript has nowhere to go, so it must not shrink the dock. */
+			scrollable = offsetY + distanceToTail > 0;
 			if (viewportHeight !== undefined) viewport = viewportHeight;
 			const growth =
 				shrunk && flipViewport !== null && viewport !== null
@@ -224,16 +269,33 @@ export function createComposerCompaction(
 				const net = Math.abs(
 					withoutOverscroll(offsetY, distanceToTail) - dragStart,
 				);
-				if (net >= SHRINK_DISTANCE_PT) requestShrink();
+				/* The run is brought up to date BEFORE the shrink: a listener that
+				 *  resizes the list at once can re-enter with the clamped offset, and
+				 *  it must find this event's offset already recorded, or the clamp
+				 *  would read as a run toward the tail. */
+				const step = offsetY - (lastRawOffset ?? offsetY);
+				if (step > 0) towardRun += step;
+				else if (step < 0) towardRun = 0;
+				lastRawOffset = offsetY;
+				if (net >= SHRINK_DISTANCE_PT && scrollable) requestShrink();
 			}
+			lastRawOffset = offsetY;
 			evaluateDwell();
 		},
 		endDrag(velocityPtPerS) {
 			dragging = false;
 			dragStart = null;
-			/* A fling that ends at the tail goes nowhere: shrinking there is a shape
-			 *  the dwell would undo 300 ms later. */
-			if (Math.abs(velocityPtPerS) >= FLING_PT_PER_S && !atTail())
+			/* A fling TOWARD the tail from inside the band goes nowhere: shrinking
+			 *  there is a shape the dwell would undo 300 ms later. A fling AWAY from
+			 *  it that starts inside the band carries the reader off (QA Q3), so
+			 *  only the sign that is positive for an offset moving toward the end
+			 *  (RN's `velocity.y` on both platforms) is exempt. */
+			const towardTail = velocityPtPerS > 0 && distance <= TAIL_BAND_PT;
+			if (
+				Math.abs(velocityPtPerS) >= FLING_PT_PER_S &&
+				scrollable &&
+				!towardTail
+			)
 				requestShrink();
 			evaluateDwell();
 		},

@@ -108,6 +108,10 @@ import {
 	dockMotionStyle,
 	fieldSelectionOverride,
 	morphHeight,
+	openOnlyForDictation,
+	PILL_ELLIPSIS_CUE_PT,
+	pillShowsEllipsis,
+	pillShowsPlaceholder,
 	pillShowsSend,
 	seedFor,
 } from "@/features/session/composer-presentation";
@@ -1154,6 +1158,11 @@ export const Composer = ({
 	/* The pill the SCROLL made, as opposed to short landscape's own: the dock is
 	 *  shrunk, nothing pins it, and `composerPresentation` agrees. */
 	const shrunkPill = presentationFacts.shrunk && !pinsCard;
+	/* The pill's two cues over its one-line field (`pillShowsEllipsis`,
+	 *  `pillShowsPlaceholder`): there is more after the first line, or the draft is
+	 *  only whitespace and the resting placeholder stands in for it. */
+	const pillCue = shrunkPill && pillShowsEllipsis(draft);
+	const pillBlank = shrunkPill && pillShowsPlaceholder(draft);
 	const selectionOverride = fieldSelectionOverride({
 		shrunkPill,
 		restoreCaretAt,
@@ -1182,30 +1191,32 @@ export const Composer = ({
 	 *  controls row then keeps the mic in that trailing slot, so the press that
 	 *  expands the card does not slide Send under the finger that just pressed the
 	 *  mic (UX review round 1, U2). Send is disabled in this state anyway: a card
-	 *  with a draft, an attachment or focus is open for its own reasons. */
-	const openForDictationOnly =
-		activePresentation.expanded &&
-		/* `shrunk: false`: "open only for dictation" asks what the dock would be
-		 *  with no take, and a draft or Stop opens it for its own reasons — a
-		 *  scroll-made pill must not make those read as dictation-only. */
-		!composerPresentation({
-			...presentationFacts,
-			dictation: false,
-			shrunk: false,
-		}).expanded;
+	 *  with a draft, an attachment or focus is open for its own reasons.
+	 *
+	 *  A whitespace-only draft counts as no draft here (`blankIsEmpty`), which is
+	 *  what the pill's Send already does (`pillShowsSend`): a take that began on
+	 *  the pill beside a blank draft opens a card with no dead Send either, and
+	 *  the mic does not slide (review R2-2). Stop, focus, an attachment and an
+	 *  error still keep the actions. */
+	const openForDictationOnly = openOnlyForDictation(presentationFacts, {
+		blankIsEmpty: true,
+	});
 	/* Whether the take that holds the card open began on the scroll-made pill
 	 *  (`dictationDropsSend`). Set at the mic press, the one moment the pill is
 	 *  still what the finger is on; kept while a failed start leaves the card open
-	 *  for dictation only, so pressing the mic again does not slide it. */
-	const dictationFromPill = useRef(false);
+	 *  for dictation only, so pressing the mic again does not slide it. State, not
+	 *  a ref: the draw reads it, and a ref read during render depends on the voice
+	 *  state change that follows the press to re-render at all (review R2-4). */
+	const [dictationFromPill, setDictationFromPill] = useState(false);
 	const pressMic = () => {
-		dictationFromPill.current =
-			shrunkPill || (dictationFromPill.current && openForDictationOnly);
+		setDictationFromPill(
+			shrunkPill || (dictationFromPill && openForDictationOnly),
+		);
 		voice?.press();
 	};
 	const dropSendForDictation = dictationDropsSend({
 		openForDictationOnly,
-		startedFromPill: dictationFromPill.current,
+		startedFromPill: dictationFromPill,
 	});
 	const trailing = controlsTrailing({
 		openForDictationOnly,
@@ -2484,7 +2495,20 @@ export const Composer = ({
 					 *  states: only its style changes, so the field never remounts. */
 					style={
 						shrunkPill
-							? { alignSelf: "stretch", justifyContent: "center" }
+							? {
+									alignSelf: "stretch",
+									justifyContent: "center",
+									/* The room the "…" cue takes, so the first line wraps short of
+									 *  it instead of running under it. Only while the cue stands:
+									 *  a pill's draft cannot change without the card opening. */
+									...(pillCue
+										? {
+												paddingEnd: Math.ceil(
+													PILL_ELLIPSIS_CUE_PT * effectiveScale,
+												),
+											}
+										: null),
+								}
 							: undefined
 					}
 				>
@@ -2551,6 +2575,49 @@ export const Composer = ({
 								})}
 						testID={CONTROL.composerInput}
 					/>
+					{/* THE PILL'S CUES (design D1/D5). Both are painted OVER the one field
+					 *  and touch nothing of it: not its value (a native input shows its
+					 *  placeholder only for an empty one, and the draft is never
+					 *  normalised), not its mount. `pointerEvents="none"` so a tap goes to
+					 *  the catcher below, `aria-hidden` because the field already carries
+					 *  the draft and the "…" is a typographic glyph, not copy. */}
+					{pillCue ? (
+						<View
+							aria-hidden
+							pointerEvents="none"
+							style={{
+								position: "absolute",
+								top: 0,
+								bottom: 0,
+								end: 0,
+								justifyContent: "center",
+							}}
+						>
+							<Text className="text-body text-ink-dim" numberOfLines={1}>
+								{"\u2026"}
+							</Text>
+						</View>
+					) : null}
+					{pillBlank ? (
+						<View
+							aria-hidden
+							pointerEvents="none"
+							style={{
+								position: "absolute",
+								top: 0,
+								bottom: 0,
+								start: 0,
+								end: 0,
+								justifyContent: "center",
+							}}
+						>
+							{/* The field's own placeholder colour and line, so a blank draft
+							 *  reads as the resting field. */}
+							<Text className="text-body text-ink-muted" numberOfLines={1}>
+								{composerCopy().placeholder}
+							</Text>
+						</View>
+					) : null}
 					{/* THE PILL'S TAP TARGET. The field is clipped to one line (24 pt at
 					 *  100 %), which is under the 44 pt floor, so a catcher covers the
 					 *  whole field row while the pill stands: a tap focuses the field

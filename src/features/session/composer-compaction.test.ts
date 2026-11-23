@@ -8,6 +8,7 @@ import {
 	SHRINK_DISTANCE_PT,
 	TAIL_BAND_PT,
 	TAIL_DWELL_MS,
+	TOWARD_TAIL_MIN_PT,
 } from "./composer-compaction";
 
 /* The clock and the timers are vitest's fake pair: `Date.now` is the policy's
@@ -52,7 +53,8 @@ describe("the design values", () => {
 			TAIL_BAND_PT,
 			TAIL_DWELL_MS,
 			HOLD_MS,
-		]).toEqual([24, 1000, 16, 150, 300]);
+			TOWARD_TAIL_MIN_PT,
+		]).toEqual([24, 1000, 16, 150, 300, 6]);
 		/* The band stays under the shrink distance so one drag cannot satisfy both
 		 *  rules at the boundary. */
 		expect(TAIL_BAND_PT).toBeLessThan(SHRINK_DISTANCE_PT);
@@ -109,6 +111,30 @@ describe("shrinking", () => {
 		c.noteOffset(2004, 4);
 		c.endDrag(FLING_PT_PER_S * 3);
 		expect(c.readShrunk()).toBe(false);
+	});
+
+	it("shrinks on a fling AWAY from the tail that starts inside the band (QA Q3)", () => {
+		const c = createComposerCompaction();
+		c.noteOffset(2000, 0, 700);
+		c.beginDrag(2000);
+		c.noteOffset(1996, 4, 700);
+		/* Negative: the offset is falling, the reader is leaving the end. */
+		c.endDrag(-FLING_PT_PER_S * 3);
+		expect(c.readShrunk()).toBe(true);
+	});
+
+	it("does not shrink on a fling toward the tail from inside the band, bounce included (QA Q3)", () => {
+		for (const [offset, distance] of [
+			[1996, 4],
+			[2010, -10],
+		] as const) {
+			const c = createComposerCompaction();
+			c.noteOffset(1990, 10, 700);
+			c.beginDrag(1990);
+			c.noteOffset(offset, distance, 700);
+			c.endDrag(FLING_PT_PER_S * 3);
+			expect(c.readShrunk(), `${offset}`).toBe(false);
+		}
 	});
 
 	it("ignores elastic overscroll at the tail: bounce is not travel", () => {
@@ -389,6 +415,184 @@ describe("the tail test does not feed on the dock's own resize (R1)", () => {
 		c.noteOffset(1990, 0);
 		vi.advanceTimersByTime(HOLD_MS + TAIL_DWELL_MS);
 		expect(c.readShrunk()).toBe(false);
+	});
+});
+
+describe("a transcript with nothing to scroll (QA Q1, UX U4)", () => {
+	it("does not shrink on a bounce when the content fits the viewport", () => {
+		const c = createComposerCompaction();
+		c.noteOffset(0, -300, 600);
+		c.beginDrag(0);
+		c.noteOffset(-30, -270, 600);
+		expect(c.readShrunk()).toBe(false);
+		c.noteOffset(-80, -220, 600);
+		c.noteOffset(30, -330, 600);
+		c.endDrag(0);
+		expect(c.readShrunk()).toBe(false);
+	});
+
+	it("does not shrink on a fling there either, and a content exactly the viewport's tall does not scroll", () => {
+		for (const [distance, velocity] of [
+			[-300, FLING_PT_PER_S * 3],
+			[-300, -FLING_PT_PER_S * 3],
+			[0, FLING_PT_PER_S * 3],
+		] as const) {
+			const c = createComposerCompaction();
+			c.noteOffset(0, distance, 600);
+			c.beginDrag(0);
+			c.noteOffset(0, distance, 600);
+			c.endDrag(velocity);
+			expect(c.readShrunk(), `${distance} ${velocity}`).toBe(false);
+		}
+	});
+
+	it("still shrinks once the content is taller than the viewport by even a little", () => {
+		const c = createComposerCompaction();
+		c.noteOffset(0, 40, 600);
+		c.beginDrag(0);
+		c.noteOffset(30, 10, 600);
+		expect(c.readShrunk()).toBe(true);
+	});
+
+	it("reads the range from the offset, so the overscroll of a bounce does not hide a scrollable list", () => {
+		const c = createComposerCompaction();
+		c.noteOffset(0, 1400, 600);
+		c.beginDrag(0);
+		/* Pulled 30 pt past the top: offset −30, the tail 30 pt farther away. */
+		c.noteOffset(-30, 1430, 600);
+		expect(c.readShrunk()).toBe(false);
+		c.noteOffset(40, 1360, 600);
+		expect(c.readShrunk()).toBe(true);
+	});
+});
+
+describe("settling at the tail after a finger run toward it (UX U2)", () => {
+	const END = 1700;
+	const VIEWPORT = 700;
+	const DELTA = 56;
+	/** A reader parked at the tail who drags `net` pt away and lets go: the list
+	 *  is clamped to its new end once the dock shrinks, as a real one is. Returns
+	 *  the signal and a reporter for the pill's frame. */
+	const peekedAway = (net: number) => {
+		const c = createComposerCompaction();
+		let viewport = VIEWPORT;
+		const report = (y: number) => {
+			const clamped = Math.min(y, END - viewport);
+			c.noteOffset(clamped, END - clamped - viewport, viewport);
+			return clamped;
+		};
+		report(END - VIEWPORT);
+		c.beginDrag(END - VIEWPORT);
+		let y = END - VIEWPORT;
+		for (let s = 4; s <= net; s += 4) {
+			y = END - VIEWPORT - s;
+			report(y);
+			if (c.readShrunk() && viewport === VIEWPORT) {
+				viewport += DELTA;
+				report(y);
+			}
+		}
+		c.endDrag(0);
+		vi.advanceTimersByTime(HOLD_MS + TAIL_DWELL_MS + 1);
+		/* The finger's own moves after the resize: unclamped, because a finger may
+		 *  pull the list past its end (the elastic overscroll). */
+		const push = (to: number) =>
+			c.noteOffset(to, END - to - viewport, viewport);
+		return { c, push, rest: Math.min(y, END - viewport), viewport };
+	};
+	/** A separate drag by the finger of `by` pt toward the tail in 2 pt steps. */
+	const dragToward = (
+		peek: ReturnType<typeof peekedAway>,
+		by: number,
+		from = peek.rest,
+	) => {
+		peek.c.beginDrag(from);
+		for (let s = 2; s <= by; s += 2) peek.push(from + s);
+		peek.c.endDrag(0);
+		vi.advanceTimersByTime(HOLD_MS + TAIL_DWELL_MS + 1);
+	};
+
+	it("leaves a nudge away and idle a pill (the reader is reading)", () => {
+		for (const net of [30, 56, 80]) {
+			const peek = peekedAway(net);
+			expect(peek.c.readShrunk(), `${net}`).toBe(true);
+			vi.advanceTimersByTime(2000);
+			expect(peek.c.readShrunk(), `${net} idle`).toBe(true);
+		}
+	});
+
+	it("grows when the reader drags back toward the tail by the threshold, from every shallow peek", () => {
+		for (const net of [30, 40, 56, 72, 80, 100, 150]) {
+			const peek = peekedAway(net);
+			dragToward(peek, net);
+			expect(peek.c.readShrunk(), `${net}`).toBe(false);
+		}
+	});
+
+	it("grows on a one-finger return: up 30 and back to the start in the same drag (T2c)", () => {
+		const c = createComposerCompaction();
+		c.noteOffset(1000, 0, VIEWPORT);
+		c.beginDrag(1000);
+		c.noteOffset(970, 30, VIEWPORT);
+		expect(c.readShrunk()).toBe(true);
+		c.noteOffset(970, 30 - DELTA, VIEWPORT + DELTA);
+		for (let y = 974; y <= 1000; y += 4) c.noteOffset(y, 0, VIEWPORT + DELTA);
+		c.endDrag(0);
+		vi.advanceTimersByTime(HOLD_MS + TAIL_DWELL_MS + 1);
+		expect(c.readShrunk()).toBe(false);
+	});
+
+	it("counts the overscroll: a pull past the end by the threshold is a run toward it", () => {
+		const peek = peekedAway(40);
+		peek.c.beginDrag(peek.rest);
+		peek.c.noteOffset(peek.rest + 4, -4, peek.viewport);
+		peek.c.noteOffset(
+			peek.rest + TOWARD_TAIL_MIN_PT,
+			-TOWARD_TAIL_MIN_PT,
+			peek.viewport,
+		);
+		peek.c.endDrag(0);
+		vi.advanceTimersByTime(HOLD_MS + TAIL_DWELL_MS + 1);
+		expect(peek.c.readShrunk()).toBe(false);
+	});
+
+	it("needs the whole threshold: one point short stays a pill", () => {
+		const peek = peekedAway(40);
+		dragToward(peek, TOWARD_TAIL_MIN_PT - 1, peek.rest);
+		expect(peek.c.readShrunk()).toBe(true);
+	});
+
+	it("resets on a reversal: the run is the last one, not the sum", () => {
+		const peek = peekedAway(40);
+		peek.c.beginDrag(peek.rest);
+		peek.push(peek.rest + 4);
+		peek.push(peek.rest + 2);
+		peek.push(peek.rest + 5);
+		peek.c.endDrag(0);
+		vi.advanceTimersByTime(HOLD_MS + TAIL_DWELL_MS + 1);
+		expect(peek.c.readShrunk()).toBe(true);
+	});
+
+	it("resets at the next touch: two short drags are not one run", () => {
+		const peek = peekedAway(40);
+		dragToward(peek, TOWARD_TAIL_MIN_PT - 2, peek.rest);
+		dragToward(peek, TOWARD_TAIL_MIN_PT - 2, peek.rest);
+		expect(peek.c.readShrunk()).toBe(true);
+	});
+
+	it("is not fed by offsets the app made: a tail pin outside a drag does not grow a nudge", () => {
+		const peek = peekedAway(40);
+		for (let s = 1; s <= 20; s++) peek.push(peek.rest + s);
+		vi.advanceTimersByTime(2000);
+		expect(peek.c.readShrunk()).toBe(true);
+	});
+
+	it("does not bring back the flicker: a 24–72 pt drag away stays shrunk after the post-resize event", () => {
+		for (const net of [24, 28, 40, 56, 72]) {
+			const peek = peekedAway(net);
+			vi.advanceTimersByTime(2000);
+			expect(peek.c.readShrunk(), `${net}`).toBe(true);
+		}
 	});
 });
 

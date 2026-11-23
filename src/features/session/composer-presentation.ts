@@ -352,6 +352,72 @@ export const composerPillRow = (
 export const pillShowsSend = (draft: string) => draft.trim().length > 0;
 
 /**
+ * Whether the pill's field shows a trailing "…" (design D1, UX U1; spec §4.1 "first
+ * line with an ellipsis"). The pill shows the draft's FIRST line only, so a draft
+ * with more lines after a non-blank one needs a cue that there is more.
+ *
+ * NEWLINE ONLY, deliberately. A single paragraph that wraps past one line is also
+ * "more", but nothing here can know it: the field is clipped to one line, the
+ * native content-size report fires only on a layout change (see `Textarea`), and a
+ * character count is a guess at a width that depends on the font, the text scale
+ * and the screen — it would paint a cue under a short draft or miss a long one. A
+ * wrong cue is worse than none, so the line break, which is exact, is the whole rule.
+ * Trailing whitespace is not "more" (a draft ending in a newline shows all its
+ * words), and a blank draft has no first line to be cut after (`pillShowsPlaceholder`).
+ */
+export const pillShowsEllipsis = (draft: string) =>
+	draft.trim().length > 0 &&
+	(draft.trimEnd().includes("\n") || draft.trimEnd().includes("\r"));
+
+/**
+ * Whether the pill shows the placeholder over a draft that is only whitespace
+ * (design D5). A native input paints its placeholder only for an EMPTY value, and
+ * the draft is never normalised, so a blank draft would otherwise read as an empty
+ * field that is not the resting "Message" one. A DECISION about what is painted over
+ * the field: `value` is untouched and a tap still restores the whitespace.
+ */
+export const pillShowsPlaceholder = (draft: string) =>
+	draft.length > 0 && draft.trim().length === 0;
+
+/** The room the "…" cue takes at the right end of the pill's field, in points, at
+ *  text scale 1. The glyph's advance is about one em (16 pt); the field keeps this
+ *  much clear so the cue never sits over the last glyph of the line. */
+export const PILL_ELLIPSIS_CUE_PT = 16;
+
+/**
+ * Whether the dock is open ONLY because of dictation: with no take it would be the
+ * collapsed pill (UX round 1, U2).
+ *
+ * `blankIsEmpty` reads a whitespace-only draft as no draft. The pill hides Send for
+ * one (`pillShowsSend`), so a take that began there, with nothing else holding the
+ * card open, must drop the dead Send too, or the mic slides one disc left under the
+ * finger that pressed it (review R2-2). Stop, focus, an attachment or an error still
+ * open the card for their own reasons, and the Stop disc must stay.
+ */
+export const openOnlyForDictation = (
+	facts: ComposerPresentationFacts,
+	{ blankIsEmpty = false }: { blankIsEmpty?: boolean } = {},
+) => {
+	const draft = blankIsEmpty && !pillShowsSend(facts.draft) ? "" : facts.draft;
+	return (
+		/* A take (or its outcome line) is what this asks about. Without the fact a
+		 *  blank draft alone would read as "dictation-only" and a card left open by
+		 *  nothing but whitespace would drop its Send after the take ended. */
+		facts.dictation &&
+		composerPresentation(facts).expanded &&
+		/* `shrunk: false`: "open only because of dictation" asks what the dock would
+		 *  be with no take, and a draft or Stop opens it for its own reasons — a
+		 *  scroll-made pill must not make those read as dictation-only. */
+		!composerPresentation({
+			...facts,
+			draft,
+			dictation: false,
+			shrunk: false,
+		}).expanded
+	);
+};
+
+/**
  * Whether the card that dictation opened drops its dead Send disc (review R2).
  *
  * The scroll-made pill has no Send beside an empty field, so its mic is the

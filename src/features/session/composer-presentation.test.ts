@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { PALETTE } from "@/ui/tokens.gen";
 import {
 	COMPOSER_CARD_MARGIN,
 	COMPOSER_CONTROLS_GAP,
@@ -24,6 +25,10 @@ import {
 	fieldSelectionOverride,
 	keyboardOverlap,
 	morphPillRadius,
+	openOnlyForDictation,
+	PILL_ELLIPSIS_CUE_PT,
+	pillShowsEllipsis,
+	pillShowsPlaceholder,
 	pillShowsSend,
 	seedFor,
 } from "./composer-presentation";
@@ -517,6 +522,174 @@ describe("a take that starts from the pill drops the dead Send (R2)", () => {
 	});
 });
 
+describe("a blank draft and the dictation card (R2-2)", () => {
+	/* The facts of a shrunk dock whose mic was just pressed, so a take is live. */
+	const taking = { ...empty, dictation: true, shrunk: true };
+
+	it("reads a whitespace-only draft as no draft when asked, and only then", () => {
+		for (const draft of [" ", "\n\t \n"]) {
+			expect(openOnlyForDictation({ ...taking, draft })).toBe(false);
+			expect(
+				openOnlyForDictation({ ...taking, draft }, { blankIsEmpty: true }),
+			).toBe(true);
+		}
+	});
+
+	it("an empty draft is dictation-only either way", () => {
+		expect(openOnlyForDictation(taking)).toBe(true);
+		expect(openOnlyForDictation(taking, { blankIsEmpty: true })).toBe(true);
+	});
+
+	it("a real draft, Stop, an attachment, focus and an error keep the card their own", () => {
+		for (const delta of [
+			{ draft: "hi" },
+			{ draft: " hi " },
+			{ stop: true },
+			{ attachments: 1 },
+			{ focused: true },
+			{ error: true },
+		])
+			expect(
+				openOnlyForDictation({ ...taking, ...delta }, { blankIsEmpty: true }),
+				JSON.stringify(delta),
+			).toBe(false);
+	});
+
+	it("Stop beside a blank draft keeps the action cluster: the Stop disc must not vanish", () => {
+		const facts = { ...taking, draft: " ", stop: true };
+		expect(
+			dictationDropsSend({
+				openForDictationOnly: openOnlyForDictation(facts, {
+					blankIsEmpty: true,
+				}),
+				startedFromPill: true,
+			}),
+		).toBe(false);
+	});
+
+	it("a take that began on the pill beside a blank draft drops the dead Send, so the mic does not slide", () => {
+		const open = openOnlyForDictation(
+			{ ...taking, draft: " " },
+			{ blankIsEmpty: true },
+		);
+		expect(
+			dictationDropsSend({ openForDictationOnly: open, startedFromPill: true }),
+		).toBe(true);
+		expect(
+			dictationDropsSend({
+				openForDictationOnly: open,
+				startedFromPill: false,
+			}),
+		).toBe(false);
+	});
+
+	it("ends with the take: a card left open by a blank draft alone keeps its layout", () => {
+		expect(
+			openOnlyForDictation(
+				{ ...empty, draft: " ", dictation: false },
+				{ blankIsEmpty: true },
+			),
+		).toBe(false);
+	});
+
+	it("does not read a ref during render (R2-4)", () => {
+		const component = read("src/features/session/components/composer.tsx");
+		expect(component).not.toContain("dictationFromPill.current");
+		expect(component).toContain("setDictationFromPill(");
+	});
+});
+
+describe("the pill's first-line cue (D1/U1)", () => {
+	it("shows a trailing ellipsis when text follows a line break", () => {
+		for (const draft of [
+			"first\nsecond",
+			"first\r\nsecond",
+			"first\n\nsecond",
+			"\nonly the second",
+			"first\n  second  ",
+		])
+			expect(pillShowsEllipsis(draft), JSON.stringify(draft)).toBe(true);
+	});
+
+	it("does not, for one line, however long, or a draft that only ends in whitespace", () => {
+		for (const draft of [
+			"",
+			"one line",
+			"one line ",
+			"one line\n",
+			"one line\n\n  \t",
+			"x".repeat(500),
+		])
+			expect(pillShowsEllipsis(draft), JSON.stringify(draft)).toBe(false);
+	});
+
+	it("does not, for a blank draft: it has no first line to be cut after", () => {
+		for (const draft of [" ", "\n", "\n \n\t"])
+			expect(pillShowsEllipsis(draft), JSON.stringify(draft)).toBe(false);
+	});
+
+	it("keeps clear room for the glyph, and reads ink-dim at 3:1 on the pill fill in every theme", () => {
+		expect(PILL_ELLIPSIS_CUE_PT).toBe(16);
+		const channel = (hex: string, at: number) => {
+			const c = Number.parseInt(hex.slice(at, at + 2), 16) / 255;
+			return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+		};
+		const luminance = (hex: string) =>
+			0.2126 * channel(hex.replace("#", ""), 0) +
+			0.7152 * channel(hex.replace("#", ""), 2) +
+			0.0722 * channel(hex.replace("#", ""), 4);
+		for (const theme of ["light", "dark"] as const) {
+			const [hi, lo] = [
+				luminance(PALETTE[theme]["ink-dim"]),
+				luminance(PALETTE[theme].elevated),
+			].sort((a, b) => b - a) as [number, number];
+			expect((hi + 0.05) / (lo + 0.05), theme).toBeGreaterThanOrEqual(3);
+		}
+	});
+
+	it("is wired: painted over the one field, out of the tap and accessibility paths", () => {
+		const component = read("src/features/session/components/composer.tsx");
+		const cue = component.slice(
+			component.indexOf("{pillCue ? ("),
+			component.indexOf("{pillBlank ? ("),
+		);
+		expect(cue).toContain("aria-hidden");
+		expect(cue).toContain('pointerEvents="none"');
+		expect(cue).toContain("\\u2026");
+		/* One mounted field: the cue is a sibling, never a second Textarea. */
+		expect(component.split("<Textarea").length - 1).toBe(1);
+	});
+});
+
+describe("a blank draft in the pill shows the placeholder (D5)", () => {
+	it("is a whitespace-only, non-empty draft", () => {
+		for (const draft of [" ", "   ", "\n", "\t \n "])
+			expect(pillShowsPlaceholder(draft), JSON.stringify(draft)).toBe(true);
+		for (const draft of ["", "a", " a ", "\n a"])
+			expect(pillShowsPlaceholder(draft), JSON.stringify(draft)).toBe(false);
+	});
+
+	it("never overlaps the ellipsis cue", () => {
+		for (const draft of ["", " ", "\n", "a", "a\nb", " \n "])
+			expect(
+				pillShowsPlaceholder(draft) && pillShowsEllipsis(draft),
+				JSON.stringify(draft),
+			).toBe(false);
+	});
+
+	it("is wired over the field with the field's own value untouched", () => {
+		const component = read("src/features/session/components/composer.tsx");
+		const blank = component.slice(
+			component.indexOf("{pillBlank ? ("),
+			component.indexOf("THE PILL'S TAP TARGET"),
+		);
+		expect(blank).toContain("aria-hidden");
+		expect(blank).toContain('pointerEvents="none"');
+		expect(blank).toContain("composerCopy().placeholder");
+		expect(component).toContain("value={draft}");
+	});
+});
+
 describe("the field's selection while the pill stands (R3)", () => {
 	it("holds the caret at the start so the first line is the one in view", () => {
 		expect(
@@ -546,7 +719,7 @@ describe("the field's selection while the pill stands (R3)", () => {
 
 	it("keeps ONE mounted field with a tap catcher beside it, and never alters value", () => {
 		const component = read("src/features/session/components/composer.tsx");
-		expect(component.match(/<Textarea\b/g)).toHaveLength(1);
+		expect(component.split("<Textarea").length - 1).toBe(1);
 		expect(component).toContain("singleLine={shrunkPill}");
 		/* The skills pass-through stays the default; the override spreads after it. */
 		expect(component).toMatch(
