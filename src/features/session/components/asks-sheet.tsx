@@ -163,18 +163,18 @@ export type AsksSheetProps = {
 	 *  D1 / UX U1), while a sheet the reader opened from the bar passes nothing and
 	 *  keeps the collapsed walk. An id the read does not return expands nothing. */
 	initialOpenAsk?: string | null;
-	/** The session's own outstanding rows, as the projection frame that raised the
-	 *  sheet already holds them. Drawn ONLY until the sheet's first aggregate read
-	 *  lands, then replaced by it (design D3): without a seed an auto-opened sheet
-	 *  paints `reading questions…`, then grows when the rows arrive - and with the
-	 *  head question now expanded that growth is a whole answer form, not 28 px.
-	 *  The aggregate stays the sheet's source of truth (its rows carry the
-	 *  `session_id`/`cwd` the frame's do not); a seed is current-session rows
-	 *  only, which need neither. Passed for a policy open only. */
-	seedRows?: readonly PendingAsk[] | null;
+	/** The conversation's own frame rows, as the projection frame that raised the
+	 *  sheet already holds them. Drawn MERGED into the aggregate on every open and
+	 *  live while it is up (see `drawnRows`): the aggregate carries the
+	 *  `session_id`/`cwd` a frame row lacks and can answer for another
+	 *  conversation, while a frame row is the question the conversation itself
+	 *  still holds - and the aggregate is not always complete when the sheet is
+	 *  opened by hand (issue #247). A frame row absent from the aggregate is kept
+	 *  only while it is outstanding, and settlement from this sheet outranks it. */
+	frameRows?: readonly PendingAsk[] | null;
 	/** The sheet's FIRST read after opening failed. The screen decides what to do
 	 *  (an auto-opened sheet with NOTHING drawn closes back to the bar; one that
-	 *  is drawing the seed stays, with the error line under the rows - round 2,
+	 *  is drawing rows stays, with the error line under the rows - round 2,
 	 *  U9). `drawn` is how many rows the sheet is drawing, which is what that
 	 *  decision turns on. Only the opening read reports, so a backstop or
 	 *  population re-read failing later - while the reader may be mid-answer - can
@@ -562,15 +562,15 @@ export const AsksSheet = ({
 	onOpenConversation,
 	sessions,
 	initialOpenAsk = null,
-	seedRows = null,
+	frameRows = null,
 	onReadFailed,
 }: AsksSheetProps) => {
 	const [rows, setRows] = useState<PendingAsk[]>([]);
 	const [loaded, setLoaded] = useState(false);
 	/** Whether the AGGREGATE has been read successfully at least once. Not
-	 *  `loaded` (which a failed read also sets): the seed is replaced by the
-	 *  aggregate only when there is an aggregate to replace it with, or a failed
-	 *  opening read would empty the very form the reader is answering. */
+	 *  `loaded` (which a failed read also sets): before this the aggregate is
+	 *  empty and the frame rows are drawn whole; after it the two are merged, and
+	 *  the failed-read branch above is what keeps the reader's rows standing. */
 	const [aggregateRead, setAggregateRead] = useState(false);
 	/** The read's own bound statement (`asks_truncated`): true only when the wire
 	 *  dropped rows, so a prefix is never drawn beside a full count. */
@@ -609,6 +609,13 @@ export const AsksSheet = ({
 		askId: string;
 		message: string;
 	} | null>(null);
+	/** Ask ids this sheet has settled (answered, declined or dismissed) since it
+	 *  mounted, whatever source drew the row. The aggregate re-read after a settle
+	 *  reports the truth, but the frame is one SSE beat behind, so `drawnRows`
+	 *  suppresses these from the FRAME side rather than letting the question the
+	 *  reader just answered reappear under the walk. Never cleared: an ask id is
+	 *  settled once and for all. */
+	const [settled, setSettled] = useState<ReadonlySet<string>>(() => new Set());
 
 	/* Whether the sheet was open on the previous render, and the frames' own
 	 *  outstanding-population signature: together they tell the one load effect
@@ -617,9 +624,9 @@ export const AsksSheet = ({
 	 *  (spec §2.3; agent review round 1, m2). */
 	const wasVisible = useRef(false);
 	/* How many rows the sheet is drawing RIGHT NOW, read when the opening read
-	 *  settles rather than captured when it started: the seed is the live frame's
-	 *  rows, so it can empty (answered elsewhere) while the read is in flight, and
-	 *  a count closed over at the opening would still say "rows drawn" and leave an
+	 *  settles rather than captured when it started: the frame rows are LIVE, so they
+	 *  can empty (answered elsewhere) while the read is in flight, and a count
+	 *  closed over at the opening would still say "rows drawn" and leave an
 	 *  empty sheet up with only an error line. Assigned after `shownRows` below. */
 	const drawnCount = useRef(0);
 	const population = useMemo(
@@ -692,8 +699,8 @@ export const AsksSheet = ({
 		}
 		void load().then((ok) => {
 			/* Only the read that OPENED the sheet reports its failure (see
-			 *  `onReadFailed`), with how many rows it is drawing: a seeded sheet is
-			 *  already interactive, so the screen must not close it under the reader. */
+			 *  `onReadFailed`), with how many rows it is drawing: a sheet drawing frame
+			 *  rows is already interactive, so the screen must not close it under the reader. */
 			if (opening && !ok) onReadFailed?.({ drawn: drawnCount.current });
 		});
 	}, [visible, population, load]);
@@ -726,14 +733,23 @@ export const AsksSheet = ({
 		return map;
 	}, [sessions]);
 
-	/* Until the first aggregate read has landed, a policy open draws the frame's own
-	 *  rows (see `seedRows`); after it, only the aggregate (`drawnRows`: the first
-	 *  SUCCESSFUL read, so a failed one keeps the rows the reader is answering).
-	 *  `aggregateRead` is per mount of this component and a policy open is a view's
-	 *  FIRST open, so it is `false` exactly when the seed is wanted. */
+	/* The aggregate UNION the frame's own rows, keyed by ask id, on every open and
+	 *  live while the sheet is up (`drawnRows` has the rules and the reason - issue
+	 *  #247: the aggregate alone was empty on a hand-open and the conversation's
+	 *  question vanished with it). `settled` is the sheet's own memory of what it
+	 *  has already answered/declined/dismissed: the frame is one SSE beat behind,
+	 *  and a stale frame row must not put a settled question back in the list. */
 	const shownRows = useMemo(
-		() => [...drawnRows(seedRows, rows, aggregateRead)],
-		[seedRows, rows, aggregateRead],
+		() => [
+			...drawnRows({
+				frame: frameRows,
+				aggregate: rows,
+				aggregateRead,
+				currentSessionId,
+				settled,
+			}),
+		],
+		[frameRows, rows, aggregateRead, currentSessionId, settled],
 	);
 	drawnCount.current = shownRows.length;
 	/* The head first, then the wire's own order — the order the bar names. */
@@ -858,6 +874,9 @@ export const AsksSheet = ({
 						ask_id: row.ask_id,
 					});
 				}
+				/* Recorded BEFORE the re-read: the frame that lands under it may still
+				 *  list the ask as open, and the merge must not resurrect it. */
+				setSettled((previous) => new Set(previous).add(row.ask_id));
 				/* Advance the walk from the list as it stood: the re-read below
 				 *  refreshes the truth, but the reader's next ask is already
 				 *  visible here. Any row with a verb — a lapsed ask's Dismiss

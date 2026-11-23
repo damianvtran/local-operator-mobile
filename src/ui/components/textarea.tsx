@@ -9,6 +9,7 @@ import {
 
 import { ROLE, state } from "@/ui/a11y";
 import { useKeyboardAppearance, useTokenColor } from "@/ui/appearance";
+import { PasteImageField } from "@/ui/components/paste-image-field";
 import { TOUCH_FLOOR } from "@/ui/layout";
 import { useTextScale } from "@/ui/text-scale-provider";
 import {
@@ -88,6 +89,9 @@ export type TextareaProps = {
 	/** A hard character cap the server enforces (e.g. the community's 4000).
 	 *  Unset leaves the field unbounded, exactly as before. */
 	maxLength?: number;
+	/** The composer's own field: the image URIs of a paste INTO the field. Unset
+	 *  leaves the field exactly as it was (a plain `TextInput`). Native only. */
+	onPasteImages?: (uris: string[]) => void;
 	testID: string;
 };
 
@@ -179,6 +183,7 @@ export const Textarea = ({
 	onSelectionChange,
 	selection,
 	maxLength,
+	onPasteImages,
 	testID,
 }: TextareaProps) => {
 	const { effectiveScale } = useTextScale();
@@ -323,101 +328,105 @@ export const Textarea = ({
 						</Text>
 					</View>
 				) : null}
-				<TextInput
-					maxLength={maxLength}
-					onFocus={onFocus}
-					onBlur={onBlur}
-					ref={resolvedRef}
-					keyboardAppearance={keyboardAppearance}
-					className={fieldClasses(fieldState, { inComposer: integrated })}
-					/* One `style`, because a textarea's box IS its visual: the growing height
-					 *  and the platform floor (48 wherever `Platform.OS` is not iOS — the
-					 *  web/audit profile) have to be resolved together (D6). */
-					style={{
-						/* The border is part of the painted box (border-box), so the height
-						 *  the content measured must grow by it or the last line is clipped
-						 *  by 2px — S16/create-filled's 100% frame (U-07). */
-						/* Web pins the height from the content report; native only bounds
-						 *  it and lets the text input measure itself, because on iOS's New
-						 *  Architecture that report fires only on a LAYOUT change, so a
-						 *  pinned height never learned of line two (TestFlight 800; the
-						 *  full reasoning is on `fieldBoxStyle`). */
-						...fieldBoxStyle(Platform.OS, {
-							contentFloor,
-							oneLineBox,
-							placeholderFloor,
-							cap,
-							touchFloor: TOUCH_FLOOR,
-							empty,
-							placeholderClamped: placeholderMaxLines !== undefined,
-						}),
-						/* `scrollEnabled` is a NATIVE prop: react-native-web does not turn it
-						 *  into CSS, so `false` left the browser free to paint its own overflow
-						 *  on an empty field at 200 % — the scrollbar and resize glyph the design
-						 *  round kept seeing in real Settings captures while a helper-only test
-						 *  stayed green (final audit, D1). Web says it in CSS terms instead, and
-						 *  only when there is nothing to scroll; content past the cap keeps
-						 *  `auto`, so both platforms agree on WHEN scrolling is allowed. */
-						...webFieldStyle(Platform.OS, scrollable),
-						/* The composer's field paints ITS OWN box, not the box plus its
-						 *  padding: a web `<textarea>` is content-box, so the 44 pt floor plus
-						 *  `py-2` painted 60 and pushed the dock 4 pt past the record's 56/112
-						 *  (measured 2026-11-05). `box-sizing` is the web spelling of RN's own
-						 *  default, so native is unchanged. */
-						...(integrated
-							? {
-									backgroundColor: "transparent",
-									paddingHorizontal: 0,
-									borderWidth: 0,
-									...(Platform.OS === "web" ? { boxSizing: "border-box" } : {}),
-								}
-							: {}),
-					}}
-					/* On WEB, an EMPTY field whose placeholder is capped to one line is an
-					 * `<input>`, not a `<textarea>`: Chrome does not ellipsize a textarea's
-					 * placeholder — `text-overflow: ellipsis` computes fine on the element
-					 * and the tail is still clipped, measured on this build and against a
-					 * bare `<input>` with the identical box, which ellipsizes correctly
-					 * (UX round 2, U9). Multiline resumes the moment a character lands,
-					 * so a typed draft wraps exactly as before, and the single-line
-					 * element also gives Enter the submit semantics the composer already
-					 * handles on web. */
-					multiline={
-						integrated ||
-						!webSingleLinePlaceholder(
-							Platform.OS,
-							value === "",
-							placeholderMaxLines === 1,
-						)
-					}
-					// The transcript scrolls, not the page: the field clips its own
-					// overflow once it hits the cap.
-					scrollEnabled={nativeScroll}
-					onContentSizeChange={handleContentSize}
-					accessibilityRole={ROLE.text}
-					accessibilityLabel={label}
-					accessibilityState={state({ disabled })}
-					value={value}
-					onChangeText={onChangeText}
-					onSelectionChange={onSelectionChange}
-					selection={selection}
-					placeholder={placeholder}
-					placeholderTextColor={placeholderColour}
-					editable={!disabled}
-					onSubmitEditing={onSubmitEditing}
-					/* Keep paragraphs available on the SOFTWARE keyboard. Calling this
-					 * key Send while RN inserts a newline is dishonest, but switching to
-					 * submit would remove the phone's only obvious newline gesture. Native
-					 * therefore says Return; the pinned footer owns Send/Steer. Web keeps
-					 * its existing Enter / Shift+Enter listener. */
-					submitBehavior={Platform.OS !== "web" ? "newline" : undefined}
-					returnKeyType={
-						Platform.OS === "web" && onSubmitEditing ? "send" : "default"
-					}
-					inputMode="text"
-					autoFocus={autoFocus}
-					testID={testID}
-				/>
+				<PasteImageField onPasteImages={onPasteImages}>
+					<TextInput
+						maxLength={maxLength}
+						onFocus={onFocus}
+						onBlur={onBlur}
+						ref={resolvedRef}
+						keyboardAppearance={keyboardAppearance}
+						className={fieldClasses(fieldState, { inComposer: integrated })}
+						/* One `style`, because a textarea's box IS its visual: the growing height
+						 *  and the platform floor (48 wherever `Platform.OS` is not iOS — the
+						 *  web/audit profile) have to be resolved together (D6). */
+						style={{
+							/* The border is part of the painted box (border-box), so the height
+							 *  the content measured must grow by it or the last line is clipped
+							 *  by 2px — S16/create-filled's 100% frame (U-07). */
+							/* Web pins the height from the content report; native only bounds
+							 *  it and lets the text input measure itself, because on iOS's New
+							 *  Architecture that report fires only on a LAYOUT change, so a
+							 *  pinned height never learned of line two (TestFlight 800; the
+							 *  full reasoning is on `fieldBoxStyle`). */
+							...fieldBoxStyle(Platform.OS, {
+								contentFloor,
+								oneLineBox,
+								placeholderFloor,
+								cap,
+								touchFloor: TOUCH_FLOOR,
+								empty,
+								placeholderClamped: placeholderMaxLines !== undefined,
+							}),
+							/* `scrollEnabled` is a NATIVE prop: react-native-web does not turn it
+							 *  into CSS, so `false` left the browser free to paint its own overflow
+							 *  on an empty field at 200 % — the scrollbar and resize glyph the design
+							 *  round kept seeing in real Settings captures while a helper-only test
+							 *  stayed green (final audit, D1). Web says it in CSS terms instead, and
+							 *  only when there is nothing to scroll; content past the cap keeps
+							 *  `auto`, so both platforms agree on WHEN scrolling is allowed. */
+							...webFieldStyle(Platform.OS, scrollable),
+							/* The composer's field paints ITS OWN box, not the box plus its
+							 *  padding: a web `<textarea>` is content-box, so the 44 pt floor plus
+							 *  `py-2` painted 60 and pushed the dock 4 pt past the record's 56/112
+							 *  (measured 2026-11-05). `box-sizing` is the web spelling of RN's own
+							 *  default, so native is unchanged. */
+							...(integrated
+								? {
+										backgroundColor: "transparent",
+										paddingHorizontal: 0,
+										borderWidth: 0,
+										...(Platform.OS === "web"
+											? { boxSizing: "border-box" }
+											: {}),
+									}
+								: {}),
+						}}
+						/* On WEB, an EMPTY field whose placeholder is capped to one line is an
+						 * `<input>`, not a `<textarea>`: Chrome does not ellipsize a textarea's
+						 * placeholder — `text-overflow: ellipsis` computes fine on the element
+						 * and the tail is still clipped, measured on this build and against a
+						 * bare `<input>` with the identical box, which ellipsizes correctly
+						 * (UX round 2, U9). Multiline resumes the moment a character lands,
+						 * so a typed draft wraps exactly as before, and the single-line
+						 * element also gives Enter the submit semantics the composer already
+						 * handles on web. */
+						multiline={
+							integrated ||
+							!webSingleLinePlaceholder(
+								Platform.OS,
+								value === "",
+								placeholderMaxLines === 1,
+							)
+						}
+						// The transcript scrolls, not the page: the field clips its own
+						// overflow once it hits the cap.
+						scrollEnabled={nativeScroll}
+						onContentSizeChange={handleContentSize}
+						accessibilityRole={ROLE.text}
+						accessibilityLabel={label}
+						accessibilityState={state({ disabled })}
+						value={value}
+						onChangeText={onChangeText}
+						onSelectionChange={onSelectionChange}
+						selection={selection}
+						placeholder={placeholder}
+						placeholderTextColor={placeholderColour}
+						editable={!disabled}
+						onSubmitEditing={onSubmitEditing}
+						/* Keep paragraphs available on the SOFTWARE keyboard. Calling this
+						 * key Send while RN inserts a newline is dishonest, but switching to
+						 * submit would remove the phone's only obvious newline gesture. Native
+						 * therefore says Return; the pinned footer owns Send/Steer. Web keeps
+						 * its existing Enter / Shift+Enter listener. */
+						submitBehavior={Platform.OS !== "web" ? "newline" : undefined}
+						returnKeyType={
+							Platform.OS === "web" && onSubmitEditing ? "send" : "default"
+						}
+						inputMode="text"
+						autoFocus={autoFocus}
+						testID={testID}
+					/>
+				</PasteImageField>
 				{/* No overlay here any more: the platform paints its own placeholder, and the
 				 *  copy is short enough at every scale that it cannot wrap into the receipt
 				 *  row (see the note on the floor above). */}

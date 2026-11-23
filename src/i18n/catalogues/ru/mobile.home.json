@@ -53,9 +53,7 @@
 	"mobile.home.startup_queue.not_started": "Не запущено",
 	"mobile.home.startup_queue.sending": "Отправка сообщений из очереди…",
 	"mobile.home.startup_queue.unconfirmed": "Запуск не подтверждён",
-	"mobile.home.suggestion.last_turn": "Покажите последний ход",
 	"mobile.home.suggestion.linear_mcp": "Настройте Linear MCP",
-	"mobile.home.suggestion.phone_access": "Включите доступ с телефона",
 	"mobile.home.suggestion.review_repo": "Проверьте репозиторий",
 	"mobile.home.suggestion.team_of_agents": "Создайте команду агентов",
 	"mobile.home.suggestion.wake_summary": "Разбудите меня со сводкой",
@@ -90,5 +88,10 @@
 	"mobile.home.identity.refused_fallback": "Не удалось запустить {name} на этом компьютере. Выберите другой вариант или агента по умолчанию.",
 	"mobile.home.identity.refused_unlicensed": "Этот компьютер сейчас не может начать чат с {name}. Чтобы отправить, выберите агента по умолчанию.",
 	"mobile.home.identity.refused_connecting": "Компьютер ещё подключается, поэтому пока ничего не запущено. Нажмите на сообщение, чтобы вернуть его, и через мгновение отправьте снова, чтобы начать с {name}.",
-	"mobile.home.identity.announce_picked": "Этот чат начнётся с {name}"
+	"mobile.home.identity.announce_picked": "Этот чат начнётся с {name}",
+	"mobile.home.work.needs_you": "Ждут вас",
+	"mobile.home.work.recent": "Недавние",
+	"mobile.home.work.try": "Попробуйте",
+	"mobile.home.work.all_conversations": "Все беседы",
+	"mobile.home.work.all_conversations_new": "Все беседы, {count, plural, one {# новая беседа} few {# новые беседы} many {# новых бесед} other {# новой беседы}}"
 }

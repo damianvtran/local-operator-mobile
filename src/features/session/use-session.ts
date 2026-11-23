@@ -115,6 +115,10 @@ export interface SessionRuntime {
 	historyErrorScope: "newest" | "older" | null;
 	streaming: boolean;
 	streamingRowId: string | null;
+	/** Motion can only be attributed to arrivals on this accepted wire stream. */
+	streamArrivalEpoch: number | null;
+	/** The wire tail, not a row introduced by history paging or gap healing. */
+	streamArrivalTail: TranscriptEntry | null;
 	/** True while the frame on screen came from the warm cache and no live frame
 	 *  has arrived yet: the conversation is shown as it was when saved, not live. */
 	hydrated: boolean;
@@ -304,7 +308,7 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 			(before) => {
 				if (!endpoints || !sameProjectionOwner(owner, currentIdentity.current))
 					return Promise.reject(new Error("History is unavailable."));
-				return endpoints.history(sessionId, { before });
+				return endpoints.history(sessionId, { before, inlineUi: true });
 			},
 			() => historyChanged((revision) => revision + 1),
 			// A hole left by a background, a network change or a stream reconnect
@@ -441,8 +445,13 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 				lastFrameAt.current = null;
 			}
 			sessions.getState().beginStream(sessionId);
+			// The reader can reopen an HTTP body inside this one stream object.
+			// Mark its accepted seed as already-present paint, without resetting
+			// the projection fence or changing how this connection retries.
+			let pendingAttemptSeed = true;
 			setError(null);
 			const stream = endpoints.sessionStream(sessionId, {
+				inlineUi: true,
 				// Read per connect, not per effect: a stream opened before the first
 				// live list frame declares on its next reconnect (`steer-journal-order.ts`).
 				steerJournalOrder: steerJournalOrderDeclared(listStore.getState()),
@@ -469,7 +478,10 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 							gateOpen: resumeGateOpen,
 							frameOverlapsHeld: historyRef.current.overlapsHeld(frame.data),
 						});
-					sessions.getState().applyFrame(sessionId, frame.data);
+					const decision = sessions
+						.getState()
+						.applyFrame(sessionId, frame.data, pendingAttemptSeed);
+					if (decision !== "dropped-older") pendingAttemptSeed = false;
 					if (readOnResume) {
 						const reader = historyRef.current;
 						heldHistoryRead.current?.();
@@ -507,6 +519,7 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 				onState: (status) => {
 					if (!active || !sameProjectionOwner(owner, currentIdentity.current))
 						return;
+					if (status.state === "open") pendingAttemptSeed = true;
 					if (status.lastEnd === "error" || status.state === "stalled")
 						recovering.current = true;
 					setFacts((current) => ({
@@ -837,7 +850,10 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 	const projection = entry.projection;
 	/** The frame on screen is the warm cache's, not a live one. */
 	const hydrated = entry.hydrated === true;
-	if (ownsProjection) historyWindow.accept(projection);
+	if (ownsProjection) {
+		if (hydrated) historyWindow.seedFromCache(projection);
+		else historyWindow.accept(projection);
+	}
 	/* Turn end is a save moment: the conversation's shape just settled. A
 	 * hydrated frame never counts as running, so it can neither trigger this nor
 	 * offer the composer a "steer" for a turn that may long be over. */
@@ -1082,6 +1098,11 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 		 *  above stays on the raw flag — it marks where streamed TEXT lands. */
 		streaming: running,
 		streamingRowId,
+		streamArrivalEpoch:
+			ownsProjection && entry.connected && !entry.awaitingSnapshot
+				? (entry.streamEpoch ?? null)
+				: null,
+		streamArrivalTail: projection?.transcript.at(-1) ?? null,
 		hydrated,
 		connection,
 		/** The session stream's own liveness, for the header's status dot

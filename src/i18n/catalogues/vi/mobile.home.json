@@ -53,9 +53,7 @@
 	"mobile.home.startup_queue.not_started": "Chưa bắt đầu",
 	"mobile.home.startup_queue.sending": "Đang gửi tin nhắn trong hàng đợi…",
 	"mobile.home.startup_queue.unconfirmed": "Chưa xác nhận bắt đầu",
-	"mobile.home.suggestion.last_turn": "Xem lượt gần nhất",
 	"mobile.home.suggestion.linear_mcp": "Thiết lập Linear MCP",
-	"mobile.home.suggestion.phone_access": "Bật truy cập điện thoại",
 	"mobile.home.suggestion.review_repo": "Rà soát repo này",
 	"mobile.home.suggestion.team_of_agents": "Tạo nhóm tác nhân",
 	"mobile.home.suggestion.wake_summary": "Đánh thức tôi kèm bản tóm tắt",
@@ -90,5 +88,10 @@
 	"mobile.home.identity.refused_fallback": "Không thể bắt đầu {name} trên máy tính này. Hãy chọn mục khác hoặc dùng tác nhân mặc định.",
 	"mobile.home.identity.refused_unlicensed": "Máy tính này hiện không thể bắt đầu trò chuyện với {name}. Hãy chọn tác nhân mặc định để gửi.",
 	"mobile.home.identity.refused_connecting": "Máy tính này vẫn đang kết nối, nên chưa có gì được bắt đầu. Chạm vào tin nhắn để lấy lại, rồi gửi lại sau giây lát để bắt đầu với {name}.",
-	"mobile.home.identity.announce_picked": "Cuộc trò chuyện này sẽ bắt đầu với {name}"
+	"mobile.home.identity.announce_picked": "Cuộc trò chuyện này sẽ bắt đầu với {name}",
+	"mobile.home.work.needs_you": "Cần bạn",
+	"mobile.home.work.recent": "Gần đây",
+	"mobile.home.work.try": "Thử",
+	"mobile.home.work.all_conversations": "Tất cả cuộc trò chuyện",
+	"mobile.home.work.all_conversations_new": "Tất cả cuộc trò chuyện, {count, plural, other {# cuộc trò chuyện mới}}"
 }

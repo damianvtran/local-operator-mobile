@@ -66,7 +66,9 @@ describe("the home's folder warning is structurally outside the composer", () =>
 
 	it("gives the notice's height to the free band, which re-centres the hero", () => {
 		expect(SPLASH).toContain('className="flex-1"');
-		expect(SPLASH).toContain("const live = heroTopInset(band, block);");
+		expect(SPLASH).toContain(
+			"const live = heroTopInsetAbove(band, block, listHeight);",
+		);
 		/* QA Q-R2-3: the offset is a spacer's height. As `paddingTop` it was
 		 *  read by U-42 as an off-scale spacing token (216/208/156 pt). */
 		expect(SPLASH).toContain(
@@ -110,9 +112,13 @@ describe("the hero holds still until there is something to move for", () => {
 		);
 	});
 	it("paints the block only once both measurements have landed", () => {
-		expect(SPLASH).toContain(
-			"style={{ opacity: heroMeasured(band, block) ? 1 : 0 }}",
-		);
+		expect(SPLASH).toContain("heroMeasured(band, block)");
+		// Hero and list appear together: the list's height is part of the hero's
+		// place, so neither paints on a half-measured frame.
+		expect(SPLASH).toContain("(!hasList || listMeasured > 0)");
+		expect(
+			SPLASH.match(/style=\{\{ opacity: painted \? 1 : 0 \}\}/g),
+		).toHaveLength(2);
 	});
 });
 
@@ -199,5 +205,31 @@ describe("the composer's glass wiring", () => {
 			expect(block).not.toContain("ChromeSurface");
 			expect(block).toContain("COMPOSER_DISC");
 		}
+	});
+});
+
+/* The work list lives INSIDE the splash's band — never in the composer stack — so
+ * it can only ever take the band's height, and the composer stays put. */
+describe("the work list is part of the band, not the composer stack", () => {
+	it("renders inside the splash's ScrollView, after the hero, above the composer", () => {
+		const scroll = SPLASH.indexOf("<ScrollView");
+		const list = SPLASH.indexOf("<WorkListView");
+		expect(list).toBeGreaterThan(
+			SPLASH.indexOf("testID={SURFACE.homeHeroMark}"),
+		);
+		expect(list).toBeGreaterThan(scroll);
+		expect(list).toBeLessThan(SPLASH.indexOf("</ScrollView>"));
+		expect(composerTag(HOME)).not.toContain("workList");
+		expect(composerTag(HOME)).not.toContain("sessions");
+	});
+
+	it("decides from the recovery and refusal states, which render instead of the splash", () => {
+		expect(HOME).toContain(
+			"recovery: homeRecovery !== null || namedRefusal !== null,",
+		);
+		// The splash only mounts when there is no recovery state at all.
+		expect(HOME).toContain(
+			") : homeRecovery === null ? (\n\t\t\t\t\t<HomeSplash",
+		);
 	});
 });

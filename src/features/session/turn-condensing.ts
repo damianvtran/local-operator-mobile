@@ -112,6 +112,10 @@ import {
 	MEDIA_ARTIFACT_TOOLS,
 } from "@/features/session/fold-model";
 import {
+	type DisplayTranscriptEntry,
+	LIVE_INLINE_UI,
+} from "@/features/session/live-inline-ui";
+import {
 	bridgeReceiptLabel,
 	canonicalRowKey,
 	hubLabel,
@@ -249,7 +253,7 @@ function isUnhandledErrorNotice(entry: TranscriptEntry): boolean {
 }
 
 /**
- * An assistant row that carries words or media: anything the model said, in a
+ * An assistant row that carries words, media or a validated widget: anything the model said, in a
  * turn that did tool work or not.
  *
  * `calls_tools` is deliberately NOT part of this test. The relay stamps it from
@@ -265,11 +269,17 @@ function isUnhandledErrorNotice(entry: TranscriptEntry): boolean {
  * The relay web client keeps the same rows on screen (`isFinalResponse`,
  * `condense-segments.ts` in local-operator).
  */
-const isAssistantProse = (entry: TranscriptEntry): boolean =>
+const isAssistantProse = (entry: DisplayTranscriptEntry): boolean =>
 	entry.kind === "assistant" &&
 	(entry.text.length > 0 ||
+		entry[LIVE_INLINE_UI] !== undefined ||
 		entry.images.length > 0 ||
 		(entry.files?.length ?? 0) > 0);
+
+/** A validated widget row: it surfaces from a latched bar even when it was
+ *  blank at the condense moment, calls or no calls (same rule as the prose). */
+const isWidgetHandover = (entry: DisplayTranscriptEntry): boolean =>
+	entry.kind === "assistant" && entry[LIVE_INLINE_UI] !== undefined;
 
 /** Rows that stay on screen outside the collapsed span even when the
  *  surrounding turn condenses: visible media artifacts, unhandled error
@@ -300,7 +310,7 @@ export function staysVisibleOutsideTurnBar(entry: TranscriptEntry): boolean {
  * The index of the turn's closing row, or `null` when the turn has none.
  *
  * Eligible closings:
- *  - a completed assistant message (`entryComplete`, non-empty text or images,
+ *  - a completed assistant message (`entryComplete`, handover content,
  *    and not declaring owed `calls_tools`);
  *  - a settled `no_reply` quiet-turn close (`isQuietCloseEntry`) when no
  *    unhandled error notice ended the turn.
@@ -324,10 +334,7 @@ function closingAnswerIndex(
 		// A row that also requests tools is mid-work prose, not the turn's closing
 		// answer: the calls it declares still have to run and be answered. Pinning
 		// it (`isAssistantProse`) must not close the turn.
-		return entry.kind === "assistant" &&
-			(entry.text.length > 0 ||
-				entry.images.length > 0 ||
-				(entry.files?.length ?? 0) > 0) &&
+		return isAssistantProse(entry) &&
 			entryComplete(entry) &&
 			!hasExplicitCallsTools(entry)
 			? index
@@ -611,6 +618,27 @@ export function condensePlan(input: CondenseInput): CondensePlan {
 			view.bar = facts;
 			view.hiddenIds = spanIds;
 			const barId = turnBarId(turn.key);
+			// Keep the bar and its frozen work facts. A later validated overlay
+			// can turn a previously blank member into part of the answer, which
+			// must surface without reopening the turn's work.
+			if (latchedTurn) {
+				const widgetIds = new Set<string>();
+				for (let at = turn.start + 1; at <= turn.end; at += 1) {
+					const row = entries[at];
+					if (row && isWidgetHandover(row)) {
+						widgetIds.add(row.id);
+						widgetIds.add(canonicalRowKey(row));
+					}
+				}
+				if (widgetIds.size) {
+					view.hiddenIds = spanIds.filter((id, i) => {
+						const canonical = latchedTurn.canonicalIds?.[i];
+						return (
+							!widgetIds.has(id) && (!canonical || !widgetIds.has(canonical))
+						);
+					});
+				}
+			}
 			if (!open) {
 				items.push({
 					kind: "bar",
@@ -629,8 +657,8 @@ export function condensePlan(input: CondenseInput): CondensePlan {
 					const row = entries[at];
 					if (
 						row === undefined ||
-						hidden.has(row.id) ||
-						hidden.has(canonicalRowKey(row))
+						(!isWidgetHandover(row) &&
+							(hidden.has(row.id) || hidden.has(canonicalRowKey(row))))
 					) {
 						continue;
 					}
@@ -1618,9 +1646,10 @@ export function groupPhrases(group: QuietGroup): string[] {
  * the streaming anchor, find and the offset table keep addressing it; text
  * arriving on a streaming row turns it back into ordinary prose.
  */
-export function isBlankAssistantEntry(entry: TranscriptEntry): boolean {
+export function isBlankAssistantEntry(entry: DisplayTranscriptEntry): boolean {
 	return (
 		entry.kind === "assistant" &&
+		entry[LIVE_INLINE_UI] === undefined &&
 		entry.text.trim() === "" &&
 		entry.images.length === 0 &&
 		(entry.videos?.length ?? 0) === 0 &&

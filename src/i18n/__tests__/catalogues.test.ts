@@ -113,7 +113,7 @@ const NAMESPACES = [
 		name: "mobile.composer_input",
 		messages: composerInput,
 		context: composerInputContext,
-		expected: 24, // +2: the failure notice's short Retry / Dismiss actions (visual audit D6); +10: the attach sheet's row labels and Take Photo's notices/error
+		expected: 25, // +2: the failure notice's short Retry / Dismiss actions (visual audit D6); +10: the attach sheet's row labels and Take Photo's notices/error
 	},
 	{
 		name: "mobile.library",
@@ -135,7 +135,7 @@ const NAMESPACES = [
 		 *  92 with the new-chat identity picker (PR #358): 25 `identity.*` keys
 		 *  for the pill, the "Start this chat with" sheet and its refusals, and 1
 		 *  from its round-1 remediation (`refused_connecting`, F2): 66 + 26. */
-		expected: 92,
+		expected: 95,
 	},
 	{
 		name: "mobile.projects",
@@ -231,7 +231,7 @@ const NAMESPACES = [
 		name: "mobile.session",
 		messages: session,
 		context: sessionContext,
-		expected: 100, // PR #353 +1: composer.settings_not_applied (99 + 1 = 100); feat/pele-diagrams +8: the mermaid diagram block (label, titled label, open hint, copy, copied marker, could-not-draw notice, viewer name, viewer close) (91 + 8 = 99); O3-a +2: the commands and attach sheet titles; PR #275 +8: background sending (outbox) — waiting / exhausted / discarded captions, Retry, Discard, and three composer hints (wait, stopped, discarding) (81 + 2 + 8 = 91); +3: Title-case sheet titles (visual audit D14); +1: newest-edge gap notice; +1: reload hint; +1: newest-refresh failure copy; +1: explicit history reload; +7: lazy history states; +1: default-closed reasoning disclosure; +1: retry-attempt storage receipt; +1: definitely-not-sent storage receipt; +3: the ended-session chip hints (TestFlight 578); +9: the pending echo; +16: session route literals keyed by the app/ scan (subagent screen, empty states, find, chip errors, retained notice); +2: the user message's Show more / Show less (iOS build 836); +15: scanner-blind expression literals (context tray, scroll cues, video title, fallback names, region labels, back-to labels); +1: the new-conversation "not confirmed" caption (PR #256 Q3)
+		expected: 104, // PR #376 +1: inline_chart_data (103 + 1 = 104); feat/jump-to-latest +2: the "Jump to latest" chip's full and narrow labels (100 + 2 = 102), and +1 for its round-1 remediation's arrow-free accessible name (jump_to_latest_name); PR #353 +1: composer.settings_not_applied (99 + 1 = 100); feat/pele-diagrams +8: the mermaid diagram block (label, titled label, open hint, copy, copied marker, could-not-draw notice, viewer name, viewer close) (91 + 8 = 99); O3-a +2: the commands and attach sheet titles; PR #275 +8: background sending (outbox) — waiting / exhausted / discarded captions, Retry, Discard, and three composer hints (wait, stopped, discarding) (81 + 2 + 8 = 91); +3: Title-case sheet titles (visual audit D14); +1: newest-edge gap notice; +1: reload hint; +1: newest-refresh failure copy; +1: explicit history reload; +7: lazy history states; +1: default-closed reasoning disclosure; +1: retry-attempt storage receipt; +1: definitely-not-sent storage receipt; +3: the ended-session chip hints (TestFlight 578); +9: the pending echo; +16: session route literals keyed by the app/ scan (subagent screen, empty states, find, chip errors, retained notice); +2: the user message's Show more / Show less (iOS build 836); +15: scanner-blind expression literals (context tray, scroll cues, video title, fallback names, region labels, back-to labels); +1: the new-conversation "not confirmed" caption (PR #256 Q3)
 	},
 	{
 		/* The relay's own two namespaces, under its own keys. They are here rather
@@ -641,7 +641,16 @@ describe("the English catalogues", () => {
 		 * counted over all 26 English JSON catalogues (sidebar 53, home 92,
 		 * chrome 28, team_bridge 221). Keep this explicit total as an
 		 * independent guard against an accidentally dropped key. */
-		expect(total).toBe(1374);
+		/* feat/jump-to-latest: +3 mobile.session (the chip's full and narrow
+		 * labels and the arrow-free accessible name): 1374 + 3 = 1377. Then the
+		 * home work list: +5 mobile.home.work.* keys, −2 pool chips
+		 * (suggestion.phone_access, suggestion.last_turn): 1377 + 3 = 1380,
+		 * home 92 → 95. */
+		/* Attach-sheet rows add mobile.composer_input.paste.empty_ios (#367),
+		 * and the chart data disclosure adds one mobile.session key (#376).
+		 * Both belong in the independent inventory: 1380 + 1 + 1 = 1382,
+		 * counted over all 26 JSON catalogues in each shipped locale. */
+		expect(total).toBe(1382);
 	});
 
 	it("lists every catalogue file this suite checks", () => {

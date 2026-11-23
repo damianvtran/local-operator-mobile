@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 
 const field = vi.hoisted(() => ({
 	os: "ios",
+	wrapped: 0,
 	props: {} as {
 		submitBehavior?: string;
 		returnKeyType?: string;
@@ -25,6 +26,13 @@ vi.mock("react-native", () => ({
 	TextInput: (props: typeof field.props) => {
 		field.props = props;
 		return null;
+	},
+}));
+// The native wrapper cannot load in Node; this records whether Textarea asked for it.
+vi.mock("expo-paste-input", () => ({
+	TextInputWrapper: ({ children }: { children?: unknown }) => {
+		field.wrapped += 1;
+		return children;
 	},
 }));
 vi.mock("@/ui/appearance", () => ({
@@ -79,4 +87,31 @@ describe("effective composer keyboard props", () => {
 		expect(field.props.submitBehavior).toBeUndefined();
 		expect(field.props.returnKeyType).toBe("send");
 	});
+
+	it.each([
+		["ios", 1],
+		["android", 1],
+		["web", 0],
+	])(
+		"wraps the field for image paste on %s only when the host asked (%i wrapper)",
+		(os, expected) => {
+			field.os = os;
+			const render = (onPasteImages?: (uris: string[]) => void) => {
+				field.wrapped = 0;
+				renderToStaticMarkup(
+					createElement(Textarea, {
+						label: "Synthetic draft",
+						value: "",
+						onChangeText: vi.fn(),
+						onPasteImages,
+						testID: "synthetic-textarea",
+					}),
+				);
+				return field.wrapped;
+			};
+			expect(render(vi.fn())).toBe(expected);
+			// No host callback: the field is the plain TextInput it always was.
+			expect(render(undefined)).toBe(0);
+		},
+	);
 });

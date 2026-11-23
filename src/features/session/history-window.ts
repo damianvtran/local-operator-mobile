@@ -3,6 +3,7 @@ import type {
 	SessionProjection,
 	TranscriptEntry,
 } from "@/contracts";
+import { type DisplayTranscriptEntry, withInlineUi } from "./live-inline-ui";
 import { mergeTranscript, rowIdentity } from "./runtime";
 
 /** The relay fold mints these non-journal ids. They cannot be before-cursors;
@@ -278,7 +279,7 @@ export class HistoryWindow {
 
 	/** Detached opener context is cached but not interleaved into a contiguous
 	 * newest page. It returns to the list when its own durable page is reached. */
-	get visibleRows(): TranscriptEntry[] {
+	get visibleRows(): DisplayTranscriptEntry[] {
 		if (this.visibleSource !== this.rows) {
 			const detached = new Set(this.detached.map(rowIdentity));
 			this.visible = this.rows.filter((row) => !detached.has(rowIdentity(row)));
@@ -322,6 +323,23 @@ export class HistoryWindow {
 		);
 	}
 
+	seedFromCache(projection: SessionProjection | null): void {
+		if (
+			!this.active ||
+			!projection ||
+			this.projection ||
+			this.read === "ok" ||
+			this.rows.length > 0
+		)
+			return;
+		// Warm storage intentionally drops inline overlays. It can fill an empty
+		// first paint, but it cannot replace HTTP history or win a pending page's
+		// revision fence. A real frame still goes through accept(), even if it
+		// has the same row ids or version as this snapshot.
+		this.seedCursor(projection.transcript, projection.transcript_head_pinned);
+		this.rows = projection.transcript;
+	}
+
 	accept(projection: SessionProjection | null): void {
 		if (!this.active || !projection || projection === this.projection) return;
 		this.projection = projection;
@@ -362,9 +380,12 @@ export class HistoryWindow {
 		}
 		const pinned = new Set(this.detached.map(rowIdentity));
 		const spine = this.rows.filter((row) => !pinned.has(rowIdentity(row)));
-		const frame = projection.transcript.filter(
-			(row) => !pinned.has(rowIdentity(row)),
-		);
+		// This is a full frame: a shared row without a valid overlay replaces
+		// the previous decorated copy, but rows outside the frame keep their data.
+		const frame = withInlineUi(
+			projection.inline_ui,
+			projection.transcript,
+		).filter((row) => !pinned.has(rowIdentity(row)));
 		// The opener is context, never evidence that two capped tails overlap.
 		// Once paging reaches the true beginning it is no longer detached, but
 		// Core still re-sends it at the head of EVERY capped frame, so a disjoint
@@ -619,7 +640,8 @@ export class HistoryWindow {
 					if (slots === undefined) accepted.set(rowIdentity(row), [row]);
 					else slots.push(row);
 				}
-				const authoritative = page.entries.map((row) => {
+				const pageRows = withInlineUi(page.inline_ui, page.entries);
+				const authoritative = pageRows.map((row) => {
 					const held = accepted.get(rowIdentity(row))?.shift();
 					return (this.liveAt.get(rowIdentity(row)) ?? 0) > started
 						? (held ?? row)
@@ -869,7 +891,7 @@ export class HistoryWindow {
 				break;
 			}
 		}
-		const fresh = page.entries
+		const fresh = withInlineUi(page.inline_ui, page.entries)
 			.slice(overlap + 1)
 			.filter((row) => !held.has(rowIdentity(row)));
 		this.rows = [...this.rows.slice(0, at), ...fresh, ...this.rows.slice(at)];

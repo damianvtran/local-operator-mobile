@@ -22,6 +22,8 @@ import { anchorBottomVisible } from "@/features/session/completion-visibility";
 import type { BridgeBodyLoader } from "@/features/session/components/bridge-card-body";
 import { FoldBar } from "@/features/session/components/fold-bar";
 import { GroupGuides } from "@/features/session/components/group-guides";
+import { ChartDataResizeContext } from "@/features/session/components/inline-ui-preview";
+import { JumpToLatestChip } from "@/features/session/components/jump-to-latest-chip";
 import { OlderHistoryEdge } from "@/features/session/components/older-history-edge";
 import { QuietGroupBar } from "@/features/session/components/quiet-group-bar";
 import {
@@ -49,6 +51,21 @@ import {
 	historyTopReached,
 } from "@/features/session/history-scroll";
 import {
+	bottomArrival,
+	contentArrival,
+	JUMP_CUE_ARRIVED,
+	JUMP_CUE_AT_TAIL,
+	JUMP_CUE_AWAY,
+	type JumpCue,
+	jumpCueShown,
+	NO_BOTTOM,
+	NO_TAIL_CONTENT,
+	nextBottomMark,
+	type TailContent,
+	withArrival,
+	withAtTail,
+} from "@/features/session/jump-cue";
+import {
 	canonicalRowKey,
 	visibleTranscriptEntries,
 } from "@/features/session/projection";
@@ -59,6 +76,7 @@ import {
 } from "@/features/session/reader-scroll-hold";
 import { reuseRows } from "@/features/session/row-identity";
 import { scrollAnchorFromHook } from "@/features/session/scroll-hook";
+import { useStreamArrival } from "@/features/session/stream-arrival";
 import { beatLive, type SupplementBeat } from "@/features/session/supplements";
 import {
 	textSelectionContainerScroll,
@@ -100,6 +118,7 @@ import {
 	REGION,
 	transcriptRowId,
 } from "@/ui/a11y";
+import { useReducedMotion } from "@/ui/appearance";
 import { Button } from "@/ui/components/button";
 import { cx } from "@/ui/variants";
 
@@ -169,6 +188,8 @@ export type TranscriptListProps = {
 	historyError?: string | null;
 	/** The row that carries `transcript-streaming`, or `null` when settled. */
 	streamingRowId: string | null;
+	streamArrivalEpoch?: number | null;
+	streamArrivalTail?: TranscriptEntry | null;
 	/** Whether a turn is running in this transcript right now. Decides whether
 	 *  the NEWEST turn may condense: an idle session condenses its finished last
 	 *  turn immediately (the relay's `!live` rule), a live one never touches it.
@@ -211,6 +232,13 @@ export type TranscriptListProps = {
 	 *  so the footer stays the notice alone, and outside `data` so a send leaves
 	 *  every memoised row untouched. An element so the screen can memoise it. */
 	pending?: React.ReactElement | null;
+	/** An ACCEPTED send's mark (`useComposer().sendMark`). When it changes the list
+	 *  snaps to the end; typing does not move it. A send-only mark, not
+	 *  `sending`: that flag is also true while Approve/Deny, an ask answer, a retry
+	 *  or a slash TAP is in flight, and none of those is a message leaving this
+	 *  composer (code review round 1, R2). The screen owns the composer, so this is
+	 *  the screen's fact, not one the list can infer from its rows. */
+	sendMark?: number;
 	/** The entry id whose BOTTOM the ack gate watches — the completion
 	 *  attention's `anchor_id` (ADR 0006 §3.1). `null` when nothing is being
 	 *  watched. */
@@ -364,6 +392,8 @@ export const TranscriptList = ({
 	historyGapBefore = null,
 	historyError = null,
 	streamingRowId,
+	streamArrivalEpoch = null,
+	streamArrivalTail = null,
 	turnLive,
 	loadImage,
 	loadFile,
@@ -378,6 +408,7 @@ export const TranscriptList = ({
 	header,
 	footer,
 	pending,
+	sendMark = 0,
 	anchorId = null,
 	onAnchorVisible,
 	highlightId = null,
@@ -385,6 +416,16 @@ export const TranscriptList = ({
 	presence,
 	testID,
 }: TranscriptListProps) => {
+	// This reveal is optional; don't start one before the OS preference arrives.
+	const reduceMotion = useReducedMotion(true);
+	const { arrival, motion } = useStreamArrival(
+		sessionId,
+		streamArrivalEpoch,
+		streamArrivalTail,
+		streamingRowId,
+		entries,
+		reduceMotion,
+	);
 	const listRef = useRef<FlatList<TranscriptItem>>(null);
 	const webRows = useRef(new Map<string, View>());
 	/* The row the reader was looking at when an older page was requested, held
@@ -429,12 +470,71 @@ export const TranscriptList = ({
 		anchor.scroll.style.overflowAnchor = "";
 		webAnchor.current = null;
 	}, []);
+	/** The capture hook's anchor: `top` starts the list unfollowed so a still can
+	 *  show the conversation's shape (see `scroll-hook.ts` for why the app exposes
+	 *  one position and what `away` adds). Read once — it is a statement about the
+	 *  page. */
+	const [scrollAnchor] = useState(scrollAnchorFromHook);
+	const atTail = useRef(scrollAnchor === null);
+	/* The "Jump to latest" chip's memory; the rules — show iff the reader left the
+	 *  end AND content arrived below them — are `jump-cue.ts`'s. It is React state
+	 *  only because the chip is rendered: `atTail` itself stays a ref so the
+	 *  frame-rate scroll path never re-renders the list. `applyCue` hands React the
+	 *  SAME object for an unchanged state, so `onScroll` cannot schedule a render
+	 *  per event. The capture hook may open with the chip's state directly
+	 *  (`lo-scroll=away`): a scroll position plus a later arrival are two events a
+	 *  URL cannot produce, and a still of the chip is what the design round reads. */
+	const [jumpCue, setJumpCue] = useState<JumpCue>(() =>
+		scrollAnchor === "away" ? JUMP_CUE_ARRIVED : JUMP_CUE_AT_TAIL,
+	);
+	const jumpCueRef = useRef(jumpCue);
+	const applyCue = useCallback((next: JumpCue) => {
+		if (next === jumpCueRef.current) return;
+		jumpCueRef.current = next;
+		setJumpCue(next);
+	}, []);
+	/* What the list last knew about its bottom row (`jump-cue.ts`): the arrival
+	 *  test that distinguishes new output from an older page inserted above. */
+	const bottomMark = useRef(NO_BOTTOM);
+	const lastItemId = useRef<string | null>(null);
+	/** The same question read off the WIRE (last id + its text length), for a
+	 *  reader far enough up that the streaming row is unmounted and produces no
+	 *  layout at all (QA round 1, Q1). Carries the session it was read from, so a
+	 *  switch is not an arrival whichever effect runs first. */
+	const tailContent = useRef<{ session: string; content: TailContent }>({
+		session: "",
+		content: NO_TAIL_CONTENT,
+	});
+	/** A jump to the end is in flight: content that arrives mid-glide must not
+	 *  raise the chip on the way down. Cleared on landing or when the reader
+	 *  takes the list back (`onScrollBeginDrag`). */
+	const snapArriving = useRef(false);
+	/** Announce an arrival the list just observed — from a height or from the wire.
+	 *  Both paths call this, so the rules (never while following, never mid-jump)
+	 *  live in one place and a doubled observation is harmless: `withArrival` hands
+	 *  back the SAME cue for an arrival already marked. */
+	const noteArrival = useCallback(() => {
+		if (atTail.current || snapArriving.current) return;
+		applyCue(withArrival(jumpCueRef.current));
+	}, [applyCue]);
+	/** Every place that answers "is this reader following the end?" writes through
+	 *  here, so the ref and the chip cannot disagree about it. Leaving the end also
+	 *  ends any jump still in flight: a programmatic move the reader has overridden
+	 *  must not keep suppressing the next announcement. */
+	const markAtTail = useCallback(
+		(value: boolean) => {
+			atTail.current = value;
+			if (!value) snapArriving.current = false;
+			applyCue(withAtTail(jumpCueRef.current, value));
+		},
+		[applyCue],
+	);
 	const requestOlder = useCallback(() => {
 		if (!loadOlder || loadingOlder || !hasOlder) return;
 		holdWebAnchor();
-		atTail.current = false;
+		markAtTail(false);
 		void loadOlder();
-	}, [loadOlder, loadingOlder, hasOlder, holdWebAnchor]);
+	}, [loadOlder, loadingOlder, hasOlder, holdWebAnchor, markAtTail]);
 	/* "Try again" repeats the read that FAILED (PR #207 R2). A failed newest-page
 	 * refresh (foreground return, Check again) is re-read as the newest page: it
 	 * is not an older-page failure, and fetching an older page instead would
@@ -454,11 +554,6 @@ export const TranscriptList = ({
 		}
 		requestOlder();
 	}, [loadingOlder, newestFailed, retryHistory, requestOlder]);
-	/** The capture hook's anchor: `top` starts the list unfollowed so a still can
-	 *  show the conversation's shape (see `scroll-hook.ts` for why the app exposes
-	 *  one position). Read once — it is a statement about the page. */
-	const [scrollAnchor] = useState(scrollAnchorFromHook);
-	const atTail = useRef(scrollAnchor !== "top");
 	/* THE READER'S SCROLL IS NEVER FOUGHT (TestFlight 1139). `nextAtTail` keeps
 	 *  `atTail` true anywhere inside its 48 pt band, so without this every
 	 *  streamed row or layout commit clamped a drag's first points back to the
@@ -484,7 +579,7 @@ export const TranscriptList = ({
 	 *  (see `openElsewhere` below). */
 	const [openElsewhereAtMount] = useState(
 		() =>
-			scrollAnchor === "top" || scrollPlaces.get(sessionId)?.atTail === false,
+			scrollAnchor !== null || scrollPlaces.get(sessionId)?.atTail === false,
 	);
 	/** The same question, asked again for whichever conversation is open NOW.
 	 *
@@ -638,6 +733,15 @@ export const TranscriptList = ({
 		[grouped, expanded, live],
 	);
 	foldLatchRef.current.ids = folded.latchedFoldIds;
+	/* The plan's bottom row, read by the content-size handler to tell a new
+	 * message (id changed) from an older page or a settle (id unchanged). It is
+	 * the PLAN's last item rather than the mounted one, so a reader several
+	 * screens up — where the bottom is virtualised away — still gets the chip
+	 * for a message that arrived below them. */
+	lastItemId.current =
+		folded.items.length === 0
+			? null
+			: (folded.items[folded.items.length - 1]?.id ?? null);
 	/* The vertical rhythm, one tier per rendered item (`trace-rail.ts`): 16 pt
 	 * before a new exchange, 8 pt at a register change (bubble ↔ trace ↔ prose),
 	 * nothing between trace lines that already carry the touch floor. Applied as
@@ -684,6 +788,10 @@ export const TranscriptList = ({
 	/* Set by a reader's own expand or collapse, consumed by the content-size
 	 *  change that toggle causes: see `onContentSizeChange`. */
 	const foldResizeRef = useRef(false);
+	const chartResizeAt = useRef<typeof previousRows.current>(null);
+	const markChartResize = useCallback(() => {
+		chartResizeAt.current = previousRows.current;
+	}, []);
 	/* The resize mark is set ONLY when the open state really changes (round 2,
 	 *  U10 / Q9 / m-r2-1). A press that asks for the state the row already has
 	 *  produces no content-size change to consume it, so the mark would sit armed
@@ -961,10 +1069,23 @@ export const TranscriptList = ({
 			heightsRef.current.set(id, height);
 			// Invalidates the cached offset table (`getItemLayout`'s, review NIT-2).
 			heightsVersionRef.current += 1;
+			/* THE MARK IS REFRESHED WHERE THE HEIGHT LANDS (QA round 1, Q2). A streamed
+			 *  row's new height reaches `heightsRef` through ITS own `onLayout`, which
+			 *  can run AFTER the content-size event that carried the same growth. The
+			 *  content-size path then read the previous height, and the next content
+			 *  change of any kind — an older page inserted above the reader — read as
+			 *  bottom growth and raised the chip (measured 2/2 runs). Recording here as
+			 *  well means the mark is current whichever event arrives first, so only
+			 *  growth nothing has seen yet announces. */
+			if (id === lastItemId.current) {
+				const next = nextBottomMark(bottomMark.current, id, height);
+				if (bottomArrival(bottomMark.current, next)) noteArrival();
+				bottomMark.current = next;
+			}
 			restoreWebAnchor();
 			scheduleRecompute();
 		},
-		[scheduleRecompute, restoreWebAnchor],
+		[noteArrival, scheduleRecompute, restoreWebAnchor],
 	);
 
 	/* A session switch starts the geometry over: heights belong to the rows that
@@ -980,11 +1101,23 @@ export const TranscriptList = ({
 		heightsRef.current.clear();
 		setReaderExpanded(NO_TURNS);
 		const elsewhere =
-			scrollAnchor === "top" || scrollPlaces.get(sessionId)?.atTail === false;
+			scrollAnchor !== null || scrollPlaces.get(sessionId)?.atTail === false;
 		setOpenElsewhere(elsewhere);
 		atTail.current = !elsewhere;
+		/* A switch is not an arrival: the new conversation's own content is what
+		 *  the reader is looking at, not something that landed under them. The one
+		 *  exception is the capture hook's `away`, which names the chip's state and
+		 *  would otherwise be cleared by this effect on the mount it was asked for. */
+		applyCue(
+			elsewhere
+				? scrollAnchor === "away"
+					? JUMP_CUE_ARRIVED
+					: JUMP_CUE_AWAY
+				: JUMP_CUE_AT_TAIL,
+		);
+		bottomMark.current = NO_BOTTOM;
 		recompute();
-	}, [sessionId, recompute, scrollAnchor]);
+	}, [sessionId, recompute, scrollAnchor, applyCue]);
 
 	/* A FIND LANDING OPENS THE ROW IT LANDS ON (UX round 1, U2): a hit on line 3
 	 *  of a folded peer message landed on a one-line summary without the word.
@@ -1090,39 +1223,42 @@ export const TranscriptList = ({
 		[geometryFor],
 	);
 
-	const revealToIndex = useCallback((index: number) => {
-		// A jump is the reader leaving the tail: following the next frame would
-		// yank them off the message they just landed on.
-		atTail.current = false;
-		listRef.current?.scrollToIndex({
-			index,
-			viewPosition: 0.3,
-			animated: false,
-		});
-		/* THE DEEP JUMP'S SECOND HALF, now armed here.
-		 *
-		 * With `getItemLayout` present the list never reports
-		 * `onScrollToIndexFailed` — it trusts the metrics it was handed — so the
-		 * recovery that used to arrive from that callback has to be armed on this
-		 * side: a row nobody has measured is placed by the ESTIMATE, and the row's
-		 * real height differs, so the landing is approximate. Re-issuing the same
-		 * index after the rows around it have mounted and measured lands it
-		 * exactly. 75 ms is the delay the old callback used, kept because it was
-		 * measured against this list's mount batching. */
-		const id = itemsRef.current[index]?.id;
-		if (id === undefined || heightsRef.current.has(id)) return;
-		if (revealTimerRef.current !== null) {
-			clearTimeout(revealTimerRef.current);
-		}
-		revealTimerRef.current = setTimeout(() => {
-			revealTimerRef.current = null;
+	const revealToIndex = useCallback(
+		(index: number) => {
+			// A jump is the reader leaving the tail: following the next frame would
+			// yank them off the message they just landed on.
+			markAtTail(false);
 			listRef.current?.scrollToIndex({
 				index,
 				viewPosition: 0.3,
 				animated: false,
 			});
-		}, 75);
-	}, []);
+			/* THE DEEP JUMP'S SECOND HALF, now armed here.
+			 *
+			 * With `getItemLayout` present the list never reports
+			 * `onScrollToIndexFailed` — it trusts the metrics it was handed — so the
+			 * recovery that used to arrive from that callback has to be armed on this
+			 * side: a row nobody has measured is placed by the ESTIMATE, and the row's
+			 * real height differs, so the landing is approximate. Re-issuing the same
+			 * index after the rows around it have mounted and measured lands it
+			 * exactly. 75 ms is the delay the old callback used, kept because it was
+			 * measured against this list's mount batching. */
+			const id = itemsRef.current[index]?.id;
+			if (id === undefined || heightsRef.current.has(id)) return;
+			if (revealTimerRef.current !== null) {
+				clearTimeout(revealTimerRef.current);
+			}
+			revealTimerRef.current = setTimeout(() => {
+				revealTimerRef.current = null;
+				listRef.current?.scrollToIndex({
+					index,
+					viewPosition: 0.3,
+					animated: false,
+				});
+			}, 75);
+		},
+		[markAtTail],
+	);
 
 	useEffect(
 		() => () => {
@@ -1254,6 +1390,11 @@ export const TranscriptList = ({
 				content: contentSize.height,
 			};
 			atTail.current = atEnd;
+			/* Not `markAtTail`: this path must NOT clear `snapArriving` on the way
+			 *  down (an intermediate scroll is not a landing), and the cue update
+			 *  itself is all this frame needs. */
+			applyCue(withAtTail(jumpCueRef.current, atEnd));
+			if (atEnd) snapArriving.current = false;
 			scrollPlaces.set(sessionId, {
 				offset: contentOffset.y,
 				atTail: atEnd,
@@ -1280,6 +1421,7 @@ export const TranscriptList = ({
 			requestOlder,
 			historyError,
 			releaseWebAnchor,
+			applyCue,
 		],
 	);
 
@@ -1292,6 +1434,9 @@ export const TranscriptList = ({
 		// only marks the touch as not-a-tap.
 		textSelectionContainerScroll();
 		releaseWebAnchor();
+		// A reader who takes over a jump in flight owns the list now; the jump's
+		// arrival suppression must not outlive the gesture that interrupted it.
+		snapArriving.current = false;
 		scrollHold.current.beginDrag();
 		presence?.setHeld(true);
 	}, [presence, releaseWebAnchor]);
@@ -1352,6 +1497,49 @@ export const TranscriptList = ({
 			animated: false,
 		});
 	}, []);
+	/**
+	 * The reader's way to the end, shared by the chip and a send: mark the tail
+	 * FIRST (so the growth this move may cause cannot raise the chip on the way
+	 * down), then clamp — the same impossible offset `pinTail` uses, which every
+	 * platform resolves to the true end without trusting an estimated height.
+	 *
+	 * It does not animate, for the same reason the tail pin does not: the jump is
+	 * a clamp to a known place, and motion across an unknown distance is exactly
+	 * what reduced-motion readers asked not to get.
+	 */
+	const snapToTail = useCallback(() => {
+		/* A HELD WEB ANCHOR IS DROPPED (UX round 1, U1). The anchor belongs to an
+		 *  older-page insert that is keeping the reader's row still; a deliberate move
+		 *  to the end supersedes it. Left held, `restoreWebAnchor` recomputed on every
+		 *  commit (and on every row measure) wrote the anchored row's position back
+		 *  over the snap — measured on the web target, 320×568: snap to 103, then
+		 *  `scrollTop = -28` (browser-clamped to 0) 18 ms later, the sent row below
+		 *  the fold and no chip, because the cue believed the reader was at the tail.
+		 *  The anchor's own scroll event, which would have released it, arrives after
+		 *  that write. */
+		releaseWebAnchor();
+		/* Suppress arrivals only when there is a glide to protect: a snap from an
+		 *  already-following list may raise no scroll event at all, and a flag left
+		 *  set would silence every future announcement. */
+		snapArriving.current = !atTail.current;
+		markAtTail(true);
+		listRef.current?.scrollToOffset({
+			offset: TAIL_CLAMP_OFFSET_PT,
+			animated: false,
+		});
+	}, [markAtTail, releaseWebAnchor]);
+	/* SENDING IS A SNAP (operator, 2026-11-21): the reader who just pressed send
+	 *  is done reading where they were. Typing never moves the list. The mark
+	 *  changes only when the composer admits a message (a prompt, or a typed slash
+	 *  op), never for an approval/ask answer, a retry or a slash TAP — those set
+	 *  `sending` too (code review round 1, R2), and none of them is a message
+	 *  leaving. */
+	const sentMark = useRef(sendMark);
+	useEffect(() => {
+		if (sendMark === sentMark.current) return;
+		sentMark.current = sendMark;
+		snapToTail();
+	}, [sendMark, snapToTail]);
 	restRef.current = () => {
 		const facts = factsRef.current;
 		const atEnd = restsAtTail({
@@ -1360,7 +1548,7 @@ export const TranscriptList = ({
 			contentPt: facts.contentPt,
 			bandPt: TAIL_BAND_PT,
 		});
-		atTail.current = atEnd;
+		markAtTail(atEnd);
 		scrollPlaces.set(sessionId, { offset: facts.offsetY, atTail: atEnd });
 		// No write at rest (TestFlight 1157): a reader at the end is already
 		// there, and one short of it stays where they stopped. The next growth
@@ -1394,13 +1582,13 @@ export const TranscriptList = ({
 						offsetY: factsRef.current.offsetY,
 					});
 					if (offset === null) return;
-					atTail.current = false;
+					markAtTail(false);
 					scrollPlaces.set(sessionId, { offset, atTail: false });
 					scroller.scrollToOffset({ offset, animated: false });
 				});
 			});
 		},
-		[sessionId],
+		[sessionId, markAtTail],
 	);
 	/* The gap row's Load continues the fill where the automatic one stopped.
 	 *  Unlike the reload it replaced, it keeps every loaded page and the
@@ -1551,9 +1739,9 @@ export const TranscriptList = ({
 				if (restoredFor.current !== sessionId) {
 					restoredFor.current = sessionId;
 					const saved = scrollPlaces.get(sessionId);
-					// The capture hook's anchor outranks a saved position: a page that
-					// asked for `top` asked for the top.
-					if (scrollAnchor !== "top" && saved !== undefined) {
+					// The capture hook's anchor outranks a saved position: a page
+					// that asked for `top` or `away` asked for that view.
+					if (scrollAnchor === null && saved !== undefined) {
 						if (saved.atTail) {
 							/* They were following the end when they left, so the END is what
 							 * to restore — not a number and not a row. This is the reopen
@@ -1579,7 +1767,17 @@ export const TranscriptList = ({
 						return;
 					}
 				}
-				if (foldResizeRef.current) {
+				// A small disclosure may not change total content height. Scope its
+				// mark to the rows the reader acted on so it cannot handle the next
+				// incoming message in place of a resize that never fired.
+				const chartResize = chartResizeAt.current;
+				chartResizeAt.current = null;
+				if (
+					foldResizeRef.current ||
+					(chartResize !== null &&
+						chartResize.session === sessionId &&
+						chartResize.rows === previousRows.current?.rows)
+				) {
 					/* A READER'S EXPAND IS NOT CONTENT ARRIVING (review round 1, m4 /
 					 *  U4). Opening a fold at the tail grew the content, the tail pin
 					 *  below followed it, and the header the reader just tapped slid
@@ -1591,15 +1789,33 @@ export const TranscriptList = ({
 					foldResizeRef.current = false;
 					const distance =
 						height - factsRef.current.offsetY - viewportRef.current;
-					atTail.current = atTail.current && distance <= TAIL_BAND_PT;
+					const stillAtTail = atTail.current && distance <= TAIL_BAND_PT;
+					markAtTail(stillAtTail);
 					scrollPlaces.set(sessionId, {
 						offset: factsRef.current.offsetY,
-						atTail: atTail.current,
+						atTail: stillAtTail,
 					});
-					if (atTail.current) pinTail();
+					if (stillAtTail) pinTail();
 					recompute();
 					return;
 				}
+				/* NEW OUTPUT, NOT OLDER HISTORY. Content height grew for SOME reason;
+				 *  only the bottom row can say whether the growth was a message
+				 *  arriving or a streamed answer getting taller (the chip), or an older
+				 *  page inserted above the reader (not the chip — operator's spec,
+				 *  `jump-cue.ts`). The bottom row is tracked even while the reader
+				 *  follows, so the mark is current at the moment they leave. A jump in
+				 *  flight suppresses the announcement: the reader is already going. */
+				const bottomId = lastItemId.current;
+				const nextBottom = nextBottomMark(
+					bottomMark.current,
+					bottomId,
+					bottomId === null ? null : (heightsRef.current.get(bottomId) ?? null),
+				);
+				if (bottomArrival(bottomMark.current, nextBottom)) {
+					noteArrival();
+				}
+				bottomMark.current = nextBottom;
 				if (atTail.current) {
 					/* The tail pin, and why it is a CLAMP rather than `scrollToEnd`.
 					 *
@@ -1623,8 +1839,37 @@ export const TranscriptList = ({
 				recompute,
 				scrollAnchor,
 				pinTail,
+				markAtTail,
+				noteArrival,
 			],
 		);
+
+	/* NEW OUTPUT SEEN FROM THE DATA, NOT THE LAYOUT (QA round 1, Q1).
+	 *
+	 * A reader several screens up unmounts the streaming row: the list measures
+	 * nothing there and the content height does not move (measured: the answer
+	 * went `pass 2` → `pass 77` while `scrollH` stayed 2354, and no chip ever
+	 * appeared). The projection still grows, so the last item's id and its text
+	 * length are what announce an arrival for that reader. It runs on every
+	 * commit and always records, so the mark is current the moment the reader
+	 * leaves; only a change against a KNOWN session's mark can announce. */
+	useEffect(() => {
+		const last = folded.items[folded.items.length - 1];
+		const next: TailContent =
+			last === undefined
+				? NO_TAIL_CONTENT
+				: {
+						id: last.id,
+						size: last.kind === "entry" ? last.entry.text.length : 0,
+					};
+		const previous = tailContent.current;
+		tailContent.current = { session: sessionId, content: next };
+		/* A session switch and a fold the reader opened are not arrivals; the
+		 *  mark is still advanced above so the next real change is measured
+		 *  against it. */
+		if (previous.session !== sessionId || foldResizeRef.current) return;
+		if (contentArrival(previous.content, next)) noteArrival();
+	});
 
 	useLayoutEffect(() => {
 		restoreWebAnchor();
@@ -1809,19 +2054,25 @@ export const TranscriptList = ({
 					{/* Always provided (0 outside a group), so opening or closing a
 					 *  bar never changes the row's element tree and never remounts it. */}
 					<GroupInsetContext.Provider value={depth * GROUP_STEP_PT}>
-						<TranscriptRow
-							entry={item.entry}
-							condensed={item.condensed === true}
-							streaming={streamingRowId !== null && item.id === streamingRowId}
-							loadImage={loadImage}
-							loadFile={loadFile}
-							onOpenAgent={onOpenAgent}
-							onOpenVideo={onOpenVideo}
-							loadBridgeBody={loadBridgeBody}
-							onCancelTurn={onCancelTurn}
-							open={rowOpen.get(canonicalRowKey(item.entry))}
-							onToggleOpen={toggleRowOpen}
-						/>
+						<ChartDataResizeContext.Provider value={markChartResize}>
+							<TranscriptRow
+								entry={item.entry}
+								condensed={item.condensed === true}
+								streaming={
+									streamingRowId !== null && item.id === streamingRowId
+								}
+								streamArrival={item.id === streamingRowId ? arrival : null}
+								streamMotion={item.id === streamingRowId ? motion : null}
+								loadImage={loadImage}
+								loadFile={loadFile}
+								onOpenAgent={onOpenAgent}
+								onOpenVideo={onOpenVideo}
+								loadBridgeBody={loadBridgeBody}
+								onCancelTurn={onCancelTurn}
+								open={rowOpen.get(canonicalRowKey(item.entry))}
+								onToggleOpen={toggleRowOpen}
+							/>
+						</ChartDataResizeContext.Provider>
 					</GroupInsetContext.Provider>
 					{/* The completion anchor: a zero-size sibling at the row's bottom edge
 					 * (an element carries one testID, so the anchor is its own element —
@@ -1851,6 +2102,8 @@ export const TranscriptList = ({
 			rowOpen,
 			toggleRowOpen,
 			streamingRowId,
+			arrival,
+			motion,
 			loadImage,
 			loadFile,
 			onOpenAgent,
@@ -1867,6 +2120,7 @@ export const TranscriptList = ({
 			gapMarker,
 			spacingTiers,
 			containment,
+			markChartResize,
 		],
 	);
 
@@ -2032,6 +2286,16 @@ export const TranscriptList = ({
 	return (
 		<UserMessageCollapseContext.Provider value={keepCollapsedTopInView}>
 			<View className="flex-1 min-h-0">
+				{/* The way back that is not a yank (operator, 2026-11-21). An
+				 *  overlay above the fades, so it adds no layout and its press
+				 *  cannot reach anything but itself. Declared BEFORE the list so the
+				 *  reading (and Tab) order reaches it first instead of after every
+				 *  mounted row (UX round 1, U2); `zIndex` keeps it painted above them.
+				 *  It is handed this viewport's height and hides itself when that is
+				 *  too short to hold it above the fade (design round 1, D1). */}
+				{jumpCueShown(jumpCue) ? (
+					<JumpToLatestChip onPress={snapToTail} viewportPt={viewportPt} />
+				) : null}
 				<FlatList
 					ref={listRef}
 					testID={testID}

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { TranscriptEntry } from "@/contracts";
+import { LIVE_INLINE_UI } from "@/features/session/live-inline-ui";
 import {
 	barPhrases,
 	condensePlan,
@@ -333,5 +334,25 @@ describe("assistant prose stays outside the bar whatever the row declares", () =
 		expect(turn.condensed).toBe(true);
 		expect(turn.hiddenIds).toEqual(["t1", "e1", "t2", "t3"]);
 		expect(turn.bar).toEqual({ steps: 3, durationS: 6 });
+	});
+
+	it("keeps a validated widget row that also declares calls_tools", () => {
+		// A widget with no prose (`text` empty) on a row that requested tools: the
+		// widget is the answer, so it stays outside the bar like prose does.
+		const widgetRow = {
+			...row({ id: "w1", kind: "assistant" }),
+			calls_tools: true,
+			[LIVE_INLINE_UI]: [{ kind: "widget" }],
+		} as unknown as TranscriptEntry;
+		const turn = first(
+			settled([
+				user("u1"),
+				tool("t1"),
+				widgetRow,
+				tool("t2"),
+				prose("a1", "Done."),
+			]),
+		);
+		expect(turn.hiddenIds).toEqual(["t1", "t2"]);
 	});
 });
