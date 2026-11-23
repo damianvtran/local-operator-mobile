@@ -537,9 +537,7 @@ export type CatalogueKey =
 	| "mobile.home.startup_queue.not_started"
 	| "mobile.home.startup_queue.sending"
 	| "mobile.home.startup_queue.unconfirmed"
-	| "mobile.home.suggestion.last_turn"
 	| "mobile.home.suggestion.linear_mcp"
-	| "mobile.home.suggestion.phone_access"
 	| "mobile.home.suggestion.review_repo"
 	| "mobile.home.suggestion.team_of_agents"
 	| "mobile.home.suggestion.wake_summary"
@@ -548,6 +546,11 @@ export type CatalogueKey =
 	| "mobile.home.tip.search"
 	| "mobile.home.transcript.needs_answer"
 	| "mobile.home.transcript.waiting"
+	| "mobile.home.work.all_conversations"
+	| "mobile.home.work.all_conversations_new"
+	| "mobile.home.work.needs_you"
+	| "mobile.home.work.recent"
+	| "mobile.home.work.try"
 	| "mobile.library.action.add_tag"
 	| "mobile.library.action.edit"
 	| "mobile.library.action.open_chat"
@@ -1828,9 +1831,7 @@ export type NoParamKey =
 	| "mobile.home.startup_queue.not_started"
 	| "mobile.home.startup_queue.sending"
 	| "mobile.home.startup_queue.unconfirmed"
-	| "mobile.home.suggestion.last_turn"
 	| "mobile.home.suggestion.linear_mcp"
-	| "mobile.home.suggestion.phone_access"
 	| "mobile.home.suggestion.review_repo"
 	| "mobile.home.suggestion.team_of_agents"
 	| "mobile.home.suggestion.wake_summary"
@@ -1839,6 +1840,10 @@ export type NoParamKey =
 	| "mobile.home.tip.search"
 	| "mobile.home.transcript.needs_answer"
 	| "mobile.home.transcript.waiting"
+	| "mobile.home.work.all_conversations"
+	| "mobile.home.work.needs_you"
+	| "mobile.home.work.recent"
+	| "mobile.home.work.try"
 	| "mobile.library.action.add_tag"
 	| "mobile.library.action.edit"
 	| "mobile.library.action.open_chat"
@@ -3053,9 +3058,7 @@ export type MessageParams = {
 	"mobile.home.startup_queue.not_started": NoParams;
 	"mobile.home.startup_queue.sending": NoParams;
 	"mobile.home.startup_queue.unconfirmed": NoParams;
-	"mobile.home.suggestion.last_turn": NoParams;
 	"mobile.home.suggestion.linear_mcp": NoParams;
-	"mobile.home.suggestion.phone_access": NoParams;
 	"mobile.home.suggestion.review_repo": NoParams;
 	"mobile.home.suggestion.team_of_agents": NoParams;
 	"mobile.home.suggestion.wake_summary": NoParams;
@@ -3064,6 +3067,11 @@ export type MessageParams = {
 	"mobile.home.tip.search": NoParams;
 	"mobile.home.transcript.needs_answer": NoParams;
 	"mobile.home.transcript.waiting": NoParams;
+	"mobile.home.work.all_conversations": NoParams;
+	"mobile.home.work.all_conversations_new": { count: number };
+	"mobile.home.work.needs_you": NoParams;
+	"mobile.home.work.recent": NoParams;
+	"mobile.home.work.try": NoParams;
 	"mobile.library.action.add_tag": NoParams;
 	"mobile.library.action.edit": NoParams;
 	"mobile.library.action.open_chat": NoParams;
@@ -4449,9 +4457,7 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.home.startup_queue.not_started": "Not started",
 	"mobile.home.startup_queue.sending": "Sending queued messages…",
 	"mobile.home.startup_queue.unconfirmed": "Start not confirmed",
-	"mobile.home.suggestion.last_turn": "Show me the last turn",
 	"mobile.home.suggestion.linear_mcp": "Set up Linear MCP",
-	"mobile.home.suggestion.phone_access": "Turn on phone access",
 	"mobile.home.suggestion.review_repo": "Review this repo",
 	"mobile.home.suggestion.team_of_agents": "Create a team of agents",
 	"mobile.home.suggestion.wake_summary": "Wake me with a summary",
@@ -4460,6 +4466,11 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.home.tip.search": "search past conversations to reopen a session",
 	"mobile.home.transcript.needs_answer": "Needs your answer",
 	"mobile.home.transcript.waiting": "Waiting for the conversation…",
+	"mobile.home.work.all_conversations": "All conversations",
+	"mobile.home.work.all_conversations_new": "All conversations, {count, plural, one {# new conversation} other {# new conversations}}",
+	"mobile.home.work.needs_you": "Needs you",
+	"mobile.home.work.recent": "Recent",
+	"mobile.home.work.try": "Try",
 	"mobile.library.action.add_tag": "Add",
 	"mobile.library.action.edit": "Edit",
 	"mobile.library.action.open_chat": "Open chat",
@@ -5830,9 +5841,7 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.home.startup_queue.not_started": { role: "status", note: "Queue-row state when the conversation never started (refused or drafting). Two words at most; it sits beside the queued-messages button." },
 	"mobile.home.startup_queue.sending": { role: "status", note: "Queue-row state while a started conversation drains its queue. Present continuous; keep the ellipsis character. Never repeat the count: the composer chip owns it." },
 	"mobile.home.startup_queue.unconfirmed": { role: "status", note: "Queue-row state when the create may or may not have happened and no automatic retry is possible. Must not imply anything is waiting." },
-	"mobile.home.suggestion.last_turn": { role: "button", note: "Suggestion chip. Sentence case, no final full stop, at most 24 characters at the source locale, and it must not begin with a verb another chip in the pool already uses." },
 	"mobile.home.suggestion.linear_mcp": { role: "button", note: "Suggestion chip. 'Linear MCP' is a product name and a protocol name: do not translate either word. No final full stop, at most 24 characters at the source locale." },
-	"mobile.home.suggestion.phone_access": { role: "button", note: "Suggestion chip. 'phone access' is the feature name used across the product. No final full stop, at most 24 characters at the source locale." },
 	"mobile.home.suggestion.review_repo": { role: "button", note: "Suggestion chip. 'repo' is developer vocabulary kept as-is. No final full stop, at most 24 characters at the source locale." },
 	"mobile.home.suggestion.team_of_agents": { role: "button", note: "Suggestion chip. Only one chip in the pool may create an agent; keep the agent-making verb on this one and no other. No final full stop, at most 24 characters at the source locale." },
 	"mobile.home.suggestion.wake_summary": { role: "button", note: "Suggestion chip. 'wake' is the product's word for a scheduled prompt. No final full stop, at most 24 characters at the source locale." },
@@ -5841,6 +5850,11 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.home.tip.search": { role: "help", note: "Rotating tip fragment, lower case by design. No final full stop, at most 48 characters at the source locale." },
 	"mobile.home.transcript.needs_answer": { role: "status", note: "Short line above a just-started conversation on the home screen when the agent is waiting for the reader to answer a question. Sits beside an \"Answer in conversation\" button, so keep it brief (a few words)." },
 	"mobile.home.transcript.waiting": { role: "status", note: "Empty state of the transcript shown under the home composer right after a send, before the first message arrives. Keep the ellipsis character." },
+	"mobile.home.work.all_conversations": { role: "button", note: "Footer row on the home work list that opens the conversations drawer. A noun phrase; the drawer's own word for conversations, not a new term." },
+	"mobile.home.work.all_conversations_new": { role: "button", note: "Spoken label of the same footer row when the drawer button carries a count of new conversations. {count} is a number. Preserve ICU plural arms and placeholder; use the drawer's word for conversations." },
+	"mobile.home.work.needs_you": { role: "heading", note: "Home work-list section heading over conversations waiting on the reader for an approval or an answer. Shown upper-case in a small label; keep it to one to three words and address the reader directly." },
+	"mobile.home.work.recent": { role: "heading", note: "Home work-list section heading over the most recently active conversations. Shown upper-case in a small label; one or two words." },
+	"mobile.home.work.try": { role: "heading", note: "Home section heading over two example prompts shown only on a brand-new account. Shown upper-case in a small label; one word, an invitation." },
 	"mobile.library.action.add_tag": { role: "button", note: "Button beside the 'New tag' field that creates the typed tag and selects it for this asset. A verb used as a label, no final full stop. It adds a tag, not a file or an asset." },
 	"mobile.library.action.edit": { role: "button", note: "Header button on an asset that opens the edit-details sheet. A verb used as a label, no final full stop. Edits only the asset's name, description and tags, never the file itself." },
 	"mobile.library.action.open_chat": { role: "button", note: "Button on an asset that opens the conversation the asset is linked to. Imperative label, no final full stop. 'Chat' is a conversation with the agent." },
@@ -7225,9 +7239,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.startup_queue.not_started": "Sin iniciar",
 		"mobile.home.startup_queue.sending": "Enviando los mensajes en cola…",
 		"mobile.home.startup_queue.unconfirmed": "Inicio sin confirmar",
-		"mobile.home.suggestion.last_turn": "Muéstrame el último turno",
 		"mobile.home.suggestion.linear_mcp": "Configura Linear MCP",
-		"mobile.home.suggestion.phone_access": "Activa el acceso telefónico",
 		"mobile.home.suggestion.review_repo": "Revisa este repo",
 		"mobile.home.suggestion.team_of_agents": "Crea un equipo de agentes",
 		"mobile.home.suggestion.wake_summary": "Despiértame con un resumen",
@@ -7236,6 +7248,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.tip.search": "busca una conversación pasada y reábrela",
 		"mobile.home.transcript.needs_answer": "Necesita tu respuesta",
 		"mobile.home.transcript.waiting": "Esperando la conversación…",
+		"mobile.home.work.all_conversations": "Todas las conversaciones",
+		"mobile.home.work.all_conversations_new": "Todas las conversaciones, {count, plural, one {# conversación nueva} other {# conversaciones nuevas}}",
+		"mobile.home.work.needs_you": "Te necesitan",
+		"mobile.home.work.recent": "Recientes",
+		"mobile.home.work.try": "Prueba",
 		"mobile.library.action.add_tag": "Añadir",
 		"mobile.library.action.edit": "Editar",
 		"mobile.library.action.open_chat": "Abrir conversación",
@@ -8604,9 +8621,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.startup_queue.not_started": "Non démarrée",
 		"mobile.home.startup_queue.sending": "Envoi des messages en attente…",
 		"mobile.home.startup_queue.unconfirmed": "Démarrage non confirmé",
-		"mobile.home.suggestion.last_turn": "Montrez le dernier tour",
 		"mobile.home.suggestion.linear_mcp": "Configurez Linear MCP",
-		"mobile.home.suggestion.phone_access": "Activez l’accès téléphone",
 		"mobile.home.suggestion.review_repo": "Examinez ce repo",
 		"mobile.home.suggestion.team_of_agents": "Créez une équipe d’agents",
 		"mobile.home.suggestion.wake_summary": "Réveillez-moi et résumez",
@@ -8615,6 +8630,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.tip.search": "retrouvez une session passée pour la rouvrir",
 		"mobile.home.transcript.needs_answer": "Attend votre réponse",
 		"mobile.home.transcript.waiting": "En attente de la conversation…",
+		"mobile.home.work.all_conversations": "Toutes les conversations",
+		"mobile.home.work.all_conversations_new": "Toutes les conversations, {count, plural, one {# nouvelle conversation} other {# nouvelles conversations}}",
+		"mobile.home.work.needs_you": "Besoin de vous",
+		"mobile.home.work.recent": "Récentes",
+		"mobile.home.work.try": "Essayer",
 		"mobile.library.action.add_tag": "Ajouter",
 		"mobile.library.action.edit": "Modifier",
 		"mobile.library.action.open_chat": "Ouvrir la conversation",
@@ -9983,9 +10003,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.startup_queue.not_started": "शुरू नहीं हुआ",
 		"mobile.home.startup_queue.sending": "कतार के संदेश भेजे जा रहे हैं…",
 		"mobile.home.startup_queue.unconfirmed": "शुरू होना पक्का नहीं",
-		"mobile.home.suggestion.last_turn": "पिछला टर्न दिखाएँ",
 		"mobile.home.suggestion.linear_mcp": "Linear MCP सेट करें",
-		"mobile.home.suggestion.phone_access": "फ़ोन एक्सेस चालू करें",
 		"mobile.home.suggestion.review_repo": "यह repo रिव्यू करें",
 		"mobile.home.suggestion.team_of_agents": "एजेंटों की टीम बनाएँ",
 		"mobile.home.suggestion.wake_summary": "सारांश के साथ मुझे जगाएँ",
@@ -9994,6 +10012,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.tip.search": "पुरानी बातचीत खोजकर सत्र फिर खोलें",
 		"mobile.home.transcript.needs_answer": "आपके जवाब की ज़रूरत है",
 		"mobile.home.transcript.waiting": "बातचीत का इंतज़ार…",
+		"mobile.home.work.all_conversations": "सभी बातचीत",
+		"mobile.home.work.all_conversations_new": "सभी बातचीत, {count, plural, one {# नई बातचीत} other {# नई बातचीत}}",
+		"mobile.home.work.needs_you": "आपका इंतज़ार",
+		"mobile.home.work.recent": "हाल के",
+		"mobile.home.work.try": "आज़माएँ",
 		"mobile.library.action.add_tag": "जोड़ें",
 		"mobile.library.action.edit": "संपादित करें",
 		"mobile.library.action.open_chat": "बातचीत खोलें",
@@ -11362,9 +11385,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.startup_queue.not_started": "Не запущено",
 		"mobile.home.startup_queue.sending": "Отправка сообщений из очереди…",
 		"mobile.home.startup_queue.unconfirmed": "Запуск не подтверждён",
-		"mobile.home.suggestion.last_turn": "Покажите последний ход",
 		"mobile.home.suggestion.linear_mcp": "Настройте Linear MCP",
-		"mobile.home.suggestion.phone_access": "Включите доступ с телефона",
 		"mobile.home.suggestion.review_repo": "Проверьте репозиторий",
 		"mobile.home.suggestion.team_of_agents": "Создайте команду агентов",
 		"mobile.home.suggestion.wake_summary": "Разбудите меня со сводкой",
@@ -11373,6 +11394,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.tip.search": "поищите сессию в прошлых беседах",
 		"mobile.home.transcript.needs_answer": "Нужен ваш ответ",
 		"mobile.home.transcript.waiting": "Ожидание беседы…",
+		"mobile.home.work.all_conversations": "Все беседы",
+		"mobile.home.work.all_conversations_new": "Все беседы, {count, plural, one {# новая беседа} few {# новые беседы} many {# новых бесед} other {# новой беседы}}",
+		"mobile.home.work.needs_you": "Ждут вас",
+		"mobile.home.work.recent": "Недавние",
+		"mobile.home.work.try": "Попробуйте",
 		"mobile.library.action.add_tag": "Добавить",
 		"mobile.library.action.edit": "Изменить",
 		"mobile.library.action.open_chat": "Открыть беседу",
@@ -12741,9 +12767,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.startup_queue.not_started": "شروع نہیں ہوا",
 		"mobile.home.startup_queue.sending": "قطار کے پیغامات بھیجے جا رہے ہیں…",
 		"mobile.home.startup_queue.unconfirmed": "شروع ہونے کی تصدیق نہیں",
-		"mobile.home.suggestion.last_turn": "آخری ٹرن دکھائیں",
 		"mobile.home.suggestion.linear_mcp": "Linear MCP سیٹ اپ کریں",
-		"mobile.home.suggestion.phone_access": "فون رسائی آن کریں",
 		"mobile.home.suggestion.review_repo": "اس repo کا جائزہ لیں",
 		"mobile.home.suggestion.team_of_agents": "ایجنٹس کی ٹیم بنائیں",
 		"mobile.home.suggestion.wake_summary": "مجھے خلاصہ دے کر جگائیں",
@@ -12752,6 +12776,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.tip.search": "گزشتہ گفتگو تلاش کر کے سیشن دوبارہ کھولیں",
 		"mobile.home.transcript.needs_answer": "آپ کے جواب کی ضرورت ہے",
 		"mobile.home.transcript.waiting": "گفتگو کا انتظار…",
+		"mobile.home.work.all_conversations": "تمام گفتگوئیں",
+		"mobile.home.work.all_conversations_new": "تمام گفتگوئیں، {count, plural, one {# نئی گفتگو} other {# نئی گفتگوئیں}}",
+		"mobile.home.work.needs_you": "آپ کے منتظر",
+		"mobile.home.work.recent": "حالیہ",
+		"mobile.home.work.try": "آزمائیں",
 		"mobile.library.action.add_tag": "شامل کریں",
 		"mobile.library.action.edit": "ترمیم کریں",
 		"mobile.library.action.open_chat": "گفتگو کھولیں",
@@ -14120,9 +14149,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.startup_queue.not_started": "Chưa bắt đầu",
 		"mobile.home.startup_queue.sending": "Đang gửi tin nhắn trong hàng đợi…",
 		"mobile.home.startup_queue.unconfirmed": "Chưa xác nhận bắt đầu",
-		"mobile.home.suggestion.last_turn": "Xem lượt gần nhất",
 		"mobile.home.suggestion.linear_mcp": "Thiết lập Linear MCP",
-		"mobile.home.suggestion.phone_access": "Bật truy cập điện thoại",
 		"mobile.home.suggestion.review_repo": "Rà soát repo này",
 		"mobile.home.suggestion.team_of_agents": "Tạo nhóm tác nhân",
 		"mobile.home.suggestion.wake_summary": "Đánh thức tôi kèm bản tóm tắt",
@@ -14131,6 +14158,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.tip.search": "tìm lại cuộc trò chuyện cũ để mở lại phiên",
 		"mobile.home.transcript.needs_answer": "Cần bạn trả lời",
 		"mobile.home.transcript.waiting": "Đang chờ cuộc trò chuyện…",
+		"mobile.home.work.all_conversations": "Tất cả cuộc trò chuyện",
+		"mobile.home.work.all_conversations_new": "Tất cả cuộc trò chuyện, {count, plural, other {# cuộc trò chuyện mới}}",
+		"mobile.home.work.needs_you": "Cần bạn",
+		"mobile.home.work.recent": "Gần đây",
+		"mobile.home.work.try": "Thử",
 		"mobile.library.action.add_tag": "Thêm",
 		"mobile.library.action.edit": "Chỉnh sửa",
 		"mobile.library.action.open_chat": "Mở cuộc trò chuyện",
@@ -15499,9 +15531,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.startup_queue.not_started": "未启动",
 		"mobile.home.startup_queue.sending": "正在发送排队消息……",
 		"mobile.home.startup_queue.unconfirmed": "启动未确认",
-		"mobile.home.suggestion.last_turn": "看看上一轮",
 		"mobile.home.suggestion.linear_mcp": "设置Linear MCP",
-		"mobile.home.suggestion.phone_access": "开启手机访问",
 		"mobile.home.suggestion.review_repo": "审查此仓库",
 		"mobile.home.suggestion.team_of_agents": "创建智能体团队",
 		"mobile.home.suggestion.wake_summary": "用摘要唤醒我",
@@ -15510,6 +15540,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.tip.search": "搜索过往对话以重新打开会话",
 		"mobile.home.transcript.needs_answer": "需要你的回答",
 		"mobile.home.transcript.waiting": "正在等待对话……",
+		"mobile.home.work.all_conversations": "全部对话",
+		"mobile.home.work.all_conversations_new": "全部对话，{count, plural, other {# 个新对话}}",
+		"mobile.home.work.needs_you": "待你处理",
+		"mobile.home.work.recent": "最近",
+		"mobile.home.work.try": "试试",
 		"mobile.library.action.add_tag": "添加",
 		"mobile.library.action.edit": "编辑",
 		"mobile.library.action.open_chat": "打开对话",

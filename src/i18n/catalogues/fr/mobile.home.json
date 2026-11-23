@@ -53,9 +53,7 @@
 	"mobile.home.startup_queue.not_started": "Non démarrée",
 	"mobile.home.startup_queue.sending": "Envoi des messages en attente…",
 	"mobile.home.startup_queue.unconfirmed": "Démarrage non confirmé",
-	"mobile.home.suggestion.last_turn": "Montrez le dernier tour",
 	"mobile.home.suggestion.linear_mcp": "Configurez Linear MCP",
-	"mobile.home.suggestion.phone_access": "Activez l’accès téléphone",
 	"mobile.home.suggestion.review_repo": "Examinez ce repo",
 	"mobile.home.suggestion.team_of_agents": "Créez une équipe d’agents",
 	"mobile.home.suggestion.wake_summary": "Réveillez-moi et résumez",
@@ -90,5 +88,10 @@
 	"mobile.home.identity.refused_fallback": "Impossible de démarrer {name} sur cet ordinateur. Choisissez-en un autre ou utilisez l’agent par défaut.",
 	"mobile.home.identity.refused_unlicensed": "Cet ordinateur ne peut pas démarrer de conversation avec {name} pour le moment. Choisissez l’agent par défaut pour envoyer.",
 	"mobile.home.identity.refused_connecting": "Cet ordinateur est encore en cours de connexion ; rien n’a encore été démarré. Touchez votre message pour le récupérer, puis renvoyez-le dans un instant pour démarrer avec {name}.",
-	"mobile.home.identity.announce_picked": "Cette conversation démarrera avec {name}"
+	"mobile.home.identity.announce_picked": "Cette conversation démarrera avec {name}",
+	"mobile.home.work.needs_you": "Besoin de vous",
+	"mobile.home.work.recent": "Récentes",
+	"mobile.home.work.try": "Essayer",
+	"mobile.home.work.all_conversations": "Toutes les conversations",
+	"mobile.home.work.all_conversations_new": "Toutes les conversations, {count, plural, one {# nouvelle conversation} other {# nouvelles conversations}}"
 }

@@ -224,8 +224,8 @@ export const useTokenColor = (role: ColorRole): string => {
  * can be folded into the same flag rather than consulted separately at every
  * animation (`tokens.json § motion.reducedMotion.detect`).
  */
-export const useReducedMotion = (): boolean => {
-	const [reduce, setReduce] = useState(false);
+export const useReducedMotion = (initial = false): boolean => {
+	const [reduce, setReduce] = useState(initial);
 
 	useEffect(() => {
 		let cancelled = false;
@@ -234,9 +234,8 @@ export const useReducedMotion = (): boolean => {
 				if (!cancelled) setReduce(enabled);
 			})
 			.catch(() => {
-				// A platform without the API keeps motion on. Reduced motion is a
-				// preference the reader opts into; failing closed would remove
-				// feedback nobody asked to lose.
+				// Keep the caller's initial policy if the platform has no reading.
+				// An optional reveal can stay off; control feedback defaults on.
 			});
 		const subscription = AccessibilityInfo.addEventListener(
 			"reduceMotionChanged",

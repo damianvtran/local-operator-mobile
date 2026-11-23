@@ -2,9 +2,11 @@
 import * as Clipboard from "expo-clipboard";
 import {
 	memo,
+	type RefObject,
 	useCallback,
 	useContext,
 	useEffect,
+	useLayoutEffect,
 	useMemo,
 	useRef,
 	useState,
@@ -25,13 +27,18 @@ import {
 	SelectableMessage,
 	useTextSelection,
 } from "@/features/session/components/selectable-message";
+import {
+	CODE_CARD_INITIAL_OPACITY,
+	StreamBlock,
+	useWebStreamFade,
+} from "@/features/session/components/stream-fade";
 import { GroupInsetContext } from "@/features/session/components/trace-rail";
 import { isDiagramBlock } from "@/features/session/diagram-source";
 import {
+	type Block,
 	blocksPlainText,
 	type InlineSpan,
 	parseInline,
-	parseMarkdown,
 	TABLE_BORDER_PT,
 	tableColumnWidths,
 	tableFadeGeometry,
@@ -42,6 +49,11 @@ import {
 	safeMarkdownHref,
 } from "@/features/session/markdown-links";
 import { NATIVE_MONO_FAMILY } from "@/features/session/mono-face";
+import type { StreamArrival } from "@/features/session/stream-arrival";
+import {
+	type MarkdownFrame,
+	parseMarkdownFrame,
+} from "@/features/session/streaming-markdown";
 import { forcedTableScroll } from "@/features/session/table-scroll-hook";
 import { CONTROL, ROLE, SURFACE } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
@@ -130,18 +142,138 @@ const spanClass = (span: InlineSpan): string =>
 		span.href && safeMarkdownHref(span.href) && "text-info underline",
 	);
 
+// Split only at a space (without isolating bidi runs). Splitting a word can
+// break shaping/ligatures; a combining mark after even a space can join it.
+const SUFFIX_BOUNDARY = /[ \t\n\r]/;
+const JOINING_START = /^(?:\p{M}|\p{Emoji_Modifier}|\u200c|\u200d)/u;
+const OPEN_CLUSTER_END = /(?:\p{Surrogate}|\u200d)$/u;
+const SAME_STYLE = (a: InlineSpan, b: InlineSpan): boolean =>
+	a.code === b.code &&
+	a.bold === b.bold &&
+	a.italic === b.italic &&
+	a.href === b.href &&
+	a.strike === b.strike;
+
+function InlineSuffix({
+	value,
+	nodeRef,
+	animate,
+}: {
+	value: string;
+	nodeRef: RefObject<Text | null>;
+	animate: boolean;
+}) {
+	useWebStreamFade(nodeRef, animate ? value : null);
+	return <Text ref={nodeRef}>{value}</Text>;
+}
+
+type SuffixSplit = { span: number; start: number; end: number; value: string };
+
+function selectionIntersects(node: Node | null): boolean {
+	if (!node?.isConnected) return false;
+	const selection = node.ownerDocument?.getSelection();
+	if (!selection || selection.isCollapsed) return false;
+	for (let index = 0; index < selection.rangeCount; index += 1) {
+		if (selection.getRangeAt(index).intersectsNode(node)) return true;
+	}
+	return false;
+}
+
 const Inline = memo(function Inline({
 	text,
 	base,
+	appendFrom,
 }: {
 	text: string;
 	base?: string;
+	appendFrom?: string;
 }) {
 	/* PARSED ONCE PER STRING (design pass item E, cause 2). The parse used to run
 	 *  in the render body, so a panel re-render or a row re-render re-tokenised the
 	 *  same text: on a long answer that is the frame budget spent on work whose
 	 *  input did not change. */
 	const spans = useMemo(() => parseInline(text), [text]);
+	const previous = useRef<{
+		text: string;
+		spans: InlineSpan[];
+		split: SuffixSplit | null;
+	} | null>(null);
+	const nodeRef = useRef<Text>(null);
+	const splitSpan =
+		(nodeRef.current as unknown as Node | null)?.parentNode ?? null;
+	const [, releaseSelection] = useState(false);
+	const old = previous.current;
+	let fresh: SuffixSplit | null = null;
+	const last = spans.at(-1);
+	const oldLast = old?.spans.at(-1);
+	if (
+		Platform.OS === "web" &&
+		appendFrom !== undefined &&
+		old?.text === appendFrom &&
+		oldLast &&
+		last &&
+		!last.href &&
+		!last.code &&
+		old.spans.length === spans.length &&
+		SAME_STYLE(oldLast, last) &&
+		last.text.startsWith(oldLast.text) &&
+		old.spans.every((before, index) => {
+			if (index === spans.length - 1) return true;
+			const after = spans[index];
+			return (
+				after !== undefined &&
+				before.text === after.text &&
+				SAME_STYLE(before, after)
+			);
+		})
+	) {
+		const next = last.text.slice(oldLast.text.length);
+		if (
+			next.length > 0 &&
+			!JOINING_START.test(next) &&
+			!OPEN_CLUSTER_END.test(next) &&
+			(typeof document === "undefined" ||
+				document.getSelection?.()?.isCollapsed !== false) &&
+			(SUFFIX_BOUNDARY.test(oldLast.text.slice(-1)) ||
+				SUFFIX_BOUNDARY.test(next[0] ?? ""))
+		) {
+			fresh = {
+				span: spans.length - 1,
+				start: oldLast.text.length,
+				end: last.text.length,
+				value: next,
+			};
+		}
+	}
+	// Flattening replaces the unanimated prefix text node too. A Range anywhere
+	// in the split's parent span owns its identity, independently of paint.
+	// Hold only the affected split, and only until the selection leaves.
+	const priorSplit = old?.split;
+	const priorSpan = priorSplit ? old?.spans[priorSplit.span] : undefined;
+	const sameSpan = priorSplit ? spans[priorSplit.span] : undefined;
+	const held =
+		!fresh &&
+		priorSplit &&
+		priorSpan &&
+		sameSpan &&
+		SAME_STYLE(priorSpan, sameSpan) &&
+		sameSpan.text.startsWith(priorSpan.text.slice(0, priorSplit.end)) &&
+		selectionIntersects(splitSpan)
+			? priorSplit
+			: null;
+	const split = fresh ?? held;
+	useLayoutEffect(() => {
+		previous.current = { text, spans, split };
+	}, [spans, split, text]);
+	useLayoutEffect(() => {
+		const doc = splitSpan?.ownerDocument;
+		if (!held || !doc) return;
+		const release = () => {
+			if (!selectionIntersects(splitSpan)) releaseSelection((value) => !value);
+		};
+		doc.addEventListener("selectionchange", release);
+		return () => doc.removeEventListener("selectionchange", release);
+	}, [held, splitSpan]);
 	const { selectionColor, accessibility, leafSelectable } = useTextSelection();
 	return (
 		<Text
@@ -178,7 +310,20 @@ const Inline = memo(function Inline({
 							: undefined
 					}
 				>
-					{span.text}
+					{split?.span === index ? (
+						<>
+							{span.text.slice(0, split.start)}
+							<InlineSuffix
+								key={split.end}
+								value={split.value}
+								nodeRef={nodeRef}
+								animate={fresh !== null}
+							/>
+							{span.text.slice(split.end)}
+						</>
+					) : (
+						span.text
+					)}
 				</Text>
 			))}
 		</Text>
@@ -688,18 +833,35 @@ const HEADING_CLASS: Record<number, string> = {
 export const Markdown = memo(function Markdown({
 	text,
 	host,
+	streaming = false,
+	arrival = null,
+	motion = null,
 }: {
 	text: string;
 	/** A host that owns the long-press (Team Bridge's actions sheet); see
 	 *  `HostSelection`. Pass a memoised object: this component is `memo`. */
 	host?: HostSelection;
+	streaming?: boolean;
+	arrival?: StreamArrival | null;
+	motion?: object | null;
 }) {
-	/* THE PARSE IS A FUNCTION OF THE TEXT AND NOTHING ELSE (design pass item E,
-	 *  cause 2), so it is memoised on the text alone: a re-render that arrives with
-	 *  the same answer (a panel opening, a scroll-linked parent, the row's own
-	 *  disclosure) re-uses the block list, and a streaming frame re-parses only the
-	 *  row that actually changed. */
-	const blocks = useMemo(() => parseMarkdown(text), [text]);
+	const previous = useRef<MarkdownFrame | null>(null);
+	const old = previous.current;
+	const frame = useMemo(
+		() => parseMarkdownFrame(text, streaming, previous.current),
+		[streaming, text],
+	);
+	useLayoutEffect(() => {
+		previous.current = frame;
+	}, [frame]);
+	const { blocks } = frame;
+	const from =
+		!arrival || arrival.sealed || motion === null ? null : arrival.previousText;
+	const oldBlocks = from !== null && old?.text === from ? old.blocks : null;
+	// A single update can grow prose and insert a card. Its raw source start,
+	// not equality of the preceding rendered block, decides whether it is new.
+	// A delimiter that adopts older source is not a birth.
+	const boundary = from === "" || oldBlocks ? from?.length : undefined;
 	const plainText = useCallback(() => blocksPlainText(blocks), [blocks]);
 	return (
 		/* The whole answer is ONE selection surface, so a drag can run across
@@ -717,76 +879,125 @@ export const Markdown = memo(function Markdown({
 			 * value. The gap is the `between-components` tier, desktop parity. */}
 			<View className="gap-3">
 				{blocks.map((block, index) => {
-					switch (block.kind) {
-						case "code": {
-							const listing = (
-								<CodeBlock
-									key={index}
-									lines={block.lines}
-									language={block.language}
-								/>
-							);
-							// A closed ```mermaid fence draws as a diagram; the listing is
-							// what it falls back to (still loading, or Pele refused it).
-							return isDiagramBlock(block) ? (
-								<DiagramBlock
-									key={index}
-									source={block.lines.join("\n")}
-									language={block.language}
-									fallback={listing}
-								/>
-							) : (
-								listing
-							);
-						}
-						case "heading":
-							return (
-								<Inline
-									key={index}
-									text={block.text}
-									base={HEADING_CLASS[block.level] ?? "text-body-lg text-ink"}
-								/>
-							);
-						case "list":
-							return (
-								<View key={index} className="gap-1">
-									{block.items.map((item, itemIndex) => (
-										<View
-											key={itemIndex}
-											className="flex-row gap-2"
-											style={{
-												paddingStart: (block.indents?.[itemIndex] ?? 0) * 8,
-											}}
-										>
-											<Text className="text-body-read text-ink-dim" aria-hidden>
-												{block.markers?.[itemIndex] ??
-													(block.ordered ? `${itemIndex + 1}.` : "•")}
-											</Text>
-											<View className="min-w-0 flex-1">
-												<Inline text={item} />
-											</View>
-										</View>
-									))}
-								</View>
-							);
-						case "quote":
-							return (
-								<View key={index} className="border-s-2 border-hairline ps-2">
-									<Inline
-										text={block.text}
-										base="text-body-sm text-ink-muted"
-									/>
-								</View>
-							);
-						case "table":
-							return (
-								<Table key={index} header={block.header} rows={block.rows} />
-							);
-						default:
-							return <Inline key={index} text={block.text} />;
-					}
+					const prior = oldBlocks?.[index];
+					const start = frame.starts[index];
+					const born =
+						boundary !== undefined && start !== undefined && start >= boundary;
+					const appendFrom =
+						!born &&
+						prior?.kind === block.kind &&
+						"text" in prior &&
+						"text" in block &&
+						block.text !== prior.text &&
+						block.text.startsWith(prior.text)
+							? prior.text
+							: undefined;
+					return (
+						<MarkdownBlock
+							key={index}
+							block={block}
+							appendFrom={appendFrom}
+							birth={born ? motion : null}
+							motion={motion}
+						/>
+					);
 				})}
 			</View>
 		</SelectableMessage>
 	);
+});
+
+const MarkdownBlock = memo(function MarkdownBlock({
+	block,
+	appendFrom,
+	birth,
+	motion,
+}: {
+	block: Block;
+	appendFrom: string | undefined;
+	birth: object | null;
+	motion: object | null;
+}) {
+	return (
+		<StreamBlock
+			birth={birth}
+			motion={motion}
+			initialOpacity={
+				block.kind === "code" ? CODE_CARD_INITIAL_OPACITY : undefined
+			}
+		>
+			<BlockBody block={block} appendFrom={appendFrom} />
+		</StreamBlock>
+	);
+});
+
+const BlockBody = memo(function BlockBody({
+	block,
+	appendFrom,
+}: {
+	block: Block;
+	appendFrom: string | undefined;
+}) {
+	switch (block.kind) {
+		case "code": {
+			const listing = (
+				<CodeBlock lines={block.lines} language={block.language} />
+			);
+			// A closed ```mermaid fence draws as a diagram; the listing is
+			// what it falls back to (still loading, or Pele refused it).
+			return isDiagramBlock(block) ? (
+				<DiagramBlock
+					source={block.lines.join("\n")}
+					language={block.language}
+					fallback={listing}
+				/>
+			) : (
+				listing
+			);
+		}
+		case "heading":
+			return (
+				<Inline
+					text={block.text}
+					appendFrom={appendFrom}
+					base={HEADING_CLASS[block.level] ?? "text-body-lg text-ink"}
+				/>
+			);
+		case "list":
+			return (
+				<View className="gap-1">
+					{block.items.map((item, itemIndex) => (
+						<View
+							key={itemIndex}
+							className="flex-row gap-2"
+							style={{
+								paddingStart: (block.indents?.[itemIndex] ?? 0) * 8,
+							}}
+						>
+							<Text className="text-body-read text-ink-dim" aria-hidden>
+								{block.markers?.[itemIndex] ??
+									(block.ordered ? `${itemIndex + 1}.` : "•")}
+							</Text>
+							<View className="min-w-0 flex-1">
+								<Inline text={item} />
+							</View>
+						</View>
+					))}
+				</View>
+			);
+		case "quote":
+			return (
+				<View className="border-s-2 border-hairline ps-2">
+					<Inline
+						text={block.text}
+						appendFrom={appendFrom}
+						base="text-body-sm text-ink-muted"
+					/>
+				</View>
+			);
+		case "table":
+			return <Table header={block.header} rows={block.rows} />;
+		default:
+			return <Inline text={block.text} appendFrom={appendFrom} />;
+	}
 });

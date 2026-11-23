@@ -115,6 +115,10 @@ export interface SessionRuntime {
 	historyErrorScope: "newest" | "older" | null;
 	streaming: boolean;
 	streamingRowId: string | null;
+	/** Motion can only be attributed to arrivals on this accepted wire stream. */
+	streamArrivalEpoch: number | null;
+	/** The wire tail, not a row introduced by history paging or gap healing. */
+	streamArrivalTail: TranscriptEntry | null;
 	/** True while the frame on screen came from the warm cache and no live frame
 	 *  has arrived yet: the conversation is shown as it was when saved, not live. */
 	hydrated: boolean;
@@ -441,6 +445,10 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 				lastFrameAt.current = null;
 			}
 			sessions.getState().beginStream(sessionId);
+			// The reader can reopen an HTTP body inside this one stream object.
+			// Mark its accepted seed as already-present paint, without resetting
+			// the projection fence or changing how this connection retries.
+			let pendingAttemptSeed = true;
 			setError(null);
 			const stream = endpoints.sessionStream(sessionId, {
 				// Read per connect, not per effect: a stream opened before the first
@@ -469,7 +477,10 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 							gateOpen: resumeGateOpen,
 							frameOverlapsHeld: historyRef.current.overlapsHeld(frame.data),
 						});
-					sessions.getState().applyFrame(sessionId, frame.data);
+					const decision = sessions
+						.getState()
+						.applyFrame(sessionId, frame.data, pendingAttemptSeed);
+					if (decision !== "dropped-older") pendingAttemptSeed = false;
 					if (readOnResume) {
 						const reader = historyRef.current;
 						heldHistoryRead.current?.();
@@ -507,6 +518,7 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 				onState: (status) => {
 					if (!active || !sameProjectionOwner(owner, currentIdentity.current))
 						return;
+					if (status.state === "open") pendingAttemptSeed = true;
 					if (status.lastEnd === "error" || status.state === "stalled")
 						recovering.current = true;
 					setFacts((current) => ({
@@ -1082,6 +1094,11 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 		 *  above stays on the raw flag — it marks where streamed TEXT lands. */
 		streaming: running,
 		streamingRowId,
+		streamArrivalEpoch:
+			ownsProjection && entry.connected && !entry.awaitingSnapshot
+				? (entry.streamEpoch ?? null)
+				: null,
+		streamArrivalTail: projection?.transcript.at(-1) ?? null,
 		hydrated,
 		connection,
 		/** The session stream's own liveness, for the header's status dot
