@@ -1312,7 +1312,14 @@ export const SURFACE = {
 	/** The scroll cap around the notices above the composer (QA Q-R2-1). */
 	homeNoticeStack: "home-notice-stack",
 	homeGreeting: "home-greeting",
-	homeSuggestions: "home-suggestions",
+	/** The work list above the composer (needs you · running · recent, or the
+	 *  brand-new account's TRY rows): an id so a capture can measure it against
+	 *  the hero and the composer's top. */
+	homeWorkList: "home-work-list",
+	/** One TRY row or the "All conversations" footer inside the work list. The
+	 *  session rows keep the drawer's own `sessionRowId`. */
+	homeWorkRow: "home-work-row",
+	homeWorkAll: "home-work-all",
 	homeStarting: "home-starting",
 	/** The decorative brand mark beside the header's computer chip: an id so a
 	 *  capture can measure its alignment and its yield at large text. */
