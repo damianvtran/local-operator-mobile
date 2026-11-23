@@ -47,17 +47,15 @@ function decodeMessage(value: unknown): readonly AssistantPart[] | undefined {
 			offset > text.length
 		)
 			return undefined;
-		// Offsets are UTF-16 code units into the envelope's exact text, not
-		// Unicode code points or offsets into the legacy row's text.
-		const before = text.charCodeAt(offset - 1);
-		const after = text.charCodeAt(offset);
-		if (
-			before >= 0xd800 &&
-			before <= 0xdbff &&
-			after >= 0xdc00 &&
-			after <= 0xdfff
-		)
-			return undefined;
+		// Core places standalone blocks at the start of a Markdown line or
+		// at EOF. Measure in UTF-16 code units into the envelope's exact text;
+		// neither half of a CRLF nor the middle of a surrogate pair is a
+		// line boundary. Cutting a line would change how Markdown parses it.
+		if (offset !== 0 && offset !== text.length) {
+			const before = text.charCodeAt(offset - 1);
+			const after = text.charCodeAt(offset);
+			if (before !== 10 && (before !== 13 || after === 10)) return undefined;
+		}
 		const payload = decodeInlineUi(placement?.payload);
 		if (!payload) return undefined;
 		remaining -= JSON.stringify({ offset, payload }).length;

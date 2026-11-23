@@ -838,7 +838,10 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 	const projection = entry.projection;
 	/** The frame on screen is the warm cache's, not a live one. */
 	const hydrated = entry.hydrated === true;
-	if (ownsProjection) historyWindow.accept(projection);
+	if (ownsProjection) {
+		if (hydrated) historyWindow.seedFromCache(projection);
+		else historyWindow.accept(projection);
+	}
 	/* Turn end is a save moment: the conversation's shape just settled. A
 	 * hydrated frame never counts as running, so it can neither trigger this nor
 	 * offer the composer a "steer" for a turn that may long be over. */

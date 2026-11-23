@@ -226,8 +226,13 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	 *  the mock relay gains the `start-targets*` worlds, `GET /api/start-targets`
 	 *  and the start route's `agent`/`team` handling. Source identity only — no
 	 *  U-08 scene, assertion or threshold changed here; not rendered evidence. */
+	/* PR #376: negotiate chart fixture sidecars on every projection. Re-pin
+	 * the changed sources and the chart dataset module the registry now loads;
+	 * the U-08 scene, checks and thresholds are unchanged. */
 	"tools/mock-relay/relay.ts":
-		"ec4fcc4a6157d2e3a8da0c3e16295ff03356bb9e12393836992bb2e979b3a10c",
+		"713053956d61b3eda90ace49e98e21f9669f096dd25e904b08d13a2840ae8a5a",
+	"tools/mock-relay/inline-charts.ts":
+		"d5ff734f546a710b51b1521a56958d5479dc4416c659e1218fd16690fc26678e",
 	/* Re-pinned 2026-10-29 after merging main's session-health work into the French
 	 * wave: `src` and `app` carry that surface plus the French catalogues and the
 	 * per-render copy modules, and the readiness/matrix/scenario helpers moved with
@@ -255,7 +260,7 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	 *  and the start route's `agent`/`team` handling. Source identity only — no
 	 *  U-08 scene, assertion or threshold changed here; not rendered evidence. */
 	"tools/mock-relay/scenarios.ts":
-		"dd89609b1d545f9bc77a7626dba2631a91349500a3c06fc0a022b464434476b2",
+		"2deef7ca1c9ef321117595df7562c1726b4f3f58c4d59f7b6aa5122968f190f9",
 	"tools/mock-relay/shape.ts":
 		"0ef0c342578ffaf4a7067d4427f10a999740152d6a56ec2da63d75697f08fb5b",
 	/* The startup evidence helper the fixture's relay imports. It has been loaded by

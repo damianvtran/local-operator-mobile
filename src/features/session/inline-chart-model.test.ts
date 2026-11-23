@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+	chartAxisLabels,
 	chartTickLabel,
+	histogramAxisLabels,
 	type InlineChart,
 	inlineChartModel,
 } from "./inline-chart-model";
@@ -86,7 +88,9 @@ describe("inline chart geometry", () => {
 			{ x: 0.1, y: 0.5 },
 			{ x: 1, y: 0.5 },
 		]);
-		expect(scatter.left.ticks).toEqual([{ position: 0.5, value: 1 }]);
+		expect(chartAxisLabels(scatter.left, "en").ticks).toMatchObject([
+			{ position: 0.5, label: "10" },
+		]);
 	});
 
 	it("normalizes large pie weights without overflow and closes the circle", () => {
@@ -175,12 +179,54 @@ describe("inline chart geometry", () => {
 		});
 		expect(left.unit).toBe("items");
 		expect(right?.unit).toBe("ms");
+		if (!right) throw new Error("Expected the right axis");
 		expect(left.scale).toBe(1000);
-		expect(right?.scale).toBe(10);
+		expect(right.scale).toBe(10);
+		expect(chartAxisLabels(left, "en").ticks.map(({ label }) => label)).toEqual(
+			["-500", "0", "1,000"],
+		);
+		expect(
+			chartAxisLabels(right, "en").ticks.map(({ label }) => label),
+		).toEqual(["-5", "0", "10"]);
 		expect(right?.zero).toBe(left.zero);
 		expect(bars).toBeUndefined();
 		expect(lines?.[0]?.[0]?.y).toBeCloseTo(0.4);
 		expect(lines?.[0]?.[1]?.y).toBe(1);
 		expect(lines?.[1]?.map(({ y }) => y)).toEqual([0, 1]);
+	});
+});
+
+describe("compact chart labels", () => {
+	it.each([
+		[[10000, 10001, 10002], "10,000", ["0", "1", "2"]],
+		[[0.0001, 0.00010001, 0.00010002], "1E-4", ["0", "1.0e-8", "2.0e-8"]],
+		[[10, 11, 12], undefined, ["10", "11", "12"]],
+		[[9007199254740990, 9007199254740991], "9.00719925474099E15", ["0", "1"]],
+	] as const)(
+		"distinguishes visible ticks for %j",
+		(values, offset, labels) => {
+			const { left } = plot({
+				type: "line",
+				title: "Close readings",
+				data: values.map((n, i) => [String(i), n]),
+			});
+			const actual = chartAxisLabels(left, "en");
+			expect(actual.offset).toBe(offset);
+			expect(actual.ticks.map(({ label }) => label)).toEqual(labels);
+		},
+	);
+
+	it("only factors a unanimous interval unit without changing endpoint text", () => {
+		const labels = ["0–50 ms", "50–100 ms", "100–150 ms", "150–200 ms"];
+		expect(histogramAxisLabels(labels)).toEqual({
+			labels: ["0–50", "50–100", "100–150", "150–200"],
+			unit: "ms",
+		});
+		expect(labels[2]).toBe("100–150 ms");
+		const mixed = ["0–50 ms", "Other"];
+		expect(histogramAxisLabels(mixed)).toEqual({
+			labels: mixed,
+			unit: undefined,
+		});
 	});
 });

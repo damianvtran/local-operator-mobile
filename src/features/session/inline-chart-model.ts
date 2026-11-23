@@ -17,6 +17,14 @@ type Bar = {
 type Tick = { position: number; value: number };
 type Axis = { ticks: Tick[]; unit?: string; zero: number; scale: number };
 
+// Line and scatter domains can zoom into nearby nonzero values. In the
+// wire domain, their absolute coordinates cannot overflow; keeping those
+// values avoids rounding their axis origin through normalization.
+const axisScale = (values: readonly number[]) => {
+	const max = scaledSeries(values);
+	return max <= Number.MAX_SAFE_INTEGER ? 1 : max;
+};
+
 type Cartesian = {
 	kind: "cartesian";
 	left: Axis;
@@ -53,7 +61,7 @@ function axis([min, max]: [number, number], scale: number, unit?: string) {
 		scale,
 		unit,
 		zero: position(0),
-		ticks: (constant ? [min] : [min, middle, max]).map((value) => ({
+		ticks: [...new Set(constant ? [min] : [min, middle, max])].map((value) => ({
 			position: position(value),
 			value,
 		})),
@@ -76,8 +84,8 @@ export function inlineChartModel(chart: InlineChart): Cartesian | Pie {
 	if (chart.type === "scatter") {
 		const xs = chart.data.map(([x]) => x);
 		const ys = chart.data.map(([, y]) => y);
-		const sx = scaledSeries(xs);
-		const sy = scaledSeries(ys);
+		const sx = axisScale(xs);
+		const sy = axisScale(ys);
 		const xAxis = axis(
 			extent(
 				xs.map((x) => x / sx),
@@ -106,9 +114,9 @@ export function inlineChartModel(chart: InlineChart): Cartesian | Pie {
 	}
 	if (chart.type !== "series") {
 		const values = chart.data.map(([, n]) => n);
-		const scale = scaledSeries(values);
-		const scaled = values.map((n) => n / scale);
 		const line = chart.type === "line";
+		const scale = line ? axisScale(values) : scaledSeries(values);
+		const scaled = values.map((n) => n / scale);
 		const left = axis(extent(scaled, !line), scale, chart.unit);
 		const width = 1 / values.length;
 		const center = (i: number) => (i + 0.5) * width;
@@ -240,4 +248,57 @@ export function chartTickLabel(
 	if (Number.isFinite(number)) return number.toExponential(1);
 	const exponent = Math.floor(Math.log10(scale));
 	return `${(value * (scale / 10 ** exponent)).toFixed(1)}e${exponent}`;
+}
+
+/** If compact absolute labels collide, put their shared origin in the axis
+ * caption. The rails can show small deltas without clipping extra digits. */
+export function chartAxisLabels(axis: Axis, locale: string) {
+	const ticks = axis.ticks.map((tick) => ({
+		...tick,
+		label: chartTickLabel(tick.value, axis.scale, locale),
+	}));
+	const absolute = { ticks, offset: undefined };
+	if (new Set(ticks.map(({ label }) => label)).size === ticks.length)
+		return absolute;
+
+	const first = ticks[0];
+	if (!first) return absolute;
+	const origin = first.value * axis.scale;
+	if (!Number.isFinite(origin)) return absolute;
+	const distinct = ticks.map(({ value, position }) => ({
+		value,
+		position,
+		delta: (value - first.value) * axis.scale,
+	}));
+	const originMagnitude = Math.abs(origin);
+	const exactOrigin = new Intl.NumberFormat(locale, {
+		notation:
+			originMagnitude !== 0 &&
+			(originMagnitude < 0.001 || originMagnitude >= 1e9)
+				? "scientific"
+				: "standard",
+		maximumSignificantDigits: 17,
+	}).format(origin);
+	return {
+		offset: exactOrigin,
+		ticks: distinct.map(({ value, position, delta }) => ({
+			value,
+			position,
+			label: chartTickLabel(delta, 1, locale),
+		})),
+	};
+}
+
+/** A histogram's count unit is not the interval unit. Only lift a common
+ * suffix when every label is a numeric range with that same suffix; custom
+ * or mixed labels keep their original text. The exact grid never uses this. */
+const INTERVAL_WITH_UNIT =
+	/^([+-]?(?:\d+(?:\.\d+)?|\.\d+)\s*–\s*[+-]?(?:\d+(?:\.\d+)?|\.\d+))\s+(\S.*)$/u;
+
+export function histogramAxisLabels(labels: readonly string[]) {
+	const parsed = labels.map((label) => INTERVAL_WITH_UNIT.exec(label));
+	const unit = parsed[0]?.[2];
+	if (!unit || !parsed.every((match) => match?.[2] === unit))
+		return { labels, unit: undefined };
+	return { labels: parsed.map((match) => match?.[1] ?? ""), unit };
 }

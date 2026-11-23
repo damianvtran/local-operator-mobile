@@ -1,4 +1,8 @@
-import { decodeInlineSeries, type InlineSeries } from "./inline-series";
+import {
+	decodeInlineSeries,
+	type InlineSeries,
+	isInlineNumber,
+} from "./inline-series";
 
 export type CategoryChart = {
 	type: "bar" | "line" | "pie" | "histogram";
@@ -52,8 +56,6 @@ const isText = (value: unknown): value is string =>
 	typeof value === "string" && value.length <= 256;
 const isLabel = (value: unknown): value is string =>
 	isText(value) && value.trim().length > 0;
-const isNumber = (value: unknown): value is number =>
-	typeof value === "number" && Number.isFinite(value);
 
 export function decodeInlineUi(value: unknown): InlineUi | null {
 	if (!value || typeof value !== "object" || Array.isArray(value)) return null;
@@ -78,7 +80,7 @@ export function decodeInlineUi(value: unknown): InlineUi | null {
 					Array.isArray(point) &&
 					point.length === 2 &&
 					isLabel(point[0]) &&
-					isNumber(point[1]) &&
+					isInlineNumber(point[1]) &&
 					(type !== "pie" || point[1] > 0) &&
 					(type !== "histogram" || point[1] >= 0),
 			)
@@ -95,7 +97,9 @@ export function decodeInlineUi(value: unknown): InlineUi | null {
 			data.length > MAX_ROWS ||
 			!data.every(
 				(point): point is [number, number] =>
-					Array.isArray(point) && point.length === 2 && point.every(isNumber),
+					Array.isArray(point) &&
+					point.length === 2 &&
+					point.every(isInlineNumber),
 			)
 		)
 			return null;
@@ -119,14 +123,14 @@ export function decodeInlineUi(value: unknown): InlineUi | null {
 				rowLabels.length !== rows.length ||
 				!rowLabels.every(isLabel) ||
 				!rows.every((row): row is (number | null)[] =>
-					row.every((cell: unknown) => cell === null || isNumber(cell)),
+					row.every((cell: unknown) => cell === null || isInlineNumber(cell)),
 				)
 			)
 				return null;
 			return { type, title, unit, columns, rowLabels, rows };
 		}
 		const isValue = (cell: unknown): cell is string | number =>
-			isText(cell) || isNumber(cell);
+			isText(cell) || isInlineNumber(cell);
 		if (type === "spreadsheet") {
 			if (
 				!rows.every((row): row is (string | number | null)[] =>

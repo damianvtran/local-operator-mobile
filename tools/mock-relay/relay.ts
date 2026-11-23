@@ -1593,6 +1593,7 @@ export function createRelay(options: RelayOptions = {}) {
 
 	const sessionFrames = (
 		projection: SessionProjection,
+		serialize: (frame: SessionProjection) => SessionProjection,
 	): ((tick: number) => StreamFrame | "end" | null) => {
 		const stream = state.world.stream ?? { mode: "idle" };
 		if (stream.mode === "idle") {
@@ -1607,7 +1608,7 @@ export function createRelay(options: RelayOptions = {}) {
 				const current = projection.version ?? 1;
 				if (current <= sent) return null;
 				sent = current;
-				return { event: "projection", data: structuredClone(projection) };
+				return { event: "projection", data: serialize(projection) };
 			};
 		}
 		if (stream.mode !== "streaming") return () => null;
@@ -1626,7 +1627,7 @@ export function createRelay(options: RelayOptions = {}) {
 					? `${text}\n\nReconciliation finished: 214 files scanned, 3 edits applied.`
 					: `${text}${" ".repeat(0)}${tick === 0 ? "" : "\n"}pass ${tick}: scanning shard ${tick}…`;
 			}
-			const frame = structuredClone(projection);
+			const frame = { ...projection };
 			frame.version = version;
 			frame.streaming = !settled;
 			frame.activity = settled ? "" : "responding";
@@ -1671,7 +1672,7 @@ export function createRelay(options: RelayOptions = {}) {
 			// the client must drop `incoming.version < current.version`.
 			if (state.faults.sse.staleVersion && tick === settleAfter - 1)
 				frame.version = Math.max(1, version - 5);
-			return { event: "projection", data: frame };
+			return { event: "projection", data: serialize(frame) };
 		};
 	};
 
@@ -3402,23 +3403,25 @@ export function createRelay(options: RelayOptions = {}) {
 						frames: () => null,
 					});
 				}
-				const snapshot = () => ({
-					...structuredClone(projection),
-					...withChartMessages(projection.transcript ?? []),
+				// As on the real relay, negotiation applies at serialization of
+				// every outgoing snapshot, not just the stream's initial seed.
+				const snapshot = (frame: SessionProjection) => ({
+					...structuredClone(frame),
+					...withChartMessages(frame.transcript),
 				});
-				const seedProjection = snapshot();
+				const seedProjection = snapshot(projection);
 				return openStream(req, res, {
 					kind: "projection",
 					seed:
 						stream.mode === "keepalive-only"
 							? null
 							: { event: "projection", data: seedProjection },
-					frames: sessionFrames(projection),
+					frames: sessionFrames(projection, snapshot),
 					// The duplicate provider reads the live projection, so the second copy
 					// carries the admitted command's row and the version that announces it.
 					duplicate: () => ({
 						event: "projection",
-						data: snapshot(),
+						data: snapshot(projection),
 					}),
 				});
 			}

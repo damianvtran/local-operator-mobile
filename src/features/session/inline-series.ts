@@ -17,11 +17,17 @@ const isText = (value: unknown): value is string =>
 	typeof value === "string" && value.length <= 256;
 const isLabel = (value: unknown): value is string =>
 	isText(value) && value.trim().length > 0;
-const isNumber = (value: unknown): value is number =>
-	typeof value === "number" && Number.isFinite(value);
+// JSON.parse has already rounded an unsafe integer by this point. Core
+// sends out-of-domain grid numbers as strings and leaves unsupported plots
+// as prose; reject old or malformed overlays rather than claim rounded data
+// is exact. Fractional values within the shared domain are still numbers.
+export const isInlineNumber = (value: unknown): value is number =>
+	typeof value === "number" &&
+	Number.isFinite(value) &&
+	Math.abs(value) <= Number.MAX_SAFE_INTEGER;
 
-/** Work in relative units before adding stacks: the wire allows finite values
- * near Number.MAX_VALUE, whose raw sum (or signed domain width) can overflow. */
+/** Work in relative units for ratios, and keep chart geometry safe even for
+ * standalone callers with values outside the decoded wire domain. */
 export function scaledSeries(values: readonly number[]): number {
 	return values.reduce((max, n) => Math.max(max, Math.abs(n)), 0) || 1;
 }
@@ -84,7 +90,7 @@ export function decodeInlineSeries(
 			!isLabel(label) ||
 			!Array.isArray(values) ||
 			values.length !== labels.length ||
-			!Array.from(values).every(isNumber) ||
+			!Array.from(values).every(isInlineNumber) ||
 			(axis !== undefined && axis !== "left" && axis !== "right") ||
 			(mode === "dual" && axis === undefined)
 		) {
@@ -104,8 +110,8 @@ export function decodeInlineSeries(
 	)
 		return null;
 
-	// With no negatives, a positive member proves a positive total without
-	// adding finite values that might overflow Number.MAX_VALUE.
+	// With no negatives, a positive member suffices to prove a positive total;
+	// there's no need to sum a category again during decode.
 	if (
 		mode === "percent" &&
 		(series.some(({ values }) => values.some((n) => n < 0)) ||

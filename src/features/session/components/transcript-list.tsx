@@ -22,6 +22,7 @@ import { anchorBottomVisible } from "@/features/session/completion-visibility";
 import type { BridgeBodyLoader } from "@/features/session/components/bridge-card-body";
 import { FoldBar } from "@/features/session/components/fold-bar";
 import { GroupGuides } from "@/features/session/components/group-guides";
+import { ChartDataResizeContext } from "@/features/session/components/inline-ui-preview";
 import { JumpToLatestChip } from "@/features/session/components/jump-to-latest-chip";
 import { OlderHistoryEdge } from "@/features/session/components/older-history-edge";
 import { QuietGroupBar } from "@/features/session/components/quiet-group-bar";
@@ -771,6 +772,10 @@ export const TranscriptList = ({
 	/* Set by a reader's own expand or collapse, consumed by the content-size
 	 *  change that toggle causes: see `onContentSizeChange`. */
 	const foldResizeRef = useRef(false);
+	const chartResizeAt = useRef<typeof previousRows.current>(null);
+	const markChartResize = useCallback(() => {
+		chartResizeAt.current = previousRows.current;
+	}, []);
 	/* The resize mark is set ONLY when the open state really changes (round 2,
 	 *  U10 / Q9 / m-r2-1). A press that asks for the state the row already has
 	 *  produces no content-size change to consume it, so the mark would sit armed
@@ -1746,7 +1751,17 @@ export const TranscriptList = ({
 						return;
 					}
 				}
-				if (foldResizeRef.current) {
+				// A small disclosure may not change total content height. Scope its
+				// mark to the rows the reader acted on so it cannot handle the next
+				// incoming message in place of a resize that never fired.
+				const chartResize = chartResizeAt.current;
+				chartResizeAt.current = null;
+				if (
+					foldResizeRef.current ||
+					(chartResize !== null &&
+						chartResize.session === sessionId &&
+						chartResize.rows === previousRows.current?.rows)
+				) {
 					/* A READER'S EXPAND IS NOT CONTENT ARRIVING (review round 1, m4 /
 					 *  U4). Opening a fold at the tail grew the content, the tail pin
 					 *  below followed it, and the header the reader just tapped slid
@@ -2023,19 +2038,23 @@ export const TranscriptList = ({
 					{/* Always provided (0 outside a group), so opening or closing a
 					 *  bar never changes the row's element tree and never remounts it. */}
 					<GroupInsetContext.Provider value={depth * GROUP_STEP_PT}>
-						<TranscriptRow
-							entry={item.entry}
-							condensed={item.condensed === true}
-							streaming={streamingRowId !== null && item.id === streamingRowId}
-							loadImage={loadImage}
-							loadFile={loadFile}
-							onOpenAgent={onOpenAgent}
-							onOpenVideo={onOpenVideo}
-							loadBridgeBody={loadBridgeBody}
-							onCancelTurn={onCancelTurn}
-							open={rowOpen.get(canonicalRowKey(item.entry))}
-							onToggleOpen={toggleRowOpen}
-						/>
+						<ChartDataResizeContext.Provider value={markChartResize}>
+							<TranscriptRow
+								entry={item.entry}
+								condensed={item.condensed === true}
+								streaming={
+									streamingRowId !== null && item.id === streamingRowId
+								}
+								loadImage={loadImage}
+								loadFile={loadFile}
+								onOpenAgent={onOpenAgent}
+								onOpenVideo={onOpenVideo}
+								loadBridgeBody={loadBridgeBody}
+								onCancelTurn={onCancelTurn}
+								open={rowOpen.get(canonicalRowKey(item.entry))}
+								onToggleOpen={toggleRowOpen}
+							/>
+						</ChartDataResizeContext.Provider>
 					</GroupInsetContext.Provider>
 					{/* The completion anchor: a zero-size sibling at the row's bottom edge
 					 * (an element carries one testID, so the anchor is its own element —
@@ -2081,6 +2100,7 @@ export const TranscriptList = ({
 			gapMarker,
 			spacingTiers,
 			containment,
+			markChartResize,
 		],
 	);
 

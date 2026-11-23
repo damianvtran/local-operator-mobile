@@ -245,7 +245,7 @@ it("negotiates live and paged overlays over HTTP and falls back to legacy prose"
 				...seed,
 				version: 1,
 				...(rich && {
-					inline_ui: { version: 1, messages: { current: envelope(4) } },
+					inline_ui: { version: 1, messages: { current: envelope(6) } },
 				}),
 			});
 			// A later full frame must remove only the addressed rich content, even
@@ -271,7 +271,7 @@ it("negotiates live and paged overlays over HTTP and falls back to legacy prose"
 					...(rich && {
 						inline_ui: {
 							version: 1,
-							messages: { [row.id]: envelope(4), current: envelope(4) },
+							messages: { [row.id]: envelope(6), current: envelope(6) },
 						},
 					}),
 				}),
@@ -321,9 +321,9 @@ it("negotiates live and paged overlays over HTTP and falls back to legacy prose"
 		try {
 			await vi.waitFor(() => expect(observed).toHaveLength(3));
 			const rich = [
-				{ kind: "markdown", text: "Hi😀" },
+				{ kind: "markdown", text: "Hi😀\r\n" },
 				{ kind: "ui", value: widget },
-				{ kind: "markdown", text: "\r\nBye" },
+				{ kind: "markdown", text: "Bye" },
 			];
 			expect(observed).toEqual([rich, live.text, live.text]);
 			await window.load();

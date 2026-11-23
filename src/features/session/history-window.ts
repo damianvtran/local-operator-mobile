@@ -323,6 +323,23 @@ export class HistoryWindow {
 		);
 	}
 
+	seedFromCache(projection: SessionProjection | null): void {
+		if (
+			!this.active ||
+			!projection ||
+			this.projection ||
+			this.read === "ok" ||
+			this.rows.length > 0
+		)
+			return;
+		// Warm storage intentionally drops inline overlays. It can fill an empty
+		// first paint, but it cannot replace HTTP history or win a pending page's
+		// revision fence. A real frame still goes through accept(), even if it
+		// has the same row ids or version as this snapshot.
+		this.seedCursor(projection.transcript, projection.transcript_head_pinned);
+		this.rows = projection.transcript;
+	}
+
 	accept(projection: SessionProjection | null): void {
 		if (!this.active || !projection || projection === this.projection) return;
 		this.projection = projection;

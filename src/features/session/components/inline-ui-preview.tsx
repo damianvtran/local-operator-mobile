@@ -1,5 +1,5 @@
 // biome-ignore-all lint/suspicious/noArrayIndexKey: a decoded payload replaces the whole matrix; positions identify cells even when labels repeat.
-import { useState } from "react";
+import { createContext, useContext, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import type { InlineChart } from "@/features/session/inline-chart-model";
@@ -83,6 +83,10 @@ export const inlineUiPlainText = ({ title, header, rows }: InlineUiData) =>
 		...rows.map((row) => row.join("\t")),
 	].join("\n");
 
+// A chart can also render outside a scrolling transcript (e.g. the visual
+// fixture); only the host that owns the scroll offset handles the resize.
+export const ChartDataResizeContext = createContext<(() => void) | null>(null);
+
 function ChartDisclosure({
 	chart,
 	data,
@@ -91,6 +95,7 @@ function ChartDisclosure({
 	data: InlineUiData;
 }) {
 	const [expanded, setExpanded] = useState(false);
+	const markReaderResize = useContext(ChartDataResizeContext);
 	const ink = useTokenColor("ink-muted");
 	const label = t("mobile.session.inline_chart_data");
 	return (
@@ -103,7 +108,10 @@ function ChartDisclosure({
 				accessibilityLabel={`${label} · ${data.title}`}
 				aria-expanded={expanded}
 				className="min-h-12 flex-row items-center gap-2 border border-transparent px-3 active:bg-row-hover web:focus-visible:border-accent"
-				onPress={() => setExpanded((open) => !open)}
+				onPress={() => {
+					markReaderResize?.();
+					setExpanded((open) => !open);
+				}}
 			>
 				<Text className="shrink text-body-sm text-ink-muted">{label}</Text>
 				<Svg aria-hidden width={16} height={16} viewBox="0 0 16 16">
