@@ -1,6 +1,11 @@
-import { createElement, type ReactNode } from "react";
+import { act, createElement, type ReactNode, type Ref } from "react";
+import { createRoot } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { TranscriptEntry } from "@/contracts";
+import type { AssistantPart } from "@/features/session/inline-ui-parts";
+import { useStreamArrival } from "@/features/session/stream-arrival";
+import { installDomShim } from "@/testing/dom-shim";
 
 // Mount the real block/inline component tree; only native adapters/providers are
 // replaced. This proves dispatch/actions, not native layout (browser/device QA).
@@ -14,6 +19,11 @@ const host = vi.hoisted(() => ({
 	}[],
 	open: vi.fn(async (_url: string) => undefined),
 	copies: [] as (() => void)[],
+	disclosure: null as {
+		node: HTMLButtonElement;
+		expanded: boolean;
+		press: () => void;
+	} | null,
 	/* Every Pressable's accessibility contract, in mount order (PR #233 R1, M1). */
 	pressables: [] as {
 		accessible?: boolean;
@@ -45,11 +55,13 @@ vi.mock("react-native", async () => {
 		accessibilityRole,
 		accessibilityActions,
 		onPress,
+		ref,
 		...rest
 	}: {
 		children: ReactNode;
 		accessibilityRole?: string;
 		accessibilityActions?: { name: string }[];
+		ref?: Ref<HTMLElement>;
 		className?: string;
 		style?: unknown;
 		testID?: string;
@@ -63,6 +75,7 @@ vi.mock("react-native", async () => {
 		return createElement(
 			accessibilityRole === "link" ? "a" : "span",
 			{
+				ref,
 				role: accessibilityRole,
 				"data-actions": accessibilityActions?.map((a) => a.name).join(","),
 				...hostProps(rest),
@@ -72,13 +85,15 @@ vi.mock("react-native", async () => {
 	};
 	const view = ({
 		children,
+		ref,
 		...rest
 	}: {
 		children: ReactNode;
+		ref?: Ref<HTMLElement>;
 		className?: string;
 		style?: unknown;
 		testID?: string;
-	}) => createElement("div", hostProps(rest), children);
+	}) => createElement("div", { ...hostProps(rest), ref }, children);
 	return {
 		Text: text,
 		View: view,
@@ -86,6 +101,7 @@ vi.mock("react-native", async () => {
 		Pressable: ({
 			children,
 			onLongPress,
+			onPress,
 			accessible,
 			accessibilityRole,
 			"aria-expanded": expanded,
@@ -93,6 +109,7 @@ vi.mock("react-native", async () => {
 		}: {
 			children: ReactNode;
 			onLongPress?: () => void;
+			onPress?: () => void;
 			"aria-expanded"?: boolean;
 			accessibilityLabel?: string;
 			accessible?: boolean;
@@ -107,7 +124,14 @@ vi.mock("react-native", async () => {
 			return expanded !== undefined
 				? createElement(
 						"button",
-						{ "aria-expanded": expanded, "aria-label": accessibilityLabel },
+						{
+							"aria-expanded": expanded,
+							"aria-label": accessibilityLabel,
+							ref: (node: HTMLButtonElement | null) => {
+								if (node && onPress)
+									host.disclosure = { node, expanded, press: onPress };
+							},
+						},
 						children,
 					)
 				: view({ children });
@@ -159,6 +183,275 @@ vi.mock("@/features/session/table-scroll-hook", () => ({
 
 import { inlineUiData, inlineUiPlainText } from "./inline-ui-preview";
 import { Markdown } from "./markdown";
+
+function nodeText(node: Node): string {
+	return node.nodeValue ?? Array.from(node.childNodes, nodeText).join("");
+}
+
+function ownsNode(owner: Node, child: Node): boolean {
+	for (let node: Node | null = child; node; node = node.parentNode) {
+		if (node === owner) return true;
+	}
+	return false;
+}
+
+async function withWebMount(
+	work: (host: ReturnType<typeof webMount>) => Promise<void>,
+) {
+	const host = webMount();
+	try {
+		await work(host);
+	} finally {
+		await act(async () => host.root.unmount());
+		host.dom.dispose();
+	}
+}
+
+function webMount() {
+	host.os = "web";
+	const dom = installDomShim();
+	const container = dom.container as Element;
+	const doc = container.ownerDocument;
+	const root = createRoot(container);
+	const fades: {
+		node: HTMLElement;
+		cancel: ReturnType<typeof vi.fn>;
+		keyframes: Keyframe[] | PropertyIndexedKeyframes | null;
+		options?: number | KeyframeAnimationOptions;
+	}[] = [];
+	const listeners = new Set<EventListenerOrEventListenerObject>();
+	let chosen: Node[] = [];
+	const create = doc.createElement.bind(doc);
+	const add = doc.addEventListener.bind(doc);
+	const remove = doc.removeEventListener.bind(doc);
+	Object.assign(doc, {
+		createElement(tag: string) {
+			const node = create(tag);
+			Object.assign(node, {
+				tagName: tag.toUpperCase(),
+				nodeName: tag.toUpperCase(),
+			});
+			Object.defineProperty(node, "isConnected", {
+				get: () => ownsNode(container, node),
+			});
+			// React's single-text fast path writes textContent, whereas the basic
+			// shim only stores a string. Give that path an inspectable text node.
+			Object.defineProperty(node, "textContent", {
+				get: () => Array.from(node.childNodes, nodeText).join(""),
+				set(text: string) {
+					for (const child of Array.from(node.childNodes))
+						node.removeChild(child);
+					if (text) node.appendChild(doc.createTextNode(text));
+				},
+			});
+			node.animate = vi.fn((keyframes, options) => {
+				const cancel = vi.fn();
+				fades.push({ node, cancel, keyframes, options });
+				return { cancel } as unknown as Animation;
+			});
+			return node;
+		},
+		// React uses the namespace factory for the mocked SVG plot element.
+		createElementNS: (_namespace: string, tag: string) =>
+			doc.createElement(tag),
+		getSelection: () => ({
+			isCollapsed: chosen.length === 0,
+			rangeCount: chosen.length === 0 ? 0 : 1,
+			// The shim has no live Range. Model endpoint ancestry here; the
+			// browser replay checks actual Range endpoints, offsets and text.
+			getRangeAt: () => ({
+				intersectsNode: (node: Node) =>
+					chosen.some((endpoint) => ownsNode(node, endpoint)),
+			}),
+		}),
+		addEventListener(
+			type: string,
+			listener: EventListenerOrEventListenerObject,
+		) {
+			if (type === "selectionchange") listeners.add(listener);
+			else add(type, listener);
+		},
+		removeEventListener(
+			type: string,
+			listener: EventListenerOrEventListenerObject,
+		) {
+			if (type === "selectionchange") listeners.delete(listener);
+			else remove(type, listener);
+		},
+	});
+	const motion = {};
+	return {
+		container,
+		dom,
+		fades,
+		root,
+		draw: async (
+			text: string,
+			previousText?: string,
+			streaming = true,
+			assistantParts?: readonly AssistantPart[],
+		) =>
+			act(async () =>
+				root.render(
+					createElement(Markdown, {
+						text,
+						assistantParts,
+						streaming,
+						arrival:
+							previousText === undefined
+								? null
+								: { previousText, sealed: false },
+						motion: streaming ? motion : null,
+					}),
+				),
+			),
+		select: (...nodes: Node[]) => {
+			chosen = nodes;
+		},
+		clearSelection: async () =>
+			act(async () => {
+				chosen = [];
+				for (const listener of listeners) {
+					if (typeof listener === "function")
+						listener(new Event("selectionchange"));
+				}
+			}),
+	};
+}
+
+it.each(["prefix", "suffix", "crossing", "unrelated"])(
+	"handles %s selection across a matching final without replaying the fade",
+	async (selection) => {
+		await withWebMount(
+			async ({ container, draw, fades, select, clearSelection }) => {
+				const seed = "Existing prose.";
+				const text = `${seed} Select these words.`;
+				await draw(seed);
+				await draw(text, seed);
+				expect(fades).toHaveLength(1);
+				const fade = fades[0];
+				const span = fade?.node.parentNode;
+				const prefix = span?.childNodes[0];
+				const suffix = fade?.node.childNodes[0];
+				if (!fade || !span || !prefix || !suffix)
+					throw new Error("Missing selectable split nodes");
+				const { node, cancel } = fade;
+				expect(nodeText(prefix)).toBe(seed);
+				expect(nodeText(suffix)).toBe(" Select these words.");
+				if (selection === "unrelated") select(container);
+				else if (selection === "prefix") select(prefix);
+				else if (selection === "suffix") select(suffix);
+				else select(prefix, suffix);
+				await draw(text, undefined, false);
+				expect(cancel).toHaveBeenCalledOnce();
+				expect(fades).toHaveLength(1);
+				expect(nodeText(container)).toBe(text);
+				if (selection === "unrelated") {
+					expect(node.parentNode).toBeNull();
+				} else {
+					expect(prefix.parentNode).toBe(span);
+					expect(suffix.parentNode).toBe(node);
+					expect(node.parentNode).toBe(span);
+				}
+				await clearSelection();
+				expect(node.parentNode).toBeNull();
+				expect(nodeText(container)).toBe(text);
+			},
+		);
+	},
+);
+
+it("cancels prose paint when an open fence becomes code without restarting or replacing the wrapper", async () => {
+	await withWebMount(async ({ draw, fades }) => {
+		const seed = "Existing paragraph.";
+		const prose = `${seed}\n\n\x60\x60`;
+		const code = `${prose}\x60sh\nprintf adopted\n\x60\x60\x60`;
+		await draw(seed);
+		await draw(prose, seed);
+		expect(fades).toHaveLength(1);
+		const fade = fades[0];
+		if (!fade) throw new Error("Missing prose fade");
+		expect(fade.keyframes).toEqual([{ opacity: 0.55 }, { opacity: 1 }]);
+		await draw(code, prose);
+		expect(fade.cancel).toHaveBeenCalledOnce();
+		expect(fades).toHaveLength(1);
+		expect(fade.node.isConnected).toBe(true);
+		expect(nodeText(fade.node)).toContain("printf adopted");
+	});
+});
+
+it("fades code from fresh source even if the preceding paragraph grows, without fading replay or adopted source", async () => {
+	await withWebMount(async ({ draw, fades }) => {
+		const seed = "Existing paragraph.";
+		const live = `${seed} More prose.\n\n\x60\x60\x60sh\nprintf hello\n\x60\x60\x60`;
+		await draw(seed);
+		await draw(live, seed);
+		const hosts = fades.map(({ node }) => [
+			node.tagName.toLowerCase(),
+			nodeText(node),
+		]);
+		expect(hosts).toEqual([
+			["span", " More prose."],
+			["div", expect.stringContaining("printf hello")],
+		]);
+		expect(fades[0]?.keyframes).toEqual([{ opacity: 0.55 }, { opacity: 1 }]);
+		expect(fades[1]?.keyframes).toEqual([{ opacity: 0.96 }, { opacity: 1 }]);
+		expect(fades[1]?.options).not.toHaveProperty("delay");
+		await draw(live); // An identical snapshot has no birth cue.
+		expect(fades).toHaveLength(2);
+	});
+	await withWebMount(async ({ container, draw, fades }) => {
+		const oldFence = "Existing paragraph.\n\n\x60\x60";
+		await draw(oldFence);
+		await draw(`${oldFence}\x60sh\nprintf adopted\n\x60\x60\x60`, oldFence);
+		expect(nodeText(container)).toContain("printf adopted");
+		expect(fades).toHaveLength(0);
+	});
+});
+
+it("retires cancelled and skipped block births when Reduce Motion is turned off", async () => {
+	await withWebMount(async ({ root, fades }) => {
+		function Live({ text, reduce }: { text: string; reduce: boolean }) {
+			const row = {
+				id: "assistant",
+				kind: "assistant",
+				text,
+			} as TranscriptEntry;
+			const { arrival, motion } = useStreamArrival(
+				"session",
+				1,
+				row,
+				row.id,
+				[row],
+				reduce,
+			);
+			return createElement(Markdown, {
+				text,
+				streaming: true,
+				arrival,
+				motion,
+			});
+		}
+		const draw = async (text: string, reduce = false) =>
+			act(async () => root.render(createElement(Live, { text, reduce })));
+		await draw("Seed paragraph.");
+		const live = "Seed paragraph.\n\nFirst block.";
+		await draw(live);
+		expect(fades).toHaveLength(1);
+		await draw(live, true);
+		expect(fades[0]?.cancel).toHaveBeenCalledOnce();
+		await draw(live);
+		expect(fades).toHaveLength(1);
+		const skipped = `${live}\n\nSkip this block.`;
+		await draw(skipped, true);
+		await draw(skipped);
+		expect(fades).toHaveLength(1);
+		await draw(`${skipped}\n\nNext fresh block.`);
+		expect(fades).toHaveLength(2);
+		expect(fades[1]?.node.textContent).toBe("Next fresh block.");
+	});
+});
+
 import { GroupInsetContext } from "./trace-rail";
 
 const INLINE_UI_ORDER =
@@ -225,6 +518,35 @@ describe("rendered assistant markdown dispatch", () => {
 		expect(inlineUiPlainText(inlineUiData(value))).toBe(
 			"Mixed units\n\tVolume\tLatency\nMonday\t17009 items\t-12.375 ms",
 		);
+	});
+
+	it("keeps a negotiated chart open and unfaded through the matching final", async () => {
+		await withWebMount(async ({ container, draw, fades }) => {
+			const seed = "Existing prose.";
+			const parts: AssistantPart[] = [
+				{ kind: "markdown", text: seed },
+				{
+					kind: "ui",
+					value: { type: "bar", title: "Readings", data: [["Exact", 1.765]] },
+				},
+			];
+			const legacy = `${seed}\n\nLegacy chart listing`;
+			await draw(seed);
+			await draw(legacy, seed, true, parts);
+			const disclosure = host.disclosure;
+			if (!disclosure) throw new Error("Missing mounted chart disclosure");
+			expect(disclosure.expanded).toBe(false);
+			await act(async () => disclosure.press());
+			expect(host.disclosure?.expanded).toBe(true);
+
+			// Real SSE decoding can reconstruct the sidecar on the final frame.
+			await draw(legacy, undefined, false, structuredClone(parts));
+			expect(host.disclosure?.node).toBe(disclosure.node);
+			expect(host.disclosure?.expanded).toBe(true);
+			expect(nodeText(container)).toContain("1.765");
+			expect(nodeText(container)).not.toContain("Legacy chart listing");
+			expect(fades).toHaveLength(0);
+		});
 	});
 
 	it.each([

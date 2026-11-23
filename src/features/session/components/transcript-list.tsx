@@ -76,6 +76,7 @@ import {
 } from "@/features/session/reader-scroll-hold";
 import { reuseRows } from "@/features/session/row-identity";
 import { scrollAnchorFromHook } from "@/features/session/scroll-hook";
+import { useStreamArrival } from "@/features/session/stream-arrival";
 import { beatLive, type SupplementBeat } from "@/features/session/supplements";
 import {
 	textSelectionContainerScroll,
@@ -117,6 +118,7 @@ import {
 	REGION,
 	transcriptRowId,
 } from "@/ui/a11y";
+import { useReducedMotion } from "@/ui/appearance";
 import { Button } from "@/ui/components/button";
 import { cx } from "@/ui/variants";
 
@@ -186,6 +188,8 @@ export type TranscriptListProps = {
 	historyError?: string | null;
 	/** The row that carries `transcript-streaming`, or `null` when settled. */
 	streamingRowId: string | null;
+	streamArrivalEpoch?: number | null;
+	streamArrivalTail?: TranscriptEntry | null;
 	/** Whether a turn is running in this transcript right now. Decides whether
 	 *  the NEWEST turn may condense: an idle session condenses its finished last
 	 *  turn immediately (the relay's `!live` rule), a live one never touches it.
@@ -388,6 +392,8 @@ export const TranscriptList = ({
 	historyGapBefore = null,
 	historyError = null,
 	streamingRowId,
+	streamArrivalEpoch = null,
+	streamArrivalTail = null,
 	turnLive,
 	loadImage,
 	loadFile,
@@ -410,6 +416,16 @@ export const TranscriptList = ({
 	presence,
 	testID,
 }: TranscriptListProps) => {
+	// This reveal is optional; don't start one before the OS preference arrives.
+	const reduceMotion = useReducedMotion(true);
+	const { arrival, motion } = useStreamArrival(
+		sessionId,
+		streamArrivalEpoch,
+		streamArrivalTail,
+		streamingRowId,
+		entries,
+		reduceMotion,
+	);
 	const listRef = useRef<FlatList<TranscriptItem>>(null);
 	const webRows = useRef(new Map<string, View>());
 	/* The row the reader was looking at when an older page was requested, held
@@ -2045,6 +2061,8 @@ export const TranscriptList = ({
 								streaming={
 									streamingRowId !== null && item.id === streamingRowId
 								}
+								streamArrival={item.id === streamingRowId ? arrival : null}
+								streamMotion={item.id === streamingRowId ? motion : null}
 								loadImage={loadImage}
 								loadFile={loadFile}
 								onOpenAgent={onOpenAgent}
@@ -2084,6 +2102,8 @@ export const TranscriptList = ({
 			rowOpen,
 			toggleRowOpen,
 			streamingRowId,
+			arrival,
+			motion,
 			loadImage,
 			loadFile,
 			onOpenAgent,

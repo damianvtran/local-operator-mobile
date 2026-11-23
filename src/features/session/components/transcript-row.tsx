@@ -42,6 +42,7 @@ import {
 	peerLabel,
 	transcriptRowTestID,
 } from "@/features/session/projection";
+import type { StreamArrival } from "@/features/session/stream-arrival";
 import {
 	USER_BUBBLE_FRAME_CLASS,
 	userBubbleFill,
@@ -96,6 +97,8 @@ export type TranscriptRowProps = {
 	entry: DisplayTranscriptEntry;
 	/** The anchor `transcript-streaming` belongs on this row. */
 	streaming?: boolean;
+	streamArrival?: StreamArrival | null;
+	streamMotion?: object | null;
 	/** Resolves an attachment's bytes; threaded from the screen. */
 	loadImage?: (entryId: string, index: number) => Promise<string | null>;
 	loadFile?: (
@@ -197,6 +200,8 @@ const UserBox = ({
 const TranscriptRowBody = ({
 	entry,
 	streaming = false,
+	streamArrival = null,
+	streamMotion = null,
 	loadImage,
 	onOpenAgent,
 	onOpenVideo,
@@ -340,7 +345,13 @@ const TranscriptRowBody = ({
 		 *  the bug the fold exists to fix. Same rule as an `ask` below. */
 		return (
 			<View className="px-4 py-1" testID={testID}>
-				<Markdown text={entry.text} assistantParts={entry[LIVE_INLINE_UI]} />
+				<Markdown
+					text={entry.text}
+					assistantParts={entry[LIVE_INLINE_UI]}
+					streaming={streaming}
+					arrival={streamArrival}
+					motion={streamMotion}
+				/>
 				{/* An answer can carry inline images (a pasted chart, a returned
 				 *  screenshot) exactly as a prompt can; without this strip they were
 				 *  on the wire and nowhere on screen. Same strip as the user row's,
