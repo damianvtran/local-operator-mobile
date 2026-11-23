@@ -83,6 +83,15 @@ export const TAIL_DWELL_MS = 150;
  *  review's simulated drag-away-and-return traces (2026-11-23) 12 and 8 left some
  *  returning drags a pill and 6 did not. Tune it on TestFlight. */
 export const TOWARD_TAIL_MIN_PT = 6;
+/** The largest single step AWAY from the tail that is still jitter, in points. A
+ *  finger that has stopped (or lifts) still reports a sub-point wobble, and one
+ *  such step used to zero the run, so a fling TOWARD the tail shrank the dock and
+ *  nothing grew it back (review R4-2 / QA Q1). A step at or under this costs the
+ *  run only what it moved back; a larger one, or one that comes with the dock's own resize, ends the run.
+ *  A DESIGN VALUE like the rest, not a measurement: it sits under
+ *  `TOWARD_TAIL_MIN_PT`, so one wobble cannot undo a run that counted. Tune it on
+ *  TestFlight. */
+export const TOWARD_RESET_PT = 2;
 /** The least time between two scroll-driven flips. A tap, a send, a jump or a pin
  *  is the reader's intent and is not held. */
 export const HOLD_MS = 300;
@@ -171,7 +180,8 @@ export function createComposerCompaction(
 	 *  reader who peeked 30–80 pt up to travel 24 pt away AND back before the dock
 	 *  returns, which left a reader who dragged up a little and came back in a pill.
 	 *  `towardRun` is how far the finger's current run has carried the RAW offset
-	 *  toward the tail since the last reversal or touch; it is judged on the raw
+	 *  toward the tail since the last reversal (a step away over `TOWARD_RESET_PT`) or
+	 *  touch; it is judged on the raw
 	 *  offset, so the dock's own resize (which moves the viewport, not the offset)
 	 *  cannot feed it, and it only counts inside a drag, so the tail pin cannot
 	 *  either. */
@@ -259,6 +269,12 @@ export function createComposerCompaction(
 			 *  scrollable range, negative when everything already fits. A bounce on
 			 *  a short transcript has nowhere to go, so it must not shrink the dock. */
 			scrollable = offsetY + distanceToTail > 0;
+			/* An offset report that carries a NEW viewport is the dock's own resize
+			 *  talking (the list clamps its offset to the new end), not the finger. */
+			const resized =
+				viewportHeight !== undefined &&
+				viewport !== null &&
+				viewportHeight !== viewport;
 			if (viewportHeight !== undefined) viewport = viewportHeight;
 			const growth =
 				shrunk && flipViewport !== null && viewport !== null
@@ -276,7 +292,11 @@ export function createComposerCompaction(
 				 *  would read as a run toward the tail. */
 				const step = offsetY - (lastRawOffset ?? offsetY);
 				if (step > 0) towardRun += step;
-				else if (step < 0) towardRun = 0;
+				else if (step < 0)
+					towardRun =
+						resized || -step > TOWARD_RESET_PT
+							? 0
+							: Math.max(0, towardRun + step);
 				lastRawOffset = offsetY;
 				if (net >= SHRINK_DISTANCE_PT && scrollable) requestShrink();
 			}
@@ -287,7 +307,8 @@ export function createComposerCompaction(
 			dragging = false;
 			dragStart = null;
 			/* A fling TOWARD the tail from inside the band goes nowhere: shrinking
-			 *  there is a shape the dwell would undo 300 ms later. A fling AWAY from
+			 *  there is a shape the dwell would undo (the hold, `HOLD_MS` 300 ms from the
+			 *  last flip, then `TAIL_DWELL_MS` 150 ms). A fling AWAY from
 			 *  it that starts inside the band carries the reader off (QA Q3), so
 			 *  only a toward-tail drag is exempt. "Toward" comes from the finger's own
 			 *  offset motion (`towardRun`), never from the velocity's sign: iOS

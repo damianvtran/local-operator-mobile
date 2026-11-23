@@ -434,6 +434,47 @@ export const dictationDropsSend = (input: {
 }) => input.openForDictationOnly && input.startedFromPill;
 
 /**
+ * The card's trailing slot and whether its Send is dropped, decided TOGETHER
+ * (review R4-1 / QA Q2). They used to read two different rules for a blank draft:
+ * the slot the strict one (`actions`, which renders no mic while recording) and
+ * the Send the blank-aware one (dropped), so a ' ' draft with a take begun on the
+ * pill left an EMPTY slot and slid the ✓ off the finger. One function means they
+ * cannot disagree: Send is dropped only when the slot holds the mic or ✓ in its
+ * place.
+ *
+ * `restsAsCard` picks the rule. The card reads a whitespace-only draft as no draft
+ * (the pill's Send is already dead there, `pillShowsSend`). Short landscape keeps
+ * its one row and its Send, so ' ' stays a draft there and the slot stays
+ * `actions` through a take (R3-2), and nothing is dropped.
+ */
+export const dictationSlots = (input: {
+	facts: ComposerPresentationFacts;
+	restsAsCard: boolean;
+	startedFromPill: boolean;
+	recording: boolean;
+	micShown: boolean;
+}): { trailing: ControlsTrailing; dropSend: boolean } => {
+	const openForDictationOnly = openOnlyForDictation(input.facts, {
+		blankIsEmpty: input.restsAsCard,
+	});
+	const trailing = controlsTrailing({
+		openForDictationOnly,
+		recording: input.recording,
+		micShown: input.micShown,
+	});
+	return {
+		trailing,
+		dropSend:
+			input.restsAsCard &&
+			trailing !== "actions" &&
+			dictationDropsSend({
+				openForDictationOnly,
+				startedFromPill: input.startedFromPill,
+			}),
+	};
+};
+
+/**
  * The `selection` the composer forces on its field, or `null` for none (review R3).
  *
  * A native text view keeps its scroll offset, so a draft typed over several lines

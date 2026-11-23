@@ -8,6 +8,7 @@ import {
 	SHRINK_DISTANCE_PT,
 	TAIL_BAND_PT,
 	TAIL_DWELL_MS,
+	TOWARD_RESET_PT,
 	TOWARD_TAIL_MIN_PT,
 } from "./composer-compaction";
 
@@ -54,7 +55,8 @@ describe("the design values", () => {
 			TAIL_DWELL_MS,
 			HOLD_MS,
 			TOWARD_TAIL_MIN_PT,
-		]).toEqual([24, 1000, 16, 150, 300, 6]);
+			TOWARD_RESET_PT,
+		]).toEqual([24, 1000, 16, 150, 300, 6, 2]);
 		/* The band stays under the shrink distance so one drag cannot satisfy both
 		 *  rules at the boundary. */
 		expect(TAIL_BAND_PT).toBeLessThan(SHRINK_DISTANCE_PT);
@@ -642,6 +644,63 @@ describe("settling at the tail after a finger run toward it (UX U2)", () => {
 			vi.advanceTimersByTime(2000);
 			expect(peek.c.readShrunk(), `${net}`).toBe(true);
 		}
+	});
+});
+
+describe("a toward-tail fling and the last offset step (R4-2)", () => {
+	const END = 1700;
+	const VIEWPORT = 700;
+	const REST = END - VIEWPORT;
+	/** A reader parked 10 pt from the tail (the card) who drags toward it, past the
+	 *  end into the elastic overscroll, ends with one step of `lastStep` pt (negative
+	 *  = away from the tail) and flings at `velocity`. */
+	const flingToward = (lastStep: number, velocity: number) => {
+		const c = createComposerCompaction();
+		const at = (y: number) => c.noteOffset(y, END - y - VIEWPORT, VIEWPORT);
+		at(REST - 10);
+		c.beginDrag(REST - 10);
+		for (let s = 4; s <= 24; s += 4) at(REST - 10 + s);
+		at(REST - 10 + 24 + lastStep);
+		c.endDrag(velocity);
+		vi.advanceTimersByTime(HOLD_MS + TAIL_DWELL_MS + 1);
+		return c;
+	};
+
+	it("control: a clean toward fling from the band does not shrink, on either platform's sign", () => {
+		for (const velocity of [4000, -4000])
+			expect(flingToward(4, velocity).readShrunk(), `${velocity}`).toBe(false);
+	});
+
+	it("a wobble up to the jitter floor at the end does not make it a shrink", () => {
+		for (const away of [0.1, 0.5, 1, TOWARD_RESET_PT])
+			for (const velocity of [4000, -4000])
+				expect(
+					flingToward(-away, velocity).readShrunk(),
+					`${away} / ${velocity}`,
+				).toBe(false);
+	});
+
+	it("a small step away that arrives with a NEW viewport is the dock's resize, not the finger's wobble", () => {
+		const c = createComposerCompaction();
+		const at = (y: number, viewport = VIEWPORT) =>
+			c.noteOffset(y, END - y - viewport, viewport);
+		at(REST - 10);
+		c.beginDrag(REST - 10);
+		for (let s = 4; s <= 24; s += 4) at(REST - 10 + s);
+		/* The list clamps its offset by 1 pt as the viewport changes under it. */
+		at(REST - 10 + 24 - 1, VIEWPORT + 1);
+		c.endDrag(4000);
+		vi.advanceTimersByTime(HOLD_MS + TAIL_DWELL_MS + 1);
+		expect(c.readShrunk()).toBe(true);
+	});
+
+	it("a step away over the floor is a real reversal: the fling is no longer toward", () => {
+		for (const away of [TOWARD_RESET_PT + 1, 5, 12])
+			for (const velocity of [4000, -4000])
+				expect(
+					flingToward(-away, velocity).readShrunk(),
+					`${away} / ${velocity}`,
+				).toBe(true);
 	});
 });
 

@@ -21,6 +21,7 @@ import {
 	composerShellRadius,
 	controlsTrailing,
 	dictationDropsSend,
+	dictationSlots,
 	dockMotionStyle,
 	fieldSelectionOverride,
 	keyboardOverlap,
@@ -609,14 +610,95 @@ describe("a blank draft and the dictation card (R2-2)", () => {
 		).toBe(true);
 	});
 
-	it("is wired: the trailing slot reads the strict rule, the dead Send the blank-aware one", () => {
+	it("is wired: one decision (dictationSlots) feeds the trailing slot and the dead Send", () => {
 		const component = read("src/features/session/components/composer.tsx");
-		expect(component).toContain(
-			"openForDictationOnly: openOnlyForDictation(presentationFacts),",
-		);
 		expect(component).toMatch(
-			/const openForDictationOnly = openOnlyForDictation\(presentationFacts, \{\s*blankIsEmpty: true,/,
+			/const \{ trailing, dropSend: dropSendForDictation \} = dictationSlots\(\{/,
 		);
+		expect(component).not.toContain("controlsTrailing(");
+	});
+
+	/* R4-1: the slot and the Send read two rules for ' ' and left an empty slot. */
+	describe("the trailing slot and the dead Send never disagree (R4-1)", () => {
+		const drafts = ["", " ", "x"];
+		const phases = ["recording", "idle", "transcribing"] as const;
+		const cases = drafts.flatMap((draft) =>
+			[true, false].flatMap((startedFromPill) =>
+				phases.flatMap((phase) =>
+					[true, false].map((restsAsCard) => ({
+						draft,
+						startedFromPill,
+						phase,
+						restsAsCard,
+					})),
+				),
+			),
+		);
+		const slots = (c: (typeof cases)[number]) =>
+			dictationSlots({
+				facts: {
+					...empty,
+					draft: c.draft,
+					shrunk: true,
+					dictation: c.phase !== "idle",
+				},
+				restsAsCard: c.restsAsCard,
+				startedFromPill: c.startedFromPill,
+				recording: c.phase === "recording",
+				micShown: true,
+			});
+
+		it("whenever Send is dropped the slot holds the mic or the finish tick", () => {
+			let dropped = 0;
+			for (const c of cases) {
+				const { trailing, dropSend } = slots(c);
+				if (dropSend) {
+					dropped++;
+					expect(["mic", "finish"], JSON.stringify(c)).toContain(trailing);
+				}
+			}
+			/* The matrix must actually reach the case, or this proves nothing. */
+			expect(dropped).toBeGreaterThan(0);
+		});
+
+		it("a blank draft on the card with a take begun on the pill: the tick takes the slot", () => {
+			expect(
+				dictationSlots({
+					facts: { ...empty, draft: " ", shrunk: true, dictation: true },
+					restsAsCard: true,
+					startedFromPill: true,
+					recording: true,
+					micShown: true,
+				}),
+			).toEqual({ trailing: "finish", dropSend: true });
+		});
+
+		it("short landscape keeps its Send and `actions` for ' ' through a take", () => {
+			for (const c of cases.filter(
+				(x) => !x.restsAsCard && x.draft === " " && x.phase !== "idle",
+			))
+				expect(slots(c), JSON.stringify(c)).toEqual({
+					trailing: "actions",
+					dropSend: false,
+				});
+		});
+
+		it("short landscape never reports a dropped Send: its one row keeps the cluster", () => {
+			for (const c of cases.filter((x) => !x.restsAsCard))
+				expect(slots(c).dropSend, JSON.stringify(c)).toBe(false);
+		});
+
+		it("never drops Send without a mic to put in its place", () => {
+			expect(
+				dictationSlots({
+					facts: { ...empty, shrunk: true, dictation: true },
+					restsAsCard: true,
+					startedFromPill: true,
+					recording: false,
+					micShown: false,
+				}).dropSend,
+			).toBe(false);
+		});
 	});
 
 	it("ends with the take: a card left open by a blank draft alone keeps its layout", () => {

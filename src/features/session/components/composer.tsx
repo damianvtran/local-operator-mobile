@@ -103,8 +103,7 @@ import {
 	composerRestRow,
 	composerShellPadding,
 	composerShellRadius,
-	controlsTrailing,
-	dictationDropsSend,
+	dictationSlots,
 	dockMotionStyle,
 	fieldSelectionOverride,
 	morphHeight,
@@ -1214,19 +1213,6 @@ export const Composer = ({
 		);
 		voice?.press();
 	};
-	const dropSendForDictation = dictationDropsSend({
-		openForDictationOnly,
-		startedFromPill: dictationFromPill,
-	});
-	/* The trailing slot reads the STRICT rule: a blank draft is a draft here. Only
-	 *  the pill's dead Send is a blank-aware question; where the card keeps its
-	 *  Send (short landscape's one row) a ' ' draft keeps `actions` through a take
-	 *  too, rather than putting the mic under a Send the reader can still reach. */
-	const trailing = controlsTrailing({
-		openForDictationOnly: openOnlyForDictation(presentationFacts),
-		recording: voice?.phase === "recording",
-		micShown,
-	});
 	/* Physical orientation is supplied by the caller, not the keyboard-shortened
 	 * window. Narrow splits retain two rows rather than clipping a control. */
 	const compactSingle =
@@ -1250,6 +1236,17 @@ export const Composer = ({
 	const presentation = restsAsCard
 		? composerPresentation({ ...presentationFacts, card: true })
 		: activePresentation;
+	/* The trailing slot and the dead-Send drop come from ONE decision
+	 *  (`dictationSlots`): on the card a blank draft is no draft for both; short
+	 *  landscape keeps its Send, so ' ' stays a draft there. They cannot disagree,
+	 *  which left an empty slot and a ✓ sliding off the finger (review R4-1). */
+	const { trailing, dropSend: dropSendForDictation } = dictationSlots({
+		facts: presentationFacts,
+		restsAsCard,
+		startedFromPill: dictationFromPill,
+		recording: voice?.phase === "recording",
+		micShown,
+	});
 	/* The lift. One keyboard source (`keyboard-frame.ts`); this subscription runs
 	 * in the native event itself, so the lift starts with the keyboard. iOS follows
 	 * the native frame/duration; safe-area clearance belongs OUTSIDE the shell.
@@ -2582,8 +2579,8 @@ export const Composer = ({
 					{/* THE PILL'S CUES (design D1/D5). Both are painted OVER the one field
 					 *  and touch nothing of it: not its value (a native input shows its
 					 *  placeholder only for an empty one, and the draft is never
-					 *  normalised), not its mount. `pointerEvents: "none"` (a style: the prop is
-					 *  deprecated in RN 0.86) so a tap goes to
+					 *  normalised), not its mount. `pointerEvents: "none"` (a style:
+					 *  react-native-web warns on the prop) so a tap goes to
 					 *  the catcher below, `aria-hidden` because the field already carries
 					 *  the draft and the "…" is a typographic glyph, not copy. */}
 					{pillCue ? (
