@@ -656,26 +656,33 @@ describe("a toward-tail fling and the last offset step (R4-2)", () => {
 	 *  = away from the tail) and flings at `velocity`. */
 	const flingToward = (lastStep: number, velocity: number) => {
 		const c = createComposerCompaction();
+		const seen = flips(c);
 		const at = (y: number) => c.noteOffset(y, END - y - VIEWPORT, VIEWPORT);
 		at(REST - 10);
 		c.beginDrag(REST - 10);
-		for (let s = 4; s <= 24; s += 4) at(REST - 10 + s);
-		at(REST - 10 + 24 + lastStep);
+		/* The drag stays under `SHRINK_DISTANCE_PT`, or it shrinks the dock itself and
+		 *  the dwell grows it back: that [true, false] reads the same as no flip from
+		 *  `readShrunk()`, hiding what the fling decided. */
+		for (let s = 4; s <= 16; s += 4) at(REST - 10 + s);
+		at(REST - 10 + 16 + lastStep);
 		c.endDrag(velocity);
 		vi.advanceTimersByTime(HOLD_MS + TAIL_DWELL_MS + 1);
-		return c;
+		return { c, seen };
 	};
 
 	it("control: a clean toward fling from the band does not shrink, on either platform's sign", () => {
-		for (const velocity of [4000, -4000])
-			expect(flingToward(4, velocity).readShrunk(), `${velocity}`).toBe(false);
+		for (const velocity of [4000, -4000]) {
+			const { c, seen } = flingToward(4, velocity);
+			expect(c.readShrunk(), `${velocity}`).toBe(false);
+			expect(seen, `${velocity}`).toEqual([]);
+		}
 	});
 
 	it("a wobble up to the jitter floor at the end does not make it a shrink", () => {
 		for (const away of [0.1, 0.5, 1, TOWARD_RESET_PT])
 			for (const velocity of [4000, -4000])
 				expect(
-					flingToward(-away, velocity).readShrunk(),
+					flingToward(-away, velocity).c.readShrunk(),
 					`${away} / ${velocity}`,
 				).toBe(false);
 	});
@@ -698,7 +705,7 @@ describe("a toward-tail fling and the last offset step (R4-2)", () => {
 		for (const away of [TOWARD_RESET_PT + 1, 5, 12])
 			for (const velocity of [4000, -4000])
 				expect(
-					flingToward(-away, velocity).readShrunk(),
+					flingToward(-away, velocity).c.readShrunk(),
 					`${away} / ${velocity}`,
 				).toBe(true);
 	});
