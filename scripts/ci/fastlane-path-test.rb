@@ -153,11 +153,14 @@ Dir.mktmpdir('fastlane-cwd-test-', base) do |root|
     partial = response.new(200, { 'data' => [], 'links' => { 'next' => 'synthetic' } })
     app = Struct.new(:id).new('synthetic-app')
     testflight = $lanes[[:ios, :testflight]]
-    $recovery = { app: app, build: empty, upload: empty }
-    $called.clear
-    testflight.call(recovery_v010: true)
-    raise 'recovery did not check both collections before Pilot' unless $called == [:key, :lookup_app, :lookup_build, :lookup_upload, :testflight]
-    puts 'PASS recovery: both exact read queries empty, then internal Pilot call'
+    null_next = response.new(200, { 'data' => [], 'links' => { 'next' => nil } })
+    { 'missing' => empty, 'null' => null_next }.each do |label, result|
+      $recovery = { app: app, build: result, upload: result }
+      $called.clear
+      testflight.call(recovery_v010: true)
+      raise 'recovery did not check both collections before Pilot' unless $called == [:key, :lookup_app, :lookup_build, :lookup_upload, :testflight]
+      puts "PASS recovery: both exact read queries empty with links.next #{label}, then internal Pilot call"
+    end
 
     [
       [:app, nil, 'Cannot confirm Local Operator'],
@@ -176,6 +179,28 @@ Dir.mktmpdir('fastlane-cwd-test-', base) do |root|
         raise unless error.message.include?(expected) && !$called.include?(:testflight)
       end
       puts "PASS recovery blocked before Pilot: #{expected}"
+    end
+
+    # A plausible final-page envelope is not evidence of absence when `next`
+    # has a non-null value (in particular, JSON false is also falsy in Ruby).
+    { build: 'build', upload: 'build upload' }.each do |field, collection|
+      [false, true, '', {}].each do |next_value|
+        path = field == :build ? 'builds' : 'apps/synthetic-app/buildUploads'
+        links = { 'self' => "https://api.appstoreconnect.apple.com/v1/#{path}", 'next' => next_value }
+        malformed = response.new(200, { 'data' => [], 'links' => links })
+        $recovery = { app: app, build: empty, upload: empty }.merge(field => malformed)
+        $called.clear
+        cutoff = [:key, :lookup_app, :lookup_build]
+        cutoff << :lookup_upload if field == :upload
+        label = "#{collection} links.next: #{JSON.generate(next_value)}"
+        begin
+          testflight.call(recovery_v010: true)
+          raise "#{label} did not stop before Pilot: #{$called.inspect}"
+        rescue RuntimeError => error
+          raise unless error.message == "Cannot confirm App Store Connect #{collection} absence; refusing recovery" && $called == cutoff
+        end
+        puts "PASS recovery blocked before Pilot: #{label}"
+      end
     end
   end
 end

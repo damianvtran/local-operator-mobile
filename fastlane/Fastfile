@@ -157,10 +157,11 @@ platform :ios do
 
   # Only a positively empty App Store Connect response permits recovery. No
   # unsafe retry on an auth/network error, malformed body or unseen next page.
+  # Only omitted or null `next` means no next page; JSON false is malformed.
   def require_empty_recovery_result!(response, collection)
     body = response&.body
     unless response&.status == 200 && body.is_a?(Hash) && body["data"].is_a?(Array) &&
-           body["links"].is_a?(Hash) && !body["links"]["next"]
+           body["links"].is_a?(Hash) && body["links"]["next"].nil?
       UI.user_error!("Cannot confirm App Store Connect #{collection} absence; refusing recovery")
     end
     UI.user_error!("App Store Connect already has a #{collection} for 0.1.0 (1517); refusing recovery upload") unless body["data"].empty?
