@@ -1,0 +1,40 @@
+name: Install the pinned fastlane
+description: >
+  Install Ruby and the fastlane version pinned by the repository's Gemfile and
+  Gemfile.lock, then print the version so the log of every job that uploads to a
+  store names the uploader it used.
+
+  WHY THIS EXISTS. The workflows used to rely on the runner image's preinstalled
+  fastlane. `ubuntu-latest` moved to ubuntu-26.04, which ships none, and tag
+  v0.1.0 failed with `fastlane: command not found` at its TestFlight step, after
+  the GitHub Release already existed (run 45128303563). Every job that runs a lane
+  now calls this action first, on Linux and macOS alike, so there is ONE fastlane
+  version in the repository and no job depends on what an image happens to carry.
+
+  WHY BUNDLER AND NOT `gem install fastlane -v X`. `gem install` pins fastlane
+  itself but resolves its 100-odd dependencies (105 gems in the lock) afresh from rubygems.org on every run,
+  so a release could pick up a dependency published that morning. Gemfile.lock
+  pins the whole tree, and `bundler-cache` installs it in frozen (deployment)
+  mode: a Gemfile that disagrees with its lock fails here instead of resolving
+  something new.
+
+  Callers run lanes as `bundle exec fastlane ...` from the repository root.
+runs:
+  using: composite
+  steps:
+    # Pinned to a commit, not a tag: this action runs in jobs that hold the store
+    # credentials, and a moved tag would be code nobody reviewed running next to
+    # them. v1.343.0.
+    - uses: ruby/setup-ruby@be3c7df29b3349ec6bcfc6b4792f1cf9f5237d18
+      with:
+        # A series, not a patch: setup-ruby's README notes newer runner images
+        # (ubuntu-26.04 among them) carry builds of only the latest patch of each
+        # series, so an exact patch stops resolving when the image moves. fastlane
+        # 2.242.0 requires Ruby >= 3.2.
+        ruby-version: "3.4"
+        # `bundle install` from Gemfile.lock, cached per lockfile and platform.
+        bundler-cache: true
+
+    - name: Print the fastlane version
+      shell: bash
+      run: bundle exec fastlane --version

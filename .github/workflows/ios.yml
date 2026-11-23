@@ -830,7 +830,8 @@ jobs:
           set -euo pipefail
           umask 077
           printf '%s' "$APPLE_ASC_PRIVATE_KEY_BASE64" | base64 --decode > "$APPLE_ASC_PRIVATE_KEY_PATH"
-          fastlane ios testflight
+          # The pinned fastlane `ios-signed-ipa` installed earlier in this job.
+          bundle exec fastlane ios testflight
 
       - name: Remove the upload key even if the upload fails
         if: always()

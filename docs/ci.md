@@ -817,13 +817,20 @@ still fails.
 
 | Runner | Used for | Notes |
 |---|---|---|
-| `ubuntu-latest` (24.04 at the time of writing) | `checks`, the Android build, the uploader jobs | Ships the Android SDK, Java 17/21/25, Google Chrome and fastlane. Timeouts are set on every job. |
+| `ubuntu-latest` (24.04 when this table was written; 26.04 by 2026-11) | `checks`, the Android build, the uploader jobs | Ships the Android SDK, Java 17/21/25 and Google Chrome. Timeouts are set on every job. |
 | `macos-26` | the iOS build, the design-kit asset gates | Ships Xcode 26.x (which is what Apple requires for uploads) and CocoaPods 1.17.0. The simulator is named in `env` in `ios.yml` and resolved by `scripts/ci/ios-simulator.ts`, which prints what it chose. |
 
-`fastlane` is used as the runner image provides it (2.238.0 on `macos-26`, 2.240.1
-on `ubuntu-latest`, read from the image manifests on 2026-09-29), so upgrading it
-means moving the runner label — the same one-line change as Xcode or the Android
-SDK. Nothing is `gem install`ed at release time.
+`fastlane` is NOT taken from the runner image. It used to be, until
+`ubuntu-latest` moved to ubuntu-26.04, which ships none: tag v0.1.0 failed at its
+TestFlight step with `fastlane: command not found` after its GitHub Release existed
+(run 45128303563). `Gemfile` pins fastlane and `Gemfile.lock` pins its whole
+dependency tree; `.github/actions/setup-fastlane` installs exactly that (Ruby 3.4
+via a commit-pinned `ruby/setup-ruby`, `bundle install` frozen and cached) in every
+job that runs a lane, which then runs as `bundle exec fastlane ...`. Upgrading is a
+Gemfile + lock change (`bundle lock --update fastlane --add-platform x86_64-linux
+arm64-darwin`). `release.yml`'s `fastlane` job installs it and loads the Fastfile on
+both images on every run, dry runs included, and `publish` waits for it, so a
+missing uploader stops a release before its GitHub Release is created.
 
 Every job sets `timeout-minutes`. A wedged step failing in 30 minutes rather than
 GitHub's 360-minute default is the difference between a retry and a lost
