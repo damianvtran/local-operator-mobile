@@ -46,6 +46,46 @@ export const SHEET_RESIZE_PROJECTION = 0.15;
 export type SheetResizeSize = "medium" | "large";
 
 /**
+ * The size the reader chose, per sheet, for THIS APP RUN.
+ *
+ * In memory only, deliberately: the size is a preference about a surface, not a
+ * fact about an answer, and the app still stores nothing durably about asks
+ * (ADR 0005 § 2). A relaunch starts from `openingResizeSize` again.
+ */
+const chosenSizes = new Map<string, SheetResizeSize>();
+
+export const recallResizeSize = (key: string): SheetResizeSize | null =>
+	chosenSizes.get(key) ?? null;
+
+export const rememberResizeSize = (
+	key: string,
+	size: SheetResizeSize,
+): void => {
+	chosenSizes.set(key, size);
+};
+
+/** Tests only: the store is module state, and a suite must start empty. */
+export const forgetResizeSizes = (): void => {
+	chosenSizes.clear();
+};
+
+/**
+ * The size a sheet opens at: hug its content when the content fits Medium,
+ * otherwise open Large (spec 3.1).
+ *
+ * The failure this answers is the ask sheet's: a long question, its option cards
+ * and the Other field did not fit Medium, so the cards were cut off below a
+ * pinned footer and there was no handle to make the surface taller.
+ */
+export const openingResizeSize = ({
+	contentHeight,
+	medium,
+}: {
+	contentHeight: number;
+	medium: number;
+}): SheetResizeSize => (contentHeight > medium ? "large" : "medium");
+
+/**
  * The two body heights, in pt.
  *
  * Both are SURFACE fractions minus `chrome` (the header and footer that never

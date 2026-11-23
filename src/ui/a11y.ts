@@ -37,6 +37,10 @@ export const ROLE = {
 	tab: "tab",
 	tablist: "tablist",
 	radiogroup: "radiogroup",
+	/* A control with a size or a value the reader steps through (ARIA's
+	 *  `adjustable`, RN's own role): the resizable sheet's grab bar is the one
+	 *  this slice renders, and VoiceOver/TalkBack read its value and actions. */
+	adjustable: "adjustable",
 	radio: "radio",
 	switch: "switch",
 	checkbox: "checkbox",
@@ -2574,6 +2578,12 @@ export const askOtherId = (questionId: string): string =>
  *  family also reaches its field. */
 export const askOtherFieldId = (questionId: string): string =>
 	`ask-other-field-${questionId}`;
+
+/** The field of a question that has no options (the free-text door). Its own
+ *  family beside `ask-other-field-`, because a flow that focuses "the second
+ *  field of a multi-question ask" must reach it without guessing a coordinate. */
+export const askAnswerFieldId = (questionId: string): string =>
+	`ask-answer-field-${questionId}`;
 
 /** One row of the todos panel, by its position in the list. */
 export const todosRowId = (index: number): string => `todos-row-${index}`;

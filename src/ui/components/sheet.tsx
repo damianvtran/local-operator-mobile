@@ -1,10 +1,11 @@
 import { X } from "lucide-react-native";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
 	AccessibilityInfo,
 	Animated,
 	Easing,
 	findNodeHandle,
+	Keyboard,
 	LayoutAnimation,
 	Modal,
 	Platform,
@@ -45,6 +46,7 @@ import {
 	ModalScopeContext,
 	useModalStackEntry,
 } from "@/ui/components/modal-stack-entry";
+import { SheetBodyScrollContext } from "@/ui/components/sheet-body-scroll";
 import { DirectionView } from "@/ui/direction";
 import { useShadow } from "@/ui/elevation";
 import { useModalDismissal } from "@/ui/modal-dismissal-ledger";
@@ -56,11 +58,15 @@ import {
 import { effectiveDuration, parseCubicBezier } from "@/ui/motion";
 import { sheetKeyboardLift, sheetKeyboardRoom } from "@/ui/sheet-keyboard";
 import {
+	openingResizeSize,
+	recallResizeSize,
+	rememberResizeSize,
 	resistResizeDrag,
 	type SheetResizeSize,
 	settleResize,
 	sheetResizeSizes,
 } from "@/ui/sheet-resize";
+import { focusScrollTarget } from "@/ui/sheet-scroll";
 import { useTextScale } from "@/ui/text-scale-provider";
 import { DURATIONS, EASINGS } from "@/ui/tokens.gen";
 import {
@@ -100,6 +106,14 @@ const MIN_CONTENT_HEIGHT = 120;
 const SHEET_BODY_FADE = 24;
 
 /**
+ * How long the keyboard's own move of the sheet is given before a focused field's
+ * reveal is re-computed. The platform's keyboard animation is ~250 ms; the surface
+ * follows it on the same curve, so anything sooner measures a body that is still
+ * moving.
+ */
+const KEYBOARD_SETTLE_MS = 350;
+
+/**
  * Gradient ids must be unique per instance (two sheets can share one document,
  * and `url(#…)` resolves to the first id in it). A module counter, like the
  * markdown table's fades: the id must be stable across re-renders — a
@@ -122,8 +136,12 @@ const sheetTransitionTick = createTransitionTick(() => haptic("selection"));
  * exactly when the mistake bites — the shipped web client measured a `60dvh` card
  * putting its own send button under the column's clipped foot at 360×780.
  *
- * **No drag gesture.** A drag handle with no drag is worse than no handle, so
- * dismissal is the scrim, the Close control, or Escape.
+ * **No drag-to-dismiss.** A drag handle that dismisses is a trap on a surface
+ * that holds a typed answer, so dismissal stays the scrim, the Close control and
+ * Escape. A sheet may opt into `resizable`, which gives the grab bar a drag that
+ * RESIZES between two heights (Medium and Large) and springs back past either
+ * end — never a dismissal. Off by default: the handle exists only where the drag
+ * does, which is the rule this primitive shipped with.
  *
  * Focus: on a phone the platform moves focus into a modal for us, and the
  * platform's own behaviour is what a screen reader follows. What the kit asks for
@@ -227,6 +245,28 @@ export type SheetProps = {
 	 */
 	resizable?: boolean;
 	/**
+	 * Which sheet's remembered size this is. Several resizable sheets would
+	 * otherwise share one choice; the default suits the one sheet that opts in.
+	 */
+	resizeKey?: string;
+	/**
+	 * The first tap on the dim area HIDES THE KEYBOARD rather than closing the
+	 * sheet, when the keyboard is up. Opt-in, because it is only a kindness where
+	 * the reader is typing an answer: elsewhere the first tap closing the sheet is
+	 * the behaviour the rest of the app already has.
+	 */
+	dismissKeyboardOnScrimTap?: boolean;
+	/**
+	 * A tap on the body's own space — the question text, the gap between cards —
+	 * puts the keyboard away. Opt-in because it is about typing an answer: the
+	 * scrolling body of a search sheet also *is* its control (spec 3.3 rule 3).
+	 *
+	 * `keyboardShouldPersistTaps="handled"` alone does not do this: a tap on a
+	 * `Text` child is consumed by that child, so the body's copy — which is most
+	 * of what a reader sees between controls — never reaches the scroller.
+	 */
+	dismissKeyboardOnBodyTap?: boolean;
+	/**
 	 * The platform's own way of putting the keyboard away from the scrolling
 	 * body: iOS's `interactive` follows the finger, Android's `on-drag` waits for
 	 * the drag to end. Opt-in, and only meaningful with `resizable` in practice —
@@ -251,6 +291,9 @@ export const Sheet = ({
 	titleLines = 1,
 	testID,
 	resizable = false,
+	resizeKey = "sheet",
+	dismissKeyboardOnScrimTap = false,
+	dismissKeyboardOnBodyTap = false,
 	keyboardDismissMode,
 }: SheetProps) => {
 	const titleRef = useRef<Text>(null);
@@ -483,9 +526,10 @@ export const Sheet = ({
 	 * (react-native-gesture-handler's "Usage with modals"). It is mounted per
 	 * sheet and only when a sheet opts in — `app/_layout.tsx` is shared with other
 	 * lanes, and a root there would not reach these touches anyway. */
-	/* Medium is its ceiling while this is a fixed two-size sheet; the "hug the
-	 *  content when it is shorter" half of the spec reads the measured body height
-	 *  in the same argument, which the ask panel supplies. */
+	/* Medium hugs the content when the content is shorter than its ceiling, so a
+	 *  one-line ask does not open as a half-empty slab (spec 3.1); the measured
+	 *  content height is what decides that, and the OPENING size below. */
+	const [contentHeight, setContentHeight] = useState(0);
 	const bodyCeiling =
 		keyboardRoom === null
 			? Number.POSITIVE_INFINITY
@@ -493,11 +537,19 @@ export const Sheet = ({
 	const resizeSizes = sheetResizeSizes({
 		capHeight,
 		chrome,
-		contentHeight: Number.POSITIVE_INFINITY,
+		/* Before the first measurement the content is unknown, and assuming it
+		 *  FITS keeps Medium at its ceiling rather than collapsing it to the floor
+		 *  for one frame. */
+		contentHeight: contentHeight > 0 ? contentHeight : Number.POSITIVE_INFINITY,
 		floor: MIN_CONTENT_HEIGHT,
 		ceiling: bodyCeiling,
 	});
-	const [resizeSize, setResizeSize] = useState<SheetResizeSize>("medium");
+	/* The size chosen THIS RUN survives a close: a sheet that forgot its size
+	 *  between openings would ask the reader to drag it twice. In memory only —
+	 *  nothing about an answer is stored durably (ADR 0005 § 2). */
+	const [resizeSize, setResizeSize] = useState<SheetResizeSize>(
+		() => recallResizeSize(resizeKey) ?? "medium",
+	);
 	const resizeBody = useSharedValue(resizeSizes.medium);
 	const resizeDragStart = useSharedValue(0);
 	const resizeMin = useSharedValue(resizeSizes.medium);
@@ -505,16 +557,78 @@ export const Sheet = ({
 	/* A SHARED value, not a ref: the pan's worklets write it on the UI thread, and
 	 *  a React ref is not readable there. */
 	const resizeDragging = useSharedValue(false);
+	/* With the keyboard up the header drag HIDES THE KEYBOARD instead of resizing
+	 *  (spec 3.3 rule 4): the sheet already fills the room the keyboard leaves, so
+	 *  there is no size to pick and a drag that only resized would leave the
+	 *  keyboard up over the reader's answer. `keyboardUp` and the once-per-drag
+	 *  latch are shared values for the same reason as `resizeDragging`. */
+	const keyboardUp = useSharedValue(keyboard.visible);
+	const keyboardDismissedByDrag = useSharedValue(false);
+	/* What the keyboard was doing when THIS drag began. The decision is taken once,
+	 *  at the start: a drag that begins with the keyboard up hides it and does
+	 *  nothing else, even though the keyboard is gone by the second half of the
+	 *  same drag (measured: without this latch the rest of that drag resized the
+	 *  sheet, so one gesture both dismissed the keyboard and changed the size). */
+	const dragStartedWithKeyboard = useSharedValue(false);
 	/* The JS side of a snap. A worklet cannot call `haptic` or set state, so the
 	 *  release hands the settled size back here — and the tick fires only when the
 	 *  size actually changed, once per snap. */
-	const resizeSizeRef = useRef<SheetResizeSize>("medium");
-	const applySettledSize = useCallback((next: SheetResizeSize) => {
-		if (resizeSizeRef.current === next) return;
-		resizeSizeRef.current = next;
-		haptic("selection");
-		setResizeSize(next);
+	const resizeSizeRef = useRef<SheetResizeSize>(resizeSize);
+	const remember = useCallback(
+		(next: SheetResizeSize) => {
+			rememberResizeSize(resizeKey, next);
+			if (resizeSizeRef.current === next) return;
+			resizeSizeRef.current = next;
+			haptic("selection");
+			setResizeSize(next);
+		},
+		[resizeKey],
+	);
+	const dismissKeyboard = useCallback(() => {
+		Keyboard.dismiss();
 	}, []);
+	/* While the keyboard is up the body is the room between the safe top and the
+	 *  keyboard's top, whatever size the reader chose with it down (spec D3). */
+	const restingBodyHeight =
+		keyboardRoom === null
+			? resizeSize === "large"
+				? resizeSizes.large
+				: resizeSizes.medium
+			: bodyCeiling;
+	/* Put the body back on the size the sheet rests at (used when a drag was a
+	 *  keyboard dismissal, so it must not leave the sheet mid-height). */
+	const restingHeightRef = useRef(restingBodyHeight);
+	restingHeightRef.current = restingBodyHeight;
+	const settleToResting = useCallback(() => {
+		resizeBody.value = reduceMotion
+			? withTiming(restingHeightRef.current, { duration: 120 })
+			: withSpring(restingHeightRef.current, { damping: 28, stiffness: 300 });
+	}, [reduceMotion, resizeBody]);
+	/* The opening size: hug the content if it fits Medium, otherwise open at Large
+	 *  (spec 3.1) — a long question opened at Medium put its option cards below the
+	 *  fold, which is the report this whole change answers.
+	 *
+	 *  There is deliberately NO "decided once" latch. A content size is measured
+	 *  more than once while a sheet fills (the expanded ask lays out, a row
+	 *  arrives, the keyboard closes), and a latch closed on an early partial
+	 *  height opened this sheet at Medium although its content did not fit — the
+	 *  exact defect. So the automatic size follows the measurement until a READER
+	 *  chooses one (drag, bar tap, VoiceOver action — all of which write the
+	 *  remembered size), and a remembered choice wins from then on. */
+	useEffect(() => {
+		if (!resizable || contentHeight <= 0) return;
+		if (recallResizeSize(resizeKey) !== null) return;
+		const opening = openingResizeSize({
+			contentHeight,
+			medium: resizeSizes.medium,
+		});
+		if (opening === resizeSizeRef.current) return;
+		resizeSizeRef.current = opening;
+		setResizeSize(opening);
+	}, [resizable, contentHeight, resizeKey, resizeSizes.medium]);
+	useEffect(() => {
+		keyboardUp.value = keyboard.visible;
+	}, [keyboard.visible, keyboardUp]);
 	useEffect(() => {
 		if (!resizable) return;
 		resizeMin.value = resizeSizes.medium;
@@ -522,13 +636,13 @@ export const Sheet = ({
 		/* Mid-drag the finger owns the height: a measurement or a keyboard frame
 		 *  landing between begin and end would otherwise jump the sheet under it. */
 		if (resizeDragging.value) return;
-		resizeBody.value = withSpring(
-			resizeSize === "large" ? resizeSizes.large : resizeSizes.medium,
-			{ damping: 28, stiffness: 300 },
-		);
+		resizeBody.value = reduceMotion
+			? withTiming(restingBodyHeight, { duration: 120 })
+			: withSpring(restingBodyHeight, { damping: 28, stiffness: 300 });
 	}, [
 		resizable,
-		resizeSize,
+		restingBodyHeight,
+		reduceMotion,
 		resizeSizes.medium,
 		resizeSizes.large,
 		resizeBody,
@@ -541,13 +655,32 @@ export const Sheet = ({
 		 *  chiefly-horizontal move never resizes the sheet (spec 3.2). */
 		.minDistance(8)
 		.failOffsetX([-20, 20])
+		/* The latch is taken on BOTH begin and start: `onBegin` is the touch-down,
+		 *  `onStart` the activation (after `minDistance`), and a platform that only
+		 *  reports one of them would otherwise leave the latch at its initial
+		 *  false and let the drag resize after the keyboard had gone. */
 		.onBegin(() => {
 			"worklet";
 			resizeDragging.value = true;
 			resizeDragStart.value = resizeBody.value;
+			dragStartedWithKeyboard.value = keyboardUp.value;
+		})
+		.onStart(() => {
+			"worklet";
+			dragStartedWithKeyboard.value = keyboardUp.value;
 		})
 		.onUpdate((event) => {
 			"worklet";
+			if (dragStartedWithKeyboard.value || keyboardUp.value) {
+				/* Downward only: an upward drag on a sheet that already fills its room
+				 *  has nothing to grow into. Once per drag, so a long pull does not
+				 *  re-dismiss repeatedly. */
+				if (event.translationY > 8 && !keyboardDismissedByDrag.value) {
+					keyboardDismissedByDrag.value = true;
+					runOnJS(dismissKeyboard)();
+				}
+				return;
+			}
 			resizeBody.value = resistResizeDrag({
 				height: resizeDragStart.value - event.translationY,
 				min: resizeMin.value,
@@ -556,6 +689,16 @@ export const Sheet = ({
 		})
 		.onEnd((event) => {
 			"worklet";
+			resizeDragging.value = false;
+			keyboardDismissedByDrag.value = false;
+			if (dragStartedWithKeyboard.value || keyboardUp.value) {
+				/* A keyboard-dismissing drag never picks a size: put the body back on
+				 *  the resting height, whatever the finger left it at. On the JS side,
+				 *  because the resting height may have changed while the keyboard was
+				 *  going (the sync effect skipped it mid-drag). */
+				runOnJS(settleToResting)();
+				return;
+			}
 			const settled = settleResize({
 				height: resizeBody.value,
 				velocityY: event.velocityY,
@@ -573,12 +716,12 @@ export const Sheet = ({
 						stiffness: 300,
 						velocity: -event.velocityY,
 					});
-			resizeDragging.value = false;
-			runOnJS(applySettledSize)(settled);
+			runOnJS(remember)(settled);
 		})
 		.onFinalize(() => {
 			"worklet";
 			resizeDragging.value = false;
+			keyboardDismissedByDrag.value = false;
 		});
 	const resizeBodyStyle = useAnimatedStyle(() => ({
 		height: resizeBody.value,
@@ -597,6 +740,78 @@ export const Sheet = ({
 	 * the only writer of the state, and it is called only from the ScrollView's
 	 * own handlers. */
 	const scrollFacts = useRef({ contentH: 0, viewportH: 0, y: 0 });
+	/* Bring a focused field into view (see `@/ui/sheet-scroll` for the two
+	 *  anchors and the arithmetic). Both nodes are measured in WINDOW coordinates
+	 *  and the scroll view's own frame is subtracted, which works on iOS, Android
+	 *  and react-native-web without a native host reference to measure against. */
+	const bodyRef = useRef<ScrollView>(null);
+	/* The last field asked to be revealed, so the reveal can be repeated once the
+	 *  keyboard has finished moving the sheet (see the effect below). */
+	const lastReveal = useRef<{ block: View | null; field: View | null } | null>(
+		null,
+	);
+	const revealField = useCallback(
+		(target: { block: View | null; field: View | null }) => {
+			const field = target.field;
+			if (!resizable || field === null) return;
+			lastReveal.current = target;
+			const scroll = bodyRef.current;
+			if (scroll === null) return;
+			/* `measureLayout` against the scroll view, not `measureInWindow`: the
+			 *  coordinates it yields are the CONTENT's, which is the space
+			 *  `scrollTo` takes, so no window frame and no offset bookkeeping are
+			 *  involved. (The window route was measured not to move the body at
+			 *  all — see the evidence note in the PR.) */
+			const measure = (
+				node: View | null,
+				then: (y: number, h: number) => void,
+			) => {
+				if (node === null) return;
+				node.measureLayout(
+					scroll as unknown as number,
+					(_x, y, _w, h) => then(y, h),
+					() => undefined,
+				);
+			};
+			measure(field, (fieldY, fieldH) => {
+				const viewportHeight = scrollFacts.current.viewportH;
+				measure(target.block, (blockY, blockH) => {
+					scroll.scrollTo({
+						y: focusScrollTarget({
+							viewportHeight,
+							blockTop: blockY,
+							blockHeight: blockH,
+							fieldTop: fieldY,
+							fieldHeight: fieldH,
+						}),
+						animated: !reduceMotion,
+					});
+				});
+			});
+		},
+		[resizable, reduceMotion],
+	);
+	const bodyScroll = useMemo(() => ({ revealField }), [revealField]);
+	/*
+	 * THE KEYBOARD MOVES THE TARGET AFTER FOCUS. `onFocus` fires while the sheet is
+	 * still where it was with the keyboard down, and the keyboard then lifts the
+	 * surface and SHRINKS the body over ~300 ms — so a reveal computed on the focus
+	 * event lands the field where the body used to be, and the field the reader is
+	 * typing into stays under the pinned footer (measured in the evidence run: the
+	 * body did not move at all). Re-run the same reveal once that move has settled,
+	 * and only once: a later manual scroll must not be undone.
+	 */
+	// biome-ignore lint/correctness/useExhaustiveDependencies: `restingBodyHeight` is the TRIGGER (the sheet has finished moving), not a value this reads — the same shape as the opening effect's `population`.
+	useEffect(() => {
+		if (!resizable) return;
+		const target = lastReveal.current;
+		if (target === null) return;
+		const timer = setTimeout(() => {
+			revealField(target);
+			lastReveal.current = null;
+		}, KEYBOARD_SETTLE_MS);
+		return () => clearTimeout(timer);
+	}, [resizable, restingBodyHeight, revealField]);
 	const [bodyCue, setBodyCue] = useState(false);
 	/* "Something has scrolled up under the pinned region" — the mirror of
 	 *  `bodyCue`, drawn only under a `pinned` slot (design D1). */
@@ -680,17 +895,59 @@ export const Sheet = ({
 			className="flex-row items-center gap-2 px-4 py-3"
 			onLayout={(event) => setHeaderHeight(event.nativeEvent.layout.height)}
 		>
+			<Heading
+				ref={titleRef}
+				tabIndex={focusTitle ? -1 : undefined}
+				level={2}
+				className="flex-1 text-title text-ink"
+				/* ONE LINE, the app's truncation idiom (36 call sites, the rows
+				 * themselves included): at 200 % on a 320 pt phone the WRAPPED
+				 * title was the sheet's single biggest chrome block — 81 pt of a
+				 * 525 pt surface (design D63-1) — and a single-line title that
+				 * ellipsizes keeps its full accessible name. */
+				numberOfLines={titleLines}
+			>
+				{title}
+			</Heading>
 			{resizable ? (
-				/* The grab bar is the visible half of the size control (36×5 pt, 6 pt
-				 *  from the top). Absolutely positioned inside the row's own padding, so
-				 *  the header's MEASURED height — the chrome the cap spends — does not
-				 *  move, and pointer-events are off because the whole row is the drag
-				 *  zone: a second target there would only take the touch away from it. */
-				<View
+				/* The grab bar is the size control (36×5 pt pill, 6 pt from the top).
+				 *  Its visible mark rides the row's own padding so the header's
+				 *  MEASURED height — the chrome the cap spends — does not move. It
+				 *  sits AFTER the title in the tree because RN routes a touch to the
+				 *  topmost sibling: drawn first, the title took every tap in the band
+				 *  and the control never fired (measured in the evidence run: the tap
+				 *  "succeeded" at Medium and nothing moved).
+				 *
+				 *  Its own frame is the pill, and `hitSlop` grows the target to the
+				 *  44 pt floor around it — a full-width band would have covered the
+				 *  close button's upper half. A tap toggles Medium/Large without a
+				 *  drag; the whole header row stays the drag zone; and a reader who
+				 *  cannot drag adjusts the same size from the VoiceOver/TalkBack
+				 *  action list (spec 3.6). */
+				<Pressable
+					accessibilityRole={ROLE.adjustable}
+					accessibilityLabel={t("mobile.common.resize_panel")}
+					accessibilityValue={{
+						text:
+							resizeSize === "large"
+								? t("mobile.common.size.large")
+								: t("mobile.common.size.medium"),
+					}}
+					accessibilityActions={[
+						{ name: "increment", label: t("mobile.common.size.taller") },
+						{ name: "decrement", label: t("mobile.common.size.shorter") },
+					]}
+					onAccessibilityAction={(event) => {
+						const action = event.nativeEvent.actionName;
+						if (action === "increment") remember("large");
+						if (action === "decrement") remember("medium");
+					}}
+					onPress={() =>
+						remember(resizeSizeRef.current === "large" ? "medium" : "large")
+					}
+					hitSlop={{ top: 19, bottom: 20, left: 42, right: 42 }}
 					testID={CONTROL.sheetGrabBar}
 					style={{
-						/* The style form, not the prop: RNW deprecates the prop. */
-						pointerEvents: "none",
 						position: "absolute",
 						top: 6,
 						left: 0,
@@ -707,22 +964,8 @@ export const Sheet = ({
 							opacity: 0.4,
 						}}
 					/>
-				</View>
+				</Pressable>
 			) : null}
-			<Heading
-				ref={titleRef}
-				tabIndex={focusTitle ? -1 : undefined}
-				level={2}
-				className="flex-1 text-title text-ink"
-				/* ONE LINE, the app's truncation idiom (36 call sites, the rows
-				 * themselves included): at 200 % on a 320 pt phone the WRAPPED
-				 * title was the sheet's single biggest chrome block — 81 pt of a
-				 * 525 pt surface (design D63-1) — and a single-line title that
-				 * ellipsizes keeps its full accessible name. */
-				numberOfLines={titleLines}
-			>
-				{title}
-			</Heading>
 			<IconButton
 				accessibilityLabel={t("mobile.common.close")}
 				testID={CONTROL.sheetClose}
@@ -875,7 +1118,15 @@ export const Sheet = ({
 									}
 									tabIndex={focusTitle ? -1 : 0}
 									testID={CONTROL.sheetScrim}
-									onPress={onClose}
+									/* First tap with the keyboard up puts the keyboard away and
+									 *  leaves the sheet open; closing is then one press away.
+									 *  Opt-in: where nothing is being typed, the first tap
+									 *  keeps meaning "close". */
+									onPress={
+										dismissKeyboardOnScrimTap && keyboard.visible
+											? () => Keyboard.dismiss()
+											: onClose
+									}
 								/>
 							</Animated.View>
 
@@ -940,6 +1191,7 @@ export const Sheet = ({
 									</View>
 								)}
 								<Body
+									ref={bodyRef}
 									testID={SURFACE.sheetBody}
 									/* A row tapped while the keyboard is up is picked in ONE tap. The
 									 *  default (`never`) spends the first tap dismissing the keyboard,
@@ -993,6 +1245,9 @@ export const Sheet = ({
 									}}
 									onContentSizeChange={(_width, height) => {
 										scrollFacts.current.contentH = height;
+										/* The opening size and the content hug are decided from
+										 *  this measurement (the resize block above). */
+										setContentHeight(height);
 										syncBodyCue();
 									}}
 									onScroll={(event) => {
@@ -1001,7 +1256,22 @@ export const Sheet = ({
 									}}
 									scrollEventThrottle={16}
 								>
-									{children}
+									{/* The body's own space, as one press target UNDER the content:
+									 *  an option card or a field handles its own press and wins, so
+									 *  only a tap on copy or empty space reaches this and puts the
+									 *  keyboard away (opt-in, see the prop). */}
+									<SheetBodyScrollContext.Provider value={bodyScroll}>
+										{dismissKeyboardOnBodyTap ? (
+											<Pressable
+												onPress={() => Keyboard.dismiss()}
+												style={{ minHeight: "100%" }}
+											>
+												{children}
+											</Pressable>
+										) : (
+											children
+										)}
+									</SheetBodyScrollContext.Provider>
 								</Body>
 								{footer === undefined ? null : (
 									<View

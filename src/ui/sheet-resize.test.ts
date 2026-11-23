@@ -9,6 +9,10 @@
 import { describe, expect, it } from "vitest";
 
 import {
+	forgetResizeSizes,
+	openingResizeSize,
+	recallResizeSize,
+	rememberResizeSize,
 	resistResizeDrag,
 	SHEET_RESIZE_FLICK,
 	SHEET_RESIZE_RESIST_MAX,
@@ -108,5 +112,41 @@ describe("settleResize", () => {
 		// Exactly the midpoint projects to the midpoint: "not greater" is Medium,
 		// so a drag that comes back to where it started does not flip the size.
 		expect(settleResize({ ...base, height: 350 })).toBe("medium");
+	});
+});
+
+describe("openingResizeSize", () => {
+	it("hugs the content when it fits Medium", () => {
+		expect(openingResizeSize({ contentHeight: 300, medium: 400 })).toBe(
+			"medium",
+		);
+	});
+
+	it("opens Large when the content does not fit Medium", () => {
+		// The ask sheet's report: cards cut off below a pinned footer, with no way
+		// to make the surface taller.
+		expect(openingResizeSize({ contentHeight: 520, medium: 400 })).toBe(
+			"large",
+		);
+	});
+
+	it("treats exactly Medium as fitting", () => {
+		expect(openingResizeSize({ contentHeight: 400, medium: 400 })).toBe(
+			"medium",
+		);
+	});
+});
+
+describe("the size chosen this run", () => {
+	it("remembers one sheet's choice without touching another's", () => {
+		forgetResizeSizes();
+		rememberResizeSize("asks", "large");
+		expect(recallResizeSize("asks")).toBe("large");
+		expect(recallResizeSize("model")).toBeNull();
+	});
+
+	it("has no choice before the reader makes one, so the opening size applies", () => {
+		forgetResizeSizes();
+		expect(recallResizeSize("asks")).toBeNull();
 	});
 });
