@@ -3,6 +3,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
 import type { TranscriptEntry } from "@/contracts";
+import type { AssistantPart } from "@/features/session/inline-ui-parts";
+import { LIVE_INLINE_UI } from "@/features/session/live-inline-ui";
 import { transcriptRowTestID } from "@/features/session/projection";
 import { SURFACE } from "@/ui/a11y";
 
@@ -58,8 +60,21 @@ vi.mock("@/ui/text-scale-provider", () => ({
 vi.mock("@/features/session/components/markdown", async () => {
 	const { createElement } = await import("react");
 	return {
-		Markdown: ({ text }: { text: string }) =>
-			createElement("p", { "data-md": "" }, text),
+		Markdown: ({
+			text,
+			assistantParts,
+		}: {
+			text: string;
+			assistantParts?: readonly AssistantPart[];
+		}) =>
+			createElement(
+				"p",
+				{ "data-md": "" },
+				text,
+				assistantParts?.flatMap((part) =>
+					part.kind === "ui" ? [part.value.title] : [],
+				),
+			),
 	};
 });
 
@@ -112,6 +127,22 @@ const render = (entry: TranscriptEntry, streaming = false) =>
 	renderToStaticMarkup(createElement(TranscriptRow, { entry, streaming }));
 
 describe("a blank assistant row paints nothing", () => {
+	it("does not collapse a widget-only answer as an empty tool placeholder", () => {
+		const entry = {
+			...assistant("widget-only", ""),
+			[LIVE_INLINE_UI]: [
+				{
+					kind: "ui",
+					value: {
+						type: "bar",
+						title: "Daily readings",
+						data: [["Monday", 17]],
+					},
+				},
+			],
+		} satisfies import("@/features/session/live-inline-ui").DisplayTranscriptEntry;
+		expect(render(entry, true)).toContain("Daily readings");
+	});
 	it("keeps a file-only historical answer visible and wires its sparse Save control", () => {
 		const entry = {
 			...assistant("file-only", ""),

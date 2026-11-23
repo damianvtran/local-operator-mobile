@@ -18,7 +18,7 @@ import { CONTROL, ROLE, SURFACE, state } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
 import { ChromeSurface } from "@/ui/components/chrome-surface";
 import { Heading } from "@/ui/components/heading";
-import { Textarea } from "@/ui/components/textarea";
+import { Textarea, type TextareaProps } from "@/ui/components/textarea";
 import { TOUCH_FLOOR, useCompactChrome } from "@/ui/layout";
 import { headerStacks } from "@/ui/size-class";
 import { useTextScale } from "@/ui/text-scale-provider";
@@ -66,11 +66,16 @@ import { CONTROL_DISABLED_INK, cx } from "@/ui/variants";
 export function BridgeThreadTitle({
 	title,
 	accessibilityLabel,
+	subtitle,
 }: {
 	title: string;
 	/** The name a screen reader hears when it differs from the drawn title:
 	 *  a channel draws `# humans` but is announced "humans" (review R1-10). */
 	accessibilityLabel?: string;
+	/** One muted line under the title naming where this screen sits — a reply
+	 *  thread's conversation (design D3 / UX U2), since a push can land on it
+	 *  with no conversation screen behind it. */
+	subtitle?: string;
 }) {
 	const compact = useCompactChrome();
 	const { effectiveScale } = useTextScale();
@@ -80,6 +85,7 @@ export function BridgeThreadTitle({
 		<BridgeThreadTitleView
 			title={title}
 			accessibilityLabel={accessibilityLabel}
+			subtitle={subtitle}
 			compact={compact}
 			stacked={stacked}
 		/>
@@ -91,31 +97,48 @@ export function BridgeThreadTitle({
 export function BridgeThreadTitleView({
 	title,
 	accessibilityLabel,
+	subtitle,
 	compact,
 	stacked,
 }: {
 	title: string;
 	accessibilityLabel?: string;
+	subtitle?: string;
 	compact: boolean;
 	stacked: boolean;
 }) {
 	const style = sessionHeaderTitle({ compact, stacked });
+	const heading = (
+		<Heading
+			level={1}
+			className={style.className}
+			/* React Native's default `ellipsizeMode` is "tail", which is the
+			 *  session title's cut; `Heading` does not forward the prop. */
+			numberOfLines={style.numberOfLines}
+			accessibilityLabel={accessibilityLabel}
+		>
+			{title}
+		</Heading>
+	);
 	return (
 		/* The SAME slot the session title takes (`min-w-0 flex-1` around the
 		 *  heading, `SessionHealthControl`'s no-reading branch), so the trailing
 		 *  notifications control is pushed to the edge and the name, not the
-		 *  control, is what gives way. */
+		 *  control, is what gives way. Without a subtitle the slot holds the
+		 *  heading alone, exactly as before. */
 		<View className="min-w-0 flex-1">
-			<Heading
-				level={1}
-				className={style.className}
-				/* React Native's default `ellipsizeMode` is "tail", which is the
-				 *  session title's cut; `Heading` does not forward the prop. */
-				numberOfLines={style.numberOfLines}
-				accessibilityLabel={accessibilityLabel}
-			>
-				{title}
-			</Heading>
+			{subtitle ? (
+				<>
+					{heading}
+					{/* One line at most, cut at the tail like the title: the
+					 *  conversation's name is context and never wraps. */}
+					<Text className="text-meta text-ink-muted" numberOfLines={1}>
+						{subtitle}
+					</Text>
+				</>
+			) : (
+				heading
+			)}
 		</View>
 	);
 }
@@ -134,6 +157,10 @@ export type BridgeComposerFieldProps = {
 	placeholder: string;
 	draft: string;
 	onDraftChange: (value: string) => void;
+	/** Caret reports and a one-shot caret placement for @-mentions
+	 *  (`mentions/use-mentions.ts`); both optional and passed straight through. */
+	onSelectionChange?: TextareaProps["onSelectionChange"];
+	selection?: TextareaProps["selection"];
 	/** A send is in flight: the field and both controls hold still. */
 	sending: boolean;
 	/** The accessible name of the add-image control ("Add image"). Absent when
@@ -145,6 +172,9 @@ export type BridgeComposerFieldProps = {
 	sendLabel: string;
 	sendDisabled: boolean;
 	onSend: () => void;
+	/** Focus the field when it mounts: the reply thread opened from the
+	 *  actions sheet's "Reply in thread" lands ready to type. */
+	autoFocus?: boolean;
 	/** The shell's fill: the host's `useChromeGlass()` (iOS 26, Reduce
 	 *  Transparency off), as the agent composer takes it. Absent is solid —
 	 *  exactly the shell as it was before glass. */
@@ -191,6 +221,8 @@ export function BridgeComposerFieldView({
 	placeholder,
 	draft,
 	onDraftChange,
+	onSelectionChange,
+	selection,
 	sending,
 	attachLabel,
 	attachDisabled = false,
@@ -199,6 +231,7 @@ export function BridgeComposerFieldView({
 	sendDisabled,
 	onSend,
 	glass = false,
+	autoFocus = false,
 }: BridgeComposerFieldProps & {
 	focused: boolean;
 	onFocus?: () => void;
@@ -343,8 +376,11 @@ export function BridgeComposerFieldView({
 					placeholder={placeholder}
 					value={draft}
 					onChangeText={onDraftChange}
+					onSelectionChange={onSelectionChange}
+					selection={selection}
 					disabled={sending}
 					onFocus={onFocus}
+					autoFocus={autoFocus}
 					onBlur={onBlur}
 					testID={CONTROL.teamBridgeMessageInput}
 				/>

@@ -21,9 +21,15 @@ const host = vi.hoisted(() => ({
 	roles: new Map<string, string>(),
 	checked: new Map<string, boolean>(),
 	ariaChecked: new Map<string, boolean>(),
+	/** Each `Segmented`'s selected value, by the group's testID. */
+	groups: new Map<string, string>(),
 	hints: new Map<string, string | undefined>(),
 	/** Every string a `Text` printed: what is on screen, as opposed to read. */
 	texts: [] as string[],
+	/** The platform the row believes it is on (`Platform.OS`). */
+	os: "web" as string,
+	/** The props the platform `Switch` was last drawn with. */
+	switchProps: null as null | Record<string, unknown>,
 }));
 
 vi.mock("react-native", () => ({
@@ -33,7 +39,15 @@ vi.mock("react-native", () => ({
 		if (typeof children === "string") host.texts.push(children);
 		return children ?? null;
 	},
-	Switch: () => null,
+	Platform: {
+		get OS() {
+			return host.os;
+		},
+	},
+	Switch: (props: Record<string, unknown>) => {
+		host.switchProps = props;
+		return null;
+	},
 	Pressable: (props: {
 		children?: import("react").ReactNode;
 		testID: string;
@@ -54,13 +68,18 @@ vi.mock("react-native", () => ({
 		return props.children ?? null;
 	},
 }));
-vi.mock("@/ui/appearance", () => ({ useTokenColor: () => "black" }));
+/* The token colour IS the role name here, so a test reads which role painted
+ *  which part of the switch. */
+vi.mock("@/ui/appearance", () => ({ useTokenColor: (role: string) => role }));
 vi.mock("@/ui/layout", () => ({ TOUCH_FLOOR: 44 }));
 vi.mock("@/ui/components/segmented", () => ({
 	Segmented: (props: {
+		value: string;
+		testID: string;
 		options: { value: string; testID: string }[];
 		onChange: (value: string) => void;
 	}) => {
+		host.groups.set(props.testID, props.value);
 		for (const option of props.options)
 			host.choices.set(option.testID, () => props.onChange(option.value));
 		return null;
@@ -89,17 +108,36 @@ const row = (id: string, extra: Partial<SessionSummary>): SessionSummary =>
 const ROWS = [
 	row("ended", { ended: true, mtime: NOON / 1000 - 60 }),
 	row("running", { streaming: true, created_at: NOON / 1000 - 600 }),
-	row("open", { mtime: NOON / 1000 - 120 }),
+	row("open", {
+		mtime: NOON / 1000 - 120,
+		tags: [{ id: "work", name: "Work" }],
+		primary: "work",
+	}),
 ];
 
 let current: View = DEFAULT_SIDEBAR_VIEW;
-function Harness({ scope }: { scope: "sheet" | "settings" }) {
-	const [view, setView] = useState<View>(DEFAULT_SIDEBAR_VIEW);
+let tagsOn = false;
+function Harness({
+	scope,
+	tagsAvailable = false,
+	initial = DEFAULT_SIDEBAR_VIEW,
+}: {
+	scope: "sheet" | "settings";
+	tagsAvailable?: boolean;
+	initial?: View;
+}) {
+	const [view, setView] = useState<View>(initial);
 	current = view;
-	return createElement(SidebarViewControls, { view, onChange: setView, scope });
+	tagsOn = tagsAvailable;
+	return createElement(SidebarViewControls, {
+		view,
+		onChange: setView,
+		scope,
+		tagsAvailable,
+	});
 }
 const drawn = () =>
-	arrangeSidebar(ROWS, current, NOON).map(
+	arrangeSidebar(ROWS, current, NOON, { tagsAvailable: tagsOn }).map(
 		(group) => `${group.key}:${group.rows.map((r) => r.session_id).join(",")}`,
 	);
 
@@ -113,8 +151,11 @@ beforeEach(() => {
 	host.roles.clear();
 	host.checked.clear();
 	host.ariaChecked.clear();
+	host.groups.clear();
 	host.hints.clear();
 	host.texts.length = 0;
+	host.os = "web";
+	host.switchProps = null;
 	current = DEFAULT_SIDEBAR_VIEW;
 });
 afterEach(() => {
@@ -175,6 +216,70 @@ describe("Settings → Sidebar", () => {
 	});
 });
 
+/* The tag view options (mobile sidebar tag view options, 2026-11-22). Both
+ * controls are RELAY-GATED, and the grouping's selected value is the DRAWN one
+ * so a stored `tag` never claims a mode the list is not drawing. */
+describe("the tag view options", () => {
+	it("draws the Tag grouping and the Show tags switch only on a relay that has tags", () => {
+		act(() =>
+			root.render(
+				createElement(Harness, { scope: "sheet", tagsAvailable: false }),
+			),
+		);
+		expect(host.choices.has(CONTROL.sidebarViewGroupTag)).toBe(false);
+		expect(host.presses.has(CONTROL.sidebarViewShowTags)).toBe(false);
+
+		act(() =>
+			root.render(
+				createElement(Harness, { scope: "settings", tagsAvailable: true }),
+			),
+		);
+		expect(host.choices.has(CONTROL.settingsSidebarGroupTag)).toBe(true);
+		expect(host.roles.get(CONTROL.settingsSidebarShowTags)).toBe("switch");
+		expect(host.checked.get(CONTROL.settingsSidebarShowTags)).toBe(true);
+		// The hint lives in Settings, under the switch (the Show ended pattern).
+		expect(host.texts).toContain("Tags stay in each conversation's menu.");
+	});
+
+	it("the Tag grouping writes and groups the list; Show tags writes its switch", () => {
+		act(() =>
+			root.render(
+				createElement(Harness, { scope: "sheet", tagsAvailable: true }),
+			),
+		);
+		expect(host.groups.get(CONTROL.sidebarViewGroup)).toBe("section");
+		press(host.choices, CONTROL.sidebarViewGroupTag);
+		expect(current.groupBy).toBe("tag");
+		expect(host.groups.get(CONTROL.sidebarViewGroup)).toBe("tag");
+		expect(drawn()).toEqual(["tag:work:open", "untagged:running,ended"]);
+
+		press(host.presses, CONTROL.sidebarViewShowTags);
+		expect(current.showTags).toBe(false);
+		expect(host.checked.get(CONTROL.sidebarViewShowTags)).toBe(false);
+		expect(host.ariaChecked.get(CONTROL.sidebarViewShowTags)).toBe(false);
+		press(host.presses, CONTROL.sidebarViewShowTags);
+		expect(current.showTags).toBe(true);
+	});
+
+	it("a stored Tag on a relay without tags selects Time section and is not rewritten", () => {
+		act(() =>
+			root.render(
+				createElement(Harness, {
+					scope: "settings",
+					tagsAvailable: false,
+					initial: { ...DEFAULT_SIDEBAR_VIEW, groupBy: "tag" },
+				}),
+			),
+		);
+		// The drawn grouping is what the control names…
+		expect(host.groups.get(CONTROL.settingsSidebarGroup)).toBe("section");
+		// …while a write of another field keeps the reader's stored Tag.
+		press(host.presses, CONTROL.settingsSidebarShowEnded);
+		expect(current.groupBy).toBe("tag");
+		expect(current.showEnded).toBe(false);
+	});
+});
+
 describe("review round 1 remediation", () => {
 	it("Q1: the switch row states its value to the web's tree as well as the native one", () => {
 		// react-native-web drops `accessibilityState.checked` for role `switch`, so a
@@ -223,5 +328,69 @@ describe("PR #264 design D6 / UX U9", () => {
 		);
 		expect(host.hints.get(id)).toBe("Visible hint");
 		expect(host.texts).toContain("Visible hint");
+	});
+});
+
+/* Review round 1, R2/Q1/Q3: the switch's colours, as the platform `Switch`
+ * actually receives them. A source grep passed with the on and off thumbs
+ * swapped; these fail on that swap, on a missing web on-thumb, and on a
+ * disabled switch drawn in the enabled colours. Roles: `SWITCH_ROLES`. */
+describe("SwitchRow paints the switch from the platform's roles", () => {
+	const draw = (os: string, value: boolean, disabled = false) => {
+		host.os = os;
+		act(() =>
+			root.render(
+				createElement(SwitchRow, {
+					label: "Show ended sessions",
+					value,
+					onChange: () => {},
+					testID: "switch-under-test",
+					disabled,
+				}),
+			),
+		);
+		return host.switchProps as Record<string, unknown>;
+	};
+
+	it("web, on: an accent thumb on the accent-muted track, the web's own on-thumb included", () => {
+		const props = draw("web", true);
+		expect(props.thumbColor).toBe("accent");
+		expect(props.activeThumbColor).toBe("accent");
+		expect(props.trackColor).toEqual({
+			true: "accent-muted",
+			false: "hairline-strong",
+		});
+	});
+
+	it("web, off: a neutral ink thumb", () => {
+		const props = draw("web", false);
+		expect(props.thumbColor).toBe("ink-muted");
+		expect(props.trackColor).toEqual({
+			true: "accent-muted",
+			false: "hairline-strong",
+		});
+	});
+
+	it("Android overhangs like the web", () => {
+		expect(draw("android", true).thumbColor).toBe("accent");
+		expect(draw("android", false).thumbColor).toBe("ink-muted");
+	});
+
+	it("iOS, thumb inside the track: on-accent on accent, elevated on border-control", () => {
+		const on = draw("ios", true);
+		expect(on.thumbColor).toBe("on-accent");
+		expect(on.trackColor).toEqual({ true: "accent", false: "border-control" });
+		expect(on.ios_backgroundColor).toBe("border-control");
+		expect(draw("ios", false).thumbColor).toBe("elevated");
+	});
+
+	it("disabled: the disabled roles in both states, never the enabled colours", () => {
+		for (const value of [true, false]) {
+			const props = draw("web", value, true);
+			expect(props.thumbColor).toBe("ink-disabled");
+			expect(props.activeThumbColor).toBe("ink-disabled");
+			expect(props.trackColor).toEqual({ true: "hairline", false: "hairline" });
+			expect(props.disabled).toBe(true);
+		}
 	});
 });

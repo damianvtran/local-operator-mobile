@@ -57,9 +57,12 @@ export interface AsksSheetControl {
 	/** The ask the sheet should open EXPANDED, or `null` (see `expandTargetFor`).
 	 *  Non-null only while the sheet is up because the POLICY opened it. */
 	initialOpenAsk: string | null;
-	/** The frame's own rows, to draw the sheet's first frame from while its first
-	 *  read is in flight - for a policy open only (see `AsksSheet.seedRows`). */
-	seedRows: PendingAsk[] | null;
+	/** The conversation's own frame rows (`projection.asks`), on EVERY open. The
+	 *  sheet merges them into its aggregate keyed by ask id (see `drawnRows`) -
+	 *  a hand-opened sheet used to draw the aggregate alone, so a short or empty
+	 *  read blanked the conversation the reader was in (issue #247). Null when the
+	 *  frame does not publish asks: that runtime renders exactly today's view. */
+	frameRows: PendingAsk[] | null;
 	/** Attach to the ask bar: it is the auto-opened sheet's opener, so the platform
 	 *  returns focus to it on close (see the focus note in the hook). */
 	barRef: React.RefObject<View | null>;
@@ -146,10 +149,10 @@ export const useAsksSheet = (input: AsksSheetInput): AsksSheetControl => {
 	const initialOpenAsk = visible
 		? expandTargetFor(controller.openOrigin(), entry.projection?.asks)
 		: null;
-	const seedRows =
-		visible && controller.openOrigin() === "policy"
-			? (entry.projection?.asks ?? null)
-			: null;
+	/* The frame's own rows on EVERY open, not only a policy open: the sheet draws
+	 * them merged into the aggregate, keyed by ask id (`drawnRows`). Gated on the
+	 * sheet being up so a closed sheet does not re-render with every frame. */
+	const frameRows = visible ? (entry.projection?.asks ?? null) : null;
 
 	/* THE BAR IS THE AUTO-OPENED SHEET'S OPENER (UX round 1, U3). The platform's
 	 * `Modal` returns focus, when it closes, to whatever held it when it OPENED
@@ -262,7 +265,7 @@ export const useAsksSheet = (input: AsksSheetInput): AsksSheetControl => {
 	return {
 		visible,
 		initialOpenAsk,
-		seedRows,
+		frameRows,
 		barRef,
 		readFailed,
 		open,

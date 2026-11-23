@@ -115,8 +115,9 @@ The one action affordance. Anything that **navigates** is a link, not a button.
 target and the visible box grow into it instead of keeping the size's own
 height. Use it only where a button must match a neighbour whose height follows
 the reader's type — the Past screen's Search beside its field, whose caller sizes
-the container to the measured field so the pair match at 100 % and 200 %. It
-never shrinks a button below its size or the touch floor.
+the container to the measured field so the pair match at 100 % and 200 %; and
+the ask footer's Send and Decline side by side, which stay one height when only
+one label wraps. It never shrinks a button below its size or the touch floor.
 
 ### Variants and their states
 
@@ -373,7 +374,24 @@ column's clipped foot at 360×780.
   opener.** The client stores the opener before moving focus.
 - **A control that answers the sheet may not scroll out of reach** — see the
   three-region rule in § 13.
-- **No drag gesture in v1.** A drag handle with no drag is worse than no handle.
+- **A sheet has no drag gesture BY DEFAULT.** A drag handle with no drag is worse
+  than no handle, so the plain `Sheet` — every sheet that does not ask otherwise —
+  keeps no handle and no drag.
+- **The one exception: a sheet may opt into `resizable`.** Then the grab bar has
+  a drag, and it RESIZES between two heights — Medium (the `content` detent's
+  fraction, hugging shorter content) and Large (the `full` detent's) — never a
+  dismissal. Past either end the surface resists (0.35, at most 48 pt) and
+  springs back, because a downward fling must not close a sheet holding a typed
+  answer. The body's height is what moves; the pinned footer never does, so the
+  verbs cannot slide off the edge. A tap on the bar toggles the two sizes, and
+  the bar is an adjustable control ("Resize panel", value Medium/Large, the one
+  action available at the current size) so the same choice is reachable without
+  a drag. The size is remembered in memory for the app run, never on disk. With
+  the keyboard up a header drag puts the keyboard away instead of resizing, and
+  the body fills the space between the safe top and the keyboard.
+
+  The ask sheet opts in (`AsksSheet`); every other sheet keeps the plain rule
+  above, and its tree is unchanged apart from one layout-neutral wrapper.
 
 ---
 
@@ -682,6 +700,34 @@ same square. A wide image is contained inside the column, not pushed past it.
 An image is fetched once: the source is kept across the row leaving and
 re-entering the list, so scrolling back to it shows the picture, not a second
 loading state.
+
+### A Mermaid diagram renders as a figure
+
+A closed ```` ```mermaid ```` fence in an answer draws as a diagram (Pele, painted
+with `react-native-svg`); an open fence stays a plain listing until it closes, and
+a source Pele cannot draw stays a listing under a one-line notice.
+
+- **Frame:** the code block's geometry (1pt `hairline` border, `rounded-sm`, a
+  header strip with the language) on `surface` rather than `sunken` — a figure on
+  a card, a listing in a well. Pele paints its own ground as `surface`.
+- **Colour:** only the app's roles, mapped as the desktop does: nodes `elevated`
+  with a `border-control` stroke, edges and secondary text `ink-muted`, labels
+  `ink`, chart series `accent`, `accent-alt`, `warning`, `danger`, `info`,
+  `success`. A theme change redraws it. Rows in `palette-rules.mjs` (`diagram/*`)
+  assert the pairs.
+- **Size:** full size when it fits the column, shrunk to no less than 0.85 (so the
+  12pt labels stay near 10pt), then it scrolls **sideways only**; a vertical drag
+  always scrolls the transcript.
+- **Tap** opens the full-screen viewer, as the Team Bridge image viewer does: the
+  drawing at full size (or as wide as the window, up to 3x), panned with one
+  finger; pinch-zoom on iOS only (Android and web have none). The header's 44pt
+  button copies the source.
+- **Not scaled with the reader's text size:** the drawing is a graphic, so its
+  labels stay 10-14pt while the prose around it scales (accepted gap).
+- **Too large** (past 1.5M pt² or 5,000pt on a side at the scale it would be
+  drawn): a one-line notice and the listing, because a native view is one surface.
+- **Reader without sight:** the control is named "<kind> diagram: <title or first
+  label>" and carries the Mermaid source as its value; the drawing is hidden.
 
 **No edge rules, no boxes around a turn.** Whose turn it is comes from alignment
 and fill (the reader's), a glyph and label (another participant's), or nothing

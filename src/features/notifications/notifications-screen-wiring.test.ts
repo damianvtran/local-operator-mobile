@@ -83,6 +83,14 @@ describe("the detail keeps read-only ask context separate from answering", () =>
 		expect(detail).toContain(
 			"mobile.notifications.detail.answer_in_conversation",
 		);
+		/* The sheet expands the row whose `ask_id` equals `initialOpenAsk`, so the
+		 * detail must hand it the BARE ask id. It used to hand the item's own
+		 * composite id (`ask:<session>:<ask_id>`), which no row matches and which
+		 * opened the card's own ask collapsed (Ben, 2026-11-23). The invariant is
+		 * asserted behaviourally in notifications-model.test.ts; here it is the
+		 * wiring that can silently regress. */
+		expect(detail).toContain("openAskIdFor(state.detail)");
+		expect(detail).not.toContain("state.detail.item.id");
 	});
 });
 
@@ -218,5 +226,116 @@ describe("the inbox list re-reads on return", () => {
 		expect(hook).toContain(
 			"if (ticket === ticketRef.current) setLoading(false);",
 		);
+	});
+});
+
+/**
+ * The empty inbox fills the screen below its filter (issue #321).
+ *
+ * Static for the reason the top of this file gives. The defect was layout, not
+ * logic: the Unread empty's wrapper had no `flex-1`, so on iOS the
+ * `EmptyState` (itself `flex-1 … justify-center`) was offered zero height and
+ * its centred block spilled UP over the Unread/All control, with the receipt
+ * crammed straight under it. The All empty had no filter at all, so a reader
+ * who tapped "Show all notifications" had no way back to Unread but Back. The
+ * rendered proof is the web capture; this pins the facts that caused it.
+ *
+ * The region SCROLLS, and the empty state inside it keeps its content height:
+ * at 200 % text on a 320 pt phone a fixed `flex-1` region was shorter than the
+ * empty state, which shrank and spilled over the filter the same way (web
+ * capture, iphone-se 200 %), while the receipt ran off the bottom unreachable.
+ */
+const EMPTY_BRANCH_START = "if (response !== null && inboxEmpty(response))";
+const EMPTY_BRANCH_END = "/* The populated case is the FlatList below.";
+const GROWING_WRAPPER =
+	/<ScrollView\b[^>]*\bclassName="(?:[^"]* )?flex-1(?: [^"]*)?"/;
+const GROWING_CONTENT =
+	/<ScrollView\b[^>]*\bcontentContainerClassName="(?:[^"]* )?grow(?: [^"]*)?"/;
+const SCROLLING_PROP = /^\s*scrolling$/gm;
+const EMPTY_SCROLL_REF = /<ScrollView\b[^>]*\bref=\{emptyScrollRef\}/;
+const TOP_ON_TAB_CHANGE =
+	/const setEmptyFilter = \(next: InboxFilter\) => \{\s*emptyScrollRef\.current\?\.scrollTo\(\{ y: 0, animated: false \}\);\s*inbox\.setFilter\(next\);/;
+const EMPTY_TAB_CONTROLS = /setEmptyFilter\b/g;
+const FILTER_TAG = /<SegmentedFilter\b/g;
+
+function emptyBranch(): string {
+	const start = source.indexOf(EMPTY_BRANCH_START);
+	const end = source.indexOf(EMPTY_BRANCH_END, start);
+	expect(start).toBeGreaterThan(-1);
+	expect(end).toBeGreaterThan(start);
+	return source.slice(start, end);
+}
+
+describe("the empty inbox's layout (#321)", () => {
+	it("gives the empty state a growing wrapper, so it centres instead of collapsing", () => {
+		const branch = emptyBranch();
+		const wrapper = GROWING_WRAPPER.exec(branch);
+		expect(wrapper).not.toBeNull();
+		/* The wrapper opens BEFORE either empty state, so both are inside it. */
+		expect(wrapper?.index ?? -1).toBeLessThan(
+			branch.indexOf("testID={EMPTY.notifications}"),
+		);
+		expect(wrapper?.index ?? -1).toBeLessThan(
+			branch.indexOf("testID={EMPTY.notificationsAll}"),
+		);
+	});
+
+	it("scrolls when the screen is shorter than the empty state", () => {
+		const branch = emptyBranch();
+		/* The content grows to the viewport (so the state centres) but is never
+		 *  smaller than its children (so a short screen scrolls to them). */
+		expect(GROWING_CONTENT.test(branch)).toBe(true);
+		/* Both sentences opt out of `flex-1`'s zero basis. */
+		expect(branch.match(SCROLLING_PROP)?.length).toBe(2);
+	});
+
+	it("opens each tab at the top, not at the other tab's scroll offset (design D1)", () => {
+		/* One region serves both tabs. "Show all notifications" pressed after
+		 *  scrolling down at 320 pt / 200 % landed the All tab mid-sentence, with
+		 *  the Unread/All control above the viewport. Both of the region's tab
+		 *  controls (the filter and "Show all") scroll it to its top first; not a
+		 *  remount, which would also cut the segmented indicator's slide. */
+		const branch = emptyBranch();
+		expect(EMPTY_SCROLL_REF.test(branch)).toBe(true);
+		expect(TOP_ON_TAB_CHANGE.test(source)).toBe(true);
+		expect(branch.match(EMPTY_TAB_CONTROLS)?.length).toBe(2);
+		expect(branch).not.toContain("inbox.setFilter");
+	});
+
+	it("keeps the Unread/All filter on BOTH empty tabs", () => {
+		const branch = emptyBranch();
+		/* One filter, rendered before the tab decides which sentence to show. */
+		expect(branch.match(FILTER_TAG)?.length).toBe(1);
+		expect(branch.indexOf("<SegmentedFilter")).toBeLessThan(
+			branch.indexOf('inbox.filter === "unread"'),
+		);
+	});
+});
+
+/**
+ * The dismiss receipt is a pinned, inset footer (#321).
+ *
+ * The screen is `scroll={false}`, so `Screen` adds no horizontal gutter and
+ * pays no bottom inset (`bottomInset` defaults to "child"): the receipt ran
+ * edge to edge, and once the empty state grows it would sit in the home
+ * indicator band. The footer that holds it pays both, and only while it holds
+ * something, so an idle list still scrolls under the indicator as before.
+ */
+const RECEIPT_IN_GUTTER =
+	/<View\b[^>]*\bclassName="[^"]*\bpx-4\b[^"]*"\s*>\s*<DismissReceipt dismissAll=\{dismissAll\} \/>/;
+const FOOTER_PAYS_INSET =
+	/paddingBottom:\s*footerShowing \? insets\.bottom : 0/;
+
+describe("the dismiss receipt's footer (#321)", () => {
+	it("insets the receipt by the screen's gutter", () => {
+		expect(RECEIPT_IN_GUTTER.test(source)).toBe(true);
+	});
+
+	it("pays the bottom safe-area inset while the footer holds anything", () => {
+		expect(source).toContain("const insets = useSafeAreaInsets();");
+		expect(source).toContain(
+			"const footerShowing = selecting || receiptShowing;",
+		);
+		expect(FOOTER_PAYS_INSET.test(source)).toBe(true);
 	});
 });

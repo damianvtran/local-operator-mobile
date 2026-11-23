@@ -2,7 +2,6 @@ import { useGlobalSearchParams, usePathname } from "expo-router";
 import {
 	AtSign,
 	BellOff,
-	Check,
 	ChevronsUpDown,
 	Hash,
 	Lock,
@@ -11,8 +10,10 @@ import {
 import {
 	createContext,
 	type ReactNode,
+	type RefObject,
 	useContext,
 	useEffect,
+	useRef,
 	useState,
 } from "react";
 import {
@@ -22,7 +23,14 @@ import {
 	Text,
 	View,
 } from "react-native";
+import { communityEnabled } from "@/community/flag";
+import { CommunityOpening } from "@/features/community/opening";
 import { countLabel } from "@/features/notifications/notifications-model";
+import {
+	createViewportSignal,
+	type ViewportSignal,
+} from "@/features/team-bridge/avatar-viewport";
+import { AvatarViewportProvider } from "@/features/team-bridge/avatar-viewport-context";
 import {
 	conversationsStatus,
 	peopleStatus,
@@ -45,7 +53,6 @@ import {
 	SURFACE,
 	teamBridgeChiefId,
 	teamBridgeConversationId,
-	teamBridgeOrganizationId,
 	teamBridgePersonId,
 	teamBridgeProfileOpenId,
 } from "@/ui/a11y";
@@ -54,7 +61,6 @@ import { initialsOf } from "@/ui/components/avatar";
 import { Button } from "@/ui/components/button";
 import { Screen } from "@/ui/components/screen";
 import { SectionHeader } from "@/ui/components/section-header";
-import { Sheet } from "@/ui/components/sheet";
 import { Skeleton } from "@/ui/components/skeleton";
 import { TEXT_END_CLASS } from "@/ui/direction";
 import { TOUCH_FLOOR } from "@/ui/layout";
@@ -62,6 +68,7 @@ import { CONTROL_DISABLED_INK, cx } from "@/ui/variants";
 import { DefaultOnNoticeBanner } from "./default-on-notice-banner";
 import { BridgeBack, BridgeGate } from "./gate";
 import { useRestoreLastTarget } from "./last-target-hooks";
+import { OrgSwitcherSheet } from "./org-switcher-sheet";
 import {
 	PersonAvatar,
 	ProfileAvatarButton,
@@ -393,6 +400,28 @@ function BridgeRowLink({
  * `onNavigate`, which dismisses the panel first so the thread is not opened
  * underneath a still-covering drawer; the route screen passes nothing.
  */
+/** The directory's two contexts: its ground, and the photo viewport signal
+ *  its rows gate their reads on (`avatar-viewport.ts`). */
+function DirectoryProviders({
+	ground,
+	viewport,
+	clip,
+	children,
+}: {
+	ground: DirectoryGround;
+	viewport: ViewportSignal;
+	clip: RefObject<ScrollView | null>;
+	children: ReactNode;
+}) {
+	return (
+		<DirectoryGroundContext.Provider value={ground}>
+			<AvatarViewportProvider signal={viewport} clip={clip}>
+				{children}
+			</AvatarViewportProvider>
+		</DirectoryGroundContext.Provider>
+	);
+}
+
 export function BridgeDirectory({
 	onBeforeOpen,
 	ground = "canvas",
@@ -425,7 +454,6 @@ export function BridgeDirectory({
 	const activeRoute: ReturnType<typeof activeBridgeRoute> =
 		openRoute ?? mark.route;
 	const chevronColor = useTokenColor("ink-dim");
-	const checkColor = useTokenColor("accent");
 	const openTarget = useOpenTarget();
 	const open = (target: Parameters<typeof openTarget>[0]) => {
 		onBeforeOpen?.();
@@ -540,6 +568,9 @@ export function BridgeDirectory({
 	 * promise settles as soon as its reads do, or at once when both halves are
 	 * inside a wait and nothing is sent. */
 	const [pulling, setPulling] = useState(false);
+	// The list re-announces the clipping geometry on layout, growth and scroll.
+	const [viewport] = useState(createViewportSignal);
+	const clip = useRef<ScrollView>(null);
 	const retry = () => {
 		// The reader asked: bypass freshness and TTL (never an active 429 wait).
 		if (tenantId) void actions.loadOrganization(tenantId, { force: true });
@@ -559,7 +590,7 @@ export function BridgeDirectory({
 	const peopleLoading = peopleSection.skeleton;
 	const multiOrg = state.organizations.length > 1;
 	return (
-		<DirectoryGroundContext.Provider value={ground}>
+		<DirectoryProviders ground={ground} viewport={viewport} clip={clip}>
 			<View className="px-2 py-1">
 				<Pressable
 					accessibilityRole={ROLE.button}
@@ -600,7 +631,8 @@ export function BridgeDirectory({
 									readOnly: selected?.readOnly ? "yes" : "no",
 								})}
 							</Text>
-							{multiOrg ? (
+							{/* With communities on, the sheet always has a second group to offer. */}
+							{multiOrg || communityEnabled() ? (
 								<ChevronsUpDown size={15} color={chevronColor} aria-hidden />
 							) : null}
 						</View>
@@ -608,8 +640,13 @@ export function BridgeDirectory({
 				</Pressable>
 			</View>
 			<ScrollView
+				ref={clip}
 				testID={SURFACE.teamBridgeSections}
 				contentContainerClassName="pb-6"
+				onLayout={viewport.emit}
+				onContentSizeChange={viewport.emit}
+				onScroll={viewport.emit}
+				scrollEventThrottle={100}
 				refreshControl={
 					<RefreshControl refreshing={pulling} onRefresh={pull} />
 				}
@@ -846,78 +883,11 @@ export function BridgeDirectory({
 					onBeforeOpen={onBeforeOpen}
 				/>
 			)}
-			<Sheet
+			<OrgSwitcherSheet
 				visible={switching}
 				onClose={() => setSwitching(false)}
-				title={t("mobile.team_bridge.list.organization")}
-				testID={SURFACE.teamBridgeOrganizations}
-			>
-				{/* `Sheet` already provides `px-4` on its scroll content; no inner `p-4`
-				 *  so options sit flush with the sheet header's 16 pt margin. */}
-				<View className="gap-1 pb-2">
-					{state.organizations.map((o) => {
-						const active = o.tenantId === tenantId;
-						const optionLabel = t(
-							"mobile.team_bridge.list.organization_label",
-							{
-								name: o.name,
-								readOnly: o.readOnly ? "yes" : "no",
-								count: o.unread ?? 0,
-							},
-						);
-						return (
-							<Pressable
-								key={o.tenantId}
-								accessibilityRole={ROLE.button}
-								accessibilityLabel={optionLabel}
-								accessibilityState={a11yState({ selected: active })}
-								testID={teamBridgeOrganizationId(o.tenantId)}
-								onPress={() => {
-									actions.selectOrganization(o.tenantId);
-									setSwitching(false);
-								}}
-								style={{ minHeight: TOUCH_FLOOR }}
-							>
-								{({ pressed }) => (
-									<View
-										className={cx(
-											"flex-1 flex-row items-center gap-3 rounded-sm px-3 py-2",
-											active
-												? "bg-row-selected"
-												: pressed
-													? "bg-row-hover"
-													: "bg-transparent",
-										)}
-									>
-										<View
-											className="h-6 w-6 items-center justify-center rounded-sm bg-accent-muted"
-											aria-hidden
-											accessibilityElementsHidden
-											importantForAccessibility="no-hide-descendants"
-										>
-											<Text className="text-mono-label font-semibold text-accent-active dark:text-accent-hover">
-												{initialsOf(o.name).slice(0, 1)}
-											</Text>
-										</View>
-										<Text
-											className={cx(
-												"min-w-0 flex-1 text-body",
-												active ? "font-semibold text-ink" : "text-ink",
-											)}
-										>
-											{optionLabel}
-										</Text>
-										{active ? (
-											<Check size={18} color={checkColor} aria-hidden />
-										) : null}
-									</View>
-								)}
-							</Pressable>
-						);
-					})}
-				</View>
-			</Sheet>
-		</DirectoryGroundContext.Provider>
+			/>
+		</DirectoryProviders>
 	);
 }
 
@@ -938,8 +908,13 @@ function ListContent() {
 
 export default function TeamBridgeListScreen() {
 	return (
-		<BridgeGate>
-			<ListContent />
-		</BridgeGate>
+		<>
+			{/* Outside the gate: rule 7 (no private org) must act while the
+			 *  no-plan gate is what would otherwise paint. */}
+			<CommunityOpening />
+			<BridgeGate>
+				<ListContent />
+			</BridgeGate>
+		</>
 	);
 }

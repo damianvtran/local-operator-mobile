@@ -1,0 +1,75 @@
+# o3c-fr-f99d15: commands run in session f99d15fd59f3 and their actual printed output
+
+$ git -C ~/local-operator-mobile/.worktrees/i18n-m3-s2a rev-parse HEAD; git branch --show-current
+e7ebc3917537d83cc772148fc5b2fc2ad3f43a41
+feat/i18n-o3c-rows-headers
+
+$ shasum -a 256 <brief> <draft>
+e88beb09366b9ff795bf0ac916f30cef1c9a93c35fa4617575e904c7a6f5fd17  /Users/damian/.local-operator/sessions/162198c78bcb/scratchpad/o3c-translation-brief.json
+8512afaa45e9c5735e1d41b491627a146e73ffc2738f395d7b0fd2c0ad3df547  /Users/damian/.local-operator/sessions/0942405d8cd5/scratchpad/o3c/draft-fr.json
+
+$ git show e7ebc391:src/i18n/catalogues/fr/mobile.sidebar.json | shasum -a 256
+b5a442345da677e12ff7caca461f94193f3d267908671b2627b9deb49694cd04  -
+$ git show e7ebc391:src/i18n/catalogues/fr/relay.chrome.json | shasum -a 256
+092846834cd5200dfec2b47332a94a6f26aecc482cf4bac5f5afbd0ae88154d0  -
+$ shasum -a 256 ~/local-operator/i18n/style-guides/fr.md ~/local-operator/i18n/glossary.md
+ae1519ab7617d19aa826918d607de1d018595094166edbc18aa58f6a8f0a4226  i18n/style-guides/fr.md
+0eb34437a8c3d6f564f278ef957a603b1d9f51bb07d5ddae5ea8f37deba962f8  i18n/glossary.md
+
+# Checker script: check-fr.mts (embedded below). Prior attempts failed and were fixed, not hidden:
+#  1) as .ts: esbuild 'Top-level await is currently not supported with the "cjs" output format' -> renamed .mts
+#  2) formatMessage called with wrong signature ('nodes is not iterable') -> formatMessage(parsed, args, "fr")
+#  3) first comparator serialised a Map as {} (false 'DIFF') -> compared params entries and select arms explicitly
+$ cd ~/local-operator-mobile/.worktrees/i18n-m3-s2a && ./node_modules/.bin/tsx check-fr.mts
+draft sha256 8512afaa45e9c5735e1d41b491627a146e73ffc2738f395d7b0fd2c0ad3df547
+brief sha256 e88beb09366b9ff795bf0ac916f30cef1c9a93c35fa4617575e904c7a6f5fd17
+en mobile.sidebar.json beaba7baeffe546ce65430d6cb18213da2fbb88d23128c071c286fb32a08ecdf
+en mobile.sidebar.context.json 858f7c51c595862306120be7833c4274439b436bb8bd1f547b88139f8d0f2fd3
+missing [] extra []
+mobile.sidebar.row_status.approval | nfc true | args same {"params":[],"selects":[]} | out ["approbation"] | width 11 / 10 OVER | lower true | edge-punct false
+mobile.sidebar.row_status.question | nfc true | args same {"params":[],"selects":[]} | out ["question"] | width 8 / 10 ok | lower true | edge-punct false
+mobile.sidebar.row_status.not_reachable | nfc true | args same {"params":[],"selects":[]} | out ["injoignable"] | width 11 / 14 ok | lower true | edge-punct false
+mobile.sidebar.row_status.ended | nfc true | args same {"params":[],"selects":[]} | out ["terminée"] | width 8 / 10 ok | lower true | edge-punct false
+mobile.sidebar.row_status.not_answering | nfc true | args same {"params":[],"selects":[]} | out ["ne répond pas"] | width 13 / 14 ok | lower true | edge-punct false
+mobile.sidebar.row_label.waiting | nfc true | args same {"params":[["kind","select"]],"selects":[["kind",["approval","other"]]]} | out ["approbation en attente","question en attente"] | width 22 / 24 ok | lower true | edge-punct false
+mobile.sidebar.row_label.working | nfc true | args same {"params":[],"selects":[]} | out ["en cours"] | width 8 / 24 ok | lower true | edge-punct false
+mobile.sidebar.row_label.on_device | nfc true | args same {"params":[["device","text"]],"selects":[]} | out ["sur Studio Mac"] | width 14 / 24 ok | lower true | edge-punct false
+mobile.sidebar.row_label.open | nfc true | args same {"params":[],"selects":[]} | out ["ouverte"] | width 7 / 24 ok | lower true | edge-punct false
+redaction hits draft 0 brief(excl pattern) 0 en 0
+neg {kind, select, approval {x}} REJECTED RangeError: Invalid message "{kind, select, approval {x}}": select is missing its 'other' branch (at
+neg {kind, select, approval {x} other {y} REJECTED RangeError: Invalid message "{kind, select, approval {x} other {y}": unterminated select (at offset 
+neg sur {appareil} parsed {"source":"sur {appareil}","params":{},"nodes":[{"type":"text","value":"sur "},{"type":"argument","name":"appareil"}]}
+
+--- check-fr.mts ---
+import { readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+const W = "/Users/damian/local-operator-mobile/.worktrees/i18n-m3-s2a";
+const { parseMessage, formatMessage } = await import(W + "/src/i18n/messages.ts");
+const draftPath = "/Users/damian/.local-operator/sessions/0942405d8cd5/scratchpad/o3c/draft-fr.json";
+const briefPath = "/Users/damian/.local-operator/sessions/162198c78bcb/scratchpad/o3c-translation-brief.json";
+const sha = (p: string) => createHash("sha256").update(readFileSync(p)).digest("hex");
+console.log("draft sha256", sha(draftPath)); console.log("brief sha256", sha(briefPath));
+for (const f of ["mobile.sidebar.json","mobile.sidebar.context.json"]) console.log("en", f, sha(`${W}/src/i18n/catalogues/en/${f}`));
+const draft = JSON.parse(readFileSync(draftPath, "utf8")); const brief = JSON.parse(readFileSync(briefPath, "utf8"));
+const en = JSON.parse(readFileSync(`${W}/src/i18n/catalogues/en/mobile.sidebar.json`, "utf8"));
+const keys = brief.keys.map((k: any) => k.key); const dk = Object.keys(draft.values);
+console.log("missing", keys.filter((k: string) => !dk.includes(k)), "extra", dk.filter(k => !keys.includes(k)));
+const sig = (p: any) => JSON.stringify(p);
+for (const k of keys) {
+  const b = brief.keys.find((x: any) => x.key === k); const v = draft.values[k];
+  if (en[k] !== b.english) console.log("BRIEF/EN MISMATCH", k);
+  let pe: any, pf: any;
+  try { pe = parseMessage(en[k]); pf = parseMessage(v); } catch (e) { console.log("PARSE FAIL", k, String(e)); continue; }
+  const sh = (m: any) => JSON.stringify({params: [...m.params.entries()].sort(), selects: m.nodes.filter((n: any) => n.type === "select").map((n: any) => [n.name, (n.options instanceof Map ? [...n.options.keys()] : Object.keys(n.options)).sort()])}); const argsE = sh(pe); const argsF = sh(pf);
+  const nfc = v === v.normalize("NFC");
+  const samples: any[] = k.endsWith("waiting") ? [{kind:"approval"},{kind:"question"}] : k.endsWith("on_device") ? [{device:"Studio Mac"}] : [{}];
+  const out = samples.map(a => formatMessage(pf, a, "fr"));
+  const w = Math.max(...out.map((s: string) => [...s].length));
+  console.log(k, "| nfc", nfc, "| args", argsF === argsE ? "same "+argsF : `DIFF en=${argsE} fr=${argsF}`, "| out", JSON.stringify(out), "| width", w, "/", b.width_hint_chars, w > b.width_hint_chars ? "OVER" : "ok", "| lower", v === v.toLowerCase() || k.endsWith("on_device"), "| edge-punct", /^[\s,.;:]|[\s,.;:]$/.test(v));
+}
+const pat = new RegExp(brief.redaction_scan.pattern.replace(/^\(\?i\)/, ""), "i");
+const scan = (s: string) => (s.match(new RegExp(pat.source, "gi")) ?? []).length;
+const briefNoPat = JSON.stringify({ ...brief, redaction_scan: { ...brief.redaction_scan, pattern: "" } });
+console.log("redaction hits draft", scan(readFileSync(draftPath, "utf8")), "brief(excl pattern)", scan(briefNoPat), "en", scan(readFileSync(`${W}/src/i18n/catalogues/en/mobile.sidebar.json`,"utf8")));
+// negative controls
+for (const bad of ["{kind, select, approval {x}}", "{kind, select, approval {x} other {y}", "sur {appareil}"]) { try { const p = parseMessage(bad); console.log("neg", bad, "parsed", JSON.stringify(p).slice(0,120)); } catch (e) { console.log("neg", bad, "REJECTED", String(e).slice(0,100)); } }

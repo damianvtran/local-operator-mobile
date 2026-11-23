@@ -25,13 +25,23 @@ export const remoteConversationOf = (
 /** Dictation uploads audio to the CONNECTED computer. A remote conversation
  * cannot claim that as its owner's audio support or carry its local input_path
  * to the peer. Omitting STT hides both record and misleading local setup UI;
- * image-only pickers and ordinary typed prompt/steer remain available. */
+ * image-only pickers and ordinary typed prompt/steer remain available. The same
+ * rule withholds `skill_invocation` (`$skill` autocomplete and `expand_skills`):
+ * the relay refuses the flag on a remote conversation. */
 export const sessionCapabilities = (
 	capabilities: Capabilities,
 	remote: boolean,
 ): Capabilities => {
 	if (!remote) return capabilities;
-	const { stt: _localStt, ...remoteCapabilities } = capabilities;
+	/* `skill_invocation` goes with it: the relay answers `expand_skills` on a
+	 * remote conversation with `409 remote_unsupported`
+	 * (`remote_sessions.skill_invocation` is false), and the catalogue is the
+	 * CONNECTED computer's, not the owner's. */
+	const {
+		stt: _localStt,
+		skill_invocation: _localSkills,
+		...remoteCapabilities
+	} = capabilities;
 	return remoteCapabilities;
 };
 

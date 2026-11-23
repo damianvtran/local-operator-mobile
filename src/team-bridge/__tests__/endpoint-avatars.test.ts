@@ -4,6 +4,7 @@ import {
 	avatarKey,
 	avatarVersion,
 	createAvatarCache,
+	ENDPOINT_PHOTO_FRESH_MS,
 	endpointAvatarFailure,
 	endpointAvatarKey,
 	endpointAvatarVersion,
@@ -11,6 +12,7 @@ import {
 } from "@/team-bridge/avatars";
 import { AVATAR_MAX_BYTES, createHubClient } from "@/team-bridge/client";
 import { directoryMemberSchema } from "@/team-bridge/contract";
+import { DIRECTORY_TTL_MS } from "@/team-bridge/store";
 
 const HASH = "0123456789abcdef";
 const ACCESS = ["unit", "photo"].join("-");
@@ -77,26 +79,83 @@ describe("endpoint avatar identity", () => {
 	});
 });
 
-describe("private endpoint photo retention", () => {
-	it("deduplicates only in-flight reads, leaves no ready bytes and reauthorizes a remount", async () => {
-		const cache = createAvatarCache();
+describe("endpoint photo retention (hash-pinned, TestFlight 1157 fan-out)", () => {
+	it("displays a verified photo for the freshness window only, then revalidates conditionally", async () => {
+		let clock = 0;
+		const cache = createAvatarCache({ now: () => clock });
 		const human = avatarKey(OWNER, HASH, 64);
 		const key = endpointAvatarKey(OWNER, HASH, 64);
 		await cache.load(human, async () => OWNER_URI, avatarFailure);
-		const read = vi.fn(async () => AGENT_URI);
+		const etag = `"${HASH}-64"`;
+		const http = vi
+			.fn<typeof fetch>()
+			.mockResolvedValueOnce(new Response(PNG, { headers: { etag } }))
+			.mockResolvedValueOnce(new Response(null, { status: 304 }));
+		const hub = createHubClient({
+			accessToken: async () => ACCESS,
+			fetchImpl: http,
+		});
+		const read = vi.fn((validator?: string) =>
+			hub
+				.revalidateEndpointAvatar(OWNER, HASH, 64, {
+					etag: validator ?? null,
+					native: true,
+				})
+				.then((photo) => photo && { uri: AGENT_URI, etag: photo.etag }),
+		);
 		const first = cache.loadEndpoint(key, read, avatarFailure);
 		const twin = cache.loadEndpoint(key, read, avatarFailure);
 		expect(await first).toBe(AGENT_URI);
 		expect(await twin).toBe(AGENT_URI);
 		expect(read).toHaveBeenCalledTimes(1);
+		// The account-photo peek never reveals endpoint bytes.
 		expect(cache.peek(key)).toBeNull();
-		expect(cache.stats().bytes).toBe(OWNER_URI.length);
-		await cache.loadEndpoint(key, read, avatarFailure);
-		// Even an accidental legacy call cannot create reusable endpoint bytes.
-		await cache.load(key, read, avatarFailure);
-		expect(read).toHaveBeenCalledTimes(3);
-		expect(cache.stats().bytes).toBe(OWNER_URI.length);
+		// U5/D4: a row re-entering inside the window repaints with no new read.
+		clock = ENDPOINT_PHOTO_FRESH_MS - 1;
+		expect(cache.peekEndpoint(key)).toBe(AGENT_URI);
+		expect(await cache.loadEndpoint(key, read, avatarFailure)).toBe(AGENT_URI);
+		expect(read).toHaveBeenCalledTimes(1);
+		// Past it the bytes are only a validator: no display until a new read.
+		clock = ENDPOINT_PHOTO_FRESH_MS;
+		expect(cache.peekEndpoint(key)).toBeNull();
+		expect(await cache.loadEndpoint(key, read, avatarFailure)).toBe(AGENT_URI);
+		expect(read).toHaveBeenCalledTimes(2);
+		const second = http.mock.calls[1]?.[1];
+		expect(second?.cache).toBe("no-store");
+		expect(new Headers(second?.headers).get("if-none-match")).toBe(etag);
+		expect(new Headers(second?.headers).get("cache-control")).toBe("no-cache");
+		// Same opaque id and hash, different namespace: never the owner's bytes.
 		expect(cache.peek(human)).toBe(OWNER_URI);
+		// The 304 renewed the authorization for another window.
+		clock += ENDPOINT_PHOTO_FRESH_MS - 1;
+		expect(cache.peekEndpoint(key)).toBe(AGENT_URI);
+		// Account change: nothing verified for the old account is displayable.
+		cache.clear();
+		expect(cache.peek(key)).toBeNull();
+		expect(cache.peekEndpoint(key)).toBeNull();
+	});
+	it("trusts a photo read no longer than the directory row that advertised it", () => {
+		expect(ENDPOINT_PHOTO_FRESH_MS).toBe(DIRECTORY_TTL_MS);
+	});
+	it("web forces a fresh GET without CORS-forbidden headers or unsolicited 304", async () => {
+		const http = vi
+			.fn<typeof fetch>()
+			.mockResolvedValue(new Response(null, { status: 304 }));
+		const hub = createHubClient({
+			accessToken: async () => ACCESS,
+			fetchImpl: http,
+		});
+		await expect(
+			hub.revalidateEndpointAvatar(ENDPOINT, HASH, 64, {
+				etag: '"opaque"',
+				native: false,
+			}),
+		).rejects.toMatchObject({ status: 304 });
+		const request = http.mock.calls[0]?.[1];
+		expect(request?.cache).toBe("no-store");
+		const headers = new Headers(request?.headers);
+		expect(headers.has("if-none-match")).toBe(false);
+		expect(headers.has("cache-control")).toBe(false);
 	});
 	it("shares permanent endpoint failures across sizes, never with the owner's key", async () => {
 		const cache = createAvatarCache();
@@ -268,7 +327,9 @@ describe("photo authorization and refusal bounds", () => {
 			finish(ACCESS);
 			await vi.advanceTimersByTimeAsync(0);
 			expect(read).not.toHaveBeenCalled();
-			expect(cache.stats()).toEqual({ entries: 0, bytes: 0 });
+			// The queued photo succeeded and is held (hash-pinned retention); the
+			// timed-out one left nothing behind it could have been evicted for.
+			expect(cache.stats()).toEqual({ entries: 1, bytes: AGENT_URI.length });
 		} finally {
 			vi.useRealTimers();
 		}
@@ -388,37 +449,185 @@ describe("photo authorization and refusal bounds", () => {
 		expect(first.bodyUsed).toBe(true);
 		expect(read).toHaveBeenCalledTimes(2);
 	});
-	it("reauthorizes after success and turns a withdrawn 404 into a glyph, not stale bytes", async () => {
-		let calls = 0;
-		let clock = 0;
+	it.each([
+		[404, 1],
+		// 401 is retried once with a forced refresh before it is a refusal.
+		[401, 2],
+	])(
+		"same-hash %i withdrawal withholds the URI and retries only after cooldown",
+		async (status, refusals) => {
+			let calls = 0;
+			let clock = 0;
+			const hub = createHubClient({
+				accessToken: async () => ACCESS,
+				fetchImpl: vi.fn(async () =>
+					++calls === 1 || calls > 1 + refusals
+						? new Response(PNG)
+						: new Response("{}", { status }),
+				) as unknown as typeof fetch,
+			});
+			const cache = createAvatarCache({ now: () => clock });
+			const key = endpointAvatarKey(ENDPOINT, HASH, 64);
+			const read = () =>
+				hub.endpointAvatarBytes(ENDPOINT, HASH, 64).then(() => AGENT_URI);
+			expect(await cache.loadEndpoint(key, read, endpointAvatarFailure)).toBe(
+				AGENT_URI,
+			);
+			// Inside the window a verified photo is reused; once it lapses the
+			// next read is the one that discovers the refusal.
+			clock = ENDPOINT_PHOTO_FRESH_MS;
+			expect(
+				await cache.loadEndpoint(key, read, endpointAvatarFailure),
+			).toBeNull();
+			expect(cache.peek(key)).toBeNull();
+			expect(cache.peekEndpoint(key)).toBeNull();
+			expect(
+				await cache.loadEndpoint(key, read, endpointAvatarFailure),
+			).toBeNull();
+			expect(calls).toBe(1 + refusals);
+			clock += 60_001;
+			expect(await cache.loadEndpoint(key, read, endpointAvatarFailure)).toBe(
+				AGENT_URI,
+			);
+			expect(calls).toBe(2 + refusals);
+		},
+	);
+	it("a refusal from any read of the key withdraws a still-fresh photo", async () => {
+		const cache = createAvatarCache({ now: () => 0 });
+		const key = endpointAvatarKey(ENDPOINT, HASH, 64);
+		expect(
+			await cache.loadEndpoint(
+				key,
+				async () => AGENT_URI,
+				endpointAvatarFailure,
+			),
+		).toBe(AGENT_URI);
+		expect(cache.peekEndpoint(key)).toBe(AGENT_URI);
+		// e.g. the decoder refusing the bytes, or a card's read of the key.
+		cache.fail(key, "transient");
+		expect(cache.peekEndpoint(key)).toBeNull();
+	});
+	it.each([401, 403, 404])(
+		"a %i on one size withdraws the other size's still-fresh photo (review R3-1)",
+		async (status) => {
+			let clock = 0;
+			const cache = createAvatarCache({ now: () => clock });
+			const row = endpointAvatarKey(ENDPOINT, HASH, 64);
+			const card = endpointAvatarKey(ENDPOINT, HASH, 256);
+			const hub = createHubClient({
+				accessToken: async () => ACCESS,
+				fetchImpl: vi.fn(
+					async () => new Response("{}", { status }),
+				) as unknown as typeof fetch,
+			});
+			let reads = 0;
+			const ok = async () => {
+				reads += 1;
+				return AGENT_URI;
+			};
+			expect(await cache.loadEndpoint(row, ok, endpointAvatarFailure)).toBe(
+				AGENT_URI,
+			);
+			clock = 1_000;
+			expect(
+				await cache.loadEndpoint(
+					card,
+					() =>
+						hub
+							.revalidateEndpointAvatar(ENDPOINT, HASH, 256, {
+								etag: null,
+								native: true,
+							})
+							.then(() => AGENT_URI),
+					endpointAvatarFailure,
+				),
+			).toBeNull();
+			clock = 2_000;
+			// Still inside ENDPOINT_PHOTO_FRESH_MS of the 64 px 200, yet refused.
+			expect(cache.peekEndpoint(row)).toBeNull();
+			expect(await cache.loadEndpoint(row, ok, endpointAvatarFailure)).toBe(
+				AGENT_URI,
+			);
+			expect(reads).toBe(2);
+		},
+	);
+	it("a transient 5xx on one size leaves the other size's fresh photo shown", async () => {
+		const cache = createAvatarCache({ now: () => 0 });
+		const row = endpointAvatarKey(ENDPOINT, HASH, 64);
+		const card = endpointAvatarKey(ENDPOINT, HASH, 256);
 		const hub = createHubClient({
 			accessToken: async () => ACCESS,
-			fetchImpl: vi.fn(async () =>
-				++calls !== 2 ? new Response(PNG) : new Response("{}", { status: 404 }),
+			fetchImpl: vi.fn(
+				async () => new Response("{}", { status: 503 }),
 			) as unknown as typeof fetch,
 		});
-		const cache = createAvatarCache({ now: () => clock });
-		const key = endpointAvatarKey(ENDPOINT, HASH, 64);
-		const read = () =>
-			hub.endpointAvatarBytes(ENDPOINT, HASH, 64).then(() => AGENT_URI);
-		expect(await cache.loadEndpoint(key, read, endpointAvatarFailure)).toBe(
-			AGENT_URI,
+		await cache.loadEndpoint(row, async () => AGENT_URI, endpointAvatarFailure);
+		await cache.loadEndpoint(
+			card,
+			() =>
+				hub
+					.revalidateEndpointAvatar(ENDPOINT, HASH, 256, {
+						etag: null,
+						native: true,
+					})
+					.then(() => AGENT_URI),
+			endpointAvatarFailure,
 		);
-		expect(
-			await cache.loadEndpoint(key, read, endpointAvatarFailure),
-		).toBeNull();
-		expect(calls).toBe(2);
-		expect(cache.peek(key)).toBeNull();
-		expect(
-			await cache.loadEndpoint(key, read, endpointAvatarFailure),
-		).toBeNull();
-		expect(calls).toBe(2);
-		clock = 60_001;
-		expect(await cache.loadEndpoint(key, read, endpointAvatarFailure)).toBe(
-			AGENT_URI,
-		);
-		expect(calls).toBe(3);
+		expect(cache.peekEndpoint(row)).toBe(AGENT_URI);
 	});
+	it("withholds the same photo on 429 and pauses queued reads until Retry-After", async () => {
+		vi.useFakeTimers();
+		const cache = createAvatarCache();
+		const key = endpointAvatarKey(ENDPOINT, HASH, 64);
+		const http = vi
+			.fn<typeof fetch>()
+			.mockResolvedValueOnce(
+				new Response(PNG, { headers: { etag: '"opaque"' } }),
+			)
+			.mockResolvedValueOnce(
+				new Response(null, { status: 429, headers: { "retry-after": "2" } }),
+			)
+			.mockImplementation(async () => new Response(PNG));
+		const hub = createHubClient({
+			accessToken: async () => ACCESS,
+			fetchImpl: http,
+		});
+		const check = (endpoint: string) => (etag?: string) =>
+			hub
+				.revalidateEndpointAvatar(endpoint, HASH, 64, {
+					etag: etag ?? null,
+					native: true,
+				})
+				.then((photo) => photo && { uri: AGENT_URI, etag: photo.etag });
+		try {
+			expect(
+				await cache.loadEndpoint(key, check(ENDPOINT), endpointAvatarFailure),
+			).toBe(AGENT_URI);
+			// Past the freshness window, so the next load is a real read.
+			await vi.advanceTimersByTimeAsync(ENDPOINT_PHOTO_FRESH_MS);
+			expect(
+				await cache.loadEndpoint(key, check(ENDPOINT), endpointAvatarFailure),
+			).toBeNull();
+			expect(
+				await cache.loadEndpoint(key, check(ENDPOINT), endpointAvatarFailure),
+			).toBeNull();
+			const other = "bep_other";
+			const queued = cache.loadEndpoint(
+				endpointAvatarKey(other, HASH, 64),
+				check(other),
+				endpointAvatarFailure,
+			);
+			await vi.advanceTimersByTimeAsync(1_999);
+			expect(http).toHaveBeenCalledTimes(2);
+			await vi.advanceTimersByTimeAsync(1);
+			await expect(queued).resolves.toBe(AGENT_URI);
+			expect(http).toHaveBeenCalledTimes(3);
+		} finally {
+			cache.clear();
+			vi.useRealTimers();
+		}
+	});
+
 	it("refuses oversized declared and streamed endpoint bodies, cancelling each", async () => {
 		for (const declared of [true, false]) {
 			const cancel = vi.fn();

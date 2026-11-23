@@ -16,6 +16,8 @@ import {
 import {
 	EXPRESSION_LITERAL_SCOPE,
 	expressionRuleActive,
+	LABEL_PART_SCOPE,
+	labelPartRuleActive,
 	scanSource,
 	scanTree,
 } from "./scan-strings.ts";
@@ -385,6 +387,91 @@ describe("the expression-literal rule", () => {
 		expect(
 			ratchet(buildBaseline(found, ACCOUNTABLE), found).added,
 		).toHaveLength(0);
+	});
+});
+
+describe("the label-part-literal rule (O3-c)", () => {
+	/* The row's spoken name was built from English fragments pushed into an
+	 *  array, and its status projection returned English words a JSX expression
+	 *  painted raw (`{statusWord}`). No earlier rule saw either: a push argument
+	 *  is no conditional/return, and rule 4 drops a lowercase single word. */
+	const META = "src/ui/components/list-row-meta.ts";
+	const STATUS = "src/ui/components/list-row-status.ts";
+	const ELSEWHERE = "src/features/example/example.ts";
+	const BUILDER = [
+		"const parts = [title];",
+		"parts.push(`${attentionWord} waiting`);",
+		'parts.push("working");',
+		'if (ended) parts.push("not answering");',
+		"parts.push(`on ${device}`);",
+	].join("\n");
+
+	it("finds word literals pushed into a label, one word or several", () => {
+		expect(labelPartRuleActive(META)).toBe(true);
+		const findings = scanSource(META, BUILDER).filter(
+			(finding) => finding.rule === "label-part-literal",
+		);
+		expect(findings.map((finding) => finding.text)).toEqual([
+			"${attentionWord} waiting",
+			"working",
+			"not answering",
+			"on ${device}",
+		]);
+	});
+
+	it("leaves keyed fragments, keys, passed-through values and ids alone (negative control)", () => {
+		const findings = scanSource(
+			META,
+			[
+				"const parts = [title];",
+				'parts.push(t("mobile.sidebar.row_label.working"));',
+				"parts.push(",
+				'\tt("mobile.sidebar.row_label.on_device", { device }),',
+				");",
+				"parts.push(t(ROW_STATUS_KEY.ended));",
+				"parts.push(options.tagAnnouncement);",
+				'ids.push("mobile.sidebar.row.new");',
+				'paths.push("src/ui/x.ts");',
+			].join("\n"),
+		);
+		expect(findings).toHaveLength(0);
+	});
+
+	it("is NOT applied outside its named files", () => {
+		expect(labelPartRuleActive(ELSEWHERE)).toBe(false);
+		expect(LABEL_PART_SCOPE).not.toContain(ELSEWHERE);
+		expect(scanSource(ELSEWHERE, BUILDER)).toHaveLength(0);
+	});
+
+	it("activates rule 4 on the status projection, so prose-shaped states are findings", () => {
+		expect(expressionRuleActive(STATUS)).toBe(true);
+		const projection = [
+			"const word = pending",
+			"\t? attentionWord",
+			"\t: unreachable",
+			'\t\t? "not reachable"',
+			"\t\t: degraded",
+			'\t\t\t? "not answering"',
+			"\t\t\t: null;",
+		].join("\n");
+		expect(scanSource(STATUS, projection).map((f) => f.text)).toEqual([
+			"not reachable",
+			"not answering",
+		]);
+		// Negative control: the identifier spelling the projection now uses.
+		expect(
+			scanSource(
+				STATUS,
+				projection
+					.replace('"not reachable"', '"not_reachable"')
+					.replace('"not answering"', '"not_answering"'),
+			),
+		).toHaveLength(0);
+	});
+
+	it("is reported as added by the ratchet until it is keyed", () => {
+		const found = scanSource(META, BUILDER);
+		expect(ratchet([], found).added).toHaveLength(4);
 	});
 });
 

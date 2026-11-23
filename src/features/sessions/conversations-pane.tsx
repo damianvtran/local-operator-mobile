@@ -40,6 +40,7 @@ import {
 	useConnection,
 	useConnectionState,
 	useListState,
+	useLocaleFrame,
 } from "@/features/auth/connection-provider";
 import { libraryEnabled } from "@/features/library/library-model";
 import {
@@ -47,6 +48,7 @@ import {
 	notificationsEnabled,
 } from "@/features/notifications/notifications-model";
 import { NotificationsOffRow } from "@/features/notifications/notifications-off-row";
+import { listRefreshing } from "@/features/sessions/list-refreshing";
 import { SessionMoveSheet } from "@/features/sessions/move-sheet";
 import {
 	PANE_LOADING_BARS,
@@ -81,19 +83,20 @@ import { SessionRow } from "@/features/sessions/session-row";
 import {
 	arrangeSidebar,
 	DEFAULT_SIDEBAR_VIEW,
+	drawnGroupBy,
 	hiddenSectionCount,
 	isEmptiedByView,
+	isSectionGroup,
 	type SidebarGroup,
+	type SidebarSectionKey,
 } from "@/features/sessions/sidebar-view";
 import { SIDEBAR_SECTION_LABEL } from "@/features/sessions/sidebar-view-controls";
 import { SidebarViewButton } from "@/features/sessions/sidebar-view-sheet";
 import { canAssignSessionTags } from "@/features/sessions/tags";
 import { SessionTagsSheet } from "@/features/sessions/tags-sheet";
 import { useSidebarView } from "@/features/sessions/use-sidebar-view";
-import {
-	useOptionalWorkspaceDrawer,
-	WorkspaceModeBar,
-} from "@/features/sessions/workspace-drawer";
+import { useOptionalWorkspaceDrawer } from "@/features/sessions/workspace-drawer-context";
+import { WorkspaceModeBar } from "@/features/sessions/workspace-mode-bar";
 import { t } from "@/i18n";
 import { useUiStore } from "@/state/ui-store";
 import { TeamBridgeEntry } from "@/team-bridge/navigation";
@@ -482,6 +485,9 @@ export const ConversationsPane = ({
 	);
 	const capabilities = useListState((state) => state.capabilities);
 	const route = useConnectionState((state) => state.route);
+	/* The resolved language, subscribed so a config frame re-renders this pane;
+	 *  see the `items` memo below for why it is also a dependency there. */
+	const language = useLocaleFrame();
 	const destinationInk = useTokenColor("ink-muted");
 	const workspaceDrawer = useOptionalWorkspaceDrawer();
 	const dockedBridgeAdapter = !onClose
@@ -596,18 +602,71 @@ export const ConversationsPane = ({
 	/* The desktop's arrangement (TestFlight 906): the reader's order, grouping and
 	 *  clock, applied to the search's result — `sidebar-view.ts` owns every rule. */
 	const { view: sidebarView, setView: setSidebarView } = useSidebarView();
-	const groups = useMemo(
-		() => arrangeSidebar(filtered, sidebarView, now),
-		[filtered, sidebarView, now],
+	/* The tag grouping's group order is the registry's own (`GET /api/tags`), so
+	 *  the pane reads the catalogue while that grouping is on screen — the same
+	 *  read the tags sheet makes, keyed the same way on the connection's
+	 *  identity so an incidental render does not re-fetch it. Nothing WAITS on
+	 *  this read: `arrangeSidebar` falls back to first-seen order while it is in
+	 *  flight or failed, and a tag it never names still gets a group. */
+	const drawnGrouping = drawnGroupBy(sidebarView, tagsAssignable);
+	const [tagOrder, setTagOrder] = useState<readonly string[] | undefined>(
+		undefined,
 	);
-	const items = useMemo(() => buildItems(groups), [groups]);
+	const connectionIdentity = useConnectionState(
+		(state) => `${state.phase}:${state.revision}`,
+	);
+	const relayRef = useRef(relay);
+	relayRef.current = relay;
+	useEffect(() => {
+		/* `connectionIdentity` is a TRIGGER, not a value this body reads: a new
+		 *  route or a phase change is "a new relay, re-read its catalogue". */
+		void connectionIdentity;
+		if (drawnGrouping !== "tag") return;
+		const client = relayRef.current();
+		if (client === null) return;
+		let cancelled = false;
+		client
+			.tags()
+			.then((answer) => {
+				if (cancelled) return;
+				setTagOrder(
+					[...answer.tags]
+						.sort((a, b) => a.order - b.order)
+						.map((tag) => tag.id),
+				);
+			})
+			.catch(() => {
+				// First-seen order is the fallback; the list never blocks on this.
+				if (!cancelled) setTagOrder(undefined);
+			});
+		return () => {
+			cancelled = true;
+		};
+	}, [drawnGrouping, connectionIdentity]);
+	const groups = useMemo(
+		() =>
+			arrangeSidebar(filtered, sidebarView, now, {
+				tagsAvailable: tagsAssignable,
+				tagOrder,
+			}),
+		[filtered, sidebarView, now, tagsAssignable, tagOrder],
+	);
+	/* `language` is a dependency because these items hold RENDERED COPY: each
+	 *  section header's label is a `t()` reading taken inside `buildItems`, at call
+	 *  time. The subscription re-renders the pane on a language frame, and the
+	 *  dependency makes the memo re-run; without both, the headers kept the old
+	 *  language until the minute tick moved `groups` (PR #302 design D2). biome
+	 *  cannot see the link — the body never mentions `language` — so it is a
+	 *  TRIGGER, silenced with this reason as `home.tsx` does. */
+	// biome-ignore lint/correctness/useExhaustiveDependencies: `language` is a TRIGGER: the header labels read the locale live, so it must re-run the memo (see above)
+	const items = useMemo(() => buildItems(groups), [groups, language]);
 	/* The view's own explanations (PR #255 review round 1). `emptiedByView`: rows
 	 *  exist but the view draws none, which must not read "No sessions yet" (M1).
 	 *  `hiddenSections`: the desktop's quiet "N sections hidden" line, so a
 	 *  section switched off in Settings does not just vanish (D2). Both read the
 	 *  search's result, so a search that matched nothing keeps its own state. */
 	const emptiedByView = isEmptiedByView(filtered, groups);
-	const hiddenSections = hiddenSectionCount(sidebarView);
+	const hiddenSections = hiddenSectionCount(sidebarView, tagsAssignable);
 	/* Does any row in THIS list draw a picture? Then every row reserves the picture's
 	 *  width for its title, so the list's titles share one left edge instead of
 	 *  stepping in and out between pictured and plain rows (design review round 1,
@@ -715,7 +774,18 @@ export const ConversationsPane = ({
 							),
 						}}
 					>
-						<SectionHeader label={item.label} testID={item.testID} />
+						{item.composed === true ? (
+							<TagGroupHeader
+								label={item.label}
+								accessibilityLabel={item.accessibilityLabel ?? item.label}
+							/>
+						) : (
+							<SectionHeader
+								label={item.label}
+								testID={item.testID}
+								accessibilityLabel={item.accessibilityLabel}
+							/>
+						)}
 					</View>
 				</View>
 			) : item.kind === "divider" ? (
@@ -738,6 +808,7 @@ export const ConversationsPane = ({
 					surfaceClassName={surfaceClassName}
 					homeDirectory={homeDirectory}
 					tagsAssignable={tagsAssignable}
+					showTags={sidebarView.showTags}
 					onActivate={onRowActivate}
 					onLongPress={onRowLongPress}
 				/>
@@ -750,6 +821,7 @@ export const ConversationsPane = ({
 			onRowActivate,
 			onRowLongPress,
 			sidebarView.basis,
+			sidebarView.showTags,
 			surfaceClassName,
 			tagsAssignable,
 		],
@@ -1005,7 +1077,15 @@ export const ConversationsPane = ({
 				data={items}
 				keyExtractor={itemKey}
 				refreshControl={
-					<RefreshControl refreshing={busy} onRefresh={onRefresh} />
+					<RefreshControl
+						/* Not `busy` alone: a live route can still be awaiting startup
+						 *  admission (`list-refreshing.ts`, PR #327 review m1). */
+						refreshing={listRefreshing({
+							busy,
+							connected: routed && relay() !== null,
+						})}
+						onRefresh={onRefresh}
+					/>
 				}
 				ListHeaderComponent={
 					inListStale || (hiddenSections > 0 && !emptiedByView) ? (
@@ -1228,9 +1308,50 @@ function loadFailed(
 }
 
 type Item =
-	| { kind: "header"; key: string; label: string; testID?: string }
+	| {
+			kind: "header";
+			key: string;
+			label: string;
+			testID?: string;
+			/** A longer spoken name when the painted label is composed (a tag
+			 *  group's `{name} · {count}`), so the heading is a sentence to a
+			 *  screen reader rather than a dot and a bare number. */
+			accessibilityLabel?: string;
+			/** The label splices the reader's tag name to a count, so its
+			 *  paragraph base must come from the page (`SectionHeader.labelDir`). */
+			composed?: boolean;
+	  }
 	| { kind: "divider"; key: string }
 	| { kind: "row"; key: string; session: SessionSummary; section: string };
+
+/**
+ * A tag group's heading: the reader's tag name and the group's count, spliced.
+ *
+ * A COMPONENT so it can own `useComposedDir()` and the pane's hoisted
+ * `renderItem` keeps one identity across pane renders (perf audit P11); the
+ * composed label's base comes from the page, as `SectionHeader` requires, and
+ * the spoken name says "conversations" rather than reading a dot.
+ */
+const TagGroupHeader = ({
+	label,
+	accessibilityLabel,
+}: {
+	label: string;
+	accessibilityLabel: string;
+}) => {
+	const composedDir = useComposedDir();
+	return (
+		<SectionHeader
+			label={label}
+			labelDir={composedDir}
+			accessibilityLabel={accessibilityLabel}
+		/>
+	);
+};
+
+/** The spoken name of a tag group: "Research, 4 conversations". */
+const tagGroupAnnouncement = (name: string, count: number): string =>
+	t("mobile.sidebar.tag_group.announcement", { name, count });
 
 /** Module-level so the list never sees a new extractor (perf audit P11). */
 /** The pill's field: fills the capsule's height (the capsule owns the touch
@@ -1244,11 +1365,11 @@ const SEARCH_FIELD_STYLE: TextStyle = {
 const itemKey = (item: Item): string => item.key;
 
 /**
- * The flat list the pane renders: section headings and rows, in the order
- * `arrangeSidebar` decided (this function never re-sorts). An empty section
+ * The flat list the pane renders: section and tag headings and rows, in the
+ * order `arrangeSidebar` decided (this function never re-sorts). An empty group
  * contributes no heading; the flat grouping is one list with no heading at all.
  */
-const SECTION_TEST_ID: Record<Exclude<SidebarGroup["key"], "all">, string> = {
+const SECTION_TEST_ID: Record<SidebarSectionKey, string> = {
 	pinned: REGION.sidebarSectionPinned,
 	running: REGION.sidebarSectionRunning,
 	today: REGION.sidebarSectionToday,
@@ -1259,7 +1380,29 @@ const SECTION_TEST_ID: Record<Exclude<SidebarGroup["key"], "all">, string> = {
 function buildItems(groups: readonly SidebarGroup[]): Item[] {
 	const items: Item[] = [];
 	for (const group of groups) {
-		if (group.key !== "all") {
+		if (group.tag !== undefined) {
+			/* A tag group: "{name} · {count}", spoken as "{name}, N conversations". */
+			items.push({
+				kind: "header",
+				key: `h-${group.key}`,
+				label: `${group.tag.name} · ${group.tag.count}`,
+				accessibilityLabel: tagGroupAnnouncement(
+					group.tag.name,
+					group.tag.count,
+				),
+				composed: true,
+			});
+		} else if (group.key === "untagged") {
+			/* Untagged is a catalogue word, never composed on its own; it is spoken
+			 *  with the group's count like the tag headings beside it. */
+			const label = t("mobile.sidebar.section.untagged");
+			items.push({
+				kind: "header",
+				key: `h-${group.key}`,
+				label,
+				accessibilityLabel: tagGroupAnnouncement(label, group.rows.length),
+			});
+		} else if (isSectionGroup(group)) {
 			items.push({
 				kind: "header",
 				key: `h-${group.key}`,

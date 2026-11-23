@@ -1,0 +1,47 @@
+# o3c-ru-eaf265 mobile.sidebar: actual printed output of commands run in session eaf2654d42af (shell + worktree tsx). Not notes.
+
+$ cd /Users/damian/local-operator-mobile/.worktrees/i18n-m3-s2a && git rev-parse HEAD && git branch --show-current
+e7ebc3917537d83cc772148fc5b2fc2ad3f43a41
+feat/i18n-o3c-rows-headers
+
+$ shasum -a 256 <draft-ru.json> <o3c-translation-brief.json>
+04f108c69a381e1562fe9183c95ec20c0d0f45d436a80e2b6fced5dfb3ee6c70  /Users/damian/.local-operator/sessions/0d790ba194ba/scratchpad/o3c/draft-ru.json
+e88beb09366b9ff795bf0ac916f30cef1c9a93c35fa4617575e904c7a6f5fd17  /Users/damian/.local-operator/sessions/162198c78bcb/scratchpad/o3c-translation-brief.json
+
+$ node_modules/.bin/tsx $SCRATCH/o3c-audit/check-ru.ts   # repo parseMessage/formatMessage from src/i18n/messages.ts (sha256 c1831406…bba0), read-only
+missing [] extra []
+mobile.sidebar.row_status.approval "одобрение" en= "approval" ph en/ru  /  OK nfc true redact false render ["одобрение"] len 9 hint 10 fits
+mobile.sidebar.row_status.question "вопрос" en= "question" ph en/ru  /  OK nfc true redact false render ["вопрос"] len 6 hint 10 fits
+mobile.sidebar.row_status.not_reachable "недоступна" en= "not reachable" ph en/ru  /  OK nfc true redact false render ["недоступна"] len 10 hint 14 fits
+mobile.sidebar.row_status.ended "завершена" en= "ended" ph en/ru  /  OK nfc true redact false render ["завершена"] len 9 hint 10 fits
+mobile.sidebar.row_status.not_answering "не отвечает" en= "not answering" ph en/ru  /  OK nfc true redact false render ["не отвечает"] len 11 hint 14 fits
+mobile.sidebar.row_label.waiting "{kind, select, approval {ждёт одобрения} other {ждёт ответа на вопрос}}" en= "{kind, select, approval {approval waiting} other {question waiting}}" ph en/ru kind / kind OK nfc true redact false render ["ждёт одобрения","ждёт ответа на вопрос"] len 14/21 hint 24 fits
+mobile.sidebar.row_label.working "работает" en= "working" ph en/ru  /  OK nfc true redact false render ["работает"] len 8 hint 24 fits
+mobile.sidebar.row_label.on_device "на {device}" en= "on {device}" ph en/ru device / device OK nfc true redact false render ["на Studio Mac"] len 13 hint 24 fits
+mobile.sidebar.row_label.open "открыта" en= "open" ph en/ru  /  OK nfc true redact false render ["открыта"] len 7 hint 24 fits
+arms [[]]
+label sample: Платежи, ждёт одобрения, завершена, на Studio Mac, недоступна, открыта
+control unbalanced CAUGHT Invalid message "{kind, select, approval {x} other {y}": unterminated select (at offset 37)
+control renamed arg compare parsed; ph= kind2 CAUGHT(by ph compare)
+control redaction CAUGHT control nfd CAUGHT
+
+$ node_modules/.bin/tsx $SCRATCH/o3c-audit/arms.ts   # select arm keys, ru draft vs en
+select kind [ 'approval', 'other' ]
+select kind [ 'approval', 'other' ]
+
+$ python3 redaction + codepoint scan (brief pattern; brief scanned with redaction_scan.pattern removed)
+draft-ru.json 0
+en/mobile.sidebar.json 0
+en/mobile.sidebar.context.json 0
+brief excluding redaction_scan.pattern 0
+non-ascii non-cyrillic codepoints []
+ё codepoints {'0x451', '0x435'}   # ё is precomposed U+0451; no U+0308 combining diaeresis
+
+$ shasum -a 256 (inputs)
+beaba7baeffe546ce65430d6cb18213da2fbb88d23128c071c286fb32a08ecdf  src/i18n/catalogues/en/mobile.sidebar.json
+858f7c51c595862306120be7833c4274439b436bb8bd1f547b88139f8d0f2fd3  src/i18n/catalogues/en/mobile.sidebar.context.json
+ae029496e813d0b08a3176c7f5a31cd28ae5fb14a8b3b916800278f4d33d268e  src/i18n/catalogues/ru/mobile.sidebar.json
+e838878911fdf3342bb7932decd97bc157578c4c5d169017b3160a5712ecfd97  src/i18n/catalogues/ru/relay.chrome.json
+8b59dabaa9be70dd0b7c6ff3218aa407bdcefbfc4f811e7eb05ad0f6b57e1410  src/i18n/catalogues/ru/mobile.remote_sessions.json
+f20e1cafaf70578c17ce072c71725628808d228e4be5604329f8da30386f1fb5  ~/local-operator/i18n/style-guides/ru.md
+0eb34437a8c3d6f564f278ef957a603b1d9f51bb07d5ddae5ea8f37deba962f8  ~/local-operator/i18n/glossary.md

@@ -9,7 +9,37 @@
  * gap in the PR).
  */
 
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+/** The SDK's `File`, as this suite needs it: a URI, a synthetic `exists`, a delete
+ *  that records itself and `bytes()`. `vi.mock` is hoisted above the imports, so
+ *  the stand-in is built in `vi.hoisted` where the factory can reach it. */
+const expoFiles = vi.hoisted(() => {
+	/** Every read and delete the mocked SDK saw, in order. */
+	const calls: string[] = [];
+	const state = {
+		exists: false,
+		failure: null as Error | null,
+		bytes: new Uint8Array([0x66, 0x61, 0x6b, 0x65]),
+	};
+	class File {
+		constructor(readonly uri: string) {}
+		get exists() {
+			return state.exists;
+		}
+		delete() {
+			calls.push(`delete ${this.uri}`);
+		}
+		async bytes(): Promise<Uint8Array> {
+			calls.push(`bytes ${this.uri}`);
+			if (state.failure !== null) throw state.failure;
+			return state.bytes;
+		}
+	}
+	return { File, calls, state };
+});
+
+vi.mock("expo-file-system", () => ({ File: expoFiles.File }));
 
 import {
 	canRecord,
@@ -22,6 +52,7 @@ import {
 	readMicPermission,
 	recorderFromHook,
 	recorderSupported,
+	recordingUploadPart,
 	startRecording,
 } from "@/stt/recorder";
 
@@ -138,5 +169,49 @@ describe("stopping a recording", () => {
 		expect(result?.uri).toBe("file:///cache/recording.m4a");
 		expect(result?.mimeType).toBe("audio/mp4");
 		expect(result?.name).toBe("recording.m4a");
+	});
+});
+
+describe("the upload part for a stopped recording", () => {
+	const recording = {
+		uri: "file:///cache/recording.m4a",
+		mimeType: "audio/mp4",
+		name: "recording.m4a",
+		durationMs: 1200,
+	};
+
+	beforeEach(() => {
+		expoFiles.calls.length = 0;
+		expoFiles.state.failure = null;
+	});
+
+	it("hands over named, typed bytes, never React Native's `{ uri }` descriptor", async () => {
+		/* The descriptor is what the encoder refuses (see `transcribeForm`); the part
+		 * must therefore carry no `uri` and answer `bytes()`. */
+		const part = await recordingUploadPart(recording);
+		expect(part).toEqual({
+			name: "recording.m4a",
+			type: "audio/mp4",
+			bytes: expect.any(Function),
+		});
+		expect("uri" in part).toBe(false);
+		expect(new Uint8Array(await part.bytes())).toEqual(expoFiles.state.bytes);
+		/* The bytes are the FILE's, read once, from the recording's URI. */
+		expect(expoFiles.calls).toEqual(["bytes file:///cache/recording.m4a"]);
+	});
+
+	it("does not read the file until the encoder asks for the bytes", async () => {
+		/* Building the part happens on the press's path; the read waits for the
+		 * upload's own turn. */
+		await recordingUploadPart(recording);
+		expect(expoFiles.calls).toEqual([]);
+	});
+
+	it("lets a read failure through, so it reaches the caller as a failed upload", async () => {
+		/* Unlike `discardRecording`, which swallows: a recording that cannot be read
+		 * is an upload that failed, and the reader is owed the retry sentence. */
+		expoFiles.state.failure = new Error("recording vanished");
+		const part = await recordingUploadPart(recording);
+		await expect(part.bytes()).rejects.toThrow("recording vanished");
 	});
 });

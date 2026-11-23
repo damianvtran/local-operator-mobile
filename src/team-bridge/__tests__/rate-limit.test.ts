@@ -305,10 +305,10 @@ describe("a 429 is waited out, never shown raw", () => {
 		expect(store.getState().orgs[TENANT]?.conversationsCatchingUp).toBe(false);
 	});
 
-	it("non-429 failures keep their existing error state", async () => {
+	it("definitive failures keep their existing error state", async () => {
 		const hub = fakeHub({
 			directory: vi.fn(async () => {
-				throw new HubError({ kind: "server", message: "x", status: 500 });
+				throw new HubError({ kind: "not_found", message: "x", status: 404 });
 			}),
 		});
 		const { store, actions } = bridge(hub);
@@ -453,8 +453,8 @@ describe("a retry that lands inside an in-flight load (review M1)", () => {
 	});
 });
 
-describe("a non-429 failure ends the rate-limit episode (review m1)", () => {
-	it("conversations: two 429s then unreachable clears Catching up and the strike", async () => {
+describe("a definitive failure ends the rate-limit episode (review m1)", () => {
+	it("conversations: two 429s then a 404 clears Catching up and the strike", async () => {
 		const answers: Array<() => never | undefined> = [
 			() => {
 				throw limited(1_000);
@@ -463,7 +463,7 @@ describe("a non-429 failure ends the rate-limit episode (review m1)", () => {
 				throw limited(1_000);
 			},
 			() => {
-				throw new HubError({ kind: "unreachable", message: "offline" });
+				throw new HubError({ kind: "not_found", message: "gone", status: 404 });
 			},
 			() => {
 				throw limited(1_000);
@@ -492,13 +492,13 @@ describe("a non-429 failure ends the rate-limit episode (review m1)", () => {
 		expect(org?.conversationsCatchingUp).toBe(false);
 	});
 
-	it("people: two 429s then a server error clears Catching up", async () => {
+	it("people: two 429s then a 404 clears Catching up", async () => {
 		let calls = 0;
 		const hub = fakeHub({
 			directory: vi.fn(async () => {
 				calls += 1;
 				if (calls <= 2) throw limited(1_000);
-				throw new HubError({ kind: "server", message: "x", status: 500 });
+				throw new HubError({ kind: "not_found", message: "x", status: 404 });
 			}),
 		});
 		const { store, actions } = bridge(hub);
@@ -682,5 +682,272 @@ describe("abandoned thread waits are pruned (review n1)", () => {
 		await advance(30_000);
 		await actions.loadThread(TENANT, "c1");
 		expect(hub.listMessages).toHaveBeenCalledTimes(4);
+	});
+});
+
+/*
+ * TestFlight 1157, 2026-11-17: the red "The people directory could not load."
+ * sat above a people list already on screen. Every failure that says "ask
+ * again later" now keeps held rows exactly like a 429 does.
+ */
+const server500 = () =>
+	new HubError({ kind: "server", message: "x", status: 500 });
+const TRANSIENT: Array<[string, () => HubError]> = [
+	["429", () => limited(1_000)],
+	["500", server500],
+	[
+		"502 edge",
+		() => new HubError({ kind: "server", message: "x", status: 502 }),
+	],
+	[
+		"503",
+		() => new HubError({ kind: "unavailable", message: "x", status: 503 }),
+	],
+	[
+		"504 edge",
+		() => new HubError({ kind: "server", message: "x", status: 504 }),
+	],
+	["timeout", () => new HubError({ kind: "unreachable", message: "slow" })],
+	[
+		"messaging_unavailable",
+		() =>
+			new HubError({
+				kind: "unavailable",
+				message: "x",
+				status: 502,
+				code: "messaging_unavailable",
+			}),
+	],
+];
+
+describe("transient failures over held rows are silent (TestFlight 1157)", () => {
+	it.each(TRANSIENT)(
+		"%s: people and conversations stay, no alert; Catching up from the 2nd failure; silent recovery",
+		async (_name, failure) => {
+			let refuse = false;
+			const hub = fakeHub({
+				listConversations: vi.fn(async () => {
+					if (refuse) throw failure();
+					return { conversations: [conversation()], has_more: false };
+				}),
+				directory: vi.fn(async () => {
+					if (refuse) throw failure();
+					return { members: [person(ADA, "Ada")], unavailable_count: 0 };
+				}),
+			});
+			const { store, actions } = bridge(hub);
+			await actions.loadOrganization(TENANT);
+			// The 1157 shape: rows on screen, a drawer re-open after the
+			// directory's reuse window, and that re-read fails.
+			await advance(DIRECTORY_TTL_MS);
+			refuse = true;
+			await actions.loadOrganization(TENANT, { ifStale: true });
+			let org = store.getState().orgs[TENANT];
+			expect(peopleStatus(org)).toEqual({
+				skeleton: false,
+				catchingUp: false,
+				alert: false,
+			});
+			expect(conversationsStatus(org)).toEqual({
+				skeleton: false,
+				catchingUp: false,
+				alert: false,
+			});
+			expect(org?.people).toHaveLength(1);
+			expect(org?.conversations).toHaveLength(1);
+			// The scheduled silent retry fails again: now "Catching up…".
+			const before = vi.mocked(hub.directory).mock.calls.length;
+			await advance(failure().retryAfterMs ?? RATE_LIMIT_FALLBACK_MS);
+			expect(vi.mocked(hub.directory).mock.calls.length).toBe(before + 1);
+			org = store.getState().orgs[TENANT];
+			expect(peopleStatus(org)).toEqual({
+				skeleton: false,
+				catchingUp: true,
+				alert: false,
+			});
+			expect(conversationsStatus(org).alert).toBe(false);
+			expect(conversationsStatus(org).catchingUp).toBe(true);
+			// It clears by itself once the hub answers.
+			refuse = false;
+			await advance(RATE_LIMIT_MAX_MS);
+			org = store.getState().orgs[TENANT];
+			expect(org?.peopleCatchingUp).toBe(false);
+			expect(org?.conversationsCatchingUp).toBe(false);
+			expect(org?.peopleState).toBe("ready");
+		},
+	);
+
+	it("retries only the failed half even while both held results are fresh", async () => {
+		const hub = fakeHub();
+		const directory = vi.mocked(hub.directory);
+		const conversations = vi.mocked(hub.listConversations);
+		const { store, actions } = bridge(hub);
+		await actions.loadOrganization(TENANT);
+		// A named factory, not `TRANSIENT[1][1]`: an index into the table is
+		// `undefined` to the type checker (TS2532) and silently becomes a
+		// different failure if the table is reordered.
+		directory.mockRejectedValueOnce(server500());
+		directory.mockRejectedValueOnce(server500());
+		await actions.loadOrganization(TENANT, { force: true });
+		await advance(RATE_LIMIT_FALLBACK_MS);
+		expect(directory).toHaveBeenCalledTimes(3);
+		expect(conversations).toHaveBeenCalledTimes(2);
+		expect(peopleStatus(store.getState().orgs[TENANT])).toEqual({
+			skeleton: false,
+			catchingUp: true,
+			alert: false,
+		});
+		await advance(2 * RATE_LIMIT_FALLBACK_MS);
+		expect(directory).toHaveBeenCalledTimes(4);
+		expect(conversations).toHaveBeenCalledTimes(2);
+		expect(store.getState().orgs[TENANT]?.peopleCatchingUp).toBe(false);
+	});
+
+	/*
+	 * Review R2-1 / QA Q2: fresh rows, a transport failure, then the scheduled
+	 * retry is refused with a 429. Once that Retry-After ends the timer finds
+	 * the rows still fresh and drops the record instead of re-reading; the
+	 * heading must drop "Catching up…" with it, and nothing may be sent while
+	 * the 429 is still in force.
+	 */
+	it.each(["people", "conversations"] as const)(
+		"%s: clears Catching up when an expired 429 yields to fresh rows",
+		async (half) => {
+			const hub = fakeHub();
+			const read = vi.mocked(
+				half === "people" ? hub.directory : hub.listConversations,
+			);
+			const other = vi.mocked(
+				half === "people" ? hub.listConversations : hub.directory,
+			);
+			const status = half === "people" ? peopleStatus : conversationsStatus;
+			const { store, actions } = bridge(hub);
+			await actions.loadOrganization(TENANT);
+			read.mockRejectedValueOnce(
+				new HubError({
+					kind: "unavailable",
+					message: "x",
+					status: 503,
+					retryAfterMs: 1_000,
+				}),
+			);
+			read.mockRejectedValueOnce(limited(1_000));
+			// Inside both freshness windows, so only the refusal drives reads.
+			await actions.loadOrganization(TENANT, { ifStale: true, force: true });
+			const otherCalls = other.mock.calls.length;
+			await advance(1_000);
+			expect(read).toHaveBeenCalledTimes(3);
+			expect(status(store.getState().orgs[TENANT])).toEqual({
+				skeleton: false,
+				catchingUp: true,
+				alert: false,
+			});
+			// The 429 doubled the wait to 2 s: nothing goes out inside it.
+			await advance(1_999);
+			expect(read).toHaveBeenCalledTimes(3);
+			await advance(1);
+			await actions.loadOrganization(TENANT, { ifStale: true });
+			// Fresh rows are reused, not re-read, and the heading is settled.
+			expect(read).toHaveBeenCalledTimes(3);
+			expect(other).toHaveBeenCalledTimes(otherCalls);
+			const org = store.getState().orgs[TENANT];
+			expect(status(org)).toEqual({
+				skeleton: false,
+				catchingUp: false,
+				alert: false,
+			});
+			expect(
+				half === "people" ? org?.peopleState : org?.conversationsState,
+			).toBe("ready");
+			expect(vi.getTimerCount()).toBe(0);
+		},
+	);
+
+	it("an unmapped 4xx with the server kind is not transient", async () => {
+		let refuse = false;
+		const hub = fakeHub({
+			directory: vi.fn(async () => {
+				if (refuse)
+					throw new HubError({ kind: "server", message: "x", status: 418 });
+				return { members: [person(ADA, "Ada")], unavailable_count: 0 };
+			}),
+		});
+		const { store, actions } = bridge(hub);
+		await actions.loadOrganization(TENANT);
+		refuse = true;
+		await actions.loadOrganization(TENANT, { force: true });
+		expect(peopleStatus(store.getState().orgs[TENANT]).alert).toBe(true);
+	});
+
+	it("404 over held rows is still the definitive error", async () => {
+		let refuse = false;
+		const hub = fakeHub({
+			directory: vi.fn(async () => {
+				if (refuse)
+					throw new HubError({ kind: "not_found", message: "x", status: 404 });
+				return { members: [person(ADA, "Ada")], unavailable_count: 0 };
+			}),
+		});
+		const { store, actions } = bridge(hub);
+		await actions.loadOrganization(TENANT);
+		refuse = true;
+		await actions.loadOrganization(TENANT, { force: true });
+		expect(peopleStatus(store.getState().orgs[TENANT]).alert).toBe(true);
+	});
+
+	it("401 still goes to the sign-in gate, not a section error", async () => {
+		let refuse = false;
+		const hub = fakeHub({
+			directory: vi.fn(async () => {
+				if (refuse)
+					throw new HubError({ kind: "sign_in", message: "x", status: 401 });
+				return { members: [person(ADA, "Ada")], unavailable_count: 0 };
+			}),
+		});
+		const { store, actions } = bridge(hub);
+		await actions.loadOrganization(TENANT);
+		refuse = true;
+		await actions.loadOrganization(TENANT, { force: true });
+		expect(store.getState().gate).toBe("signed_out");
+	});
+});
+
+describe("transient failures with nothing held (TestFlight 1157)", () => {
+	it("first 500: skeleton and one silent retry; still failing: the red error with a Retry that re-reads", async () => {
+		const hub = fakeHub({
+			directory: vi.fn(async () => {
+				throw new HubError({ kind: "server", message: "x", status: 500 });
+			}),
+		});
+		const { store, actions } = bridge(hub);
+		await actions.loadOrganization(TENANT);
+		expect(peopleStatus(store.getState().orgs[TENANT])).toEqual({
+			skeleton: true,
+			catchingUp: false,
+			alert: false,
+		});
+		await advance(RATE_LIMIT_FALLBACK_MS);
+		expect(hub.directory).toHaveBeenCalledTimes(2);
+		expect(peopleStatus(store.getState().orgs[TENANT]).alert).toBe(true);
+		// Retry inside this client's own wait still goes out (only a 429's
+		// Retry-After holds a forced read back).
+		await actions.loadOrganization(TENANT, { force: true });
+		expect(hub.directory).toHaveBeenCalledTimes(3);
+	});
+
+	it("a cold 429 keeps #297's skeleton + Catching up, never the alert", async () => {
+		const hub = fakeHub({
+			directory: vi.fn(async () => {
+				throw limited(1_000);
+			}),
+		});
+		const { store, actions } = bridge(hub);
+		await actions.loadOrganization(TENANT);
+		await advance(1_000);
+		expect(peopleStatus(store.getState().orgs[TENANT])).toEqual({
+			skeleton: true,
+			catchingUp: true,
+			alert: false,
+		});
 	});
 });

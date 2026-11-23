@@ -10,6 +10,28 @@ function deferred() {
 }
 
 describe("push registration retirement ordering", () => {
+	it.each(["withdraw", "retire", "suspend"] as const)(
+		"invalidates native presentation immediately on %s, before a PUT drains",
+		async (transition) => {
+			const accepted = deferred();
+			const closePresentation = vi.fn();
+			const unregister = vi.fn(async () => {});
+			const lifecycle = createPushLifecycle({
+				register: async () => accepted.promise,
+				unregister,
+				closePresentation,
+			});
+			lifecycle.activate();
+			const put = lifecycle.register();
+			await Promise.resolve();
+			const retirement = lifecycle[transition]();
+			expect(closePresentation).toHaveBeenCalledTimes(1);
+			expect(unregister).not.toHaveBeenCalled();
+			accepted.resolve();
+			await Promise.all([put, retirement]);
+		},
+	);
+
 	it("drains an authenticated PUT before DELETE, so it cannot resurrect a signed-out row", async () => {
 		const accepted = deferred();
 		const calls: string[] = [];

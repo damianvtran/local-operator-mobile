@@ -205,6 +205,48 @@ export const startEffortAdmitted = (value: unknown): boolean => {
 	return word.length === 0 || START_EFFORTS.includes(word);
 };
 
+/** The mock's copy of the relay's start-target check (local-operator #4367,
+ *  `start_receipts.start_target` then `daemon._resolve_start_target`): `null`
+ *  admits the body; otherwise the status and code the relay answers. Absent,
+ *  `null` and blank mean "no target"; a non-string, a name over 128 code
+ *  points, or BOTH kinds is `400 invalid_start_target`; a name the roster does
+ *  not list is `404 unknown_start_target`. Case-insensitive, as the relay's
+ *  validator canonicalises (`LOPDEV` → `lopdev`). */
+export const startTargetRefusal = (
+	body: Record<string, unknown>,
+	roster: unknown,
+): { status: number; code: string } | null => {
+	const chosen: Array<["agent" | "team", string]> = [];
+	for (const kind of ["agent", "team"] as const) {
+		const value = body[kind];
+		if (value === undefined || value === null) continue;
+		if (typeof value !== "string" || [...value].length > 128)
+			return { status: 400, code: "invalid_start_target" };
+		const name = value.trim();
+		if (name !== "") chosen.push([kind, name]);
+	}
+	if (chosen.length > 1) return { status: 400, code: "invalid_start_target" };
+	const target = chosen[0];
+	if (target === undefined) return null;
+	const [kind, name] = target;
+	const rows =
+		typeof roster === "object" && roster !== null
+			? (roster as Record<string, unknown>)[
+					kind === "agent" ? "agents" : "teams"
+				]
+			: undefined;
+	const listed =
+		Array.isArray(rows) &&
+		rows.some(
+			(row) =>
+				typeof row === "object" &&
+				row !== null &&
+				String((row as { name?: unknown }).name).toLowerCase() ===
+					name.toLowerCase(),
+		);
+	return listed ? null : { status: 404, code: "unknown_start_target" };
+};
+
 /* ---------------------------------------------------------- same origin -- */
 
 /**

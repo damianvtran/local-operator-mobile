@@ -1,0 +1,145 @@
+{
+ "record_kind": "i18n-audit",
+ "audit_id": "o3c-zh-CN-de40a5",
+ "slice": "O3-c",
+ "locale": "zh-CN",
+ "namespace": "mobile.sidebar",
+ "audit_date": "2026-11-18",
+ "key_count": 9,
+ "keys_audited": [
+  "mobile.sidebar.row_status.approval",
+  "mobile.sidebar.row_status.question",
+  "mobile.sidebar.row_status.not_reachable",
+  "mobile.sidebar.row_status.ended",
+  "mobile.sidebar.row_status.not_answering",
+  "mobile.sidebar.row_label.waiting",
+  "mobile.sidebar.row_label.working",
+  "mobile.sidebar.row_label.on_device",
+  "mobile.sidebar.row_label.open"
+ ],
+ "translator_session": "702e8c7d168e",
+ "auditor": {
+  "agent": "i18n-auditor (team lopdev)",
+  "session": "de40a5fa6cff",
+  "model": "anthropic/claude-opus-5-5",
+  "actual_model_source": "harness system prompt 'Model:' line for this session; no fallback observed",
+  "independent_from_translator_session": true
+ },
+ "draft": {
+  "path": "/Users/damian/.local-operator/sessions/702e8c7d168e/scratchpad/o3c/draft-zh-CN.json",
+  "sha256": "c019694104901cbe725aad4c997224898e6757a8ea0145bde00dfc459acc5912"
+ },
+ "brief_sha256": "e88beb09366b9ff795bf0ac916f30cef1c9a93c35fa4617575e904c7a6f5fd17",
+ "brief_path": "/Users/damian/.local-operator/sessions/162198c78bcb/scratchpad/o3c-translation-brief.json",
+ "source_commit": "e7ebc3917537d83cc772148fc5b2fc2ad3f43a41",
+ "read_route": "ordinary file reads of draft/brief/catalogues/style guide/glossary; English sources via git show at e7ebc391; read_public_copy not used; no MT service",
+ "input_hashes": {
+  "en": {
+   "path": "local-operator-mobile@e7ebc391:src/i18n/catalogues/en/mobile.sidebar.json",
+   "sha256": "beaba7baeffe546ce65430d6cb18213da2fbb88d23128c071c286fb32a08ecdf"
+  },
+  "context": {
+   "path": "local-operator-mobile@e7ebc391:src/i18n/catalogues/en/mobile.sidebar.context.json",
+   "sha256": "858f7c51c595862306120be7833c4274439b436bb8bd1f547b88139f8d0f2fd3"
+  },
+  "zh-CN": {
+   "path": "/Users/damian/.local-operator/sessions/702e8c7d168e/scratchpad/o3c/draft-zh-CN.json",
+   "sha256": "c019694104901cbe725aad4c997224898e6757a8ea0145bde00dfc459acc5912"
+  },
+  "zh-CN_shipped_mobile.sidebar": {
+   "path": "local-operator-mobile worktree src/i18n/catalogues/zh-CN/mobile.sidebar.json",
+   "sha256": "7775bffdcb80c26e035062a5d9ccd7f09df756d594604f57da6a2711375fe8e7"
+  },
+  "style_guide": {
+   "path": "~/local-operator/i18n/style-guides/zh-CN.md",
+   "sha256": "8f95d89debbd0af848e72e4805e256ef9566632e520a5c6d9b37928cd617142c"
+  },
+  "glossary": {
+   "path": "~/local-operator/i18n/glossary.md",
+   "sha256": "0eb34437a8c3d6f564f278ef957a603b1d9f51bb07d5ddae5ea8f37deba962f8"
+  },
+  "core_reference_relay.asks": {
+   "path": "~/local-operator/local_operator/i18n/catalogues/zh-CN/relay.asks.json",
+   "sha256": "30220048a1deda92cac75c284f764e06a970d00b09703e63f15b83e1c342c7e1"
+  },
+  "core_reference_tui.app": {
+   "path": "~/local-operator/local_operator/i18n/catalogues/zh-CN/tui.app.json",
+   "sha256": "e1f79b11108e0179e4b0a9e6b8a7c273931fd322ddc9e483d54042f45567b490"
+  }
+ },
+ "checks": {
+  "keys_missing": 0,
+  "keys_extra": 0,
+  "brief_vs_source_hash_mismatches": 0,
+  "placeholder_icu": "pass (repo parseMessage; params and select arms identical to en)",
+  "negative_controls": "5/5 caught",
+  "cldr_zh_categories": [
+   "other"
+  ],
+  "nfc": "pass",
+  "trailing_punctuation": "none",
+  "width": "all within width_hint_chars (max chip 4ch/8 cells vs 14 hint)",
+  "repo_validator": "npm run i18n:check not run (draft outside catalogue tree; worktree read-only)"
+ },
+ "redaction_marker_hits": {
+  "draft": 0,
+  "english_sources": 0,
+  "brief_excluding_redaction_scan.pattern": 0
+ },
+ "verdict": "failed",
+ "current_report_verdict": {
+  "status": "changes_requested",
+  "unresolved_blocker_major_count": 1,
+  "finding_ids": [
+   "ZH-C1",
+   "ZH-C2",
+   "ZH-C3"
+  ]
+ },
+ "findings": [
+  {
+   "id": "ZH-C1",
+   "severity": "MAJOR",
+   "key": "mobile.sidebar.row_status.approval",
+   "current": "待批准",
+   "proposed": "待审批",
+   "reason": "Glossary/style guide fix the noun 'approval(s)' as 审批; the shipped corpus uses 审批 for the approval STATE (relay.asks.pending.kind_approval 需要审批, tui legend `lo !`等待审批, wire …审批已不再待处理) and 批准 only for the approve VERB/button (relay.asks.pending.approve, tray.approve). The chip names the pending state, the noun sense; the cited anchor owner_only uses 批准 as a verb in an action list. 待审批 is the standard pending-approval status word in zh-CN apps; 3 chars/6 cells, same width."
+  },
+  {
+   "id": "ZH-C2",
+   "severity": "NIT",
+   "key": "mobile.sidebar.row_label.on_device",
+   "current": "在 {device} 上",
+   "proposed": "在{device}上",
+   "reason": "Style guide: no space between Chinese and Latin runs. Draft mirrors mobile.remote_sessions.subtitle_owner, which itself diverges (mobile.computers.wait.host_answering uses {host}上). Spoken-only fragment, so no visible effect; non-gating."
+  },
+  {
+   "id": "ZH-C3",
+   "severity": "NIT",
+   "key": "(code) rowAccessibilityLabel join",
+   "current": "parts.join(\", \") → 支付对账, 等待你批准, 当前已打开",
+   "proposed": "No catalogue change; a future keyed separator would give zh-CN '，' like mobile.computers.row.a11y_connecting",
+   "reason": "Out of draft scope (list-row-meta.ts L505 joins with ASCII ', '); screen readers pause either way. Recorded only; not the translator's to fix."
+  }
+ ],
+ "artifacts": {
+  "report.md": {
+   "path": "report.md",
+   "sha256": "537ea2bb9c7333d8a3f229ef4b6c754ce7d123d63edc4c775f35919b163a1508"
+  },
+  "audit.log": {
+   "path": "audit.log",
+   "sha256": "ee8216232af79c163421bb2e73e03c9e231e87eeb5db6ef874b2c426f7077883"
+  },
+  "check-zh-CN.mts": {
+   "path": "check-zh-CN.mts",
+   "sha256": "50d06b67af6ad0e8f344ab47ad95787c6bb3484efad9dc380f392504ccd55422"
+  },
+  "check-zh-CN.out": {
+   "path": "check-zh-CN.out",
+   "sha256": "681f3955bd6b73221dde157026bf5cace4a3fe6311128ce9e5047d0deb84e6ca"
+  }
+ },
+ "audit_notes_not_execution_log": "report.md is the auditor's notes; audit.log and check-zh-CN.out carry actual command output",
+ "ledger_appended": false
+}

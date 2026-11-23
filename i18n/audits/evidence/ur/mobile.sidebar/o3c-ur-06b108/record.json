@@ -1,0 +1,162 @@
+{
+ "record_kind": "i18n-audit",
+ "audit_id": "o3c-ur-06b108",
+ "slice": "O3-c",
+ "locale": "ur",
+ "namespace": "mobile.sidebar",
+ "audit_date": "2026-11-18",
+ "key_count": 9,
+ "keys_audited": [
+  "mobile.sidebar.row_status.approval",
+  "mobile.sidebar.row_status.question",
+  "mobile.sidebar.row_status.not_reachable",
+  "mobile.sidebar.row_status.ended",
+  "mobile.sidebar.row_status.not_answering",
+  "mobile.sidebar.row_label.waiting",
+  "mobile.sidebar.row_label.working",
+  "mobile.sidebar.row_label.on_device",
+  "mobile.sidebar.row_label.open"
+ ],
+ "translator_session": "5703a7a23771",
+ "auditor": {
+  "agent": "i18n-auditor (team lopdev)",
+  "session": "06b10865ce7b",
+  "model": "anthropic/claude-opus-5-5",
+  "actual_model_source": "harness system prompt 'Model:' line for this session; no fallback observed",
+  "independent_from_translator_session": true
+ },
+ "draft": {
+  "path": "/Users/damian/.local-operator/sessions/5703a7a23771/scratchpad/o3c/draft-ur.json",
+  "sha256": "ee2cda121c47eddc644c11f141c9511287a43b7efb56aadfb6d2c3d1bd67155e"
+ },
+ "brief_sha256": "e88beb09366b9ff795bf0ac916f30cef1c9a93c35fa4617575e904c7a6f5fd17",
+ "source_commit": "e7ebc3917537d83cc772148fc5b2fc2ad3f43a41",
+ "read_route": "ordinary file reads (cat/python) of draft and brief; worktree parseMessage/formatMessage imported read-only via node_modules/.bin/tsx over an authored copy of the 9 values in this session's scratchpad (proven == draft.values), after guard 0.107.0 refused passing sibling-session files to tsx",
+ "input_hashes": {
+  "brief": {
+   "path": "/Users/damian/.local-operator/sessions/162198c78bcb/scratchpad/o3c-translation-brief.json",
+   "sha256": "e88beb09366b9ff795bf0ac916f30cef1c9a93c35fa4617575e904c7a6f5fd17"
+  },
+  "draft": {
+   "path": "/Users/damian/.local-operator/sessions/5703a7a23771/scratchpad/o3c/draft-ur.json",
+   "sha256": "ee2cda121c47eddc644c11f141c9511287a43b7efb56aadfb6d2c3d1bd67155e"
+  },
+  "draft_values_authored_copy": {
+   "path": "/Users/damian/.local-operator/sessions/06b10865ce7b/scratchpad/o3c-work/values-ur.json",
+   "sha256": "b74476f0d0e889aaa01792d4882ae7c2ece114bad98f00b6f8a69925d14ca973",
+   "equals_draft_values": true
+  },
+  "en": {
+   "path": "local-operator-mobile@e7ebc391:src/i18n/catalogues/en/mobile.sidebar.json",
+   "sha256": "beaba7baeffe546ce65430d6cb18213da2fbb88d23128c071c286fb32a08ecdf"
+  },
+  "context": {
+   "path": "local-operator-mobile@e7ebc391:src/i18n/catalogues/en/mobile.sidebar.context.json",
+   "sha256": "858f7c51c595862306120be7833c4274439b436bb8bd1f547b88139f8d0f2fd3"
+  },
+  "ur_shipped": {
+   "path": "local-operator-mobile@e7ebc391:src/i18n/catalogues/ur/mobile.sidebar.json",
+   "sha256": "ce997b4f316176cbf42e7855dfa97bf3c1c05defc90ff7f0a43063c6e832ade2"
+  },
+  "ur_shipped_reference": [
+   {
+    "path": "local-operator-mobile@e7ebc391:src/i18n/catalogues/ur/relay.chrome.json",
+    "sha256": "0c5a8921e7f3abd21732de4a5bf68eaec4d4a6abf19ee93cfd71a9926db7a5c9"
+   },
+   {
+    "path": "local-operator-mobile@e7ebc391:src/i18n/catalogues/ur/mobile.remote_sessions.json",
+    "sha256": "c49b1ac702a58d224129f8f3097332a8d810f7028c2d71cb90aa6acae6506d57"
+   }
+  ],
+  "parser": {
+   "path": "local-operator-mobile@e7ebc391:src/i18n/messages.ts",
+   "sha256": "c1831406332e907c9a914b3db0ec35fc9fd2cddd44c18cd2861b77667c5bdba0"
+  },
+  "style_guide": {
+   "path": "~/local-operator/i18n/style-guides/ur.md",
+   "sha256": "c0eecf7f7b5e89956b7de9ab7a9eb647ff1a7ef701ccf2a7f0264d5eea15ca60"
+  },
+  "glossary": {
+   "path": "~/local-operator/i18n/glossary.md",
+   "sha256": "0eb34437a8c3d6f564f278ef957a603b1d9f51bb07d5ddae5ea8f37deba962f8"
+  }
+ },
+ "checks": {
+  "keys_missing": 0,
+  "keys_extra": 0,
+  "brief_vs_source_hash_mismatches": 0,
+  "placeholder_icu": "pass (parseMessage params+select arms identical to en; 2/2 malformed controls threw, renamed-placeholder control visible in params diff)",
+  "cldr_ur_categories": [
+   "one",
+   "other"
+  ],
+  "plural_messages": 0,
+  "nfc": "pass",
+  "bidi_controls": "none",
+  "latin_initial_outputs": "none",
+  "trailing_punctuation": "none",
+  "width_over_hint": [
+   "mobile.sidebar.row_status.not_answering: 16/14 chars; CoreText 12pt regular 88.85pt (system cascade) / 89.00pt (Noto Nastaliq Urdu) vs en 'not answering' 79.32pt"
+  ],
+  "width_measurement": "CoreText via swift, 12pt regular (token is 12px/500; weight not measured); SF Arabic/DecoType not resolvable by name; no on-device render",
+  "repo_validator": "not run (draft outside repo; worktree read-only for this audit)"
+ },
+ "redaction_marker_hits": {
+  "draft": 0,
+  "brief_excluding_pattern_field": 0,
+  "brief_raw": 2,
+  "brief_note": "both raw brief hits are the redaction_scan.pattern literal matching itself"
+ },
+ "verdict": "passed",
+ "current_report_verdict": {
+  "status": "passed",
+  "unresolved_blocker_major_count": 0,
+  "finding_ids": [
+   "UR-S1",
+   "UR-S2"
+  ]
+ },
+ "findings": [
+  {
+   "id": "UR-S1",
+   "severity": "MINOR",
+   "key": "mobile.sidebar.row_status.not_answering",
+   "current": "جواب نہیں دے رہی",
+   "proposed": "keep as is (design call only if the 100% strip measures too tight)",
+   "reason": "16 chars vs ~14 hint; renders ~12% wider than en (88.9 vs 79.3pt). Does not clip: shrink-0 slot, title truncates first below large text, marks wrap above (list-row.tsx L231-249). Matches shipped health_quiet; fallback «جواب نہیں» loses the progressive and reads 'no answer'."
+  },
+  {
+   "id": "UR-S2",
+   "severity": "NIT",
+   "key": "mobile.sidebar.row_label.waiting",
+   "current": "{kind, select, approval {منظوری زیرِ التوا} other {سوال زیرِ التوا}}",
+   "proposed": "{kind, select, approval {منظوری زیر التوا} other {سوال زیر التوا}}",
+   "reason": "Shipped core spells this term «زیر التوا» without kasra (wire.errors.desktop.question_no_longer_pending, wire.settings.proactive_patience_max_pending.*). Both correct; consistency only."
+  }
+ ],
+ "out_of_scope_observations": [
+  {
+   "id": "O1",
+   "where": "src/ui/components/list-row-meta.ts L505",
+   "note": "label fragments joined with Latin ', '; shipped ur uses «،». Code-level, non-gating."
+  },
+  {
+   "id": "O2",
+   "where": "src/ui/components/list-row.tsx L356",
+   "note": "visible remote device line paints literal English 'On {remote.device}'; only the spoken label is keyed. Source keying gap."
+  }
+ ],
+ "artifacts": {
+  "report": {
+   "path": "report.md",
+   "sha256": "e1262e3e74916af6b8bbb46d08ed583a852bda349a0da954bd4b3c1028c23822"
+  },
+  "audit_log": {
+   "path": "audit.log",
+   "sha256": "ab7089c6fbb8df2c5d965f1e602afa9d0e709ac31128a4531c929b000aaba8bf"
+  }
+ },
+ "audit_notes_not_execution_log": "report.md is the auditor's notes; audit.log carries the printed check output",
+ "ledger_appended": false,
+ "ledger_note": "worktree read-only per brief; manager commits bundle and ledger row"
+}

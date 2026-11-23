@@ -49,6 +49,7 @@ import { Screen } from "@/ui/components/screen";
 import { SectionHeader } from "@/ui/components/section-header";
 import { Sheet } from "@/ui/components/sheet";
 import { Skeleton } from "@/ui/components/skeleton";
+import { useComposedDir } from "@/ui/direction";
 import type { SemanticTone } from "@/ui/variants";
 
 /**
@@ -88,6 +89,12 @@ export default function ProjectDetail() {
 	 * the old language on screen until a remount. The value is unused on purpose —
 	 * the subscription IS the fix (`useLocaleFrame`, connection-provider.tsx). */
 	useLocaleFrame();
+	/* The milestone editor's two fields open EMPTY, and react-native-web's
+	 *  `dir="auto"` takes direction from the value, never the placeholder, so in
+	 *  Urdu both hints (the date one opens with a Latin mask) sat on the left of an
+	 *  RTL sheet (PR #302 design D1). `Input.placeholderDir` states the page's
+	 *  direction only while the field is empty; typed text keeps its own base. */
+	const composedDir = useComposedDir();
 	const showToast = useUiStore((state) => state.showToast);
 
 	const [project, setProject] = useState<ProjectView | null>(null);
@@ -589,6 +596,7 @@ export default function ProjectDetail() {
 						value={editor?.editingName ?? draftName}
 						onChangeText={setDraftName}
 						placeholder={t("mobile.projects.milestone.name_placeholder")}
+						placeholderDir={composedDir}
 						/* The name is the milestone's KEY: it is what the store
 						 *  add-or-updates by and what the remove route addresses, so
 						 *  this form never renames one (adding a differently-named
@@ -606,6 +614,7 @@ export default function ProjectDetail() {
 						 *  which is what the store accepts, so a translation may reorder or
 						 *  re-letter the mask but the value typed stays YYYY-MM-DD. */
 						placeholder={t("mobile.projects.milestone.target_date_placeholder")}
+						placeholderDir={composedDir}
 						disabled={busy}
 					/>
 					<Text className="text-meta text-ink-dim">

@@ -96,6 +96,7 @@ import {
 	writeStoredTunnelSession,
 } from "@/features/auth/tunnel-storage";
 import { routeInvalidSentence } from "@/features/auth/tunnel-verdict";
+import { forgetAskDrafts } from "@/features/session/ask-drafts";
 import { reconnectDelay } from "@/features/session/connection-view";
 import { clearAuthorizationData } from "@/features/session/device-storage";
 import {
@@ -193,6 +194,10 @@ export const configStore = createConfigStore();
 // Registration outlives route/provider mounts, just like the credential store.
 // Startup storage registers independently, avoiding an auth/coordinator cycle.
 registerStartupAuthorizationCleanup(clearAuthorizationData);
+/* An answer typed into the ask sheet is kept in memory for the app run (a-5712);
+ *  at the same boundary as the warm cache it must go, or a signed-out session's
+ *  typed text would outlive its account (review r1 F8). */
+registerStartupAuthorizationCleanup(async () => forgetAskDrafts());
 
 /* The warm cache's owner key for the route in force (`state/warm-cache.ts`): the
  * Radient account (null on a custom tunnel) plus the durable route key. Set when a
@@ -230,9 +235,9 @@ export const useListState = <T,>(selector: (state: ListSnapshot) => T): T =>
  * the language in the memo's dependency list so the memo re-runs. Home's composer
  * is the surface that needed this (review M3): its controls and chips are memoised
  * over pure copy readers, so a language change while mounted kept the old
- * sentences until some unrelated state moved. `home.tsx` calls `useLocaleFrame()`
- * and lists the value in those memos' dependency arrays; nothing else reads the
- * config store directly.
+ * sentences until some unrelated state moved. Every screen that memoises copy
+ * (home, conversations pane, notifications, …) calls `useLocaleFrame()` and lists
+ * the value in those memos' dependency arrays; nothing reads the config store directly.
  */
 export const useLocaleFrame = (): string | null =>
 	useStore(configStore, (state: ConfigSnapshot) => state.language);
@@ -2532,9 +2537,18 @@ export const ConnectionProvider = ({
 		const client = clientRef.current;
 		if (!client) return;
 		const listGeneration = listStore.getState().connectionGeneration;
+		// A refresh can outlive a computer/account switch. Fence errors and busy
+		// ownership as well as list bytes: an old 401 must not refuse the NEW route.
+		const admission = liveAdmissionRef.current;
+		const ownsRefresh = () =>
+			mountedRef.current &&
+			clientRef.current === client &&
+			admission?.isCurrent() &&
+			listStore.getState().connectionGeneration === listGeneration;
 		setBusy(true);
 		try {
 			const frame = await client.sessions({ includePeers: true });
+			if (!ownsRefresh()) return;
 			listStore.getState().applyFrame(
 				{
 					sessions: frame.sessions,
@@ -2547,6 +2561,7 @@ export const ConnectionProvider = ({
 				listGeneration,
 			);
 		} catch (error) {
+			if (!ownsRefresh()) return;
 			if (error instanceof RelayError) {
 				/* Keep the ROUTE retry when the route has one (PR #261 U3-1). A
 				 *  refresh fails for the same cause the live list stream refuses on
@@ -2574,7 +2589,7 @@ export const ConnectionProvider = ({
 			}
 			throw error;
 		} finally {
-			if (mountedRef.current) setBusy(false);
+			if (ownsRefresh()) setBusy(false);
 		}
 	}, [noteError]);
 

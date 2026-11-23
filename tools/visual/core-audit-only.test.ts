@@ -44,7 +44,12 @@ const legacy = {
 	"mock-relay-contract": "(inputs.proof_mode || 'full') == 'full'",
 	"docs-commands":
 		"(github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && (inputs.proof_mode || 'full') == 'full'",
-	"web-audit": "(inputs.proof_mode || 'full') == 'full'",
+	/* Narrowed DELIBERATELY on 2026-11-18 (CI capacity trim): the device legs run
+	 * on schedule and dispatch only, like docs-commands/web-audit-core/maestro,
+	 * because ~45-50 min legs on every push and PR crowded the account's shared
+	 * job pool. The test below pins that push and pull_request no longer select it. */
+	"web-audit":
+		"(github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && (inputs.proof_mode || 'full') == 'full'",
 	"s15-proof":
 		"github.event_name == 'workflow_dispatch' && inputs.proof_mode == 's15-proof'",
 	"web-audit-core":
@@ -159,6 +164,19 @@ describe("core-audit-only dispatch isolation", () => {
 						`${event}/${mode}/${name}`,
 					).toBe(selects(old, event, mode));
 			}
+	});
+	it("schedules only the cheap gates on push and pull_request, never the device legs", () => {
+		for (const event of ["push", "pull_request"])
+			for (const mode of ["", "full"])
+				expect(selected(event, mode), `${event}/${mode}`).toEqual([
+					"harness",
+					"mock-relay-contract",
+				]);
+		// The device legs and their verdict still select together on the nightly and
+		// on a full dispatch, so `proof_mode=full` is the on-demand path for frames.
+		for (const event of ["schedule", "workflow_dispatch"])
+			for (const name of ["web-audit", "web-audit-verdict"])
+				expect(selected(event, "full"), `${event}/${name}`).toContain(name);
 	});
 	it("retains the existing proof stage admission rules and full/push defaults", () => {
 		for (const event of [

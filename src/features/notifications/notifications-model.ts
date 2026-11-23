@@ -31,6 +31,8 @@ import type {
 import { preferredLocale, renderFor, t } from "@/i18n";
 import type { NotificationTarget } from "@/relay";
 
+import type { ConversationDismissPhase } from "./use-conversation-dismiss";
+
 /** The inbox stamps are epoch MILLISECONDS, unlike the session clocks. */
 const DAY_MS = 86_400_000;
 
@@ -258,6 +260,32 @@ export function inboxEmpty(response: NotificationsResponse): boolean {
 	return response.items.length === 0 && (response.waiting ?? []).length === 0;
 }
 
+/** The phases `DismissReceipt` draws: a count in progress, or what a dismiss
+ *  (or its Undo) did. */
+export type ReceiptPhase = Extract<
+	ConversationDismissPhase,
+	{ kind: "counting" | "done" | "undone" | "none" | "failed" }
+>;
+
+/** Whether the dismiss receipt draws anything for this phase. The ONE rule:
+ *  `DismissReceipt` returns null on it, and the list's pinned footer pays the
+ *  bottom safe-area inset only while it holds something, so an idle list keeps
+ *  scrolling under the home indicator (#321). */
+export function dismissReceiptShowing(
+	phase: ConversationDismissPhase,
+): phase is ReceiptPhase {
+	switch (phase.kind) {
+		case "counting":
+		case "done":
+		case "undone":
+		case "none":
+		case "failed":
+			return true;
+		default:
+			return false;
+	}
+}
+
 /** Plural agreement without a string table: the count decides the word, the
  *  caller supplies both forms. */
 export function plural(count: number, one: string, many: string): string {
@@ -459,6 +487,35 @@ export async function readLoadedDetail<
 	if (!moved) return detail;
 	const refreshed = await io.reload(detail.item.id, signal).catch(() => null);
 	return refreshed ?? detail;
+}
+
+/**
+ * The bare `ask_id` an inbox ASK's detail names, for `AsksSheet.initialOpenAsk`.
+ *
+ * The detail's item carries the relay's COMPOSITE id (`ask:<session>:<ask_id>`,
+ * the format `RelayEndpoints.notification` escapes), while the sheet expands a
+ * row whose `ask_id` EQUALS `initialOpenAsk`. Handing it the composite compared
+ * two different vocabularies, so the sheet opened collapsed on the ask the
+ * reader had just pressed to answer (Ben, 2026-11-23).
+ *
+ * WHY THE ID AND NOT `detail.asks[0]`: that array is the CONVERSATION's asks
+ * INCLUDING settled ones, and the contract states no order, so its first row
+ * need not be the ask this card is about — expanding the wrong ask would be
+ * worse than expanding none. The item's own id is the only field that names
+ * THIS ask; its ask id is the last colon-separated segment.
+ *
+ * A card that is not an ask expands nothing, and an id the sheet's own read does
+ * not return still expands nothing there: the sheet keeps its collapsed walk
+ * rather than inventing a row (`AsksSheet` doc, "an id the read does not
+ * return").
+ */
+export function openAskIdFor(detail: {
+	item: Pick<NotificationItem, "id" | "source">;
+}): string | null {
+	if (detail.item.source !== "ask") return null;
+	const cut = detail.item.id.lastIndexOf(":");
+	const askId = cut < 0 ? "" : detail.item.id.slice(cut + 1);
+	return askId === "" ? null : askId;
 }
 
 /**

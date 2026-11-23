@@ -50,7 +50,7 @@ import {
 } from "react";
 import {
 	type AccessibilityActionEvent,
-	Pressable,
+	Platform,
 	Text,
 	TextInput,
 	type TextProps,
@@ -69,6 +69,7 @@ import {
 	usesSelectionMode,
 } from "@/features/session/text-selection";
 import { useTokenColor } from "@/ui/appearance";
+import { useTouchPress } from "@/ui/touch-press";
 
 type TextSelectionContextValue = {
 	/** Enter this message's selection mode (iOS); a no-op elsewhere, which also
@@ -79,12 +80,67 @@ type TextSelectionContextValue = {
 	/** Spread onto each body leaf: VoiceOver's way into the mode (iOS), empty
 	 *  where the leaf selects natively or there is no mode. */
 	accessibility: SelectTextAccessibility;
+	/** Whether body leaves take `<Text selectable>` right now. The platform
+	 *  policy (`leafSelectable()`) everywhere except a host-driven message
+	 *  on Android, where it is true only while that message is in the mode
+	 *  (see `HostSelection`). */
+	leafSelectable: boolean;
 };
 
-type SelectTextAccessibility = Pick<
+export type SelectTextAccessibility = Pick<
 	TextProps,
 	"accessibilityActions" | "onAccessibilityAction"
 >;
+
+/**
+ * A message whose HOST owns the long-press (Team Bridge, spec PR a §4.2).
+ *
+ * WHY: Bridge rows open a Slack-style message-actions sheet on long-press,
+ * and "Select text" moved INTO that sheet. Two things stop the body's own
+ * long-press from coexisting with the row's:
+ *  - iOS: this component's `Pressable onLongPress={enter}` is the deeper
+ *    responder, so the row's long-press would never fire over text;
+ *  - Android: a leaf `<Text selectable>` consumes the hold to start native
+ *    word selection, so no sheet could ever open over text.
+ * With a host selection the body attaches no long-press of its own, nested
+ * pressables (a code block, a diagram) forward their hold to `onLongPress`
+ * (the sheet) instead of the mode, and the mode is entered by id from the
+ * sheet (`requestTextSelection`). On Android the leaves are NOT selectable at
+ * rest and become selectable only for the message put in the mode — the one
+ * regression this costs (partial selection is one tap further away, in
+ * Bridge only; the session transcript passes no host selection and is
+ * unchanged). The web keeps its leaves selectable at rest (`leaves` below).
+ */
+export type HostSelection = {
+	/** Stable, screen-unique id; the mode store and `requestTextSelection`
+	 *  key on it. Two screens can mount the same message (timeline under the
+	 *  reply thread), so the host scopes it. */
+	id: string;
+	/** The row's long-press (opens the sheet). */
+	onLongPress: () => void;
+	/** The row's screen-reader actions, spread on every body leaf: the leaves
+	 *  are what VoiceOver and TalkBack focus (the wrapper is not accessible,
+	 *  so links stay reachable). Replaces the leaf's own "Select text". */
+	accessibility: SelectTextAccessibility;
+};
+
+/* Each host-driven message registers its `enter` here so the sheet can put it
+ *  in the mode by id. A module map rather than a ref chain: the sheet lives on
+ *  the screen, the body several memoised layers down. */
+const hostEntries = new Map<string, () => void>();
+
+/**
+ * Enter the selection mode for a host-driven message (the sheet's "Select
+ * text"). iOS swaps in the read-only selection view; Android makes that
+ * message's leaves selectable. False when no such message is mounted (it was
+ * windowed out while the sheet was open).
+ */
+export const requestTextSelection = (id: string): boolean => {
+	const enter = hostEntries.get(id);
+	if (!enter) return false;
+	enter();
+	return true;
+};
 
 /** The custom rotor action's name; the label is what VoiceOver speaks. */
 export const SELECT_TEXT_ACTION = "selectText";
@@ -94,10 +150,13 @@ const SELECT_TEXT_ACTIONS = [
 
 const NO_ACCESSIBILITY: SelectTextAccessibility = {};
 
+const NOOP_ENTER = () => {};
+
 const NOOP_CONTEXT: TextSelectionContextValue = {
 	enter: () => {},
 	selectionColor: undefined,
 	accessibility: NO_ACCESSIBILITY,
+	leafSelectable: leafSelectable(),
 };
 
 const TextSelectionContext =
@@ -113,6 +172,7 @@ export function SelectableMessage({
 	textClassName,
 	disabled = false,
 	onEnter,
+	host,
 	testID,
 }: {
 	/** The plain text the selection view shows and Copy writes. A function is
@@ -130,6 +190,9 @@ export function SelectableMessage({
 	 *  handle out of reach (PR #237 review, R1-m1). Not called when the mode is
 	 *  unavailable (disabled, or a platform that selects natively). */
 	onEnter?: () => void;
+	/** The host owns the long-press and the screen-reader actions; see
+	 *  `HostSelection`. Absent: this component's own long-press (session). */
+	host?: HostSelection;
 	testID?: string;
 }) {
 	/* The selection colour per platform. iOS takes it as the input's
@@ -158,7 +221,9 @@ export function SelectableMessage({
 				"user-bubble": userBubble,
 				sunken,
 			});
-	const id = useId();
+	const ownId = useId();
+	const id = host?.id ?? ownId;
+	const hosted = host !== undefined;
 	const selecting = useSyncExternalStore(
 		subscribeTextSelection,
 		() => activeTextSelection() === id,
@@ -177,14 +242,33 @@ export function SelectableMessage({
 	const [plain, setPlain] = useState("");
 
 	const enter = useCallback(() => {
-		if (disabled || !usesSelectionMode()) return;
+		if (disabled) return;
+		if (!usesSelectionMode()) {
+			// Android/web: no view to swap; entering is what makes a host-driven
+			// message's leaves selectable. Unhosted leaves always are.
+			if (hosted) enterTextSelection(id);
+			return;
+		}
 		sawRange.current = false;
 		// Same render batch as the swap below, so the view mounts already open.
 		latestOnEnter.current?.();
 		const current = latestText.current;
 		setPlain(typeof current === "function" ? current() : current);
 		enterTextSelection(id);
-	}, [disabled, id]);
+	}, [disabled, id, hosted]);
+
+	/* The iOS long-press that enters the mode, read from raw touch events and not a
+	 *  `Pressable`: a `Pressable` here claimed the responder and a table, code block
+	 *  or diagram inside could not be scrolled sideways (`@/ui/touch-press`). */
+	const longPress = useTouchPress({ onLongPress: enter });
+
+	useEffect(() => {
+		if (!hosted) return;
+		hostEntries.set(id, enter);
+		return () => {
+			if (hostEntries.get(id) === enter) hostEntries.delete(id);
+		};
+	}, [hosted, id, enter]);
 
 	/* A row that leaves the list while selecting (FlatList windowing unmounts
 	 *  it once the reader scrolls far enough) takes the mode with it, so no
@@ -200,23 +284,64 @@ export function SelectableMessage({
 		if (selecting) input.current?.setSelection(0, plain.length);
 	}, [selecting, plain]);
 
+	const hostAccessibility = host?.accessibility;
 	const accessibility = useMemo<SelectTextAccessibility>(
 		() =>
-			disabled || !usesSelectionMode()
-				? NO_ACCESSIBILITY
-				: {
-						accessibilityActions: SELECT_TEXT_ACTIONS,
-						onAccessibilityAction: (event: AccessibilityActionEvent) => {
-							if (event.nativeEvent.actionName === SELECT_TEXT_ACTION) enter();
+			hostAccessibility
+				? hostAccessibility
+				: disabled || !usesSelectionMode()
+					? NO_ACCESSIBILITY
+					: {
+							accessibilityActions: SELECT_TEXT_ACTIONS,
+							onAccessibilityAction: (event: AccessibilityActionEvent) => {
+								if (event.nativeEvent.actionName === SELECT_TEXT_ACTION)
+									enter();
+							},
 						},
-					},
-		[disabled, enter],
+		[disabled, enter, hostAccessibility],
 	);
 
+	const hostLongPress = host?.onLongPress;
+	/* WEB keeps its leaves selectable at rest even with a host (PR #339 QA
+	 *  round 1, Q3): a desktop browser reader expects to drag-select text, and
+	 *  a mouse drag does not race the row's long-press the way Android's
+	 *  native `selectable` hold does (a press-and-hold without moving selects
+	 *  nothing, so the sheet still opens). Android stays off until the mode. */
+	const leaves = hosted
+		? Platform.OS === "web"
+			? leafSelectable()
+			: !usesSelectionMode() && selecting
+		: LEAF_SELECTABLE;
 	const context = useMemo(
-		() => ({ enter, selectionColor, accessibility }),
-		[enter, selectionColor, accessibility],
+		() => ({
+			// A nested pressable's hold opens the host's sheet, not the mode. On iOS
+			// the nested wrapper reads raw touches and never claims the responder
+			// (`ScrollSafePressable`), so the hold bubbles to the row's own
+			// long-press: calling the sheet here too would open it twice.
+			enter:
+				hosted && Platform.OS === "ios" ? NOOP_ENTER : (hostLongPress ?? enter),
+			selectionColor,
+			accessibility,
+			leafSelectable: leaves,
+		}),
+		[enter, hosted, hostLongPress, selectionColor, accessibility, leaves],
 	);
+
+	if (hosted && !usesSelectionMode()) {
+		/* Android: the touch marker keeps a tap INSIDE the selectable message
+		 *  from reading as the outside tap that ends the mode (the list's
+		 *  container handlers); a tap elsewhere ends it as on iOS. */
+		return (
+			<TextSelectionContext.Provider value={context}>
+				<View
+					onTouchStart={selecting ? noteTextSelectionTouch : undefined}
+					testID={testID}
+				>
+					{children}
+				</View>
+			</TextSelectionContext.Provider>
+		);
+	}
 
 	if (!usesSelectionMode() || disabled) {
 		return (
@@ -255,19 +380,29 @@ export function SelectableMessage({
 		);
 	}
 
+	if (hosted) {
+		// iOS at rest: the host's row Pressable owns the hold.
+		return (
+			<TextSelectionContext.Provider value={context}>
+				{children}
+			</TextSelectionContext.Provider>
+		);
+	}
+
 	return (
 		<TextSelectionContext.Provider value={context}>
-			<Pressable
-				// No `onPress`: taps belong to the links, images and code blocks
-				// inside, and to the row around this body.
-				onLongPress={enter}
+			<View
+				// No press: taps belong to the links, images and code blocks inside,
+				// and to the row around this body. Only the hold is read, from raw touches
+				// so the scrollers inside keep their drag.
+				{...longPress}
 				// Not one VoiceOver element: the links and copy buttons inside
 				// must stay individually reachable (review R1, M1).
 				accessible={false}
 				testID={testID}
 			>
 				{children}
-			</Pressable>
+			</View>
 		</TextSelectionContext.Provider>
 	);
 }
@@ -279,10 +414,10 @@ const LEAF_SELECTABLE = leafSelectable();
  *  with the theme's selection colour. On iOS it is a plain `Text`; the mode
  *  does the selecting. */
 export function SelectableLeafText(props: TextProps & { className?: string }) {
-	const { selectionColor, accessibility } = useTextSelection();
+	const { selectionColor, accessibility, leafSelectable } = useTextSelection();
 	return (
 		<Text
-			selectable={LEAF_SELECTABLE}
+			selectable={leafSelectable}
 			selectionColor={selectionColor}
 			{...accessibility}
 			{...props}

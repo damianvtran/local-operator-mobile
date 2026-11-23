@@ -524,6 +524,38 @@ describe("mergeTranscript: one list from the page and the frame", () => {
 		expect(merged.holeBelowPage).toBe(true);
 	});
 
+	it("keeps a complete page copy over a frame copy the relay's size fallback cut", () => {
+		/* The wire's own shape: the frame's row text is `text[:limit - 1] + "…"`
+		 * with `text_complete: false` (see `cap_projection_frame`'s text tier). The
+		 * page read is uncapped, so its copy of the same row is the whole answer,
+		 * and preferring the frame's shortened prefix silently shortened a message
+		 * the device held in full. */
+		const whole = `${"Round 9 is finished, and the claim check produced no result. ".repeat(
+			6,
+		)}`;
+		const cut = `${whole.slice(0, 199)}…`;
+		const page = [rowAt("p2"), rowAt("p3", whole)];
+		const frameRow = { ...rowAt("p3", cut), text_complete: false };
+		const merged = mergeTranscript(frameOf(rowAt("p1"), frameRow), page);
+		const held = merged.rows.at(-1);
+		expect(held?.id).toBe("p3");
+		expect(held?.text).toBe(whole);
+		expect(held?.text_complete).toBe(true);
+		// The frame is still the live row: only its text was cut.
+		expect(held).not.toBe(frameRow);
+	});
+
+	it("still takes the frame's copy while the row is streaming", () => {
+		/* A streaming row is incomplete too, and its text is LONGER than the page's
+		 * older copy — so the guard must not reach it. */
+		const live = {
+			...rowAt("p3", "half, and then some"),
+			text_complete: false,
+		};
+		const merged = mergeTranscript(frameOf(live), [rowAt("p3", "half")]);
+		expect(merged.rows.at(-1)).toBe(live);
+	});
+
 	it("takes the frame's copy of a shared row — the live version, in place", () => {
 		const page = listOf("p0", "p1", "p2", "p3");
 		const live = rowAt("p3", "streamed so far");

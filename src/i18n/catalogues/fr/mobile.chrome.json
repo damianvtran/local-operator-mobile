@@ -25,5 +25,6 @@
 	"mobile.chrome.composer.row_usage": "Contexte",
 	"mobile.chrome.composer.row_cost": "Coût",
 	"mobile.chrome.composer.row_queue": "File d’attente",
-	"mobile.chrome.composer.row_questions": "Questions"
+	"mobile.chrome.composer.row_questions": "Questions",
+	"mobile.chrome.composer.row_identity": "Agent ou équipe"
 }

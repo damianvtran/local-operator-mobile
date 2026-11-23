@@ -1,0 +1,152 @@
+{
+ "record_kind": "i18n-audit",
+ "audit_id": "o3c-vi-867527",
+ "slice": "O3-c",
+ "locale": "vi",
+ "namespace": "mobile.sidebar",
+ "audit_date": "2026-11-18",
+ "key_count": 9,
+ "keys_audited": [
+  "mobile.sidebar.row_status.approval",
+  "mobile.sidebar.row_status.question",
+  "mobile.sidebar.row_status.not_reachable",
+  "mobile.sidebar.row_status.ended",
+  "mobile.sidebar.row_status.not_answering",
+  "mobile.sidebar.row_label.waiting",
+  "mobile.sidebar.row_label.working",
+  "mobile.sidebar.row_label.on_device",
+  "mobile.sidebar.row_label.open"
+ ],
+ "translator_session": "7b4714a933c5",
+ "auditor": {
+  "agent": "i18n-auditor (team lopdev)",
+  "session": "86752777063d",
+  "model": "anthropic/claude-opus-5-5",
+  "actual_model_source": "harness system prompt 'Model:' line for this session; no fallback observed",
+  "independent_from_translator_session": true
+ },
+ "draft": {
+  "path": "/Users/damian/.local-operator/sessions/7b4714a933c5/scratchpad/o3c/draft-vi.json",
+  "sha256": "8d48b29f99b0a862dd0a9460325e8dea6b62f46fdadc445a74292e754cb7d629",
+  "expected_sha256": "8d48b29f99b0a862dd0a9460325e8dea6b62f46fdadc445a74292e754cb7d629",
+  "match": true
+ },
+ "brief": {
+  "path": "/Users/damian/.local-operator/sessions/162198c78bcb/scratchpad/o3c-translation-brief.json",
+  "sha256": "e88beb09366b9ff795bf0ac916f30cef1c9a93c35fa4617575e904c7a6f5fd17",
+  "expected_sha256": "e88beb09366b9ff795bf0ac916f30cef1c9a93c35fa4617575e904c7a6f5fd17",
+  "match": true
+ },
+ "source_commit": "e7ebc3917537d83cc772148fc5b2fc2ad3f43a41",
+ "read_route": "ordinary file reads of the draft, brief and worktree files (worktree /Users/damian/local-operator-mobile/.worktrees/i18n-m3-s2a @ e7ebc391, branch feat/i18n-o3c-rows-headers; en blobs equal to e7ebc391); glossary and style guide read from ~/local-operator (HEAD b42471d3); read_public_copy not used",
+ "input_hashes": {
+  "en": {
+   "path": "local-operator-mobile@e7ebc391:src/i18n/catalogues/en/mobile.sidebar.json",
+   "sha256": "beaba7baeffe546ce65430d6cb18213da2fbb88d23128c071c286fb32a08ecdf"
+  },
+  "context": {
+   "path": "local-operator-mobile@e7ebc391:src/i18n/catalogues/en/mobile.sidebar.context.json",
+   "sha256": "858f7c51c595862306120be7833c4274439b436bb8bd1f547b88139f8d0f2fd3"
+  },
+  "vi": {
+   "path": "/Users/damian/.local-operator/sessions/7b4714a933c5/scratchpad/o3c/draft-vi.json",
+   "sha256": "8d48b29f99b0a862dd0a9460325e8dea6b62f46fdadc445a74292e754cb7d629"
+  },
+  "vi_shipped_reference": [
+   {
+    "path": "local-operator-mobile@e7ebc391:src/i18n/catalogues/vi/mobile.sidebar.json",
+    "sha256": "5e6cb54f7cd2e9086055069809909ae096897329cb8011c85affe855627e6dcf"
+   },
+   {
+    "path": "local-operator-mobile@e7ebc391:src/i18n/catalogues/vi/relay.chrome.json",
+    "sha256": "cf410d8d8af0757910fe0bc02524039d3732ee8213371f1eaaf7d0bb52d92212"
+   },
+   {
+    "path": "local-operator-mobile@e7ebc391:src/i18n/catalogues/vi/mobile.remote_sessions.json",
+    "sha256": "97394e3bb4277d3d4b134f4df4ade4c95d21c355c43b78eaf0118c96ffc6b6e4"
+   }
+  ],
+  "validator": {
+   "path": "local-operator-mobile@e7ebc391:src/i18n/messages.ts",
+   "sha256": "c1831406332e907c9a914b3db0ec35fc9fd2cddd44c18cd2861b77667c5bdba0"
+  },
+  "style_guide": {
+   "path": "~/local-operator/i18n/style-guides/vi.md",
+   "sha256": "e4901497ed553e2b2ae4a2660bf776adb787b89e11d7eb0f8d08f3da4b227888"
+  },
+  "glossary": {
+   "path": "~/local-operator/i18n/glossary.md",
+   "sha256": "0eb34437a8c3d6f564f278ef957a603b1d9f51bb07d5ddae5ea8f37deba962f8"
+  }
+ },
+ "checks": {
+  "keys_missing": 0,
+  "keys_extra": 0,
+  "brief_vs_source_english_mismatches": 0,
+  "placeholder_icu": "pass (parseMessage from worktree src/i18n/messages.ts via worktree tsx: params and select arms identical to en; {device} kept; select kind arms approval|other)",
+  "cldr_vi_categories": [
+   "other"
+  ],
+  "plural_messages_in_slice": 0,
+  "nfc": "pass",
+  "lowercase_no_trailing_punct": "pass",
+  "width_over_hint": [
+   "mobile.sidebar.row_status.ended: 'đã kết thúc' 11/10"
+  ],
+  "width_over_hint_assessment": "Accepted: list-row.tsx L285-293 paints all five status words in ONE shrink-0 slot, and its sibling not_answering «không phản hồi» is 14 chars (hint 14) in that same slot, so 11 is within what the slot already carries. «kết thúc» (8) would read as the imperative 'end'; «đã» is needed. Matches shipped «Đã kết thúc» (relay.chrome.session.subtitle.ended) and mobile.sidebar.show_ended.",
+  "negative_controls": "10/10 caught (drop key, extra key, rename placeholder, drop select arm, rename select arg, unbalanced, NFD, redaction, trailing punct, uppercase)",
+  "repo_validator": "npm run i18n:check not run: the draft is outside the repo and the worktree is read-only for this audit. The repo's own parseMessage/formatMessage were imported read-only via worktree tsx instead."
+ },
+ "redaction_marker_hits": {
+  "draft": 0,
+  "english_sources": 0,
+  "brief_excluding_redaction_scan_pattern": 0,
+  "brief_raw": 2,
+  "brief_note": "both raw hits are the redaction_scan.pattern literal matching itself"
+ },
+ "verdict": "passed",
+ "current_report_verdict": {
+  "status": "passed",
+  "unresolved_blocker_major_count": 0,
+  "finding_ids": [
+   "VI-C1",
+   "VI-C2"
+  ]
+ },
+ "findings": [
+  {
+   "id": "VI-C1",
+   "severity": "MINOR",
+   "key": "mobile.sidebar.row_label.open",
+   "current": "đang mở",
+   "proposed": "đang xem",
+   "reason": "Spoken last in the row name (list-row-meta.ts L504, 'Payments, …, đang mở'). Shipped vi uses «Đang mở…» for the progressive 'Opening…' (mobile.signin.panel.opening «Đang mở trình duyệt…», relay.chrome.session.resuming «Đang mở lại…»), so a bare «đang mở» fragment can be heard as 'opening/loading', not 'the one on screen'. «đang xem» (8) says 'being viewed' unambiguously. The current text is still a defensible reading ('các tab đang mở'), so this is not a meaning error."
+  },
+  {
+   "id": "VI-C2",
+   "severity": "NIT",
+   "key": "mobile.sidebar.row_status.approval",
+   "current": "phê duyệt",
+   "proposed": "chờ duyệt (optional; current acceptable)",
+   "reason": "Bare «phê duyệt» mirrors the bare English noun and the glossary term, and is lowercase so not an imperative. «chờ duyệt» (8) is the conventional vi pending-approval chip. Only the painted chip is affected; the spoken name uses row_label.waiting «đang chờ phê duyệt»."
+  }
+ ],
+ "audit_notes_not_execution_log": "report.md is audit notes; audit.log holds the actual printed output of the commands run in session 86752777063d.",
+ "ledger_appended": false,
+ "ledger_note": "not appended: brief says no repo file is edited; the bundle is staged in auditor scratchpad for the manager to land",
+ "artifacts": [
+  {
+   "path": "report.md",
+   "sha256": "fecb168afdff7cbdd0dbda49fcc2eb0eb0fea786312495c5aaf09e87d4be6464"
+  },
+  {
+   "path": "audit.log",
+   "sha256": "914245ec1e305d7689e6cf9fb89bda3ad1de060eb8fce0dc317161601970ec4d"
+  },
+  {
+   "path": "/Users/damian/.local-operator/sessions/86752777063d/scratchpad/o3c-audit/vi/work/check.ts",
+   "sha256": "ee1ec21b901bff8ac82ef8c1e32e2123a31e13e0490aa39739ce2166ef7c13c0",
+   "note": "checker script, scratch"
+  }
+ ]
+}

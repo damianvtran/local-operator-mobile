@@ -103,7 +103,10 @@ on:
   push:
     branches:
       - main
-  pull_request:
+  # Callable by merge-gate.yml on `ready-to-merge` (`pull_request: [labeled]`),
+  # replacing the per-push `pull_request` trigger so `mock-relay-contract` runs
+  # once on the final head before merge instead of on every review iteration.
+  workflow_call:
 
 # THE CONCURRENCY KEY CARRIES THE TRIGGER, and a manual run also carries its
 # proof. It has to. GitHub keeps ONE pending run per group: when a second run
@@ -123,18 +126,31 @@ on:
 # stable identities their artefacts and baselines are read under, and only a
 # dispatch can carry a proof, so no scheduled or pushed run can collide with them.
 #
-# `cancel-in-progress` keeps its meaning unchanged, and it is worth stating what
-# that meaning actually is. On `refs/heads/main` a RUNNING run is never cancelled:
-# the nightly can no longer displace a queued manual proof, and a second manual
-# run of the same proof waits behind the first instead of killing it. That is not
-# immunity from every cancel — GitHub keeps ONE pending run per group, so a third
-# run in one main lane still replaces whichever predecessor was only waiting. A
-# same-proof dispatch on a non-main ref still supersedes its older run; and no
-# push to any branch other than `main` reaches this workflow, since
-# `on.push.branches` is `main` alone, so the non-main rule never meets a push.
+# `cancel-in-progress` IS KEYED BY TRIGGER, NOT BY REF (2026-11-18). A `push` or
+# `pull_request` run is superseded by the next one in its lane on ANY ref,
+# `main` included; a `schedule` or `workflow_dispatch` run is never cancelled.
+# Why: the operator's account shares ONE concurrent-job pool across every repo.
+# At 04:50Z on 2026-11-18 about 10 of ~17 running jobs were this repository's
+# E2E/Maestro/iOS-simulator jobs (web-audit iphone-se x4, tablet-landscape x2,
+# schedule + push + PR overlapping) while local-operator's release gate sat
+# queued 80+ minutes. A main-push E2E run is not a release — it uploads nothing
+# but its own frames — so a newer merge's run makes the older one's verdict moot;
+# letting both finish only spends the pool. The nightly and every manual proof
+# are the opposite: each is the only run of its kind, so a running one is never
+# cancelled (the nightly cannot displace a queued manual proof, and a second
+# dispatch of one proof waits behind the first). That is not immunity from every
+# cancel — GitHub keeps ONE pending run per group, so a third run in one lane
+# still replaces whichever predecessor was only waiting. The account-routing
+# LITERAL WORKFLOW PREFIX (`e2e-...`) KEEPS CALLER AND SIBLINGS APART. When
+# `merge-gate.yml` calls this workflow via `workflow_call`, `github.workflow`
+# inside the callee evaluates to the CALLER's name ("Merge Gate"). Keying on
+# `'e2e'` instead of `github.workflow` prevents `e2e` from colliding with
+# `merge-gate` or with sibling callees `ios.yml` and `android.yml` on the same
+# merge ref. The account-routing proofs remain dispatch-only, so this rule never
+# cancels them either.
 concurrency:
-  group: ${{ inputs.proof_mode == 'account-routing-ios-proof' && format('account-routing-ios-{0}', github.ref) || inputs.proof_mode == 'account-routing-android-proof' && format('account-routing-android-{0}', github.ref) || github.event_name == 'workflow_dispatch' && format('{0}-{1}-{2}-{3}', github.workflow, github.event_name, github.ref, inputs.proof_mode || 'full') || format('{0}-{1}-{2}', github.workflow, github.event_name, github.ref) }}
-  cancel-in-progress: ${{ inputs.proof_mode != 'account-routing-ios-proof' && inputs.proof_mode != 'account-routing-android-proof' && github.ref != 'refs/heads/main' }}
+  group: ${{ inputs.proof_mode == 'account-routing-ios-proof' && format('account-routing-ios-{0}', github.ref) || inputs.proof_mode == 'account-routing-android-proof' && format('account-routing-android-{0}', github.ref) || github.event_name == 'workflow_dispatch' && format('e2e-{0}-{1}-{2}', github.event_name, github.ref, inputs.proof_mode || 'full') || format('e2e-{0}-{1}', github.event_name, github.ref) }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' || github.event_name == 'push' }}
 
 permissions:
   contents: read
@@ -384,7 +400,7 @@ jobs:
         run: pnpm e2e:docs
 
   web-audit:
-    if: (inputs.proof_mode || 'full') == 'full'
+    if: (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && (inputs.proof_mode || 'full') == 'full'
     name: Web target — frames, audit and the canary (${{ matrix.device }})
     needs: harness
     # SHARDED BY DEVICE PROFILE, one leg per `ci`-tier device. Measured on
@@ -443,7 +459,7 @@ jobs:
     # deliberately not additive: what keeps the job inside 60 is the measured work
     # above, which is why the measurement is stated here instead of a sum. The capture
     # and audit parts rose when `CI_SCALES` gained the boundary step (336 -> 504 cells):
-    # a budget the per-push path now pays deliberately, because an axis that BRACKETS
+    # a budget the `ci`-tier path now pays deliberately, because an axis that BRACKETS
     # the band the footer breaks in cannot see that class of defect, and it reached
     # review once already. THEY ROSE AGAIN with the projects lifecycle slice, which
     # added ten declared cells (504 -> 612 on `ci`, 1512 -> 1836 on `core`, 5544 ->
@@ -697,7 +713,15 @@ jobs:
     # guard is `web-audit`'s own, so the two are selected together; `always()` comes
     # LAST so the tests that evaluate these guards as JS short-circuit before it on
     # every non-full proof mode.
-    if: (inputs.proof_mode || 'full') == 'full' && always()
+    #
+    # NIGHTLY AND ON DEMAND ONLY (2026-11-18), like `web-audit-core`, `docs-commands`
+    # and `maestro-android`. The two device legs cost ~45-50 min of runner each and
+    # ran on every push and pull request, crowding one shared concurrent-job pool
+    # (see the concurrency comment at the top). The event guard is `web-audit`'s, so
+    # on a push or pull request both jobs are SKIPPED together and no red `always()`
+    # verdict appears for legs that never ran. A PR author who needs frames runs
+    # `gh workflow run e2e.yml --ref <branch> -f proof_mode=full` (docs/ci.md).
+    if: (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && (inputs.proof_mode || 'full') == 'full' && always()
     name: Web target — audit verdict (all device legs)
     needs: web-audit
     runs-on: ubuntu-latest
@@ -808,10 +832,10 @@ jobs:
     needs: harness
     # WHY THIS JOB EXISTS. The operator's requirement is QA "across a variety of different
     # device sizes of phone … and tablets both vertical and horizontal", and until this job
-    # nothing automated covered it: the per-push `web-audit` job runs `--tier ci`, which is
+    # nothing automated covered it: the `ci`-tier `web-audit` job runs `--tier ci`, which is
     # 2 of the matrix's 19 declared profiles, and both `core` (5 profiles / 3780 cells) and
     # `full` (19 / 13860) were local or dispatched only. This job captures and audits `core`,
-    # on the NIGHTLY schedule only, so the per-push path is untouched and the `ci` job keeps
+    # on the NIGHTLY schedule only, so the `ci`-tier path is untouched and the `ci` job keeps
     # its own 55-minute capture bound rather than being stretched to fit a 120-minute one.
     #
     # SIZED FROM THE MEASUREMENT, NOT FROM HOPE. The runner's own rate is 2.24 s/cell
@@ -842,10 +866,10 @@ jobs:
     # (`150 + 70 = 220 < 225`). The supplement slice's five cells one more took the
     # derived deadline to 9072 s = 151.2 min — ABOVE the 150 the step carried — so
     # capture moved 150 -> 160 and the job bound 225 -> 240 with it,
-    # then inside the bound (`160 + 70 = 230 < 240`). The per-push steps carry the same
+    # then inside the bound (`160 + 70 = 230 < 240`). The `ci`-tier steps carry the same
     # relationship: capture
     # 60 against a derived 3600 s (60 min) and audit 28 against 1,200 x 1.25 s (25 min).
-    # The per-push audit's rate is 1.25 s/cell (250 of the 256 cells the tier held then
+    # The `ci`-tier audit's rate is 1.25 s/cell (250 of the 256 cells the tier held then
     # in 312 s, run 37167390506) — but `core` is not that sample: its own audit measured
     # 1.47 s/cell and was killed at the old 70-minute bound (below). So 3,780 cells x
     # 1.47 s = 5,557 s ≈ 93.5 min. On THIS merged head the caps are capture 190 and
@@ -885,7 +909,7 @@ jobs:
     #     (140 unmeasurable)`, rc 1, every FAIL row a U-05 one at `iphone-15-landscape`
     #     (816/804/706 at scales 100/150/200), in 1,161 s against the 35-min bound the step
     #     then had.
-    # Those are real app-side findings the per-push `ci` sample cannot reach (it never
+    # Those are real app-side findings the `ci`-tier sample cannot reach (it never
     # captures `iphone-15-landscape`), which is the reason this job exists. So: do NOT add
     # `continue-on-error` and do NOT exempt or silence a cell — a job that reports a real
     # finding is working, and this comment is where a reader finds out that the red is the
@@ -909,8 +933,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # No `e2e:typecheck` here: it is the per-push gate and already ran on the commit this
-      # schedule fires from. This job exists to add device coverage, not to re-check types.
+      # No `e2e:typecheck` here: ci.yml's `checks` job runs it on every pull request and
+      # main push, and `web-audit` runs it again on this same nightly/dispatch run. This
+      # job exists to add device coverage, not to re-check types.
       - name: Export the web target
         run: pnpm export:web
 
@@ -992,7 +1017,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          # A distinct name from the per-push `audit-frames-<device>` legs: on a nightly run both jobs
+          # A distinct name from the `ci`-tier `audit-frames-<device>` legs: on a nightly run both jobs
           # upload, and one name would make the second upload fail rather than attach.
           name: audit-frames-core
           path: |

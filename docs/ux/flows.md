@@ -692,6 +692,12 @@ honest option.)
 - **Refresh:** pull-to-refresh everywhere there is a list; SSE keeps it live.
 - **Interruptions:** every modal sheet is dismissible by swipe-down and by the
   Android back gesture; the composer draft survives all of it.
+- **Back and the drawer:** the drawer opens from its menu button only (no edge
+  swipe: the left edge is back). Back is the Android back button or gesture, and
+  on iOS a swipe that starts at the left edge (`src/ui/stack-options.ts`; on iOS
+  26+ the system's full-screen swipe-back is limited to the left-edge strip). A
+  swipe that starts anywhere else never navigates, so a table, code block or
+  diagram scrolls from any touch inside it.
 - **Auth expiry (`C5`):** a `401` closes dispatch/publication immediately. Native
   personal Radient draft text/images are retained only as sealed ciphertext and
   may recover after fresh server-authenticated SAME owner/tenant/tunnel/backend

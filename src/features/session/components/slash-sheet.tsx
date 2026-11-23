@@ -83,7 +83,11 @@ export const SlashSheet = ({
 				testID={CONTROL.slashFilter}
 				accessibilityLabel="Filter commands"
 			/>
-			<ScrollView className="max-h-72">
+			{/* `handled`, like the Sheet body's own (review R1-m2): RN's tap capture
+			 *  runs per ScrollView, so the outer body's setting does not reach this
+			 *  nested list, and with the keyboard up its first tap only dismissed
+			 *  the keyboard — the pick took two taps. */}
+			<ScrollView className="max-h-72" keyboardShouldPersistTaps="handled">
 				{rows.map(({ command }) => {
 					const hint = argumentHint(command);
 					return (

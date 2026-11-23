@@ -1,6 +1,6 @@
 import { useFocusEffect } from "expo-router";
 import { useCallback } from "react";
-import { useWorkspaceDrawer } from "@/features/sessions/workspace-drawer";
+import { useWorkspaceDrawer } from "@/features/sessions/workspace-drawer-context";
 
 /** Home already renders the persistent conversations pane in split layout.
  * The Conversations alias requests that surface, not a second modal above it.

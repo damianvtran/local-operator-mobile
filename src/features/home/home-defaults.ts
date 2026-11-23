@@ -12,6 +12,10 @@
  * not have caught them, so the decisions live here and their tests assert the BODY.
  */
 import type { ModelEntry, Payload } from "@/contracts";
+import {
+	type StartTarget,
+	startTargetField,
+} from "@/features/home/start-targets";
 import type { ModelReading } from "@/features/session/chip-labels";
 import type { ResumeClock } from "@/features/session/resume-hold";
 import { insideResumeWindow } from "@/features/session/resume-plan";
@@ -153,12 +157,17 @@ export const homeStartSelection = (input: {
 	chosenEffort?: string | null;
 	/** `capabilities.session_start.effort`: the relay accepts `effort`. */
 	effortSupported?: boolean;
+	/** The agent or team the reader chose to start as, `null` for the default.
+	 *  Written whatever the relay's licence says: `gatedStart` decides what
+	 *  leaves (`startTargetField`, PR #358 F1). */
+	target?: StartTarget | null;
 }): StartSessionRequest | null => {
 	if (input.cwd === null) return null;
 	return {
 		cwd: input.cwd,
 		...modelFields(input.chosenModel),
 		...effortField(input.chosenEffort ?? null, input.effortSupported ?? false),
+		...startTargetField(input.target ?? null),
 	};
 };
 
@@ -234,6 +243,9 @@ export const restoredSupersede = (input: {
 	/** Whether the reader has applied a folder on this computer since the screen
 	 *  mounted. Once they have, the record is THEIR choice, not a restored one. */
 	readerApplied: boolean;
+	/** The target the home will start as — the reader's pick, else the one the
+	 *  record restored. */
+	target?: StartTarget | null;
 }): StartSessionRequest | null => {
 	const { stored, folders, chosenModel, readerApplied } = input;
 	if (stored === null) return null;
@@ -252,12 +264,21 @@ export const restoredSupersede = (input: {
 		...(cwd !== undefined ? { cwd } : {}),
 		...modelFields(chosenModel),
 		...effortField(input.chosenEffort ?? null, input.effortSupported ?? false),
+		/* A RESTORED TARGET IS KEPT, unlike a restored model (contract "PR 2"):
+		 *  the app never invents one, so a record naming a team is the reader's
+		 *  choice from before the relaunch. It is never stripped here — not while
+		 *  the licence is unread, not when the relay is known not to license it —
+		 *  because a stripped field is a start that goes out UNBOUND with the
+		 *  screen still naming the team (PR #358 F1/U2). `gatedStart`, where the
+		 *  bytes leave, refuses it visibly instead. */
+		...startTargetField(input.target ?? null),
 	};
 	/* Key order matters to this comparison: `next` is built just above and `stored`
 	 *  comes from the coordinator's record (written by `homeStartSelection` or a
 	 *  picker's commit, then round-tripped through its JSON `copy`), and every one
 	 *  of those writers emits `cwd`, then `provider`, then `model_id`, then
-	 *  `effort` — the pickers commit through `homeStartSelection` itself. */
+	 *  `effort`, then `agent`/`team` — the pickers commit through
+	 *  `homeStartSelection` itself. */
 	return JSON.stringify(next) === JSON.stringify(stored) ? null : next;
 };
 

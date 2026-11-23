@@ -1,11 +1,16 @@
 import { afterEach, describe, expect, it } from "vitest";
 
-import type { NotificationItem, NotificationsResponse } from "@/contracts";
+import type {
+	NotificationDetailResponse,
+	NotificationItem,
+	NotificationsResponse,
+} from "@/contracts";
 import {
 	canDismiss,
 	conversationName,
 	countLabel,
 	detailMetaLine,
+	dismissReceiptShowing,
 	hasUnread,
 	inboxEmpty,
 	inboxRows,
@@ -14,6 +19,7 @@ import {
 	markAllTarget,
 	mergePage,
 	notificationsEnabled,
+	openAskIdFor,
 	readLoadedDetail,
 	relativeTime,
 	rowAccessibilityLabel,
@@ -21,6 +27,7 @@ import {
 	toggleSelection,
 	unionTokens,
 } from "@/features/notifications/notifications-model";
+import type { ConversationDismissPhase } from "@/features/notifications/use-conversation-dismiss";
 import { resetLocaleSource, setLocaleSource } from "@/i18n";
 
 function item(overrides: Partial<NotificationItem> = {}): NotificationItem {
@@ -512,5 +519,134 @@ describe("C1-class fragments stay wholly English under a non-en locale", () => {
 				nowMs: NOW,
 			}),
 		).toBe("untitled");
+	});
+});
+
+/**
+ * Whether the list's pinned footer holds the dismiss receipt (#321).
+ *
+ * The footer pays the bottom safe-area inset only while it has something in it,
+ * and `DismissReceipt` returns null on this same predicate, so one rule decides
+ * both. The table is exhaustive over the phase union (`satisfies` fails to
+ * compile on a new kind).
+ */
+const RECEIPT_PHASES = {
+	idle: { phase: { kind: "idle" }, showing: false },
+	counting: { phase: { kind: "counting", title: "Aida" }, showing: true },
+	confirming: {
+		phase: { kind: "confirming", target: { kind: "tokens", tokens: [] } },
+		showing: false,
+	},
+	applying: {
+		phase: { kind: "applying", target: { kind: "tokens", tokens: [] } },
+		showing: false,
+	},
+	done: {
+		phase: {
+			kind: "done",
+			target: { kind: "tokens", tokens: [] },
+			receipt: { changed: [], refused: [] } as never,
+			sentence: "Dismissed 1 update.",
+			complete: true,
+		},
+		showing: true,
+	},
+	undoing: {
+		phase: {
+			kind: "undoing",
+			target: { kind: "tokens", tokens: [] },
+			receipt: { changed: [], refused: [] } as never,
+		},
+		showing: false,
+	},
+	undone: {
+		phase: { kind: "undone", sentence: "Restored 1 update.", complete: true },
+		showing: true,
+	},
+	none: {
+		phase: { kind: "none", sentence: "Nothing to dismiss." },
+		showing: true,
+	},
+	failed: {
+		phase: { kind: "failed", sentence: "Couldn't dismiss." },
+		showing: true,
+	},
+} satisfies {
+	[K in ConversationDismissPhase["kind"]]: {
+		phase: Extract<ConversationDismissPhase, { kind: K }>;
+		showing: boolean;
+	};
+};
+
+describe("the dismiss receipt's footer slot (#321)", () => {
+	it("is occupied exactly while the receipt has something to say", () => {
+		for (const [kind, { phase, showing }] of Object.entries(RECEIPT_PHASES)) {
+			expect([kind, dismissReceiptShowing(phase)]).toEqual([kind, showing]);
+		}
+	});
+});
+
+/**
+ * Answering from the inbox expands THAT ask (Ben, 2026-11-23).
+ *
+ * The card's "Answer in conversation" opens `AsksSheet` with the item's id as
+ * `initialOpenAsk`, and the sheet expands a row whose `ask_id` equals it. The
+ * item's id is the relay's COMPOSITE (`ask:<session>:<ask_id>`); the read's rows
+ * carry the bare `ask_id`. They are never equal, so the sheet opened collapsed
+ * on an ask the reader had just pressed to answer.
+ *
+ * The detail is shaped like the synthetic list fixture
+ * (`fixtures/relay/synthetic/notifications-populated.json:187`): composite id
+ * `ask:3f2a9c1b:a1`, and the conversation's asks read carrying `a1`.
+ */
+describe("an inbox ask opens itself in the ask sheet (Ben, 2026-11-23)", () => {
+	const askDetail = (): NotificationDetailResponse => ({
+		item: item({
+			id: "ask:3f2a9c1b:a1",
+			source: "ask",
+			ask: {
+				status: "open",
+				deadline_at: 0,
+				question_count: 2,
+				dismissible: true,
+			},
+		}),
+		history: [],
+		session: {
+			id: "s_0003",
+			title: "Payments migration",
+			agent_id: "aida",
+			cwd: "/work/payments",
+		},
+		anchor: null,
+		projects: [],
+		asks: [{ ask_id: "a1", session_id: "s_0003", status: "open" }],
+	});
+
+	it("hands the sheet an id the conversation's asks read returns", () => {
+		const detail = askDetail();
+		expect(detail.asks.map((row) => row.ask_id)).toContain(
+			openAskIdFor(detail),
+		);
+	});
+
+	it("takes the last segment of the relay's composite id", () => {
+		/* The composite is `ask:<session>:<ask_id>`; the ask id is its tail. */
+		expect(openAskIdFor(askDetail())).toBe("a1");
+	});
+
+	it("expands nothing for an update, nor for an unreadable id", () => {
+		/* An update's card opens the conversation, so the sheet is not asked to
+		 * pre-expand an ask it does not have. */
+		expect(openAskIdFor({ item: { id: "n_1", source: "notify" } })).toBeNull();
+		/* A truncated id names no ask: the sheet then keeps its collapsed walk. */
+		expect(
+			openAskIdFor({
+				item: {
+					id: "ask:3f2a9c1b:",
+					source: "ask",
+				},
+			}),
+		).toBeNull();
 	});
 });

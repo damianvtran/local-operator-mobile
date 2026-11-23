@@ -3,12 +3,15 @@ import { describe, expect, it, vi } from "vitest";
 import {
 	createThreadViewport,
 	DRAG_RELEASE_MS,
+	showsMetadataOverlay,
 	WEB_IDLE_MS,
 } from "./thread-viewport";
 
 const RELEASE = /releaseFollow\(\);/g;
 const FRESH_PEOPLE = /\?\.people \?\? \[\]/;
 const INITIAL_ANCHOR = /maintainVisibleContentPosition=\{\s*positioned/;
+const METADATA_OVERLAY =
+	/className="absolute start-0 end-0 top-0 gap-3 p-4"\s*testID=\{SURFACE\.teamBridgeThreadLoading\}/;
 const ADMISSION_RECHECK =
 	/useEffect\(\(\) => \{\s*if \(readyForPosition && items\.length > 0\) viewport\.current\?\.dataChanged\(\);\s*\}, \[items, readyForPosition\]\)/;
 
@@ -429,6 +432,107 @@ describe("admission without a content-size change", () => {
 			expect(scrollTo).not.toHaveBeenCalled();
 		},
 	);
+});
+
+/**
+ * #304 QA R4 Q1 (warm notification tap, Android API 29/31): the rows' layout
+ * and content size arrive while the open is still held (`dataReady` false),
+ * then admission flips `dataReady` with NO further native size event (a state
+ * change does not resize anything). Native cannot re-read its host, so the
+ * landing must be decided from the stored measurement — which is valid exactly
+ * when it was taken over the rows now admitted (`dataKey`).
+ */
+describe("admission after the only measurement (#304 QA R4 Q1)", () => {
+	const make = (key: { current: string }) => {
+		let ready = false;
+		const positioned = vi.fn();
+		const read = vi.fn();
+		const scrollTo = vi.fn(() => null);
+		const trace = vi.fn();
+		const v = createThreadViewport({
+			web: false,
+			scrollTo,
+			positioned,
+			read,
+			newestSeq: () => 6,
+			dataReady: () => ready,
+			dataKey: () => key.current,
+			trace,
+		});
+		return {
+			v,
+			positioned,
+			read,
+			scrollTo,
+			trace,
+			admit: () => {
+				ready = true;
+			},
+		};
+	};
+
+	it("a fitting thread positions and reveals on dataChanged alone", () => {
+		const key = { current: "d1\nm1\nm2\nm3\nm4\nm5\nm6" };
+		const t = make(key);
+		t.v.handlers.onLayout({ nativeEvent: { layout: { height: 640 } } });
+		t.v.handlers.onContentSizeChange(390, 420);
+		expect(t.v.pending).toBe(true);
+		t.admit();
+		t.v.dataChanged();
+		expect(t.v.pending).toBe(false);
+		expect(t.positioned).toHaveBeenCalledOnce();
+		expect(t.v.readSeq).toBe(6);
+		expect(t.read).toHaveBeenCalledOnce();
+		expect(t.scrollTo).not.toHaveBeenCalled();
+	});
+
+	it("a later layout-only event (the list growing) also finishes it", () => {
+		const key = { current: "m1\nm2" };
+		const t = make(key);
+		t.v.handlers.onLayout({ nativeEvent: { layout: { height: 520 } } });
+		t.v.handlers.onContentSizeChange(390, 300);
+		t.admit();
+		t.v.handlers.onLayout({ nativeEvent: { layout: { height: 640 } } });
+		expect(t.positioned).toHaveBeenCalledOnce();
+		expect(t.v.readSeq).toBe(6);
+	});
+
+	it("rows that changed since the measurement are still not trusted (#228 Q1-1)", () => {
+		const key = { current: "m31\nm80" };
+		const t = make(key);
+		t.v.handlers.onLayout({ nativeEvent: { layout: { height: 600 } } });
+		t.v.handlers.onContentSizeChange(390, 300);
+		// An older page was prepended in the same commit that admitted it.
+		key.current = "m1\nm80";
+		t.admit();
+		t.v.dataChanged();
+		expect(t.v.pending).toBe(true);
+		expect(t.positioned).not.toHaveBeenCalled();
+		// The prepended rows' own measurement lands them at the tail.
+		t.v.handlers.onContentSizeChange(390, 3892);
+		expect(t.scrollTo).toHaveBeenLastCalledWith(3892 - 600);
+	});
+
+	it("traces each early return with its reason (proof-only sink)", () => {
+		const t = make({ current: "m1" });
+		t.v.handlers.onContentSizeChange(390, 300);
+		t.v.handlers.onLayout({ nativeEvent: { layout: { height: 640 } } });
+		expect(t.trace).toHaveBeenCalledWith("content", {
+			height: 300,
+			dataReady: false,
+		});
+		expect(t.trace).toHaveBeenCalledWith("position", { skip: "not-ready" });
+		t.admit();
+		t.v.dataChanged();
+		expect(t.trace).toHaveBeenCalledWith(
+			"position",
+			expect.objectContaining({ fits: true, trusted: true }),
+		);
+		expect(t.trace).toHaveBeenLastCalledWith("positioned", {
+			atNewest: true,
+			readSeq: 6,
+		});
+	});
 });
 
 describe("late native end geometry", () => {
@@ -1005,6 +1109,51 @@ describe("a scroll that comes to rest stays where it stopped (TestFlight 1157)",
 	});
 });
 
+describe("metadata loading overlay (#315 design D1)", () => {
+	// The block is laid OVER the message area, so it may show only where that
+	// area is otherwise blank; anything with its own place there would overlap.
+	const loading = {
+		metadataLoading: true,
+		content: true,
+		list: true,
+		rows: 0,
+		positioned: false,
+	};
+	it("shows before the list or preview mounts", () => {
+		expect(
+			showsMetadataOverlay({ ...loading, content: false, list: false }),
+		).toBe(true);
+	});
+	it("stands in for rows the list holds back until positioned", () => {
+		expect(showsMetadataOverlay({ ...loading, rows: 3 })).toBe(true);
+	});
+	it("never covers the list's own loading, empty or error block", () => {
+		// rows 0 is every ListEmptyComponent state: "Loading messages…", the
+		// empty copy and the error copy alike.
+		expect(showsMetadataOverlay(loading)).toBe(false);
+		expect(showsMetadataOverlay({ ...loading, positioned: true })).toBe(false);
+	});
+	it("never covers the not-joined preview", () => {
+		expect(showsMetadataOverlay({ ...loading, list: false })).toBe(false);
+		expect(showsMetadataOverlay({ ...loading, list: false, rows: 3 })).toBe(
+			false,
+		);
+	});
+	it("never covers positioned rows, and needs metadata loading", () => {
+		expect(
+			showsMetadataOverlay({ ...loading, rows: 3, positioned: true }),
+		).toBe(false);
+		expect(
+			showsMetadataOverlay({
+				...loading,
+				metadataLoading: false,
+				content: false,
+				list: false,
+			}),
+		).toBe(false);
+	});
+});
+
 describe("screen wiring", () => {
 	const source = readFileSync(
 		new URL("./thread-screen.tsx", import.meta.url),
@@ -1032,6 +1181,19 @@ describe("screen wiring", () => {
 	it("waits for positioned rows before growing the container, and rechecks admitted data", () => {
 		expect(source).toContain('positioned ? "grow justify-end pb-2" : "pb-2"');
 		expect(source).toMatch(ADMISSION_RECHECK);
+	});
+	it("lays the metadata loading block over the list and keys measurements by rows (#304 QA R4 Q1)", () => {
+		// In normal layout the block took height from the list while a warm
+		// tap's metadata loaded, re-laying out rows mid-landing.
+		expect(source).toMatch(METADATA_OVERLAY);
+		// Gated by the D1 predicate with the screen's real mount conditions.
+		expect(source).toContain("content: preview || admitted || validDraft,");
+		expect(source).toContain("list: !preview && (admitted || validDraft),");
+		expect(source).not.toContain("metadataLoading && !(positioned");
+		expect(source).toContain("dataKey: () => itemsKey.current");
+		// Proof-only sink: wired from the seam module, never a logger here.
+		expect(source).toContain("trace: threadViewportTrace");
+		expect(source).not.toContain("console.");
 	});
 	it("keeps the heading semantic and scalable and the identity account scoped", () => {
 		// The heading is the session header's title style now (one line, two

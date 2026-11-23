@@ -155,8 +155,20 @@ platform :ios do
     )
   end
 
+  # Only a positively empty App Store Connect response permits recovery. No
+  # unsafe retry on an auth/network error, malformed body or unseen next page.
+  # Only omitted or null `next` means no next page; JSON false is malformed.
+  def require_empty_recovery_result!(response, collection)
+    body = response&.body
+    unless response&.status == 200 && body.is_a?(Hash) && body["data"].is_a?(Array) &&
+           body["links"].is_a?(Hash) && body["links"]["next"].nil?
+      UI.user_error!("Cannot confirm App Store Connect #{collection} absence; refusing recovery")
+    end
+    UI.user_error!("App Store Connect already has a #{collection} for 0.1.0 (1517); refusing recovery upload") unless body["data"].empty?
+  end
+
   desc "Upload an already-built IPA to TestFlight (internal testers)"
-  lane :testflight do
+  lane :testflight do |options|
     dir = repo_path(require_env!("LO_IOS_IPA_DIR", "It is the directory the export wrote the IPA into."))
     ipas = Dir[File.join(dir, "*.ipa")].sort
     UI.user_error!("no .ipa in #{dir}") if ipas.empty?
@@ -176,6 +188,22 @@ platform :ios do
       # This is an App Store Connect key, not an in-house enterprise one.
       in_house: false
     )
+
+    if options&.fetch(:recovery_v010, false) == true
+      # Check both exact version/build collections with the same credential as
+      # Pilot. Neither the latest build nor the processed list alone can rule
+      # out a duplicate. No processing-state filter: any matching record blocks.
+      asc = Spaceship::ConnectAPI
+      app = asc::App.find("com.localoperator.mobile")
+      UI.user_error!("Cannot confirm Local Operator's App Store Connect app; refusing recovery") unless app && !app.id.to_s.empty?
+      require_empty_recovery_result!(asc.get_builds(
+        filter: { app: app.id, "preReleaseVersion.version" => "0.1.0", version: "1517" }, includes: nil
+      ), "build")
+      require_empty_recovery_result!(asc.get_build_uploads(
+        app_id: app.id, filter: { cfBundleShortVersionString: "0.1.0", cfBundleVersion: "1517" }
+      ), "build upload")
+      UI.message("App Store Connect has no visible 0.1.0 (1517) build or upload; continuing recovery")
+    end
 
     # `distribute_external: false` — external testers need an App Store review of
     # the first build of a version, which is a human decision (ADR 0004, "Stores

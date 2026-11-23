@@ -12,10 +12,10 @@
  * - An unfamiliar REQUIRED field fails closed. The screen shows its error state
  *   instead of rendering `undefined`.
  * - An ADDITIVE field survives (`looseObject`), which is the hub's own contract
- *   rule. Sibling lanes are adding threads (`thread_root_id`), reactions,
- *   built-in channels (`builtin`) and the directory's chief-of-staff object
- *   (`agent`). Every one of those is optional here, so a server older OR newer
- *   than this build still parses.
+ *   rule. Reply threads (`thread_root_id` and the root rollup, parsed on
+ *   `messageSchema`), reactions, built-in channels (`builtin`) and the
+ *   directory's chief-of-staff object (`agent`) are all optional here, so a
+ *   server older OR newer than this build still parses.
  *
  * WHY NOT THE RELAY CONTRACT. Team Bridge lives on the hub, not on the
  * operator's machine, so these reads go straight to `api.radienthq.com` with the
@@ -53,6 +53,31 @@ export const hubErrorSchema = z.looseObject({
  */
 export const notifySchema = z.enum(["all", "mention", "mute"]);
 export type Notify = z.infer<typeof notifySchema>;
+
+/**
+ * One structured @-mention on a send (the hub's person send DTO `mentions[]`,
+ * agent-server `internal/requests/bridge_conversation.go`). An agent row names
+ * its endpoint; a person row must not. STRICT and bounded because this is an
+ * OUTGOING shape: a stray key or an 51st row would make the hub refuse the
+ * whole message, so it is refused here, before the network, with a message a
+ * test can read. Mirrors desktop `src/shared/desktop-contract.ts`.
+ */
+export const mentionRowSchema = z.discriminatedUnion("kind", [
+	z.strictObject({ kind: z.literal("human"), account_id: id }),
+	z.strictObject({ kind: z.literal("agent"), account_id: id, endpoint_id: id }),
+]);
+export type MentionRow = z.infer<typeof mentionRowSchema>;
+
+/** At most 50 rows, each member at most once (the hub's own bounds). */
+export const mentionRowsSchema = z
+	.array(mentionRowSchema)
+	.max(50)
+	.refine(
+		(rows) =>
+			new Set(rows.map((r) => `${r.kind}:${r.account_id}`)).size ===
+			rows.length,
+		{ message: "mentions must name each member once" },
+	);
 
 export const participantSchema = z.looseObject({
 	account_id: id,
@@ -189,6 +214,44 @@ export const attachmentDescriptorSchema = z.looseObject({
 });
 export type AttachmentDescriptor = z.infer<typeof attachmentDescriptorSchema>;
 
+/*
+ * REACTIONS (lop-dev spec "Mobile Team Bridge: reactions and start-a-thread",
+ * §2.1, slice PR b). One row per emoji: the hub's summary FOR THIS READER —
+ * how many reacted, whether I did, and up to three display names. No reactor
+ * ids exist on the wire (spec gap G1), so none are parsed or kept.
+ *
+ * Mirrors the desktop's parse (`local-operator-ui`
+ * `src/shared/team-bridge-contract.ts` `teamBridgeReactionSchema` and its
+ * history variant), including its bounds: a history read TRIMS to ≤ 50 rows and
+ * ≤ 3 labels rather than failing, because a future server cap must not make a
+ * whole page unreadable; the toggle answer below is strict, so an incompatible
+ * write answer stays a visible failure instead of silently replacing rows.
+ */
+export const reactionSchema = z.looseObject({
+	emoji: z.string().min(1),
+	count: z.number().int().positive(),
+	reacted_by_me: z.boolean(),
+	sample_labels: z.array(z.string().max(256)).max(3),
+});
+export type Reaction = z.infer<typeof reactionSchema>;
+
+const historyReactionsSchema = z
+	.array(
+		reactionSchema.extend({
+			sample_labels: z
+				.array(z.string().max(256))
+				.transform((labels) => labels.slice(0, 3)),
+		}),
+	)
+	.transform((rows) => rows.slice(0, 50));
+
+/** The PUT/DELETE answer: the message's FULL summary for the caller. */
+export const reactionsAnswerSchema = z.looseObject({
+	message_id: id,
+	reactions: z.array(reactionSchema).max(50),
+});
+export type ReactionsAnswer = z.infer<typeof reactionsAnswerSchema>;
+
 export const messageSchema = z
 	.looseObject({
 		id,
@@ -221,6 +284,65 @@ export const messageSchema = z
 			.optional()
 			.catch(undefined),
 		delivery_states: deliveryStatesSchema,
+		/*
+		 * REPLY THREADS (agent-server #164 threads, TR1 thread reads). Mirrors the
+		 * desktop parse (`local-operator-ui` `src/shared/team-bridge-contract.ts`,
+		 * read at origin/main on 2026-11-17) field for field.
+		 *
+		 * SERVER-COMPUTED, NEVER DERIVED HERE. The count, the repliers and the
+		 * unread number are the hub's projection for THIS reader; the phone shows
+		 * them as served and never recounts replies it happens to hold (the
+		 * relay/projection rule: two clients deriving the same number differently
+		 * is how badges disagree).
+		 *
+		 * Every field is optional and `.catch(undefined)`: a hub older than threads
+		 * sends none, a root with no replies omits its rollup, and a malformed value
+		 * costs the thread affordance, never the message. ABSENT is not 0 —
+		 * an absent `thread_unread_count` means "this hub cannot tell", so the row
+		 * draws no badge rather than claiming the thread is read.
+		 *
+		 * `thread_root_id` marks a REPLY (the timeline page never carries one; the
+		 * hub excludes replies from it); the rollup sits on a ROOT.
+		 */
+		thread_root_id: id.optional().catch(undefined),
+		reply_count: z.number().int().nonnegative().optional().catch(undefined),
+		last_reply_at: z.string().optional().catch(undefined),
+		/* Up to three distinct repliers' labels: a facepile, not a roster. */
+		reply_participants: z
+			.array(z.string().max(256))
+			.max(16)
+			.optional()
+			.catch(undefined),
+		/* Parallel to `reply_participants` (same order). Caught PER ENTRY: one
+		 * replier of an unknown kind costs that entry only. */
+		reply_participant_ids: z
+			.array(
+				z
+					.looseObject({ account_id: id, kind: z.enum(["human", "agent"]) })
+					.nullable()
+					.catch(null),
+			)
+			.max(16)
+			.optional()
+			.catch(undefined),
+		thread_unread_count: z
+			.number()
+			.int()
+			.nonnegative()
+			.optional()
+			.catch(undefined),
+		thread_last_read_seq: z
+			.number()
+			.int()
+			.nonnegative()
+			.optional()
+			.catch(undefined),
+		/*
+		 * Additive, like every field above: a hub older than reactions sends none
+		 * and a malformed list costs the pills, never the message. ABSENT and []
+		 * render the same (no pill row, zero added height).
+		 */
+		reactions: historyReactionsSchema.optional().catch(undefined),
 	})
 	.transform((message) => {
 		// A malformed non-array projection is absence, not an authorized empty
@@ -252,6 +374,47 @@ export const messagePageSchema = z.looseObject({
 	has_more: z.boolean().optional(),
 });
 export type MessagePage = z.infer<typeof messagePageSchema>;
+
+/**
+ * `GET /conversations/:cid/messages/:rootId/replies`
+ * (`responses.BridgeConversationRepliesResponse`): the root with its rollup and
+ * its replies OLDEST-first — a thread reads top-down, unlike the newest-first
+ * timeline page. `next_after_seq` is the inclusive cursor for the next page.
+ */
+export const replyThreadPageSchema = z.looseObject({
+	root: messageSchema,
+	replies: z.array(messageSchema),
+	next_after_seq: z.number().int().nonnegative().optional(),
+	next_before_seq: z.number().int().positive().optional(),
+	order: z.enum(["asc", "desc"]).optional().catch(undefined),
+	has_more: z.boolean().optional(),
+});
+export type ReplyThreadPage = z.infer<typeof replyThreadPageSchema>;
+
+/**
+ * `POST /conversations/:cid/messages/:rootId/read`
+ * (`responses.BridgeConversationThreadReadView`): this reader's thread cursor
+ * after the write. Lenient like the desktop's: the 2xx alone confirms the read,
+ * and a malformed body costs only the immediate badge update (the next page
+ * read restates the count).
+ */
+export const replyThreadReadStateSchema = z.looseObject({
+	conversation_id: z.string().optional().catch(undefined),
+	root_id: z.string().optional().catch(undefined),
+	thread_last_read_seq: z
+		.number()
+		.int()
+		.nonnegative()
+		.optional()
+		.catch(undefined),
+	thread_unread_count: z
+		.number()
+		.int()
+		.nonnegative()
+		.optional()
+		.catch(undefined),
+});
+export type ReplyThreadReadState = z.infer<typeof replyThreadReadStateSchema>;
 
 export const readStateSchema = z.looseObject({
 	conversation_id: id,

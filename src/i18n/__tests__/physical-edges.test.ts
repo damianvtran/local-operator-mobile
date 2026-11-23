@@ -320,19 +320,31 @@ const ALLOWLIST: {
 		reason:
 			"holdout: the drawer's slide is physical and must flip together with its anchor",
 	},
+	/* A glyph mirror IS the RTL conversion, not a physical edge: the reply arrow
+	 * in the Team Bridge actions sheet is flipped only when `useIsRTL()` is true
+	 * (PR #339 design D6). Lucide ships no mirrored `MessageSquareReply`, so the
+	 * `BackIcon` route (swap to a mirrored glyph) is not open here. */
+	{
+		file: "src/features/team-bridge/message-actions-sheet.tsx",
+		token: "scaleX",
+		count: 1,
+		reason:
+			"the reply glyph's RTL mirror, applied only under useIsRTL() (design D6)",
+	},
 	/* Device edges. `insets.left`/`insets.right` are physical by definition. */
 	{
 		file: "src/ui/components/sheet.tsx",
 		token: "left",
-		count: 1,
+		count: 2,
 		reason:
-			"the body fade spans the sheet between the device's safe-area insets",
+			"the body fade and the pinned-region fade each span the sheet between the device's safe-area insets",
 	},
 	{
 		file: "src/ui/components/sheet.tsx",
 		token: "right",
-		count: 1,
-		reason: "the other safe-area inset of the same pair",
+		count: 2,
+		reason:
+			"the other safe-area inset of the same pair, once per fade (body and pinned)",
 	},
 	{
 		file: "src/ui/components/toast.tsx",

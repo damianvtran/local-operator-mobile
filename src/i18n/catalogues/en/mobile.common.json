@@ -14,5 +14,10 @@
 	"mobile.common.copy_command_hint": "Copies the {label} command",
 	"mobile.common.close": "Close",
 	"mobile.common.loading": "Loading",
-	"mobile.common.no_matches": "Nothing matches that."
+	"mobile.common.no_matches": "Nothing matches that.",
+	"mobile.common.resize_panel": "Resize panel",
+	"mobile.common.size.medium": "Medium",
+	"mobile.common.size.large": "Large",
+	"mobile.common.size.taller": "Taller",
+	"mobile.common.size.shorter": "Shorter"
 }

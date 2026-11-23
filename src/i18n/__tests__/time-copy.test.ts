@@ -83,7 +83,24 @@ describe("mobile.time renders the English it replaced", () => {
 		expect(en("mobile.projects.section.linked_sessions")).toBe(
 			"linked sessions",
 		);
-		expect(en("mobile.session.sheet_title.attach")).toBe("attach");
 		expect(en("mobile.session.sheet_title.commands")).toBe("commands");
+	});
+
+	/* #248 shipped the attach sheet's title lower-case ("attach"); 67d60400
+	 * capitalised it. The 2026-11-22 design consult then named it for what the
+	 * sheet does — the relay takes images only, so "Attach" promised files it
+	 * cannot carry — and kept it Title Case beside "Model" and "Effort". */
+	it("the attach sheet's title names the image it adds, capitalised in every cased locale", () => {
+		expect(en("mobile.session.sheet_title.attach")).toBe("Add Image");
+		const cased = {
+			fr: "Ajouter une image",
+			es: "Añadir imagen",
+			ru: "Добавить изображение",
+			vi: "Thêm hình ảnh",
+		} as const;
+		for (const [locale, title] of Object.entries(cased))
+			expect(renderFor("mobile.session.sheet_title.attach", {}, locale)).toBe(
+				title,
+			);
 	});
 });

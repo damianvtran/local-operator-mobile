@@ -21,7 +21,8 @@
 			"!docs",
 			"!fixtures",
 			"!store",
-			"!i18n/audits/evidence"
+			"!i18n/audits/evidence",
+			"!modules/lop-team-bridge-push/android/src/androidTest/assets"
 		]
 	},
 	"formatter": {

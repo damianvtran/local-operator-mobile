@@ -36,7 +36,7 @@ import { availabilityFromStatus } from "@/notifications/permission";
 import { notePushToken } from "@/notifications/push-token-changes";
 import {
 	type BuiltinSoundId,
-	LEGACY_ALERT_CHANNEL_ID,
+	legacyChannelIds,
 	type SoundChannelLabel,
 	soundChannelSpecs,
 } from "@/notifications/sound-catalog";
@@ -119,9 +119,10 @@ const BUILTIN_CHANNEL_NAME_KEYS = {
 } as const satisfies Record<BuiltinSoundId, NoParamKey>;
 
 /**
- * Creates the twelve Android sound channels at app start: `sound.<id>` for
- * each bundled sound, `sound.default` (the phone's own default sound) and the
- * silent `sound.none` (`sound-catalog.ts` explains the set).
+ * Creates the twelve Android sound channels at app start: `alert.<id>` for
+ * each bundled sound, `alert.default` (the phone's own default sound) and the
+ * silent `alert.none` (`sound-catalog.ts` explains the set, and why the wire
+ * still says `sound.<id>`).
  *
  * FCM requires `channel_id` to name a channel the app has ALREADY created or
  * the message falls back to a default channel (ADR 0006 §5, quoted from
@@ -133,38 +134,48 @@ const BUILTIN_CHANNEL_NAME_KEYS = {
  * its name and description, which is what lets a language change rename the
  * channels on the next start.
  *
+ * IMPORTANCE IS HIGH (ADR 0010 S4, §7 row 4): a DEFAULT channel plays the sound
+ * but never peeks a heads-up banner, so a finished session was silent on screen
+ * on Android while iOS showed a banner. Importance is fixed at creation, which
+ * is why the ids changed from `sound.*` rather than this value alone.
+ *
  * Each channel is created independently, so one failure (a sound file missing
  * from a build that did not run the plugin) does not take the other eleven
- * with it. The pre-sound `"default"` channel is deleted: no push ever named it
- * (S7 is unbuilt), and leaving it would put a channel in the system settings
- * that nothing posts to.
+ * with it. Then the channels earlier versions created are deleted
+ * (`legacyChannelIds`): the pre-sound `"default"` one and the DEFAULT-importance
+ * `sound.*` set. Deleting comes second so the native `sound.*`→`alert.*` remap
+ * always finds its target before its source goes.
  */
 export async function ensureAndroidSoundChannels(): Promise<void> {
 	if (Platform.OS !== "android") return;
 	const module = await loadNotifications();
 	if (module === null) return;
 	const description = t("mobile.notifications.channel.description");
+	const created = new Set<string>();
 	for (const spec of soundChannelSpecs()) {
 		try {
 			await module.setNotificationChannelAsync(spec.id, {
 				name: soundChannelName(spec.label),
 				description,
-				importance: module.AndroidImportance.DEFAULT,
+				importance: module.AndroidImportance.HIGH,
 				// An absent `sound` key is the system default sound; `null` is
 				// silence; a file name plays that `res/raw` resource. The key is
 				// only set when the spec sets it, so `sound.default` stays default.
 				...(spec.sound === undefined ? {} : { sound: spec.sound }),
 			});
+			created.add(spec.id);
 		} catch {
 			/* A channel that cannot be created is not a state the reader can act
 			 * on; a push naming it falls back to the platform default, which is
 			 * the documented FCM behaviour for an unknown channel_id. */
 		}
 	}
-	try {
-		await module.deleteNotificationChannelAsync(LEGACY_ALERT_CHANNEL_ID);
-	} catch {
-		/* Absent already, or the platform refused: either way nothing posts to it. */
+	for (const id of legacyChannelIds(created)) {
+		try {
+			await module.deleteNotificationChannelAsync(id);
+		} catch {
+			/* Absent already, or the platform refused: either way nothing posts to it. */
+		}
 	}
 }
 

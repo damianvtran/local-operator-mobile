@@ -99,6 +99,10 @@ final class SignInAppUITests: XCTestCase {
     _ = try control("/control?session=success")
     app.buttons["refusal-sign-in"].tap()
     try visible("home-screen")
+    if ProcessInfo.processInfo.environment["PROOF_THEME"] == "light" {
+      try attachPickerOpens("library", "attach-library-picker")
+      try attachPickerOpens("files", "attach-files-picker")
+    }
     app.buttons["home-sidebar"].tap()
     try visible("conversations-list")
     try visible("session-row-b3535011f562")
@@ -118,6 +122,28 @@ final class SignInAppUITests: XCTestCase {
     attach("dark-largest-welcome-initial")
     attach("dark-largest-welcome-settled")
     app.terminate()
+  }
+
+  // TestFlight 1333: Attach -> Photo Library / Files closed the sheet and then
+  // showed nothing. The picker is the SYSTEM's (PHPicker / document picker), so
+  // its appearance is read as a system "Cancel" button that the attach sheet
+  // itself never has (its own control is "Close"). Cancelling must leave the
+  // composer's Attach usable again: a picker that never settles keeps it busy.
+  @MainActor private func attachPickerOpens(_ source: String, _ frame: String) throws {
+    let attachButton = app.buttons["composer-attach"].firstMatch
+    try require(attachButton.waitForExistence(timeout: 90), "Missing composer Attach")
+    attachButton.tap()
+    try visible("attach-option-\(source)")
+    attach("attach-sheet-before-\(source)")
+    app.buttons["attach-option-\(source)"].firstMatch.tap()
+    let cancel = app.buttons["Cancel"].firstMatch
+    try require(cancel.waitForExistence(timeout: 30), "System \(source) picker never appeared after Attach")
+    attach(frame)
+    cancel.tap()
+    try require(attachButton.waitForExistence(timeout: 30), "Composer Attach missing after cancelling \(source)")
+    let enabled = NSPredicate(format: "isEnabled == true AND isHittable == true")
+    let ready = XCTNSPredicateExpectation(predicate: enabled, object: attachButton)
+    try require(XCTWaiter.wait(for: [ready], timeout: 30) == .completed, "Attach stayed busy after cancelling \(source)")
   }
 
   @MainActor private func pickerRow() throws {

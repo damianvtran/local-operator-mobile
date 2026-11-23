@@ -1,11 +1,15 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
+import { renderFor, SHIPPED_LOCALES, t } from "@/i18n";
 import { DEFAULT_SELECTION } from "@/state/theme-preference";
 import { THEMES } from "@/ui/tokens.gen";
 import {
 	isSelectedTheme,
 	pickerColumns,
 	pickerSections,
+	THEME_MODE_ORDER,
+	themeModeOptions,
 } from "./theme-picker-model";
 
 describe("pickerColumns", () => {
@@ -70,4 +74,86 @@ describe("isSelectedTheme", () => {
 			"localOperatorLight",
 		]);
 	});
+});
+
+/** A hand-written mode option in a screen: the shape the drift came from. */
+const LITERAL_MODE_OPTION = /value: "(system|light|dark)"/;
+
+describe("themeModeOptions: one mode order for both surfaces", () => {
+	const ids = { system: "s", light: "l", dark: "d" } as const;
+
+	it("is System, Light, Dark — the order the mode cycles from neutral to forced", () => {
+		expect(THEME_MODE_ORDER).toEqual(["system", "light", "dark"]);
+		expect(themeModeOptions(ids)).toEqual([
+			{
+				value: "system",
+				label: t("mobile.settings.theme.mode_system"),
+				testID: "s",
+			},
+			{
+				value: "light",
+				label: t("mobile.settings.theme.mode_light"),
+				testID: "l",
+			},
+			{
+				value: "dark",
+				label: t("mobile.settings.theme.mode_dark"),
+				testID: "d",
+			},
+		]);
+	});
+
+	/* The defect (UX pass, settings): Settings listed System / Dark / Light while
+	 * the Theme picker listed System / Light / Dark, because each screen spelled
+	 * its own option array. Node cannot mount either screen (react-native
+	 * styling), so pin the wiring: both read the shared list, and neither keeps a
+	 * hand-written mode option of its own that could drift again. */
+	it.each(["./settings.tsx", "./theme-picker.tsx"])(
+		"%s builds its mode control from themeModeOptions",
+		(file) => {
+			const source = readFileSync(new URL(file, import.meta.url), "utf8");
+			expect(source).toContain("options={themeModeOptions(");
+			expect(source).not.toMatch(LITERAL_MODE_OPTION);
+		},
+	);
+});
+
+describe("Theme picker search field", () => {
+	/* UX pass, theme picker, then review round 1 (R1/Q2/D2): "Search themes" was
+	 * drawn as the label AND as the placeholder right under it. Hiding the label
+	 * made the placeholder the field's only visible label (components.md § 4 and
+	 * anti-pattern 14). The label stays; the placeholder is a different hint, the
+	 * way Library ("Search the library" / "Name, tag or words") and Past do it. */
+	const source = readFileSync(
+		new URL("./theme-picker.tsx", import.meta.url),
+		"utf8",
+	);
+	const at = source.indexOf("CONTROL.themePickerSearch");
+	const field = source.slice(
+		source.lastIndexOf("<Input", at),
+		source.indexOf("/>", at),
+	);
+
+	it("keeps the drawn label: no hidden-label mode", () => {
+		expect(field).toContain('label={t("mobile.settings.theme.search_label")}');
+		expect(field).toContain(
+			'placeholder={t("mobile.settings.theme.search_placeholder")}',
+		);
+		expect(field).not.toContain("labelHidden");
+	});
+
+	it.each(SHIPPED_LOCALES)(
+		"%s: the placeholder never repeats the label",
+		(locale) => {
+			const label = renderFor("mobile.settings.theme.search_label", {}, locale);
+			const hint = renderFor(
+				"mobile.settings.theme.search_placeholder",
+				{},
+				locale,
+			);
+			expect(hint.trim().toLocaleLowerCase(locale)).not.toBe(
+				label.trim().toLocaleLowerCase(locale),
+			);
+		},
+	);
 });

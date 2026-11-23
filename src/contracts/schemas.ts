@@ -36,6 +36,8 @@ import type {
 	ApiError,
 	AskQuestion,
 	AsksResponse,
+	BridgeCardBody,
+	BridgeCardBodyItem,
 	Capabilities,
 	CheckpointManifest,
 	CommandAck,
@@ -94,7 +96,11 @@ import type {
 	SessionProjection,
 	SessionSummary,
 	SessionTagsResponse,
+	SkillEntry,
+	SkillExpansionReceipt,
+	SkillsResponse,
 	SlashCommand,
+	StartTargetsResponse,
 	SttCapability,
 	SubagentDetail,
 	SubagentRow,
@@ -200,6 +206,17 @@ export const peerSenderSchema = z.looseObject({
 	conversation_name: z.string().optional(),
 	model_label: z.string().optional(),
 	cwd: z.string().optional(),
+	/* The live echo of a Team Bridge card (core `serving.py` →
+	 *  `note_peer_message`, taken when the owner has not negotiated
+	 *  `peer_cycles`) is a `peer_message` row whose ONLY typed marks are on the
+	 *  sender the connector built (`team_bridge/connector/wake.py`
+	 *  `deliver_wake`): `source: "team_bridge_message"` and the validated
+	 *  display receipt. Lazy because the receipt schema is declared below. */
+	source: z.string().optional().catch(undefined),
+	bridge_receipt: z
+		.lazy(() => bridgeReceiptDisplaySchema)
+		.optional()
+		.catch(undefined),
 });
 
 /** The send tool's settled delivery payload (`details.delivery`).
@@ -1001,6 +1018,8 @@ export const sessionProjectionSchema = z.looseObject({
 	supplements: z
 		.record(z.string(), z.record(z.string(), z.unknown()))
 		.optional(),
+	/** Optional viewer presentation; malformed bytes must not reject the frame. */
+	inline_ui: z.unknown().optional(),
 });
 
 /* ----------------------------------------------------- conversation tags */
@@ -1049,6 +1068,14 @@ export const sessionTagsResponseSchema = z.looseObject({
  *  `capabilitiesSchema` — absence is the older relay, and it must never become
  *  a defaulted `{available: true}`. */
 export const sessionTagsCapabilitySchema = z.looseObject({
+	available: z.boolean(),
+});
+
+/** The `$skill` capability (SKM-D3), a TOP-LEVEL key of the capabilities block
+ *  and NOT `remote_sessions.skill_invocation`, which is the separate "remote
+ *  sessions can expand" flag. Three things travel under it: the catalogue route,
+ *  the `expand_skills` body flag and the receipt's `skills` block. */
+export const skillInvocationCapabilitySchema = z.looseObject({
 	available: z.boolean(),
 });
 
@@ -1265,6 +1292,13 @@ export const sessionStartCapabilitySchema = z.looseObject({
 	durable_idempotency: z.boolean().optional(),
 	receipt_capacity: z.number().int().optional(),
 	effort: z.boolean().optional(),
+	/** `agent`/`team` (local-operator #4367): each licenses BOTH that optional
+	 *  start field AND `GET /api/start-targets`. Never defaulted to `true`: an
+	 *  older relay's UNKEYED start silently drops an unknown field, so a phone
+	 *  that assumed the licence would start an unbound chat while its pill named
+	 *  a team. Absent reads as "this relay cannot". */
+	agent: z.boolean().optional(),
+	team: z.boolean().optional(),
 });
 
 export const capabilitiesSchema = z.looseObject({
@@ -1298,6 +1332,11 @@ export const capabilitiesSchema = z.looseObject({
 	 *  defaulted: absence is an older relay whose routes do not exist, while a
 	 *  default `{available: true}` would advertise controls that 404. */
 	session_tags: sessionTagsCapabilitySchema.optional(),
+	/** The `$skill` picker's licence (local-operator SKM-D3). Optional and never
+	 *  defaulted, like `session_tags`: an older relay DROPS `expand_skills`
+	 *  silently, which on the wire looks exactly like a skill that did not fire,
+	 *  so absence must read as "no `$` affordance at all". */
+	skill_invocation: skillInvocationCapabilitySchema.optional(),
 	/** The start route's capability (`docs/design/mobile-start-receipts.md`
 	 *  "Capability"). Optional and never defaulted: absence is a relay that
 	 *  predates the contract. `effort: true` is the ONLY licence to put `effort`
@@ -1305,6 +1344,15 @@ export const capabilitiesSchema = z.looseObject({
 	 *  drops it on an unkeyed one, which would start at the configured default
 	 *  while the phone said otherwise. */
 	session_start: sessionStartCapabilitySchema.optional(),
+	/** local-operator #4395 (docs/mobile.md "Steer journal order"): a stream
+	 *  that sends `?steer_journal_order=1` gets each delivered phone steer at
+	 *  its journal slot, repainted as `kind: "user"` with the same id — the
+	 *  order `/history` and a fresh mount show. Optional and never defaulted:
+	 *  absence is an older relay, and the client sends the parameter only when
+	 *  this says `available: true`. Loose, so a later field never fails a frame. */
+	steer_journal_order: z
+		.looseObject({ available: z.boolean().optional() })
+		.optional(),
 });
 
 /** The frame-level unread aggregate (push/ack-sync S1, ADR 0006 §1.1).
@@ -1596,6 +1644,7 @@ export const historyResponseSchema = z.looseObject({
 	entries: z.array(transcriptEntrySchema),
 	has_more: z.boolean(),
 	unavailable: z.string().optional(),
+	inline_ui: z.unknown().optional(),
 });
 
 export const slashCommandSchema = z.looseObject({
@@ -1607,6 +1656,29 @@ export const slashCommandSchema = z.looseObject({
 
 export const commandsResponseSchema = z.looseObject({
 	commands: z.array(slashCommandSchema),
+});
+
+/** One row of `GET /api/skills?session_id=`. The relay sorts by name and caps
+ *  the list; `hidden` marks a skill whose `hide` frontmatter suppresses
+ *  automatic selection (the picker still offers it: being typed is exactly the
+ *  case `hide` leaves open). `hidden` is optional so a relay that omits it is
+ *  read as "not hidden" rather than refusing the whole catalogue. */
+export const skillEntrySchema = z.looseObject({
+	name: nonEmpty,
+	description: z.string(),
+	hidden: z.boolean().default(false),
+});
+
+export const skillsResponseSchema = z.looseObject({
+	skills: z.array(skillEntrySchema),
+});
+
+/** The additive `skills` block a prompt/steer receipt carries when the relay
+ *  honoured `expand_skills`: names WITHOUT the `$`. Absent on a relay that does
+ *  not expand. */
+export const skillExpansionReceiptSchema = z.looseObject({
+	attached: z.array(z.string()),
+	skipped: z.array(z.string()),
 });
 
 export const modelEntrySchema = z.looseObject({
@@ -1647,6 +1719,47 @@ export const modelsResponseSchema = z.looseObject({
 	default: modelDefaultSchema.nullable().optional(),
 });
 
+/** One agent `GET /api/start-targets` offers (local-operator #4367,
+ *  `mobile/daemon.py` `_start_targets_payload`). Projected from the desktop's
+ *  own `profile_catalogue`, so `name` is exactly what the start route accepts
+ *  and `label` is already painted by the shared display rules — the phone shows
+ *  it rather than re-deriving one. Only `name` is load-bearing: every other
+ *  field is decoration a later relay may drop, so each is optional and loose. */
+export const startTargetAgentSchema = z.looseObject({
+	name: nonEmpty,
+	label: z.string().optional(),
+	/** `role` | `specialist`. */
+	kind: z.string().nullable().optional(),
+	/** `builtin` | `installed` | `custom`; the picker hides `builtin` rows, the
+	 *  desktop menu's `draftTargetRoster` rule. */
+	source: z.string().nullable().optional(),
+	description: z.string().optional(),
+	/** With `avatar_sha256`, the key to the existing
+	 *  `/v1/agents/{agent_id}/avatar` route; either `null` draws the glyph. */
+	agent_id: z.string().nullable().optional(),
+	avatar_sha256: z.string().nullable().optional(),
+});
+
+/** One team the start route can bind. Teams carry no picture of their own
+ *  (`Team` has no avatar field), so the row draws a team glyph. */
+export const startTargetTeamSchema = z.looseObject({
+	name: nonEmpty,
+	label: z.string().optional(),
+	description: z.string().optional(),
+	/** The manager's profile name; `""` when the relay could not say. */
+	manager: z.string().optional(),
+	member_count: z.number().int().nonnegative().optional(),
+});
+
+/** `GET /api/start-targets`. `degraded: true` arrives with EMPTY lists when the
+ *  registries could not be read, so "could not read" and "you have none" stay
+ *  two readings the sheet words differently. Absent `degraded` is `false`. */
+export const startTargetsResponseSchema = z.looseObject({
+	agents: z.array(startTargetAgentSchema),
+	teams: z.array(startTargetTeamSchema),
+	degraded: z.boolean().default(false),
+});
+
 export const directoriesSchema = z.looseObject({
 	home: z.string(),
 	recent: z.array(z.string()),
@@ -1673,6 +1786,7 @@ export const apiErrorSchema = z.looseObject({
 export const commandAckSchema = z.looseObject({
 	ok: z.literal(true),
 	detail: z.string(),
+	skills: skillExpansionReceiptSchema.optional(),
 });
 
 /** `GET /api/sessions/{id}/supplements/{digest}/document` — one stored turn
@@ -1682,6 +1796,50 @@ export const commandAckSchema = z.looseObject({
  *  sandboxed frame (`features/session/supplements.ts`). */
 export const supplementDocumentSchema = z.looseObject({
 	html: z.string(),
+});
+
+/** One message behind an inbound Team Bridge card (local-operator #4238,
+ *  `card_body.py`). Every field degrades instead of failing the read: a field of
+ *  the wrong type becomes absent, and an item that is not an object at all
+ *  becomes `state: "unavailable"` — so one odd item can neither blank its
+ *  siblings nor be painted as a moderation outcome nobody stated. */
+export const bridgeCardBodyItemSchema = z
+	.looseObject({
+		message_id: z.string().optional().catch(undefined),
+		conversation_id: z.string().optional().catch(undefined),
+		state: z.string().catch("unavailable"),
+		body: z.string().optional().catch(undefined),
+		source: z.string().optional().catch(undefined),
+		hold: z
+			.looseObject({
+				class: z.string().optional().catch(undefined),
+				held_for_s: z.number().optional().catch(undefined),
+			})
+			.optional()
+			.catch(undefined),
+		reason: z.string().optional().catch(undefined),
+	})
+	.catch({ state: "unavailable" });
+
+/** `GET /api/sessions/{id}/bridge-cards/{entry_id}/body` — the relay's answer
+ *  for one `team_bridge_message` row (design §4): `{v, items, more}`, at most
+ *  20 items with the remainder counted in `more`. */
+export const bridgeCardBodySchema = z.looseObject({
+	/* Pinned to the version this reader understands: a future `v:2` shape fails
+	 *  the parse, which the loader reads as "unavailable", rather than being
+	 *  read with v1 meaning (review round 1, M1). */
+	v: z.literal(1),
+	// Additive display-only facts (core ebe4a4103ae2). Bad metadata must not
+	// discard a screened body, and older relays omit this object entirely.
+	card: z
+		.looseObject({
+			received_at: z.iso.datetime().optional().catch(undefined),
+			thread_reply: z.boolean().optional().catch(undefined),
+		})
+		.optional()
+		.catch(undefined),
+	items: z.array(bridgeCardBodyItemSchema),
+	more: z.number().catch(0),
 });
 
 export const seenResponseSchema = z.looseObject({
@@ -1772,6 +1930,7 @@ export const commandOpSchema = z.discriminatedUnion("op", [
 		images: z.array(promptImageSchema).optional(),
 		input_mode: inputModeSchema.optional(),
 		input_path: z.string().max(96).optional(),
+		expand_skills: z.boolean().optional(),
 	}),
 	z.looseObject({
 		op: z.literal("steer"),
@@ -1780,6 +1939,7 @@ export const commandOpSchema = z.discriminatedUnion("op", [
 		images: z.array(promptImageSchema).optional(),
 		input_mode: inputModeSchema.optional(),
 		input_path: z.string().max(96).optional(),
+		expand_skills: z.boolean().optional(),
 	}),
 	z.looseObject({ op: z.literal("abort") }),
 	z.looseObject({
@@ -2201,16 +2361,22 @@ export const SCHEMAS = {
 	subagentRow: subagentRowSchema,
 	subagentDetail: subagentDetailSchema,
 	commands: commandsResponseSchema,
+	skills: skillsResponseSchema,
 	models: modelsResponseSchema,
 	/** One entry, for the ranked-array fixture: `models.ranked.json` is a bare array
 	 *  captured from `/api/models`, so it is validated element by element. */
 	modelEntry: modelEntrySchema,
 	directories: directoriesSchema,
+	/** The new-chat target picker's roster (local-operator #4367). */
+	startTargets: startTargetsResponseSchema,
 	apiError: apiErrorSchema,
 	commandAck: commandAckSchema,
 	/** `GET /api/sessions/{id}/supplements/{digest}/document` — a component's
 	 *  assembled document, `{html}`, fetched in-app by the frame host. */
 	supplementDocument: supplementDocumentSchema,
+	/** `GET /api/sessions/{id}/bridge-cards/{entry_id}/body` — the admitted
+	 *  bodies behind one inbound Team Bridge card (local-operator #4238). */
+	bridgeCardBody: bridgeCardBodySchema,
 	/** `GET /api/asks`: the aggregate route the asks sheet reads. */
 	asks: asksResponseSchema,
 	/** The inbox (`GET /api/notifications`, its detail, and the one answer shape
@@ -2379,8 +2545,10 @@ type WireMirror = {
 	history: HistoryResponse;
 	subagentDetail: SubagentDetail;
 	commands: CommandsResponse;
+	skills: SkillsResponse;
 	models: ModelsResponse;
 	directories: Directories;
+	startTargets: StartTargetsResponse;
 	apiError: ApiError;
 	commandAck: CommandAck;
 	seen: SeenResponse;
@@ -2423,6 +2591,10 @@ type WireMirror = {
 	 *  reads `{html}` off this parse, so a field that stops being assignable
 	 *  reds `WireConformance` before a phone renders a blank frame. */
 	supplementDocument: SupplementDocument;
+	/* The inbound Team Bridge card body read (local-operator #4238): asserted so
+	 *  a schema drifting from the mirror reds `WireConformance` before a phone
+	 *  paints a state the relay did not send. */
+	bridgeCardBody: BridgeCardBody;
 	/* The Library reads: the listing, one asset, the tag catalogue, one tag write
 	 *  answer and the chat link. Asserted like every read family around it — a
 	 *  schema whose output stops being assignable to these declarations trips
@@ -2575,6 +2747,8 @@ export type {
 	ApiError,
 	AskQuestion,
 	AsksResponse,
+	BridgeCardBody,
+	BridgeCardBodyItem,
 	Capabilities,
 	CommandAck,
 	CommandsResponse,
@@ -2632,7 +2806,11 @@ export type {
 	SessionProjection,
 	SessionSummary,
 	SessionTagsResponse,
+	SkillEntry,
+	SkillExpansionReceipt,
+	SkillsResponse,
 	SlashCommand,
+	StartTargetsResponse,
 	SttCapability,
 	SubagentDetail,
 	SubagentRow,

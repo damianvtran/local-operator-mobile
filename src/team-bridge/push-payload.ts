@@ -21,6 +21,8 @@
  * half-built route. An unknown future `v` is refused rather than guessed at.
  */
 
+import { replyThreadPath } from "@/team-bridge/reply-threads";
+
 export const TEAM_BRIDGE_PUSH_TYPE = "team_bridge_message";
 
 export interface TeamBridgePush {
@@ -28,6 +30,13 @@ export interface TeamBridgePush {
 	conversationId: string;
 	messageId: string | null;
 	seq: number | null;
+	/**
+	 * Present only when the message is a REPLY: the root of its thread. The
+	 * hub's push data gains `thread_root_id` in a companion agent-server
+	 * change; until a hub sends it, a reply push opens the conversation as
+	 * before. Absent (or not a valid id) leaves the key off entirely.
+	 */
+	threadRootId?: string;
 }
 
 const ID = /^[A-Za-z0-9_.:-]{1,128}$/;
@@ -63,7 +72,9 @@ export function teamBridgePushFromData(data: unknown): TeamBridgePush | null {
 	if (tenantId === null || conversationId === null) return null;
 	const seqRaw =
 		typeof record.seq === "string" ? Number(record.seq) : record.seq;
+	const threadRootId = idOf(record.thread_root_id);
 	return {
+		...(threadRootId === null ? {} : { threadRootId }),
 		tenantId,
 		conversationId,
 		messageId: idOf(record.message_id),
@@ -102,7 +113,17 @@ export const teamBridgeThreadPath = (push: {
 	conversationId: string;
 	messageId?: string | null;
 	seq?: number | null;
+	threadRootId?: string;
 }): string => {
+	/* A reply opens its THREAD, where the reply is (the thread lists every
+	 * reply, so no anchor rides along); the conversation's timeline never
+	 * carries replies, so anchoring there would always miss. */
+	if (push.threadRootId)
+		return replyThreadPath({
+			tenantId: push.tenantId,
+			conversationId: push.conversationId,
+			rootId: push.threadRootId,
+		});
 	const base = `/team-bridge/${encodeURIComponent(push.tenantId)}/${encodeURIComponent(push.conversationId)}`;
 	const query = [
 		push.messageId ? `messageId=${encodeURIComponent(push.messageId)}` : null,

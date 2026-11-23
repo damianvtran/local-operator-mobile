@@ -1,5 +1,6 @@
 {
 	"mobile.session.conversation_details": "Detalles de la conversación",
+	"mobile.session.inline_chart_data": "Datos del gráfico",
 	"mobile.session.chip.model_default": "Predeterminado",
 	"mobile.session.chip.model_unknown": "Desconocido",
 	"mobile.session.status_tray.hint": "Abre la línea de trabajo, las tareas y los subagentes",
@@ -65,6 +66,7 @@
 	"mobile.session.chip.model_change_failed": "No se pudo cambiar el modelo.",
 	"mobile.session.chip.effort_change_failed": "No se pudo cambiar el esfuerzo.",
 	"mobile.session.composer.retained_instruction": "Puede que ya se haya entregado una instrucción anterior. Reintenta enviarla antes de enviar tu borrador actual.",
+	"mobile.session.composer.settings_not_applied": "La sesión se reabrió, pero no se pudo aplicar el modelo o el esfuerzo que elegiste, así que no se envió nada. Vuelve a intentarlo o elige otro modelo u otro esfuerzo.",
 	"mobile.session.tray.context": "{percent}% de contexto",
 	"mobile.session.tray.context_short": "{percent}% de contexto",
 	"mobile.session.tray.context_estimate": "{percent}% de contexto (aprox.)",
@@ -72,6 +74,9 @@
 	"mobile.session.region.end": "fin · desplazar ↑",
 	"mobile.session.region.below_labels": "{labels} abajo · desplazar ↓",
 	"mobile.session.region.more_below": "más abajo · desplazar ↓",
+	"mobile.session.jump_to_latest": "↓ Ir a lo más reciente",
+	"mobile.session.jump_to_latest_short": "↓ Lo último",
+	"mobile.session.jump_to_latest_name": "Ir a lo más reciente",
 	"mobile.session.video.title_fallback": "Vídeo",
 	"mobile.session.fallback_name": "sesión",
 	"mobile.session.region.label_working": "actividad",
@@ -89,5 +94,13 @@
 	"mobile.session.outbox.composer_stopped": "Tu mensaje anterior dejó de enviarse. Reinténtalo o descártalo arriba para enviar este.",
 	"mobile.session.outbox.composer_discarding": "Descartando tu mensaje anterior. Podrás enviar este en un momento.",
 	"mobile.session.sheet_title.commands": "comandos",
-	"mobile.session.sheet_title.attach": "adjuntar"
+	"mobile.session.sheet_title.attach": "Añadir imagen",
+	"mobile.session.diagram.label": "Diagrama {type}",
+	"mobile.session.diagram.label_titled": "Diagrama {type}: {title}",
+	"mobile.session.diagram.copied": "copiado",
+	"mobile.session.diagram.error": "No se pudo dibujar este diagrama. Se muestra el código fuente.",
+	"mobile.session.diagram.open_hint": "Abre el diagrama a pantalla completa",
+	"mobile.session.diagram.copy": "Copiar el código fuente del diagrama",
+	"mobile.session.diagram.close": "Cerrar el diagrama",
+	"mobile.session.diagram.viewer": "Visor de diagramas"
 }

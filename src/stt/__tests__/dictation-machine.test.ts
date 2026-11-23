@@ -302,3 +302,57 @@ describe("a start that fails rests on the dictation row (design D6 / UX U6 / QA 
 		);
 	});
 });
+
+/** Every outcome the row can rest on, as the resting machine that says it. */
+const RESTING: DictationSnapshot[] = (
+	[
+		"added",
+		"empty",
+		"discarded",
+		"unavailable",
+		"blocked",
+		"mic-failed",
+	] as const
+).map((outcome) => ({ phase: "idle", outcome }));
+
+describe("a resting line ends when the reader moves on (issue #323)", () => {
+	// The defect: "Couldn’t start recording…" stayed on the dictation row after
+	// the reader typed, sent, and even reached the next screen's turn, because
+	// only a new press, a cancel or (for the set-up line) `available` left it.
+	it("clears every resting outcome on a send, with nothing to discard", () => {
+		for (const resting of RESTING) {
+			const { state, effects } = step(resting, { type: "send" });
+			expect(state).toEqual(IDLE_DICTATION);
+			expect(effects).toEqual([]);
+			expect(dictationStatusLine(state)).toBe("");
+		}
+	});
+
+	it("clears every resting outcome on the reader's own edit", () => {
+		// `added` included: the append that EARNED it does not dispatch `edit` (the
+		// composer's transcript setter is not the field's change handler), so the
+		// notice is announced, and it ends on the reader's next keystroke.
+		for (const resting of RESTING) {
+			const { state, effects } = step(resting, { type: "edit" });
+			expect(state).toEqual(IDLE_DICTATION);
+			expect(effects).toEqual([]);
+		}
+	});
+
+	it("never touches a live take on an edit", () => {
+		// Typing while recording is allowed and must not end, discard or relabel it.
+		for (const live of [starting, recording, transcribing]) {
+			expect(step(live, { type: "edit" })).toEqual({
+				state: live,
+				effects: [],
+			});
+		}
+	});
+
+	it("is a no-op on an idle machine with nothing to say", () => {
+		expect(step(IDLE_DICTATION, { type: "edit" })).toEqual({
+			state: IDLE_DICTATION,
+			effects: [],
+		});
+	});
+});

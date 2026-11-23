@@ -192,6 +192,17 @@ export const CONTROLS = [
 	{ id: "nav/computer-chip", fill: null, border: "border-control", ink: "ink-muted", grounds: ["canvas"] },
 	{ id: "nav/drawer-computer-row", fill: "surface", border: "border-control", ink: "ink", grounds: ["canvas", "surface"] },
 
+	/* Team Bridge reaction pills (reactions spec §4.3, slice PR b). A pill is a
+	   TOGGLE, so 1.4.11 binds its edge: the desktop's borderless pill measured
+	   `elevated` 1.15:1 and `accent-wash` 1.01:1 on the light canvas, which on a
+	   phone outdoors reads as bare text. Both pills therefore carry a ring — the
+	   chip's `border-control` for others' reactions, `accent-border` for mine —
+	   and the count's ink is asserted on the fill it actually sits on. Grounds as
+	   the chip's: the timeline page and the reply thread are `canvas`; a row's
+	   own pressed/selected tint is the list's control, not the pill's ground. */
+	{ id: "team bridge reaction pill", fill: "elevated", border: "border-control", ink: "ink-muted", grounds: ["canvas", "surface", "elevated"] },
+	{ id: "team bridge own reaction pill", fill: "accent-wash", border: "accent-border", ink: "accent", grounds: ["canvas", "surface", "elevated"] },
+
 	{ id: "badge/neutral", fill: "surface", border: "hairline", ink: "ink-dim", boundary: false },
 	{ id: "badge/success", fill: "success-wash", border: "success-border", ink: "success", boundary: false },
 	{ id: "badge/warning", fill: "warning-wash", border: "warning-border", ink: "warning", boundary: false },
@@ -203,6 +214,13 @@ export const CONTROLS = [
 	   overlay shadow, so its edge is the shadow rather than a stroke. */
 	{ id: "card/rest", fill: "surface", border: "hairline", ink: "ink", boundary: false },
 	{ id: "sheet/panel", fill: "elevated", border: null, ink: "ink", boundary: false },
+
+	/* A drawn Mermaid diagram (components.md § 14): Pele paints on the `surface`
+	   card. A node is `elevated` with a `border-control` stroke and `ink` label;
+	   an edge or secondary label is `ink-muted`. The node fill barely separates
+	   from the card (1.07:1), so the STROKE is the boundary and is asserted. */
+	{ id: "diagram/node", fill: "elevated", border: "border-control", ink: "ink", grounds: ["surface"] },
+	{ id: "diagram/edge", fill: null, border: "ink-muted", ink: "ink-muted", grounds: ["surface"] },
 
 	/* Composer: the one 16px field in the app. */
 	{ id: "composer/field", fill: "elevated", border: "border-control", ink: "ink" },

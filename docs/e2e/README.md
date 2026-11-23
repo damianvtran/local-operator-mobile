@@ -666,7 +666,7 @@ node tools/visual/capture.ts --dir e2e/fixtures/audit-canary \
 # CI runner, a plan of 403 cells then), and no documentation gate may spend that on one
 # command. So this example is the bounded sample; `--plan` above prints the full count,
 # and dropping these three flags captures the whole `core` tier. `--tier ci` is the sample
-# the per-push CI job takes — every declared cell at two device profiles, both themes and
+# the nightly/on-demand CI job takes — every declared cell at two device profiles, both themes and
 # three scales, 1260 cells — and `--full` is all 19 profiles at 13860 cells.
 #
 # The bound is DERIVED FROM THE PLAN unless you name one: `--deadline` defaults to
@@ -855,7 +855,7 @@ Three tiers are declared in `matrix.ts`, and each says what it is:
 
 | tier | sample | cells | why |
 |---|---|---|---|
-| `ci` | every declared cell × `iphone-se`, `tablet-landscape` × both themes × scales 100, 135 and 200 | 1260 | the per-push CI job's sample. The step is bound at 65 minutes — above the plan's own derived deadline (1260 × 3 s = 63.0 min) — and the measured rate is 2.24 s/cell, so a 3,780-cell `core` run cannot fit; this one lands ~45 minutes. It keeps the CELL axis whole — a state that is not captured is a state no review round can report on — and shrinks only the device, theme and scale axes, each to what its check needs: the narrowest and widest viewports (the two sides of the 768 breakpoint), because the theme check compares a cell's dark and light frames, and the 100 %/135 %/200 % set — the pair the text-scale guard measures plus the BOUNDARY step the footer's layout breaks at, because an axis that brackets that band cannot see a defect inside it. |
+| `ci` | every declared cell × `iphone-se`, `tablet-landscape` × both themes × scales 100, 135 and 200 | 1260 | the CI `web-audit` job's sample (nightly and on demand since 2026-11-18, not per push). The step is bound at 65 minutes — above the plan's own derived deadline (1260 × 3 s = 63.0 min) — and the measured rate is 2.24 s/cell, so a 3,780-cell `core` run cannot fit; this one lands ~45 minutes. It keeps the CELL axis whole — a state that is not captured is a state no review round can report on — and shrinks only the device, theme and scale axes, each to what its check needs: the narrowest and widest viewports (the two sides of the 768 breakpoint), because the theme check compares a cell's dark and light frames, and the 100 %/135 %/200 % set — the pair the text-scale guard measures plus the BOUNDARY step the footer's layout breaks at, because an axis that brackets that band cannot see a defect inside it. |
 | `core` | the 5 `core` profiles, both themes, every scale | 3780 | the default, and the local sample the operator's rule asks for. |
 | `full` | all 19 profiles | 13860 | the dispatched/nightly sample. |
 
@@ -870,8 +870,8 @@ there: `--scales 175` planned 0 frames and exited 0, which reads as a green run 
 and leaves the caller with no stills for the size they asked about. It now exits 2 before
 any plan output, naming the value and every id the table declares.
 
-**A run states the bound it took, and so does the artifact it leaves.** The per-push
-`web-audit` job captures the `ci` tier — **2 of the 19 profiles above** — and a green job
+**A run states the bound it took, and so does the artifact it leaves.** The CI
+`web-audit` job (nightly and on demand) captures the `ci` tier — **2 of the 19 profiles above** — and a green job
 that printed only the devices it used read as "the app is fine" over an assertion about two
 viewports. So the capture prints its own device coverage: the declared profiles it captured,
 by name, and the declared profiles it did **not** capture, by name and count, in the plan
@@ -881,10 +881,10 @@ in `index.html` beside the cell and frame counts, because that page is what a re
 instead of the stdout. A run of the whole matrix says so instead; the sentence is derived
 from `ALL_DEVICES`, so it cannot drift from this table.
 
-**The device variety that is not on the per-push path has its own nightly job.**
+**The device variety beyond the `ci` sample has its own nightly job.**
 `.github/workflows/e2e.yml` `web-audit-core` captures and audits the `core` tier — 5 of
 the 19 profiles, 3780 cells / 10,908 frames and ~134 minutes at the measured 2.24 s/cell —
-on the schedule and on demand only. The `ci` sample stays the per-push one and keeps its
+on the schedule and on demand only. The `ci` sample (also nightly and on demand since 2026-11-18) keeps its
 own 55-minute capture bound; neither job is stretched to cover the other's tier.
 
 ### Two cells that render byte-identically

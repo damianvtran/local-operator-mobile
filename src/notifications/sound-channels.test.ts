@@ -28,7 +28,7 @@ const deleted: string[] = [];
 let failId: string | null = null;
 
 vi.mock("expo-notifications", () => ({
-	AndroidImportance: { DEFAULT: 3 },
+	AndroidImportance: { DEFAULT: 3, HIGH: 4 },
 	setNotificationChannelAsync: async (
 		id: string,
 		input: Record<string, unknown>,
@@ -68,18 +68,18 @@ beforeEach(() => {
 describe("soundChannelSpecs", () => {
 	it("is the twelve channels the cloud can name", () => {
 		expect(soundChannelSpecs().map((spec) => spec.id)).toEqual([
-			"sound.soft-pulse",
-			"sound.two-note-chime",
-			"sound.felt-marimba",
-			"sound.hum-swell",
-			"sound.task-complete",
-			"sound.signal-handshake",
-			"sound.tape-warble",
-			"sound.bubble-chord",
-			"sound.airy-whistle",
-			"sound.bubble-pulse",
-			"sound.default",
-			"sound.none",
+			"alert.soft-pulse",
+			"alert.two-note-chime",
+			"alert.felt-marimba",
+			"alert.hum-swell",
+			"alert.task-complete",
+			"alert.signal-handshake",
+			"alert.tape-warble",
+			"alert.bubble-chord",
+			"alert.airy-whistle",
+			"alert.bubble-pulse",
+			"alert.default",
+			"alert.none",
 		]);
 	});
 
@@ -98,27 +98,38 @@ describe("ensureAndroidSoundChannels", () => {
 		const byId = new Map(calls);
 		expect([...byId.keys()]).toHaveLength(12);
 		for (const id of BUILTIN_SOUND_IDS) {
-			expect(byId.get(`sound.${id}`)?.sound).toBe(bundledSoundFile(id));
+			expect(byId.get(`alert.${id}`)?.sound).toBe(bundledSoundFile(id));
 		}
 		// Absent key = the system default sound; present-and-null = silent.
-		expect(byId.get("sound.default")).not.toHaveProperty("sound");
-		expect(byId.get("sound.none")).toHaveProperty("sound", null);
+		expect(byId.get("alert.default")).not.toHaveProperty("sound");
+		expect(byId.get("alert.none")).toHaveProperty("sound", null);
 		for (const [, input] of calls) {
-			expect(input.importance).toBe(3);
+			// HIGH, not DEFAULT: DEFAULT never peeks a heads-up banner (ADR 0010 §7 row 4).
+			expect(input.importance).toBe(4);
 			expect(typeof input.name).toBe("string");
 			expect(input.name).not.toMatch(RAW_KEY);
 			expect(input.description).not.toMatch(RAW_KEY);
 		}
-		expect(byId.get("sound.soft-pulse")?.name).toBe("Soft pulse");
-		expect(byId.get("sound.none")?.name).toBe("Silent");
-		expect(deleted).toEqual([LEGACY_ALERT_CHANNEL_ID]);
+		expect(byId.get("alert.soft-pulse")?.name).toBe("Soft pulse");
+		expect(byId.get("alert.none")?.name).toBe("Silent");
+		// Every old DEFAULT-importance channel goes, after its replacement exists.
+		expect(deleted).toEqual([
+			LEGACY_ALERT_CHANNEL_ID,
+			...BUILTIN_SOUND_IDS.map((id) => `sound.${id}`),
+			"sound.default",
+			"sound.none",
+		]);
 	});
 
 	it("keeps going when one channel cannot be created", async () => {
-		failId = "sound.hum-swell";
+		failId = "alert.hum-swell";
 		await ensureAndroidSoundChannels();
 		expect(calls.map(([id]) => id)).toHaveLength(11);
-		expect(calls.map(([id]) => id)).toContain("sound.none");
+		expect(calls.map(([id]) => id)).toContain("alert.none");
+		// Its replacement failed, so the old channel stays: the native remap
+		// falls back to it instead of Expo's generic fallback channel.
+		expect(deleted).not.toContain("sound.hum-swell");
+		expect(deleted).toContain("sound.soft-pulse");
 	});
 
 	it("does nothing off Android", async () => {

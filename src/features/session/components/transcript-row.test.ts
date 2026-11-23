@@ -177,7 +177,10 @@ describe("peer, hub and parent messages (D9)", () => {
 			"w-4 shrink-0 text-start font-mono text-mono-sm",
 		);
 		expect(ROW.match(GLYPH_BOX) ?? []).toHaveLength(0);
-		expect(ROW.match(TRACE_GLYPH_BOX_USE) ?? []).toHaveLength(3);
+		/* Four: the inbound Team Bridge card with a body region (#344) is its own
+		 *  arm and stands its `↔` on the same box, so a body-bearing card and a
+		 *  receipt-only one share the rail rather than respelling the recipe. */
+		expect(ROW.match(TRACE_GLYPH_BOX_USE) ?? []).toHaveLength(4);
 		// The notice glyph is no longer sized to its own advance.
 		expect(ROW).not.toContain('cx("text-mono-sm", ink)');
 	});

@@ -1,5 +1,5 @@
 import type { HubClient } from "@/team-bridge/client";
-import type { Conversation, Message } from "@/team-bridge/contract";
+import type { Conversation, MentionRow, Message } from "@/team-bridge/contract";
 import {
 	draftCreateInput,
 	newClientRef,
@@ -21,6 +21,7 @@ export function createMessageSender(options: {
 		body: string,
 		clientRef: string,
 		attachmentIds?: string[],
+		mentions?: MentionRow[],
 	) => Promise<Message>;
 	adopt: (conversation: Conversation) => void;
 	isCurrent: () => boolean;
@@ -32,17 +33,28 @@ export function createMessageSender(options: {
 	 * `(body_hash, attachments_hash)` on a `client_ref` replay, so changing the
 	 * text OR the image set must mint a new ref; reusing it would be refused as
 	 * `client_ref_conflict` rather than sending the edited message.
+	 *
+	 * The MENTION set is part of the key too, though the hub does not hash it:
+	 * a `client_ref` replay is answered from the STORED message before mentions
+	 * are validated, so retrying the same text with a different mention set
+	 * under the old ref would silently keep the first set (and notify the wrong
+	 * people). A changed set mints a new ref, so it is sent as what it is.
 	 */
 	let attempt: { key: string; ref: string } | null = null;
 	let busy = false;
-	return async (input: string, attachmentIds: readonly string[] = []) => {
+	return async (
+		input: string,
+		attachmentIds: readonly string[] = [],
+		mentions: readonly MentionRow[] = [],
+	) => {
 		const body = input.trim();
 		const ids = [...attachmentIds];
 		// Image-only is a valid message (`body: ""` with ids); nothing at all is not.
 		if ((!body && ids.length === 0) || busy || !options.isCurrent())
 			return false;
 		busy = true;
-		const key = JSON.stringify([body, ids]);
+		const rows = [...mentions];
+		const key = JSON.stringify([body, ids, rows]);
 		if (attempt?.key !== key)
 			attempt = { key, ref: (options.clientRef ?? newClientRef)() };
 		try {
@@ -57,8 +69,11 @@ export function createMessageSender(options: {
 				options.adopt(conversation);
 			}
 			if (!options.isCurrent()) return false;
-			// Text-only keeps the exact pre-attachments call; ids ride only when present.
-			if (ids.length > 0)
+			// Text-only keeps the exact pre-attachments call; ids and mentions ride
+			// only when present.
+			if (rows.length > 0)
+				await options.send(options.tenantId, id, body, attempt.ref, ids, rows);
+			else if (ids.length > 0)
 				await options.send(options.tenantId, id, body, attempt.ref, ids);
 			else await options.send(options.tenantId, id, body, attempt.ref);
 			attempt = null;

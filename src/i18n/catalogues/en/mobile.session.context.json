@@ -11,6 +11,10 @@
 		"role": "heading",
 		"note": "The destination screen's own title, used as the label of the control that opens it — not an action verb. It must stay identical wherever that screen is named, including the sentence in mobile.home.options.fixed, so a reader recognises the same destination. No final full stop."
 	},
+	"mobile.session.inline_chart_data": {
+		"role": "button",
+		"note": "Disclosure below a chart in an assistant reply. Opens and closes the chart's exact values as a table. The button label stays the same and the expanded state is read separately. Short noun phrase, no final full stop."
+	},
 	"mobile.session.status_tray.hint": {
 		"role": "help",
 		"note": "Accessibility hint read after the status tray's label. Describes what activating the tray opens; no final full stop. \"Subagents\" is a product term."
@@ -263,6 +267,10 @@
 		"role": "confirm",
 		"note": "Notice above the composer when an earlier instruction is retained and may already have been delivered, so the user must retry it before sending the current draft. Two sentences."
 	},
+	"mobile.session.composer.settings_not_applied": {
+		"role": "status",
+		"note": "Composer error when the session DID reopen (its header now reads Live or Idle) but the model or effort the reader picked for it was refused, so nothing was sent. It shows on two paths: after Send (the message is still in the composer and Send is enabled) and after Retry of a held earlier instruction (that instruction stays held and Send is disabled until it is resolved; the card's Retry is the working control). The remedy must therefore name no specific button: say 'try again' generically, never 'send again', and offer picking a different model or effort as the way out of a repeated refusal. Must not say the session failed to reopen, and must not point at the header's Ended control, which is no longer shown. 'Effort' is the product's word for how hard the model works; reuse the term from the effort-change error."
+	},
 	"mobile.session.tray.context": {
 		"role": "meta",
 		"note": "Activity tray fact: how full the model's context window is. {percent} is a whole number; keep the percent sign. Lower case \"context\"."
@@ -290,6 +298,18 @@
 	"mobile.session.region.more_below": {
 		"role": "meta",
 		"note": "Cue under the capped activity region when more rows are hidden below and there are no region names to list. Keep the middle dot and the down arrow; lower case."
+	},
+	"mobile.session.jump_to_latest": {
+		"role": "button",
+		"note": "The visible and accessible name of the floating chip over the transcript that takes a reader who scrolled up back to the newest message. It appears only after new output arrived while they were away. Keep the leading down arrow; imperative, sentence case, no final full stop. The arrow points at the newest content below, not at the reading direction."
+	},
+	"mobile.session.jump_to_latest_short": {
+		"role": "button",
+		"note": "The visible form of mobile.session.jump_to_latest on phones narrower than 360 pt, where the full sentence crowds the row beside it. Keep the leading down arrow; one or two words at most. The accessible name stays the full sentence, so this label may be an abbreviation."
+	},
+	"mobile.session.jump_to_latest_name": {
+		"role": "button",
+		"note": "The ACCESSIBLE name of the floating \"jump to latest\" chip: the same sentence as mobile.session.jump_to_latest WITHOUT the leading down arrow, because a screen reader would read the glyph as \"down arrow\". Imperative, sentence case, no final full stop. Shown visually only by screen readers, never on the chip itself."
 	},
 	"mobile.session.video.title_fallback": {
 		"role": "heading",
@@ -361,6 +381,38 @@
 	},
 	"mobile.session.sheet_title.attach": {
 		"role": "heading",
-		"note": "Title of the bottom sheet offering attachment sources (photo, file, camera) in the composer: the verb 'attach' used as a title. Lower case as currently shipped (other sheet titles are Title case; a casing change is a separate design decision). ~16 characters. No placeholders."
+		"note": "Title of the bottom sheet that lists image sources in the composer (Photo Library, Take Photo, Image from Files and Paste Image on iOS and Android; Choose Image and Paste Image on web). It says what the sheet adds — an image — because the relay accepts images only, so 'Attach' promised files it cannot take. Title case like the Model and Effort sheet titles; scripts without letter case need no change. ~16 characters. No placeholders."
+	},
+	"mobile.session.diagram.label": {
+		"role": "meta",
+		"note": "Accessible name of a drawn diagram in the transcript when it has no title. {type} is the diagram kind as an English technical token (flowchart, sequence, state, class, er, gantt, pie…): keep it as written and never translate it. No final full stop."
+	},
+	"mobile.session.diagram.label_titled": {
+		"role": "meta",
+		"note": "Accessible name of a drawn diagram that has a title or a first label. {type} is the English technical diagram kind (flowchart, sequence…): keep it as written. {title} is text written by the assistant, inserted unchanged. No final full stop."
+	},
+	"mobile.session.diagram.copied": {
+		"role": "status",
+		"note": "One lower-case word shown beside the diagram kind label ('mermaid · copied') after the source was copied. Mirrors the code block's copied marker. The middle dot separator is added by the app."
+	},
+	"mobile.session.diagram.error": {
+		"role": "status",
+		"note": "Shown above a code block when a diagram could not be drawn. The reason Pele gave follows on its own line in English and is not part of this string. Two short sentences."
+	},
+	"mobile.session.diagram.open_hint": {
+		"role": "help",
+		"note": "Accessibility hint on a drawn diagram in the transcript. Activating it opens the diagram full screen, where it can be panned (and on iPhone pinch-zoomed; the hint does not promise zoom because Android has none). Sentence case, no final full stop."
+	},
+	"mobile.session.diagram.copy": {
+		"role": "button",
+		"note": "Accessible name of the icon button in a diagram's header that copies the diagram's source text (Mermaid syntax) to the clipboard. Imperative, sentence case, no final full stop."
+	},
+	"mobile.session.diagram.close": {
+		"role": "button",
+		"note": "Accessible name of the close button in the full-screen diagram viewer. Imperative, sentence case, no final full stop."
+	},
+	"mobile.session.diagram.viewer": {
+		"role": "heading",
+		"note": "Accessible name of the full-screen diagram viewer dialog. A short noun phrase, sentence case, no final full stop."
 	}
 }

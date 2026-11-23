@@ -14,8 +14,6 @@ import {
 	startingLine,
 	startupQueueState,
 	suggestionCharBudget,
-	suggestionCountFor,
-	suggestionSlotFor,
 	TIP_CHAR_BUDGET,
 	tipAt,
 } from "@/features/home/home-copy";
@@ -41,12 +39,17 @@ describe("the home's copy", () => {
 		expect(greeting()).toBe("What can I help you with today?");
 	});
 
-	it("shows 3 suggestions at 390 and 2 at 320", () => {
-		expect(suggestionCountFor(390)).toBe(3);
-		expect(suggestionCountFor(430)).toBe(3);
-		// A 375 pt phone is nearer the 320 case's pressure than the 390 case's.
-		expect(suggestionCountFor(375)).toBe(2);
-		expect(suggestionCountFor(320)).toBe(2);
+	it("keeps the pool free of the two chips that left it", () => {
+		// "Turn on phone access" only pasted words into the composer and "Show me
+		// the last turn" is what the work list's rows do now: neither is in the
+		// pool, in any language, so a brand-new account's TRY rows cannot show them.
+		const keys: readonly string[] = HOME_SUGGESTION_KEYS;
+		expect(keys).not.toContain("mobile.home.suggestion.phone_access");
+		expect(keys).not.toContain("mobile.home.suggestion.last_turn");
+		expect(homeSuggestions().slice(0, 2)).toEqual([
+			"Create a team of agents",
+			"Set up Linear MCP",
+		]);
 	});
 
 	it("keeps every suggestion inside its character ceiling", () => {
@@ -186,38 +189,7 @@ describe("the draft gate", () => {
 		expect(draftExistsFor("x")).toBe(true);
 		expect(draftExistsFor(" x ")).toBe(true);
 	});
-
-	it("empties the suggestions' slot while a draft is held", () => {
-		// The regression QA reproduced on `306121b6`: a live suggestion row beside
-		// a held draft, whose tap silently replaced the text (data loss, P-4).
-		const held = suggestionSlotFor({
-			connected: true,
-			draft: "QAtest keep-this-draft",
-			width: 390,
-		});
-		expect(held.kind).toBe("none");
-	});
-
-	it("fills the slot with the pool's head while the draft is empty", () => {
-		const wide = suggestionSlotFor({ connected: true, draft: "", width: 390 });
-		expect(wide.kind).toBe("suggestions");
-		if (wide.kind === "suggestions") expect(wide.rows.length).toBe(3);
-		// The 320 pt count does not change the gate, only the row count.
-		const narrow = suggestionSlotFor({
-			connected: true,
-			draft: "",
-			width: 320,
-		});
-		if (narrow.kind === "suggestions") expect(narrow.rows.length).toBe(2);
-	});
-
-	it("still shows the connect row while a draft is held", () => {
-		// The connect row replaces nothing — it navigates — so it is not a
-		// data-loss control and stays; only the text-replacing suggestions hide.
-		expect(
-			suggestionSlotFor({ connected: false, draft: "typed", width: 390 }).kind,
-		).toBe("connect");
-	});
+	// The slot's own gate (draft, focus, recovery) is `work-list.test.ts`.
 });
 
 describe("the queue row says the state once", () => {

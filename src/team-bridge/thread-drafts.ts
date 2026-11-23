@@ -1,5 +1,5 @@
 /**
- * Lightweight account-scoped in-memory text draft map for Team Bridge threads.
+ * Lightweight account-scoped in-memory draft map for Team Bridge threads.
  *
  * WHY THIS EXISTS. Switching channels from the workspace drawer uses
  * `router.replace`, which unmounts the active `ThreadContent` instance. Without
@@ -21,7 +21,15 @@
  * eviction count would only ever discard someone's unsent words.
  */
 
-const drafts = new Map<string, string>();
+import type { MentionToken } from "../features/team-bridge/mentions/tokens";
+
+export type TeamBridgeDraft = {
+	text: string;
+	tokens: readonly MentionToken[];
+};
+
+const emptyDraft: TeamBridgeDraft = { text: "", tokens: [] };
+const drafts = new Map<string, TeamBridgeDraft>();
 
 export function teamBridgeDraftKey(input: {
 	accountId: string | null;
@@ -42,18 +50,34 @@ export function teamBridgeDraftKey(input: {
 	]);
 }
 
-export function readTeamBridgeDraft(key: string | null): string {
-	if (!key) return "";
-	return drafts.get(key) ?? "";
+export function readTeamBridgeDraft(key: string | null): TeamBridgeDraft {
+	const draft = key ? drafts.get(key) : undefined;
+	if (!draft) return emptyDraft;
+	// The sidecar contains picks, not names parsed from text. A stale range
+	// loses notification authority; never search for a new location for it.
+	const { text, tokens } = draft;
+	const valid = tokens.filter(
+		({ start, end, label }) =>
+			Number.isInteger(start) &&
+			start >= 0 &&
+			end === start + label.length + 1 &&
+			end <= text.length &&
+			text.slice(start, end) === `@${label}`,
+	);
+	return valid.length === tokens.length ? draft : { text, tokens: valid };
 }
 
-export function writeTeamBridgeDraft(key: string | null, text: string): void {
+export function writeTeamBridgeDraft(
+	key: string | null,
+	text: string,
+	tokens: readonly MentionToken[] = [],
+): void {
 	if (!key) return;
 	if (!text) {
 		drafts.delete(key);
 		return;
 	}
-	drafts.set(key, text);
+	drafts.set(key, { text, tokens });
 }
 
 export function clearTeamBridgeDrafts(): void {

@@ -6,7 +6,14 @@
  * reload rule instead of being swallowed as a transcription failure.
  */
 
-import { describe, expect, it } from "vitest";
+/* The encoder that actually builds the request body on the phone: SDK 57's global
+ * `fetch` is `expo/fetch`, and this is the module it converts a `FormData` with.
+ * Reaching into the package's source is deliberate — asserting against our own
+ * copy of what we BELIEVE the encoder accepts is how this defect survived review.
+ * An expo upgrade that moves the file fails this import loudly instead of
+ * quietly weakening the test. */
+import { convertFormDataAsync } from "expo/src/winter/fetch/convertFormData";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
 	RelayEndpoints,
@@ -129,5 +136,78 @@ describe("RelayEndpoints.transcribe", () => {
 			status: 402,
 			text: '{"error":"out of credit"}',
 		});
+	});
+});
+
+describe("the native upload's bytes part", () => {
+	/* The runtime's `FormData` keeps a part as given — React Native's does, and
+	 * `expo/fetch` patches it — while this Node host's undici `FormData` stringifies
+	 * anything that is not a `Blob`. So the assertions run against a stand-in with
+	 * the runtime's semantics, and the ENCODER stays the real one. */
+	class RuntimeFormData {
+		readonly parts: [string, unknown][] = [];
+		append(name: string, value: unknown) {
+			this.parts.push([name, value]);
+		}
+		get(name: string) {
+			return this.parts.find(([key]) => key === name)?.[1] ?? null;
+		}
+		entries() {
+			return this.parts[Symbol.iterator]();
+		}
+	}
+
+	const audioBytes = new TextEncoder().encode("fake-m4a-bytes");
+	const bytesPart = {
+		name: "recording.m4a",
+		type: "audio/mp4",
+		bytes: async () => audioBytes,
+	};
+
+	afterEach(() => {
+		vi.unstubAllGlobals();
+	});
+
+	it("is the `audio` field of the body the encoder builds", async () => {
+		vi.stubGlobal("FormData", RuntimeFormData);
+		const form = transcribeForm({ audio: bytesPart });
+		expect(form.get("audio")).toBe(bytesPart);
+
+		const { body } = await convertFormDataAsync(
+			form as unknown as FormData,
+			"TESTBOUNDARY",
+		);
+		const text = new TextDecoder().decode(body);
+		expect(text).toContain(
+			'content-disposition: form-data; name="audio"; filename="recording.m4a"',
+		);
+		expect(text).toContain("content-type: audio/mp4");
+		expect(text).toContain("fake-m4a-bytes");
+	});
+
+	it("reproduces what the `{ uri }` descriptor hits, so bytes are what make the upload possible", async () => {
+		/* The premise of the fix, kept as a control: this is the encoder's own
+		 * refusal — defect 2 — and it is why the caller cannot hand over the
+		 * descriptor React Native's `fetch` would have read. */
+		vi.stubGlobal("FormData", RuntimeFormData);
+		const uriPart = {
+			uri: "file:///cache/recording.m4a",
+			name: "recording.m4a",
+			type: "audio/mp4",
+		};
+		const form = transcribeForm({ audio: uriPart });
+		expect(form.get("audio")).toEqual(uriPart);
+		await expect(
+			convertFormDataAsync(form as unknown as FormData, "TESTBOUNDARY"),
+		).rejects.toThrow("Unsupported FormDataPart implementation");
+	});
+
+	it("leaves the Blob arm a Blob, with its filename", () => {
+		/* The path the web/Node targets upload through, unchanged by the bytes arm. */
+		const form = transcribeForm({
+			audio: new Blob(["x"], { type: "audio/mp4" }),
+			filename: "take.m4a",
+		});
+		expect(form.get("audio")).toBeInstanceOf(Blob);
 	});
 });

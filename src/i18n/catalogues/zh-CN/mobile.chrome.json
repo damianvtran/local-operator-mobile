@@ -25,5 +25,6 @@
 	"mobile.chrome.composer.row_usage": "上下文",
 	"mobile.chrome.composer.row_cost": "费用",
 	"mobile.chrome.composer.row_queue": "队列",
-	"mobile.chrome.composer.row_questions": "问题"
+	"mobile.chrome.composer.row_questions": "问题",
+	"mobile.chrome.composer.row_identity": "智能体或团队"
 }

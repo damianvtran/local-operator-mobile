@@ -1,6 +1,6 @@
 import { Text, View } from "react-native";
 
-import type { ComposedDirProps } from "@/ui/direction";
+import { type ComposedDirProps, useDirection } from "@/ui/direction";
 
 /**
  * A list section heading — Pinned · Active · Previous (`docs/ux/flows.md` § 5).
@@ -24,23 +24,47 @@ export type SectionHeaderProps = {
 	label: string;
 	testID?: string;
 	labelDir?: ComposedDirProps;
+	/** A longer spoken name when the painted label is composed from data — the
+	 *  tag groups' `{name} · {count}` — so a screen reader hears sentences
+	 *  ("Research, 4 conversations") rather than a dot and a bare number. */
+	accessibilityLabel?: string;
 };
+
+/** The label's classes. `ink-muted`, the kit's PANEL-HEADER ink (tokens.json
+ *  § color.ink), not `ink-dim`: `ink-dim` is the caption ink, and an 11 pt
+ *  upper-case mono label in it read fainter than the body text it heads (UX
+ *  pass, settings). Exported so the Node test can pin the role it paints. */
+export const SECTION_HEADER_LABEL_CLASS =
+	"text-mono-label uppercase text-ink-muted";
 
 export const SectionHeader = ({
 	label,
 	testID,
 	labelDir = {},
+	accessibilityLabel,
 }: SectionHeaderProps) => {
+	const direction = useDirection();
+	/* Tracking separates Urdu's cursive joins. Limit the override to Arabic-script
+	 * text on an RTL surface so Latin headings keep the kit's mono-label spacing.
+	 * Merge rather than replace labelDir.style: native composed labels still need
+	 * its writingDirection, while this inline value overrides the token on web. */
+	const style =
+		direction === "rtl" && /\p{Script=Arabic}/u.test(label)
+			? [labelDir.style, { letterSpacing: 0 }]
+			: labelDir.style;
 	/* Widened to `object` for the reason `DirectionView` gives in
 	 * `src/ui/direction.tsx`: `dir` is a react-native-web prop that React Native's
 	 * `TextProps` does not declare, and a precise `{ dir }` type is rejected by
-	 * TypeScript's weak-type check when it meets an all-optional prop type. On
-	 * native the value is a `writingDirection` style, so the label `Text` keeps
-	 * no `style` of its own. */
+	 * TypeScript's weak-type check when it meets an all-optional prop type. */
 	const web: object = labelDir;
 	return (
 		<View className="pb-1 pt-4" testID={testID}>
-			<Text {...web} className="text-mono-label uppercase text-ink-dim">
+			<Text
+				{...web}
+				accessibilityLabel={accessibilityLabel}
+				className={SECTION_HEADER_LABEL_CLASS}
+				style={style}
+			>
 				{label}
 			</Text>
 		</View>

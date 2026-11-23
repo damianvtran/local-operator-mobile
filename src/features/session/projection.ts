@@ -124,9 +124,34 @@ export const isBridgeReceipt = (entry: TranscriptEntry): boolean =>
 	entry.kind === "notice" &&
 	(entry.custom_type || entry.details.custom_kind) === "team_bridge_message";
 
+/**
+ * The LIVE echo of a Team Bridge card: a `peer_message` row whose sender the
+ * Team Bridge connector stamped `source: "team_bridge_message"`.
+ *
+ * Core paints a live card one of two ways. With `peer_cycles` negotiated it is a
+ * `notice` carrying `custom_kind` (`note_nonpeer_delivery`), which
+ * `isBridgeReceipt` already reads. Without it, the handle's optimistic echo
+ * (`serving.py` → `note_peer_message`) makes a plain `peer_message` row whose
+ * text is the model-facing METADATA card (no body: `build_conversation_card`
+ * cannot carry one) and whose only typed marks are on the sender
+ * (`connector/wake.py` `deliver_wake`). That row painted as
+ * "another session <team-bridge>" until the conversation was reopened (QA
+ * round 1, Q2). The provenance is a typed producer key, never body wording;
+ * its id is the delivery's message id, which the body route resolves.
+ */
+export const isLiveBridgeEcho = (entry: TranscriptEntry): boolean =>
+	entry.kind === "peer_message" &&
+	entry.details.sender?.source === "team_bridge_message";
+
+/** The display receipt for either card shape: the row's own (history fold and
+ *  the `notice` live arm) or, on the live echo, its sender's. */
+const bridgeReceiptOf = (entry: TranscriptEntry) =>
+	entry.details.bridge_receipt ??
+	(isLiveBridgeEcho(entry) ? entry.details.sender?.bridge_receipt : undefined);
+
 /** Only receiver-projected display metadata names an incoming organization member. */
 export function bridgeReceiptLabel(entry: TranscriptEntry): string {
-	const receipt = entry.details.bridge_receipt;
+	const receipt = bridgeReceiptOf(entry);
 	if (receipt?.v !== 1) return "Team Bridge";
 	const name = receipt.sender?.name;
 	return typeof name === "string"
@@ -141,7 +166,7 @@ export function bridgeReceiptLabel(entry: TranscriptEntry): string {
 /** Optional secondary facts on a typed Bridge receipt (channel/DM + attachment count)
  *  from receiver-projected display metadata, sanitized against control/bidi code points. */
 export function bridgeReceiptMeta(entry: TranscriptEntry): string {
-	const receipt = entry.details.bridge_receipt;
+	const receipt = bridgeReceiptOf(entry);
 	if (receipt?.v !== 1) return "";
 	const parts: string[] = [];
 	const convName = receipt.conversation?.label;

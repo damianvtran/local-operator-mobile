@@ -54,7 +54,11 @@ describe("the conversations pane", () => {
 		expect(PANE).toContain(
 			"if (isRemoteRow(session)) rowHandlers.current.setMoveTarget(session);\n\t\telse rowHandlers.current.setMenuTarget(session);",
 		);
-		expect(ROW).toContain("onLongPress={() => onLongPress(session)}");
+		/* Optional: the home's work list passes none (the menu is the pane's own
+		 *  state), and the row then neither handles nor announces a long press. */
+		expect(ROW).toContain(
+			"onLongPress={onLongPress ? () => onLongPress(session) : undefined}",
+		);
 	});
 
 	it("renders a tag line on every row that has one, remote included", () => {

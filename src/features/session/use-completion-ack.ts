@@ -43,12 +43,13 @@ import { useIsFocused } from "expo-router";
 import { useEffect, useRef } from "react";
 import { AppState } from "react-native";
 
-import type { SessionProjection } from "@/contracts";
+import type { SessionProjection, TranscriptEntry } from "@/contracts";
 import {
 	ACK_CHECK_MS,
 	ACK_FAILURES_BEFORE_BACKOFF,
 	type AckGates,
 	attentionRecord,
+	completionAnchorEntry,
 	mayAcknowledge,
 	retryDelayMs,
 	settlesCompletion,
@@ -62,6 +63,10 @@ export interface CompletionAckInput {
 	 *  through. `null` while there is no route. */
 	endpoints: RelayEndpoints | null;
 	projection: SessionProjection | null;
+	/** The rows the transcript renders — the live tail AND the history the
+	 *  reader paged in — so an anchor that fell out of the live frame still
+	 *  resolves (`completionAnchorEntry`, issue #322). */
+	entries: readonly TranscriptEntry[];
 	/** From `TranscriptList`: the anchor row's bottom is inside the viewport. */
 	anchorVisible: boolean;
 	/** A sheet or panel is open (models, effort, asks, slash, todos/subagents). */
@@ -72,6 +77,7 @@ export const useCompletionAck = ({
 	sessionId,
 	endpoints,
 	projection,
+	entries,
 	anchorVisible,
 	blocked,
 }: CompletionAckInput): void => {
@@ -82,6 +88,7 @@ export const useCompletionAck = ({
 		sessionId,
 		endpoints,
 		projection,
+		entries,
 		anchorVisible,
 		blocked,
 	});
@@ -89,6 +96,7 @@ export const useCompletionAck = ({
 		sessionId,
 		endpoints,
 		projection,
+		entries,
 		anchorVisible,
 		blocked,
 	};
@@ -162,9 +170,12 @@ export const useCompletionAck = ({
 			/* The anchored row's completeness, re-read per attempt like every other
 			 * gate — the transcript can change between attempts, and a row that is
 			 * not loaded resolves to NOT complete (the unknown-geometry direction,
-			 * by the CURRENT anchor_id). */
-			const anchorEntry = live.projection?.transcript.find(
-				(entry) => entry.id === current?.anchor_id,
+			 * by the CURRENT anchor_id). Loaded means RENDERED: paged-in history
+			 * counts, not only the live frame's capped tail. */
+			const anchorEntry = completionAnchorEntry(
+				current?.anchor_id,
+				live.entries,
+				live.projection?.transcript ?? [],
 			);
 			const gates: AckGates = {
 				appActive: appActiveRef.current,

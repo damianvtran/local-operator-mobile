@@ -81,6 +81,13 @@ describe("real Expo application OAuth proof boundary", () => {
 		expect(test).toContain('XCTAssertEqual(connected["session_code"], 3)');
 		expect(test).toContain('attach("connected-session-list")');
 		expect(test).toContain('try visible("conversations-list")');
+		// TestFlight 1333: the real system pickers open from the Home composer.
+		expect(test).toContain(
+			'try attachPickerOpens("library", "attach-library-picker")',
+		);
+		expect(test).toContain(
+			'try attachPickerOpens("files", "attach-files-picker")',
+		);
 		expect(test).toContain(
 			'XCTAssertEqual(connected["session_pkce_verified"], 1)',
 		);

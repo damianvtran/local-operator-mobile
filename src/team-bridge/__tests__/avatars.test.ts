@@ -381,13 +381,14 @@ describe("avatar cache", () => {
 		clock = AVATAR_RETRY_AFTER_MAX_MS;
 		await cache.load("huge", huge, avatarFailure);
 		expect(huge).toHaveBeenCalledTimes(2);
-		clock = 0;
+		const zeroStart = 2 * AVATAR_RETRY_AFTER_MAX_MS;
+		clock = zeroStart;
 		const zero = limited(0);
 		await cache.load("zero", zero, avatarFailure);
-		clock = 59_999;
+		clock = zeroStart + 59_999;
 		await cache.load("zero", zero, avatarFailure);
 		expect(zero).toHaveBeenCalledTimes(1);
-		clock = 60_000;
+		clock = zeroStart + 60_000;
 		await cache.load("zero", zero, avatarFailure);
 		expect(zero).toHaveBeenCalledTimes(2);
 	});

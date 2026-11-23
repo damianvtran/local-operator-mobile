@@ -219,9 +219,11 @@ describe("team bridge store", () => {
 	});
 
 	it("loads conversations and people in parallel; one failing half leaves the other", async () => {
+		// A definitive failure: a transient one (5xx) is retried silently first
+		// (rate-limit.test.ts, "transient failures with nothing held").
 		const hub = fakeHub({
 			directory: vi.fn(async () => {
-				throw new HubError({ kind: "server", message: "x", status: 500 });
+				throw new HubError({ kind: "not_found", message: "x", status: 404 });
 			}),
 		});
 		const { store, actions } = createTeamBridgeStore({
@@ -1113,6 +1115,30 @@ describe("terminal authorization refusals", () => {
 				clientRef: "ref",
 				body: "",
 				attachmentIds: ["batt_1"],
+			});
+		});
+
+		it("forwards mentions on send only when there are some", async () => {
+			const sent = message(5, SELF, "2026-10-21T10:05:00Z");
+			const hub = fakeHub({ send: vi.fn(async () => sent) });
+			const { actions } = createTeamBridgeStore({
+				hub: () => hub,
+				accessToken: async () => token(SELF),
+			});
+			await actions.checkStatus();
+			const rows = [{ kind: "human" as const, account_id: "a_ben" }];
+			await actions.send(TENANT, "c1", "@Ben Tran hi", "ref", [], rows);
+			expect(hub.send).toHaveBeenLastCalledWith(TENANT, "c1", {
+				clientRef: "ref",
+				body: "@Ben Tran hi",
+				attachmentIds: [],
+				mentions: rows,
+			});
+			await actions.send(TENANT, "c1", "hi", "ref2", [], []);
+			expect(hub.send).toHaveBeenLastCalledWith(TENANT, "c1", {
+				clientRef: "ref2",
+				body: "hi",
+				attachmentIds: [],
 			});
 		});
 

@@ -7,7 +7,7 @@ import { syntheticAttachmentSource } from "@/testing/team-bridge-attachment-sour
  * Where a Team Bridge image comes from on the device, and how it becomes the
  * bounded PNG/JPEG bytes the hub accepts.
  *
- * TWO SOURCES. The system photo picker (`expo-image-picker`: iOS PHPicker,
+ * THREE SOURCES. The system camera (`takeTeamBridgePhoto`), the system photo picker (`expo-image-picker`: iOS PHPicker,
  * Android Photo Picker; no photo-library permission, the same configuration the
  * session composer relies on, `src/features/session/attach.ts`) and the
  * clipboard (`expo-clipboard` `getImageAsync`). Both hand over a URI (a picked
@@ -61,6 +61,39 @@ export async function pickTeamBridgeImages(limit: number): Promise<RawImage[]> {
 		height: asset.height,
 		isPng: asset.mimeType === "image/png",
 	}));
+}
+
+/**
+ * One photo from the system camera, or `null` when the reader backed out.
+ *
+ * Team Bridge's Take Photo row (round 1 of PR #278, U5/D1: Team Bridge renders
+ * the session composer's AttachSheet). The camera PERMISSION is not asked here:
+ * the shared sheet's `prepareCamera` asks on the reader's press and only hands
+ * the row over once access is granted, exactly as for the session composer.
+ * What differs is the pipeline after the shutter — this returns the same
+ * `RawImage` (a cache-file URI plus dimensions) as a picked photo, so the
+ * capture is bounded, EXIF-stripped and its cache copy released by the same
+ * `prepareTeamBridgeImage` / `releaseTeamBridgeSource` as the library.
+ */
+export async function takeTeamBridgePhoto(): Promise<RawImage | null> {
+	const synthetic = syntheticAttachmentSource();
+	if (synthetic) return synthetic;
+	const { launchCameraAsync } = await import("expo-image-picker");
+	const result = await launchCameraAsync({
+		mediaTypes: ["images"],
+		// No `base64`, for the library's reason: every image is re-encoded once
+		// in `prepareTeamBridgeImage`.
+		quality: 1,
+	});
+	if (result.canceled) return null;
+	const asset = result.assets[0];
+	if (asset === undefined) return null;
+	return {
+		uri: asset.uri,
+		width: asset.width,
+		height: asset.height,
+		isPng: asset.mimeType === "image/png",
+	};
 }
 
 /**

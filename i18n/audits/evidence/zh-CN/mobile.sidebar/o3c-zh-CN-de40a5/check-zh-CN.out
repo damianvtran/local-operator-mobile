@@ -1,0 +1,23 @@
+draft sha256 c019694104901cbe725aad4c997224898e6757a8ea0145bde00dfc459acc5912 expected c019694104901cbe725aad4c997224898e6757a8ea0145bde00dfc459acc5912
+brief sha256 e88beb09366b9ff795bf0ac916f30cef1c9a93c35fa4617575e904c7a6f5fd17 expected e88beb09366b9ff795bf0ac916f30cef1c9a93c35fa4617575e904c7a6f5fd17
+en sha256 beaba7baeffe546ce65430d6cb18213da2fbb88d23128c071c286fb32a08ecdf brief says beaba7baeffe546ce65430d6cb18213da2fbb88d23128c071c286fb32a08ecdf
+context sha256 858f7c51c595862306120be7833c4274439b436bb8bd1f547b88139f8d0f2fd3 brief says 858f7c51c595862306120be7833c4274439b436bb8bd1f547b88139f8d0f2fd3
+keys missing [] extra [] count 9
+mobile.sidebar.row_status.approval: "待批准" params [] arms - MATCH nfc true | sample "待批准" 3ch/6c hint 10ch | trail-punct false lead/trail-space false
+mobile.sidebar.row_status.question: "待回答" params [] arms - MATCH nfc true | sample "待回答" 3ch/6c hint 10ch | trail-punct false lead/trail-space false
+mobile.sidebar.row_status.not_reachable: "无法连接" params [] arms - MATCH nfc true | sample "无法连接" 4ch/8c hint 14ch | trail-punct false lead/trail-space false
+mobile.sidebar.row_status.ended: "已结束" params [] arms - MATCH nfc true | sample "已结束" 3ch/6c hint 10ch | trail-punct false lead/trail-space false
+mobile.sidebar.row_status.not_answering: "未响应" params [] arms - MATCH nfc true | sample "未响应" 3ch/6c hint 14ch | trail-punct false lead/trail-space false
+mobile.sidebar.row_label.waiting: "{kind, select, approval {等待你批准} other {等待你回答问题}}" params [["kind","select"]] arms kind:approval|other MATCH nfc true | sample "等待你批准" 5ch/10c hint 24ch | trail-punct false lead/trail-space false
+mobile.sidebar.row_label.working: "工作中" params [] arms - MATCH nfc true | sample "工作中" 3ch/6c hint 24ch | trail-punct false lead/trail-space false
+mobile.sidebar.row_label.on_device: "在 {device} 上" params [["device","text"]] arms - MATCH nfc true | sample "在 Studio Mac 上" 14ch/16c hint 24ch | trail-punct false lead/trail-space false
+mobile.sidebar.row_label.open: "当前已打开" params [] arms - MATCH nfc true | sample "当前已打开" 5ch/10c hint 24ch | trail-punct false lead/trail-space false
+waiting other-arm render: "等待你回答问题" | unknown kind: "等待你回答问题"
+negative control renamed_arg CAUGHT
+negative control dropped_other CAUGHT
+negative control renamed_placeholder CAUGHT
+negative control dropped_placeholder CAUGHT
+negative control unbalanced CAUGHT
+negative controls 5/5; real mismatches 0
+redaction hits: draft 0 | en 0 | context 0 | brief excl. pattern field 0
+label sample: 支付对账, 等待你批准, 在 Studio Mac 上, 无法连接, 当前已打开

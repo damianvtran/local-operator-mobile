@@ -38,6 +38,10 @@ export type DiagnosticsInput = {
 	lastErrorAt?: number | null;
 	version: string;
 	platform: string;
+	/** The attach handoff's newest traces (`attachHandoffDiagnostics`): a
+	 *  path word and milliseconds each, so a TestFlight reader can send the
+	 *  measurement `DISMISS_FALLBACK_MS` is waiting on (PR #328). */
+	attachHandoff?: string | null;
 };
 
 /*
@@ -198,5 +202,6 @@ export function diagnosticsText(input: DiagnosticsInput): string {
 	lines.push(["Last error", input.lastError ?? "none"]);
 	if (input.lastError && input.lastErrorAt)
 		lines.push(["Last error at", new Date(input.lastErrorAt).toISOString()]);
+	if (input.attachHandoff) lines.push(["Attach handoff", input.attachHandoff]);
 	return lines.map(([label, value]) => `${label}: ${redact(value)}`).join("\n");
 }

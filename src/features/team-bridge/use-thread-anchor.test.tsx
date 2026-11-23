@@ -68,6 +68,8 @@ const sync = (run: () => void) => {
 const onGone = vi.fn();
 /** Mirrors the screen: its `dataReady` folds in the anchor's `pending`. */
 const anchorPending = { current: false };
+/** Mirrors the screen's `dataKey`: the rendered rows' keys. */
+const itemsKey = { current: "" };
 function Probe(props: {
 	anchor: ReturnType<typeof parseThreadAnchor>;
 	thread: Thread;
@@ -90,6 +92,7 @@ function Probe(props: {
 		schedule: sync,
 	});
 	anchorPending.current = result.pending;
+	itemsKey.current = items.map((item) => item.key).join("\n");
 	return null;
 }
 const render = (
@@ -103,6 +106,8 @@ const render = (
 
 beforeEach(() => {
 	vi.clearAllMocks();
+	// Module-level like `anchorPending`: no test may inherit the last one's rows.
+	itemsKey.current = "";
 	vi.useFakeTimers();
 	list.current = { scrollToIndex, scrollToOffset: vi.fn() };
 	viewport.current = createThreadViewport({
@@ -274,6 +279,7 @@ describe("a missing anchor after the walk lands at newest (Q1-1 / U1-1)", () => 
 			read,
 			newestSeq: () => 80,
 			dataReady: () => !anchorPending.current,
+			dataKey: () => itemsKey.current,
 			web: opts.web,
 		});
 		viewport.current = v;
@@ -343,6 +349,35 @@ describe("a missing anchor after the walk lands at newest (Q1-1 / U1-1)", () => 
 			},
 		});
 		expect(order).toEqual([`scroll@${3892 - VIEW}`, `read@${3892 - VIEW}`]);
+		expect(v.following).toBe(true);
+	});
+
+	/* #304 QA R4 Q1 (warm notification tap, Android API 29/31): the held rows
+	 *  are the whole thread and already fit, and they report their only layout
+	 *  while the anchor is pending. The walk then proves the anchor absent
+	 *  without adding a row, so nothing resizes and no further native event
+	 *  arrives. Pre-fix the rows stayed hidden (opacity 0) for good. */
+	it("native: rows measured while pending, resolved with no further size event, land and reveal", async () => {
+		const v = make({ web: false });
+		const rows = page(75, 80);
+		await render(
+			{ messageId: "bcm_nope", seq: null },
+			thread(rows, { hasMore: true }),
+		);
+		expect(result.pending).toBe(true);
+		v.handlers.onLayout({ nativeEvent: { layout: { height: VIEW } } });
+		v.handlers.onContentSizeChange(0, 420);
+		expect(v.pending).toBe(true);
+		// The older page is empty and closes history: same rows, no event.
+		await render(
+			{ messageId: "bcm_nope", seq: null },
+			thread(rows, { hasMore: false }),
+		);
+		expect(result.phase).toBe("none");
+		expect(v.pending).toBe(false);
+		expect(scrolls).toEqual([]);
+		expect(order).toEqual(["read@0"]);
+		expect(v.readSeq).toBe(80);
 		expect(v.following).toBe(true);
 	});
 

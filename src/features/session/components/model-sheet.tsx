@@ -2,9 +2,17 @@ import { Pressable, ScrollView, Text, View } from "react-native";
 
 import type { ModelEntry } from "@/contracts";
 import { t } from "@/i18n";
-import { effortRungId, modelOptionId, ROLE, SURFACE, state } from "@/ui/a11y";
+import {
+	CONTROL,
+	effortRungId,
+	modelOptionId,
+	ROLE,
+	SURFACE,
+	state,
+} from "@/ui/a11y";
 import { Sheet } from "@/ui/components";
 import { Badge } from "@/ui/components/badge";
+import { Button } from "@/ui/components/button";
 import { CONTROL_DISABLED_INK, cx } from "@/ui/variants";
 
 /**
@@ -27,6 +35,8 @@ export type ModelSheetProps = {
 	/** The projection's `model_selector` (`provider/model_id`). */
 	selected: string;
 	loading?: boolean;
+	failed?: boolean;
+	onRetry?: () => void;
 	onPick: (model: ModelEntry) => void;
 };
 
@@ -143,6 +153,8 @@ export const ModelSheet = ({
 	models,
 	selected,
 	loading = false,
+	failed = false,
+	onRetry,
 	onPick,
 }: ModelSheetProps) => {
 	const groups = groupByProvider(models);
@@ -173,10 +185,26 @@ export const ModelSheet = ({
 					</View>
 				))}
 				{loading ? (
-					<Text className="px-3 py-2 text-body-sm text-ink-dim">loading…</Text>
+					<Text className="px-3 py-2 text-body-sm text-ink-dim">
+						{t("mobile.home.picker.loading")}
+					</Text>
+				) : failed ? (
+					<View className="px-3 py-2 gap-2">
+						<Text className="text-body-sm text-ink-dim">
+							{t("mobile.home.models_read_failed")}
+						</Text>
+						{onRetry ? (
+							<Button
+								label={t("mobile.computers.retry")}
+								variant="outline"
+								onPress={onRetry}
+								testID={CONTROL.sessionModelsRetry}
+							/>
+						) : null}
+					</View>
 				) : models.length === 0 ? (
 					<Text className="px-3 py-2 text-body-sm text-ink-dim">
-						no models available
+						{t("mobile.home.picker.model_empty")}
 					</Text>
 				) : null}
 			</ScrollView>

@@ -2,6 +2,7 @@ import { useRouter } from "expo-router";
 import { memo, useEffect, useMemo } from "react";
 import { ScrollView, Text, View, type ViewStyle } from "react-native";
 import type { TranscriptEntry } from "@/contracts";
+import { startupWorkingLabel } from "@/features/home/start-targets";
 import { PendingEchoRows } from "@/features/session/components/pending-echo-row";
 import type { SupplementClient } from "@/features/session/components/supplement-block";
 import { TranscriptList } from "@/features/session/components/transcript-list";
@@ -39,6 +40,7 @@ export const StartupPendingTail = memo(function StartupPendingTail({
 	startedS,
 	onPutBack,
 	loadImage,
+	startingAs = null,
 }: {
 	echoes: readonly PendingEcho[];
 	/** The projection says a turn is alive. */
@@ -47,6 +49,9 @@ export const StartupPendingTail = memo(function StartupPendingTail({
 	startedS: number | null;
 	onPutBack?: (commandId: string) => void;
 	loadImage?: ImageLoader;
+	/** The agent or team this chat was started with, or `null` for the default.
+	 *  Named on the working line until the turn reports its own activity. */
+	startingAs?: string | null;
 }) {
 	const live = echoes.some((echo) => echo.failure === undefined);
 	const working = running || live;
@@ -63,11 +68,7 @@ export const StartupPendingTail = memo(function StartupPendingTail({
 			{working ? (
 				<View className="px-2 py-1">
 					<WorkingLine
-						activity={
-							running && activity.length > 0
-								? activity
-								: t("relay.chrome.session.subtitle.working_plain")
-						}
+						activity={startupWorkingLabel(running, activity, startingAs)}
 						startedS={running ? startedS : null}
 						testID={SURFACE.startupWorkingLine}
 					/>
@@ -94,9 +95,11 @@ const PREVIEW_CONTENT_STYLE: ViewStyle = {
 export function StartupPreview({
 	echoes,
 	onPutBack,
+	startingAs = null,
 }: {
 	echoes: readonly PendingEcho[];
 	onPutBack?: (commandId: string) => void;
+	startingAs?: string | null;
 }) {
 	return (
 		<ScrollView
@@ -111,6 +114,7 @@ export function StartupPreview({
 				activity=""
 				startedS={null}
 				onPutBack={onPutBack}
+				startingAs={startingAs}
 			/>
 		</ScrollView>
 	);
@@ -128,6 +132,7 @@ export function StartupTranscript({
 	echoes = NO_ECHOES,
 	onWitness,
 	onPutBack,
+	startingAs = null,
 }: {
 	sessionId: string;
 	onStreaming: (running: boolean) => void;
@@ -138,6 +143,8 @@ export function StartupTranscript({
 	 *  can drop the delivered stand-ins (`StartupCoordinator.witness`). */
 	onWitness?: (ids: ReadonlySet<string>) => void;
 	onPutBack?: (commandId: string) => void;
+	/** See `StartupPendingTail`. */
+	startingAs?: string | null;
 }) {
 	const runtime = useSessionRuntime(sessionId);
 	const router = useRouter();
@@ -162,6 +169,7 @@ export function StartupTranscript({
 			startedS={runtime.projection?.activity_started_s ?? null}
 			onPutBack={onPutBack}
 			loadImage={runtime.loadImage}
+			startingAs={startingAs}
 		/>
 	);
 	useEffect(() => {
@@ -221,6 +229,8 @@ export function StartupTranscript({
 				sessionId={sessionId}
 				entries={runtime.entries}
 				streamingRowId={runtime.streamingRowId}
+				streamArrivalEpoch={runtime.streamArrivalEpoch}
+				streamArrivalTail={runtime.streamArrivalTail}
 				// This screen threads no turn interrupt, so the list cannot read
 				// "running" off `onCancelTurn`: between streamed rows a first turn
 				// would look idle and condense mid-run. The projection says.

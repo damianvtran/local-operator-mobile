@@ -3,6 +3,7 @@ import * as WebBrowser from "expo-web-browser";
 import { type ReactNode, useState } from "react";
 import { Platform, Text, View } from "react-native";
 import { useConnection } from "@/features/auth/connection-provider";
+import { CommunityNoPlanCard } from "@/features/community/no-plan-card";
 import { t } from "@/i18n";
 import { useTeamBridge, useTeamBridgeState } from "@/team-bridge/provider";
 import type { TeamBridgeState } from "@/team-bridge/store";
@@ -13,13 +14,30 @@ import { Screen } from "@/ui/components/screen";
 import { Skeleton } from "@/ui/components/skeleton";
 import { BridgeThreadTitle } from "./thread-chrome";
 
-export function BridgeBack() {
+/**
+ * Back out of a Team Bridge screen. With history it pops; without (a cold push
+ * or deep link) it REPLACES with `fallback`, which defaults to Home.
+ *
+ * A reply thread passes its own conversation (UX review U1): a reply push is
+ * the main way into a thread on a phone, and a cold open's Back used to leave
+ * Team Bridge for Home. This keeps TestFlight 773 intact rather than undoing
+ * it: that decision is about the CONVERSATION screen, which leads with the
+ * drawer button so a push never lands on a back arrow with nowhere to go. A
+ * thread is a child of one conversation (the desktop closes its pane back to
+ * the channel), so its arrow always has a real destination, and that
+ * destination is the screen that keeps the drawer.
+ */
+export function BridgeBack({ fallback = "/" }: { fallback?: string } = {}) {
 	const router = useRouter();
 	return (
 		<BackButton
 			accessibilityLabel={t("mobile.team_bridge.back")}
 			testID={CONTROL.teamBridgeBack}
-			onPress={() => (router.canGoBack() ? router.back() : router.replace("/"))}
+			onPress={() =>
+				router.canGoBack()
+					? router.back()
+					: router.replace(fallback as Parameters<typeof router.replace>[0])
+			}
 		/>
 	);
 }
@@ -127,6 +145,9 @@ export function BridgeGate({
 								{t("mobile.team_bridge.gate.manage_plan")}
 							</Text>
 						)}
+						{/* RFC v2.4 §5.1: the free community join is offered on every
+						 *  no-plan path; it renders nothing while the flag is off. */}
+						<CommunityNoPlanCard />
 					</>
 				)}
 				{gate === "signed_out" && (

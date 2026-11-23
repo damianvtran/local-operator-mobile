@@ -20,6 +20,7 @@ import {
 	type PickerSection,
 	pickerColumns,
 	pickerSections,
+	themeModeOptions,
 } from "./theme-picker-model";
 
 /**
@@ -87,23 +88,11 @@ export default function ThemePicker() {
 					label={t("mobile.settings.theme.mode_label")}
 					value={selection.mode}
 					onChange={setPreference}
-					options={[
-						{
-							value: "system",
-							label: t("mobile.settings.theme.mode_system"),
-							testID: CONTROL.themePickerModeSystem,
-						},
-						{
-							value: "light",
-							label: t("mobile.settings.theme.mode_light"),
-							testID: CONTROL.themePickerModeLight,
-						},
-						{
-							value: "dark",
-							label: t("mobile.settings.theme.mode_dark"),
-							testID: CONTROL.themePickerModeDark,
-						},
-					]}
+					options={themeModeOptions({
+						system: CONTROL.themePickerModeSystem,
+						light: CONTROL.themePickerModeLight,
+						dark: CONTROL.themePickerModeDark,
+					})}
 				/>
 				<Text
 					className="text-body-sm text-ink-dim"
@@ -121,6 +110,9 @@ export default function ThemePicker() {
 				<Input
 					testID={CONTROL.themePickerSearch}
 					label={t("mobile.settings.theme.search_label")}
+					/* The label stays drawn (components.md § 4: a placeholder is
+					 *  never the only label); the placeholder is a different hint,
+					 *  not the label's words again (UX pass; review round 1). */
 					placeholder={t("mobile.settings.theme.search_placeholder")}
 					value={query}
 					onChangeText={setQuery}
@@ -280,8 +272,11 @@ const ThemeCard = ({
 						}}
 					>
 						<View className="flex-1 gap-1.5 p-2">
+							{/* `me-6` keeps the trailing 24 pt of this row clear on EVERY
+							 *  card, selected or not, so the ✓ below has its own slot and
+							 *  selecting never shifts the drawing. */}
 							<View
-								className="flex-row items-center gap-1.5 rounded-sm px-1.5 py-1"
+								className="me-6 flex-row items-center gap-1.5 rounded-sm px-1.5 py-1"
 								style={{ backgroundColor: c.surface }}
 							>
 								<View
@@ -309,7 +304,10 @@ const ThemeCard = ({
 						</View>
 						{selected ? (
 							<View
-								className="absolute end-1 top-1 h-5 w-5 items-center justify-center rounded-full"
+								/* Inset inside the ring, centred on the top row's line and
+								 *  in the slot that row leaves clear: at `end-1 top-1` it sat
+								 *  on the ring's corner and over the drawing (UX pass). */
+								className="absolute end-1.5 top-1.5 h-5 w-5 items-center justify-center rounded-full"
 								style={{ backgroundColor: ring }}
 								testID={CONTROL.themePickerCheck}
 							>

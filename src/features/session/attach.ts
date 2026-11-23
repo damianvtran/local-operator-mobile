@@ -2,10 +2,16 @@ import { Platform } from "react-native";
 
 import type { PromptImage } from "@/contracts";
 import {
+	type AttachSource,
+	type CameraReadiness,
+	cameraAnswer,
+	cameraPermissionStep,
 	fromDataUrl,
+	isIosSimulatorSandbox,
 	readClipboardImage,
+	sniffImageMime,
 } from "@/features/session/attach-rule";
-import { removePickedCacheCopy } from "./picker-cache";
+import { removePastedCopy, removePickedCacheCopy } from "./picker-cache";
 import { consumePickerAsset, pickerPrivacy } from "./picker-privacy";
 
 /**
@@ -68,6 +74,140 @@ const pickFromLibraryNative = async (
 	// `null`, because "the reader chose nothing" and "the bytes are missing" are
 	// different outcomes and only one of them is silent.
 	return consumePickerAsset(asset, removePickedCacheCopy);
+};
+
+/**
+ * Make the camera ready to open, from the reader's press on the Camera row.
+ *
+ * **Permission at the moment of use, never at launch.** The camera, unlike the
+ * photo picker, is a privacy-gated device on both platforms: iOS needs
+ * `NSCameraUsageDescription` and the reader's consent, Android needs a granted
+ * `CAMERA` runtime permission (a manifest that declares it makes the system
+ * camera intent refuse without it). `expo-image-picker`'s `launchCameraAsync`
+ * REJECTS on iOS when the permission is not already granted rather than asking
+ * (`MissingCameraPermissionException`, `ImagePickerModule.swift` at 57.0.20), so
+ * the ask has to happen here, first. It runs while the attach sheet is still up,
+ * so a refusal lands where the reader is looking: the sheet answers `denied` and
+ * offers Open Settings, instead of the sheet closing on a press that did nothing.
+ *
+ * `unavailable` covers the iOS simulator (see `isIosSimulatorSandbox` for why it
+ * must be caught BEFORE the picker is asked) and a status read that throws.
+ */
+export const prepareCamera = async (): Promise<CameraReadiness> => {
+	if (Platform.OS === "web") return "unavailable";
+	try {
+		if (Platform.OS === "ios") {
+			const { Paths } = await import("expo-file-system");
+			if (isIosSimulatorSandbox(Paths.document.uri)) return "unavailable";
+		}
+		const picker = await import("expo-image-picker");
+		// The read first: it never prompts, so a reader who already decided is not
+		// asked again, and a refusal the OS will not re-ask goes straight to Settings.
+		const current = await picker.getCameraPermissionsAsync();
+		const step = cameraPermissionStep(current);
+		if (step === "granted") return "ready";
+		if (step === "denied") return "denied";
+		const asked = await picker.requestCameraPermissionsAsync();
+		// `canAskAgain` decides between "ask again next press" and "only Settings
+		// can undo this" — see `cameraAnswer`.
+		return cameraAnswer(asked);
+	} catch {
+		// A thrown check is not a missing camera (U3): retryable, see `failed`.
+		return "failed";
+	}
+};
+
+/**
+ * Take one photo with the system camera UI and read it onto the wire form, or
+ * `null` when the reader backed out.
+ *
+ * The SAME path as a picked photo, on purpose: the same picker module, the same
+ * options (`base64` so the bytes come back in one read, single image), the same
+ * privacy gate (`pickerPrivacy.run` — a capture that returns after sign-out is
+ * refused like a late pick) and the same `consumePickerAsset`, which sniffs the
+ * real MIME type and deletes the picker's cache copy before the bytes are
+ * handed over. The composer then stages it on the one chip strip, so size
+ * handling, preview, removal and upload are the photo library's, unchanged.
+ *
+ * Only ever called after `prepareCamera` answered `ready`; a launch that still
+ * throws (Android with no camera app, a revoked permission) throws to the
+ * caller, which says `camera_error` rather than pretending nothing happened.
+ */
+export const takePhotoWithCamera = async (): Promise<PromptImage | null> => {
+	if (Platform.OS === "web") return null;
+	return pickerPrivacy.run(async (isCurrent) => {
+		const { launchCameraAsync } = await import("expo-image-picker");
+		if (!isCurrent()) throw new Error("the image could not be read");
+		const result = await launchCameraAsync({
+			mediaTypes: ["images"],
+			base64: true,
+			allowsEditing: false,
+		});
+		if (result.canceled) return null;
+		return consumePickerAsset(result.assets[0], removePickedCacheCopy);
+	});
+};
+
+/**
+ * Read the images a reader pasted INTO THE MESSAGE FIELD (`expo-paste-input`
+ * hands over `file://` URIs of copies it wrote), onto the wire form.
+ *
+ * The same privacy path as a pick: `pickerPrivacy.run` refuses a paste that
+ * lands after sign-out, and every copy is deleted once read (`removePastedCopy`)
+ * whether or not the read worked, so no clipboard image is left in the cache.
+ * All-or-nothing: if any image of a multi-image paste fails, none is attached
+ * and the reader is told, rather than half the paste vanishing without a word.
+ */
+export const readPastedImages = (uris: string[]): Promise<PromptImage[]> =>
+	pickerPrivacy.run(async (isCurrent) => {
+		const { File } = await import("expo-file-system");
+		const images: PromptImage[] = [];
+		let failure: unknown;
+		for (const uri of uris) {
+			try {
+				if (!isCurrent()) throw new Error("the image could not be read");
+				const file = new File(uri);
+				const data = await file.base64();
+				if (data.length === 0) throw new Error("the image could not be read");
+				images.push({
+					data_b64: data,
+					mime_type: sniffImageMime(data, file.type ?? ""),
+				});
+			} catch (error) {
+				failure ??= error;
+			} finally {
+				try {
+					await removePastedCopy(uri);
+				} catch (error) {
+					failure ??= error;
+				}
+			}
+		}
+		if (failure !== undefined) throw failure;
+		return images;
+	});
+
+/**
+ * Read an image from the source the reader chose on the attach sheet.
+ *
+ * One dispatcher for the two hosts that own an attach handler (the session's
+ * `use-composer.ts` and the home composer in `home.tsx`). They each had their
+ * own three-way ternary over the sources; a fourth source written twice is how
+ * one host ends up attaching camera photos while the other silently reads Files.
+ */
+export const readImageFrom = (
+	source: AttachSource,
+): Promise<PromptImage | null> => {
+	switch (source) {
+		case "library":
+			return pickImageFromLibrary();
+		case "camera":
+			return takePhotoWithCamera();
+		case "paste":
+			return pasteImage();
+		case "files":
+			return pickImageFromFiles();
+	}
 };
 
 /** The document picker path (native) / the browser's file input (web) — the

@@ -18,8 +18,9 @@ import {
 	metaPathBox,
 	rowAccessibilityLabel,
 } from "@/ui/components/list-row-meta";
-import { listRowStatus } from "@/ui/components/list-row-status";
+import { listRowStatus, ROW_STATUS_KEY } from "@/ui/components/list-row-status";
 import { Shimmer } from "@/ui/components/shimmer";
+import { useComposedDir } from "@/ui/direction";
 import { TOUCH_FLOOR } from "@/ui/layout";
 import { LARGE_TEXT_SCALE } from "@/ui/text-scale";
 import { useTextScale } from "@/ui/text-scale-provider";
@@ -57,6 +58,10 @@ import {
  */
 export type ListRowProps = {
 	title: string;
+	/** How many lines the title may take. Default 1, which is every list's
+	 *  rule; a caller that has the room opts into 2 (the home's work list at
+	 *  large text, where a one-line title cuts the thing the row is for). */
+	titleLines?: 1 | 2;
 	/** The working directory, already home-shortened by the caller. */
 	cwd?: string;
 	/** Model label, right-aligned on the second line. */
@@ -189,6 +194,7 @@ export const LIST_ROW_STATUS_PLACEMENT = "corner" as ListRowStatusPlacement;
 
 export const ListRow = ({
 	title,
+	titleLines = 1,
 	cwd,
 	model,
 	time,
@@ -227,6 +233,16 @@ export const ListRow = ({
 	 *  arrives through the root font size (see `text-scale-provider`), and the meta
 	 *  line's character budgets are built from it. */
 	const { effectiveScale } = useTextScale();
+
+	/* The remote device line composes a translated frame with the reader's own
+	 *  device name — two scripts in one line in Urdu. Without a stated base its
+	 *  paragraph direction comes from the FIRST strong character (web
+	 *  `dir="auto"`, iOS NSWritingDirectionNatural; see `@/ui/direction`), so a
+	 *  value that leads with the Latin name (`{device} پر` is a valid word order)
+	 *  would lay out left-to-right on a right-to-left page. Today's ur value
+	 *  happens to lead with ڈیوائس; this keeps the line correct whichever word a
+	 *  translator puts first. `{}` in LTR catalogues, so en/fr/hi are unchanged. */
+	const composedDir = useComposedDir();
 
 	/* §2.1's yield order (E2): at large text the count strip is over budget, and
 	 *  the counts that yield are the PROGRESS ones — an ask count carries a
@@ -289,7 +305,7 @@ export const ListRow = ({
 						pending ? "text-danger" : "text-ink-dim"
 					}`}
 				>
-					{statusWord}
+					{t(ROW_STATUS_KEY[statusWord])}
 				</Text>
 			) : null}
 			{unread ? (
@@ -346,6 +362,9 @@ export const ListRow = ({
 			 * local rows that share this list. */
 			<Text
 				testID={remote.indicatorTestID}
+				/* No caller style prop may join this element: the spread IS the
+				 *  native style (composed-dir-sites.test.ts pins it). */
+				{...composedDir}
 				className={cx(
 					"text-body-sm text-ink-dim",
 					line2 === "inline" && "min-w-0 flex-1",
@@ -353,7 +372,12 @@ export const ListRow = ({
 				numberOfLines={1}
 				ellipsizeMode="tail"
 			>
-				On {remote.device}
+				{/* ONE keyed sentence with the name as an argument, never "On " +
+				 *  name: word order around a name differs by language (Hindi and
+				 *  Urdu put the postposition after it), and a translator can only
+				 *  move the placeholder in a sentence they can see whole. The name
+				 *  itself is the reader's own and passes through untranslated. */}
+				{t("mobile.sidebar.row.on_device", { device: remote.device })}
 			</Text>
 		) : meta.cwd || meta.model ? (
 			<View
@@ -515,7 +539,7 @@ export const ListRow = ({
 												? "text-ink-muted"
 												: "text-ink"
 									}`}
-									numberOfLines={1}
+									numberOfLines={titleLines}
 									ellipsizeMode="tail"
 								>
 									{title}

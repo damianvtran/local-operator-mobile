@@ -29,7 +29,15 @@ export const hasFencedBlock = (text: string): boolean =>
 /* ----------------------------------------------------------------- the parser */
 
 export type Block =
-	| { kind: "code"; language: string; lines: string[] }
+	| {
+			kind: "code";
+			language: string;
+			lines: string[];
+			/** Present only when the stream ended inside this fence. A closed fence
+			 *  carries no key, so a block that is complete reads the same as it
+			 *  always did; a diagram waits for the closing fence before it draws. */
+			unterminated?: true;
+	  }
 	| { kind: "heading"; level: number; text: string }
 	| {
 			kind: "list";
@@ -165,12 +173,40 @@ export function startsTable(lines: string[], index: number): boolean {
  * parser's cost is paid per frame and a general grammar would be paid for text the
  * reader is already reading.
  */
-export const parseMarkdown = (text: string): Block[] => {
+export const parseMarkdown = (
+	text: string,
+	checkpoint?: (offset: number, blockCount: number) => void,
+	blockStart?: (offset: number) => void,
+): Block[] => {
 	const blocks: Block[] = [];
 	const lines = text.split("\n");
+	// A complete blank line reached by the outer parser is a hard boundary.
+	// Blanks inside fences never reach it, and a final, unterminated blank may
+	// still grow into syntax. Streaming can reuse everything before this point.
+	let lastBlank = -1;
+	let stableBlocks = 0;
 	let index = 0;
+	let sourceLine = 0;
+	let sourceOffset = 0;
 	while (index < lines.length) {
 		const line = lines[index] ?? "";
+		if (line.trim().length === 0) {
+			if (checkpoint && index < lines.length - 1) {
+				lastBlank = index;
+				stableBlocks = blocks.length;
+			}
+			index += 1;
+			continue;
+		}
+		if (blockStart) {
+			// Report raw UTF-16 offsets. Rendered block text might discard syntax
+			// or normalize cells, so it cannot tell whether a block adopts old text.
+			while (sourceLine < index) {
+				sourceOffset += (lines[sourceLine]?.length ?? 0) + 1;
+				sourceLine += 1;
+			}
+			blockStart(sourceOffset);
+		}
 		const fence = FENCE.exec(line);
 		if (fence) {
 			const language = fence[1] ?? "";
@@ -182,8 +218,13 @@ export const parseMarkdown = (text: string): Block[] => {
 			}
 			// Consume the closing fence when there is one; an unterminated fence is a
 			// stream still arriving, so the body so far is the honest render.
-			if (index < lines.length) index += 1;
-			blocks.push({ kind: "code", language, lines: body });
+			const closed = index < lines.length;
+			if (closed) index += 1;
+			blocks.push(
+				closed
+					? { kind: "code", language, lines: body }
+					: { kind: "code", language, lines: body, unterminated: true },
+			);
 			continue;
 		}
 		const heading = HEADING.exec(line);
@@ -269,10 +310,6 @@ export const parseMarkdown = (text: string): Block[] => {
 			blocks.push({ kind: "table", header, rows });
 			continue;
 		}
-		if (line.trim().length === 0) {
-			index += 1;
-			continue;
-		}
 		const paragraph: string[] = [line];
 		index += 1;
 		while (index < lines.length) {
@@ -294,6 +331,13 @@ export const parseMarkdown = (text: string): Block[] => {
 			index += 1;
 		}
 		blocks.push({ kind: "paragraph", text: paragraph.join("\n") });
+	}
+	if (checkpoint && lastBlank !== -1) {
+		let offset = text.length;
+		for (let line = lines.length - 1; line > lastBlank; line -= 1) {
+			offset -= (lines[line]?.length ?? 0) + (line > lastBlank + 1 ? 1 : 0);
+		}
+		checkpoint(offset, stableBlocks);
 	}
 	return blocks;
 };

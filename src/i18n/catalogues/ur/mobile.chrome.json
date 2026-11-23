@@ -25,5 +25,6 @@
 	"mobile.chrome.composer.row_usage": "سیاق",
 	"mobile.chrome.composer.row_cost": "لاگت",
 	"mobile.chrome.composer.row_queue": "قطار",
-	"mobile.chrome.composer.row_questions": "سوالات"
+	"mobile.chrome.composer.row_questions": "سوالات",
+	"mobile.chrome.composer.row_identity": "ایجنٹ یا ٹیم"
 }
