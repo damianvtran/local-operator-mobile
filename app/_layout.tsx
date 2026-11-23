@@ -12,6 +12,7 @@ import "@/notifications/background-task";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import type { ReactNode } from "react";
+import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { CommunityProvider } from "@/community/provider";
 import { ComputerSwitcherProvider } from "@/features/auth/computer-switcher-sheet";
@@ -39,7 +40,9 @@ import { TextScaleProvider } from "@/ui/text-scale-provider";
 /**
  * The root layout: providers in, chrome on.
  *
- * Four providers, in the order they have to be nested:
+ * Four providers, in the order they have to be nested (`KeyboardProvider` sits
+ * between the first and the second: it needs no theme or connection, and the
+ * composer's `useKeyboardHandler` needs it above every route):
  *
  *   1. `SafeAreaProvider` — everything below reads insets, and a screen that
  *      reads them without it silently gets zeros (content under the notch).
@@ -57,49 +60,55 @@ import { TextScaleProvider } from "@/ui/text-scale-provider";
 export default function RootLayout() {
 	return (
 		<SafeAreaProvider>
-			<ThemeProvider>
-				{/* Before the connection: reads the sidebar view at boot, which also
-				 *  adopts it out of the sealed device family before any sign-in can
-				 *  purge that family (the theme is read the same way, by its provider). */}
-				<SidebarViewHydration />
-				<ConnectionProvider>
-					<TextScaleProvider>
-						<DirectionRoot>
-							<TeamBridgeProvider>
-								{/* The public community client's store, BESIDE the private
-								 *  Team Bridge store (RFC v2.4 §7.2: no shared state). Dark
-								 *  behind EXPO_PUBLIC_COMMUNITY; costs nothing until read. */}
-								<CommunityProvider>
-									<ThemedStatusBar />
-									<SavedComputersHydration />
-									<DeepLinkResolution />
-									<NotificationTapRouting />
-									{/* The durable outbox's lifecycle (resume on launch and
-									 *  foreground): above the router so a send outlives the
-									 *  conversation screen that started it. */}
-									<OutboxHost />
-									{/* The ONE computer switcher sheet, above every route so any screen
-									 *  can open it with `useComputerSwitcher().open()` and two screens
-									 *  can never show two lists. Inside the providers it reads (the
-									 *  connection, the text scale) and below the router's context. */}
-									<ComputerSwitcherProvider>
-										<BridgeWorkspaceDrawer>
-											<Stack screenOptions={STACK_SCREEN_OPTIONS} />
-										</BridgeWorkspaceDrawer>
-									</ComputerSwitcherProvider>
-									{/* The first-run notification primer: one in-context sheet that
-									 *  asks before the OS does (ADR 0006 §5 as amended 2026-11-14).
-									 *  Root-mounted like the switcher so it reads the route and list
-									 *  without touching a screen; it offers itself on Home only. */}
-									<NotificationPermissionPrimer />
-									<ToastHost />
-								</CommunityProvider>
-							</TeamBridgeProvider>
-						</DirectionRoot>
-					</TextScaleProvider>
-				</ConnectionProvider>
-				<TeamBridgeFixturePresentation />
-			</ThemeProvider>
+			{/* The keyboard's per-frame height, for the composer's lift
+			 *  (`useKeyboardHandler`). `preload={false}`: the default pre-warms the
+			 *  keyboard at launch, which flashes it; off keeps today's first-focus
+			 *  behaviour. Android: the provider enforces edge-to-edge. */}
+			<KeyboardProvider preload={false}>
+				<ThemeProvider>
+					{/* Before the connection: reads the sidebar view at boot, which also
+					 *  adopts it out of the sealed device family before any sign-in can
+					 *  purge that family (the theme is read the same way, by its provider). */}
+					<SidebarViewHydration />
+					<ConnectionProvider>
+						<TextScaleProvider>
+							<DirectionRoot>
+								<TeamBridgeProvider>
+									{/* The public community client's store, BESIDE the private
+									 *  Team Bridge store (RFC v2.4 §7.2: no shared state). Dark
+									 *  behind EXPO_PUBLIC_COMMUNITY; costs nothing until read. */}
+									<CommunityProvider>
+										<ThemedStatusBar />
+										<SavedComputersHydration />
+										<DeepLinkResolution />
+										<NotificationTapRouting />
+										{/* The durable outbox's lifecycle (resume on launch and
+										 *  foreground): above the router so a send outlives the
+										 *  conversation screen that started it. */}
+										<OutboxHost />
+										{/* The ONE computer switcher sheet, above every route so any screen
+										 *  can open it with `useComputerSwitcher().open()` and two screens
+										 *  can never show two lists. Inside the providers it reads (the
+										 *  connection, the text scale) and below the router's context. */}
+										<ComputerSwitcherProvider>
+											<BridgeWorkspaceDrawer>
+												<Stack screenOptions={STACK_SCREEN_OPTIONS} />
+											</BridgeWorkspaceDrawer>
+										</ComputerSwitcherProvider>
+										{/* The first-run notification primer: one in-context sheet that
+										 *  asks before the OS does (ADR 0006 §5 as amended 2026-11-14).
+										 *  Root-mounted like the switcher so it reads the route and list
+										 *  without touching a screen; it offers itself on Home only. */}
+										<NotificationPermissionPrimer />
+										<ToastHost />
+									</CommunityProvider>
+								</TeamBridgeProvider>
+							</DirectionRoot>
+						</TextScaleProvider>
+					</ConnectionProvider>
+					<TeamBridgeFixturePresentation />
+				</ThemeProvider>
+			</KeyboardProvider>
 		</SafeAreaProvider>
 	);
 }

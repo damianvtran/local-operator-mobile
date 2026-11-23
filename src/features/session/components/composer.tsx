@@ -35,7 +35,9 @@ import {
 	View,
 } from "react-native";
 
+import { useKeyboardHandler } from "react-native-keyboard-controller";
 import Animated, {
+	cancelAnimation,
 	Easing,
 	interpolate,
 	runOnJS,
@@ -120,6 +122,7 @@ import {
 	subscribeKeyboardFrame,
 	useKeyboardFrame,
 } from "@/features/session/keyboard-frame";
+import { rideOffset, settleOffset } from "@/features/session/keyboard-motion";
 import {
 	type SkillTrayFrame,
 	shouldRevealSkillTray,
@@ -1117,6 +1120,10 @@ export const Composer = ({
 	 *  not morph in from a pill on every mount. */
 	const progress = useSharedValue(compact === null ? 1 : 0);
 	const keyboardOffset = useSharedValue(0);
+	/* True from the library's `onStart` to its `onEnd`: the keyboard's own frames
+	 *  are writing `keyboardOffset`, so the store's timed lift must not start a
+	 *  second tween over them. */
+	const motionActive = useSharedValue(false);
 	/* The overlap the lift is heading for (the latest keyboard frame's). A box
 	 *  measured while the offset is anywhere else is a mid-lift layout and is not
 	 *  published (`publishBox`), so the screen keeps the last SETTLED box and can
@@ -1269,7 +1276,12 @@ export const Composer = ({
 		const unsubscribe = subscribeKeyboardFrame((frame) => {
 			keyboardDuration.current = frame.duration;
 			liftTarget.current = frame.visible ? frame.overlap : 0;
+			/* While the keyboard's own frames drive the lift, a hide or a show event
+			 *  must neither snap nor tween it: `onEnd` settles and remeasures. This
+			 *  subscriber stays the whole driver when no motion runs (a frame the
+			 *  library never reports, a platform without the native module). */
 			if (!frame.visible) {
+				if (motionActive.value) return;
 				keyboardOffset.value = 0;
 				remeasure();
 				return;
@@ -1281,6 +1293,7 @@ export const Composer = ({
 				lifting.current = true;
 				onLiftRef.current?.(true);
 			}
+			if (motionActive.value) return;
 			keyboardOffset.value = withTiming(
 				frame.overlap,
 				{ duration: frame.duration },
@@ -1301,7 +1314,41 @@ export const Composer = ({
 		keyboardOffset.value = liftTarget.current;
 		if (present.visible) remeasure();
 		return unsubscribe;
+	}, [keyboardOffset, motionActive]);
+	/* The lift rides the keyboard frame by frame (`react-native-keyboard-controller`)
+	 *  instead of a fixed-duration tween started when the event lands. On iOS that
+	 *  is the same motion, now exact to the keyboard's frame; on Android the lift
+	 *  used to start after `keyboardDidShow` and now moves in step with the IME.
+	 *
+	 *  Each handler carries its own `"worklet"` directive: the library does not
+	 *  workletize them, and a plain callback is a launch crash on the UI runtime
+	 *  (`composer-worklets.test.ts` pins the directive). `[]` deps: the handlers
+	 *  touch only shared values and `settleLift`, which is stable. */
+	const settleLift = useCallback(() => {
+		const settled = settleOffset(keyboardOffset.value, liftTarget.current);
+		if (settled !== keyboardOffset.value) keyboardOffset.value = settled;
+		requestAnimationFrame(() => publishBoxRef.current());
 	}, [keyboardOffset]);
+	useKeyboardHandler(
+		{
+			onStart: () => {
+				"worklet";
+				motionActive.value = true;
+				cancelAnimation(keyboardOffset);
+			},
+			onMove: (event) => {
+				"worklet";
+				keyboardOffset.value = rideOffset(event.height);
+			},
+			onEnd: (event) => {
+				"worklet";
+				keyboardOffset.value = rideOffset(event.height);
+				motionActive.value = false;
+				runOnJS(settleLift)();
+			},
+		},
+		[],
+	);
 	useEffect(() => {
 		progress.value = withTiming(presentation.expanded ? 1 : 0, {
 			duration: reducedMotion

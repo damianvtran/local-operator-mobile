@@ -222,3 +222,72 @@ describe("the composer's worklets run on the UI runtime", () => {
 		expect(declaresWorklet(bodyOf("composerPresentation"))).toBe(false);
 	});
 });
+
+/**
+ * `react-native-keyboard-controller` does NOT workletize the handlers it is
+ * given: reanimated's plugin only rewrites the hooks it knows by name, and
+ * `useKeyboardHandler` is not one of them. A handler without its own directive
+ * is a plain JS function handed to the UI runtime, which throws at the first
+ * keyboard event. So every handler body must open with `"worklet"`.
+ */
+const KEYBOARD_MOTION = read("src/features/session/keyboard-motion.ts");
+
+const keyboardHandlers = (() => {
+	const found: { name: string; body: string }[] = [];
+	const comment = stripComments(COMPONENT);
+	let from = 0;
+	for (;;) {
+		const at = comment.indexOf("useKeyboardHandler(", from);
+		if (at < 0) break;
+		const call = sliceBalanced(comment, at + "useKeyboardHandler".length);
+		for (const match of call.matchAll(
+			/\b(on[A-Z]\w*)\s*:\s*(?:\([^)]*\)|\w+)\s*=>/g,
+		)) {
+			found.push({ name: match[1] ?? "", body: call.slice(match.index) });
+		}
+		from = at + "useKeyboardHandler".length;
+	}
+	return found;
+})();
+
+describe("the composer's keyboard handlers run on the UI runtime", () => {
+	it("finds the handlers, so an empty scan cannot pass this file", () => {
+		expect(keyboardHandlers.map((handler) => handler.name)).toEqual([
+			"onStart",
+			"onMove",
+			"onEnd",
+		]);
+	});
+
+	it("opens every handler with its own worklet directive", () => {
+		const plain = keyboardHandlers
+			.filter((handler) => !declaresWorklet(handler.body))
+			.map((handler) => handler.name);
+		expect(plain).toEqual([]);
+	});
+
+	it("marks the motion helpers those handlers call as worklets", () => {
+		const names = ["rideOffset", "settleOffset"];
+		for (const name of names) {
+			const at = KEYBOARD_MOTION.indexOf(`export const ${name} =`);
+			expect(at).toBeGreaterThan(-1);
+			expect(declaresWorklet(KEYBOARD_MOTION.slice(at))).toBe(true);
+		}
+		/* `rideOffset` is the one the UI-thread handlers call. */
+		expect(calledIn(stripComments(COMPONENT), "rideOffset")).toBe(true);
+	});
+
+	it("keeps the store's timed lift as the fallback, silent while a motion runs", () => {
+		/* Two writers of one shared value: the handlers while the keyboard moves,
+		 *  the store's `withTiming` otherwise. Source pins, because the component
+		 *  cannot mount in Node (the same reason as `keyboard-frame.test.ts`). */
+		const text = stripComments(COMPONENT).replace(/\s+/g, " ");
+		expect(text).toContain(
+			"if (motionActive.value) return; keyboardOffset.value = withTiming(",
+		);
+		expect(text).toContain(
+			"if (motionActive.value) return; keyboardOffset.value = 0;",
+		);
+		expect(text).toContain("runOnJS(settleLift)();");
+	});
+});
