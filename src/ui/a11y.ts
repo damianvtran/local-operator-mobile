@@ -719,7 +719,9 @@ export const CONTROL = {
 	sidebarViewGroup: "sidebar-view-group",
 	sidebarViewGroupSection: "sidebar-view-group-section",
 	sidebarViewGroupFlat: "sidebar-view-group-flat",
+	sidebarViewGroupTag: "sidebar-view-group-tag",
 	sidebarViewShowEnded: "sidebar-view-show-ended",
+	sidebarViewShowTags: "sidebar-view-show-tags",
 	sidebarViewMore: "sidebar-view-more",
 	settingsSidebarOrder: "settings-sidebar-order",
 	settingsSidebarOrderActiveFirst: "settings-sidebar-order-active-first",
@@ -727,10 +729,12 @@ export const CONTROL = {
 	settingsSidebarGroup: "settings-sidebar-group",
 	settingsSidebarGroupSection: "settings-sidebar-group-section",
 	settingsSidebarGroupFlat: "settings-sidebar-group-flat",
+	settingsSidebarGroupTag: "settings-sidebar-group-tag",
 	settingsSidebarBasis: "settings-sidebar-basis",
 	settingsSidebarBasisActive: "settings-sidebar-basis-active",
 	settingsSidebarBasisCreated: "settings-sidebar-basis-created",
 	settingsSidebarShowEnded: "settings-sidebar-show-ended",
+	settingsSidebarShowTags: "settings-sidebar-show-tags",
 	sidebarPast: "sidebar-past",
 	/** At >= 200 % text the destinations strip collapses to ONE "More" row that
 	 *  opens a sheet with the same destinations (record §3) — labels are never

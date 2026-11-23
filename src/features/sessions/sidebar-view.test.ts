@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import type { SessionSummary } from "@/contracts";
+import type { SessionSummary, TagRef } from "@/contracts";
 import {
 	arrangeRows,
 	arrangeSidebar,
 	DEFAULT_SIDEBAR_VIEW,
+	drawnGroupBy,
 	hiddenSectionCount,
 	isCustomSidebarView,
 	isEmptiedByView,
@@ -13,6 +14,7 @@ import {
 	runningOrderMs,
 	type SidebarView,
 	serializeSidebarView,
+	serializeSidebarViewOver,
 	toggleSidebarSection,
 } from "@/features/sessions/sidebar-view";
 
@@ -29,6 +31,9 @@ import {
  */
 
 const NOON = new Date(2026, 10, 13, 12, 0, 0, 0).getTime(); // 2026-11-13 local
+/** The relay every arrangement test runs on unless the tag grouping is under
+ *  test: no `session_tags`, which is also what a stored `tag` DRAWS as. */
+const NO_TAGS = { tagsAvailable: false } as const;
 const MIN = 60;
 const HOUR = 60 * MIN;
 const DAY = 24 * HOUR;
@@ -96,7 +101,7 @@ const RELAY_ORDER = [
 describe("arrangeSidebar — the desktop's default view", () => {
 	it("orders each section by the activity clock, pinned in relay order, running lifted", () => {
 		expect(
-			drawn(arrangeSidebar(RELAY_ORDER, DEFAULT_SIDEBAR_VIEW, NOON)),
+			drawn(arrangeSidebar(RELAY_ORDER, DEFAULT_SIDEBAR_VIEW, NOON, NO_TAGS)),
 		).toEqual([
 			// Pinned: the catalogue's order, never clock-sorted (`pinnedRows`).
 			["pinned", ["pin-b", "pin-a"]],
@@ -119,7 +124,9 @@ describe("arrangeSidebar — the desktop's default view", () => {
 		const edge = row("edge", { mtime: at(6 * DAY + 13 * HOUR) });
 		const inside = row("inside", { mtime: at(6 * DAY + 11 * HOUR) });
 		expect(
-			drawn(arrangeSidebar([edge, inside], DEFAULT_SIDEBAR_VIEW, NOON)),
+			drawn(
+				arrangeSidebar([edge, inside], DEFAULT_SIDEBAR_VIEW, NOON, NO_TAGS),
+			),
 		).toEqual([
 			["week", ["inside"]],
 			["older", ["edge"]],
@@ -155,9 +162,9 @@ describe("arrangeSidebar — the desktop's default view", () => {
 				mtime: at(DAY),
 			}),
 		];
-		expect(drawn(arrangeSidebar(rows, DEFAULT_SIDEBAR_VIEW, NOON))).toEqual([
-			["running", ["gate", "busy"]],
-		]);
+		expect(
+			drawn(arrangeSidebar(rows, DEFAULT_SIDEBAR_VIEW, NOON, NO_TAGS)),
+		).toEqual([["running", ["gate", "busy"]]]);
 	});
 });
 
@@ -169,7 +176,9 @@ describe("arrangeSidebar — the reader's options", () => {
 
 	it("`In one list` draws pinned first, then the running lift, then newest-first", () => {
 		expect(
-			drawn(arrangeSidebar(RELAY_ORDER, view({ groupBy: "flat" }), NOON)),
+			drawn(
+				arrangeSidebar(RELAY_ORDER, view({ groupBy: "flat" }), NOON, NO_TAGS),
+			),
 		).toEqual([
 			[
 				"all",
@@ -194,6 +203,7 @@ describe("arrangeSidebar — the reader's options", () => {
 			RELAY_ORDER,
 			view({ groupBy: "flat", orderBy: "recent" }),
 			NOON,
+			NO_TAGS,
 		);
 		expect(ids(flat[0]?.rows ?? [])).toEqual([
 			"pin-b",
@@ -214,6 +224,7 @@ describe("arrangeSidebar — the reader's options", () => {
 			RELAY_ORDER,
 			view({ basis: "created" }),
 			NOON,
+			NO_TAGS,
 		);
 		expect(drawn(groups).slice(2)).toEqual([
 			["today", ["fresh"]],
@@ -231,12 +242,14 @@ describe("arrangeSidebar — the reader's options", () => {
 		];
 		const hide = view({ showEnded: false });
 		expect(isHiddenAsEnded(rows[2] as SessionSummary, hide)).toBe(true);
-		expect(drawn(arrangeSidebar(rows, hide, NOON))).toEqual([
+		expect(drawn(arrangeSidebar(rows, hide, NOON, NO_TAGS))).toEqual([
 			["pinned", ["ended-pin"]],
 			["running", ["ended-run"]],
 			["today", ["open"]],
 		]);
-		expect(drawn(arrangeSidebar(rows, DEFAULT_SIDEBAR_VIEW, NOON))).toEqual([
+		expect(
+			drawn(arrangeSidebar(rows, DEFAULT_SIDEBAR_VIEW, NOON, NO_TAGS)),
+		).toEqual([
 			["pinned", ["ended-pin"]],
 			["running", ["ended-run"]],
 			["today", ["ended", "open"]],
@@ -246,16 +259,189 @@ describe("arrangeSidebar — the reader's options", () => {
 	it("a hidden section draws no heading and no rows, under time sections only", () => {
 		const hidden = toggleSidebarSection(DEFAULT_SIDEBAR_VIEW, "today");
 		expect(hidden.hidden).toEqual(["today"]);
-		expect(arrangeSidebar(RELAY_ORDER, hidden, NOON).map((g) => g.key)).toEqual(
-			["pinned", "running", "week", "older"],
-		);
+		expect(
+			arrangeSidebar(RELAY_ORDER, hidden, NOON, NO_TAGS).map((g) => g.key),
+		).toEqual(["pinned", "running", "week", "older"]);
 		expect(toggleSidebarSection(hidden, "today").hidden).toEqual([]);
 		const flat = arrangeSidebar(
 			RELAY_ORDER,
 			{ ...hidden, groupBy: "flat" },
 			NOON,
+			NO_TAGS,
 		);
 		expect(flat[0]?.rows).toHaveLength(RELAY_ORDER.length);
+	});
+});
+
+/* The tag grouping (mobile sidebar tag view options, 2026-11-22): the desktop's
+ * tag-first arrangement, with the phone's stated differences — Pinned leads in
+ * its own group (`sidebar-view.ts`). Every case below runs the REAL arrangement.
+ */
+describe("arrangeSidebar — the tag grouping", () => {
+	const TAGS_ON = { tagsAvailable: true } as const;
+	const WORK: TagRef = { id: "work", name: "Work" };
+	const RESEARCH: TagRef = { id: "research", name: "Research" };
+	const LIFE: TagRef = { id: "life", name: "Life" };
+	const tagged = (
+		id: string,
+		tags: TagRef[],
+		primary: string | null,
+		overrides: Partial<SessionSummary> = {},
+	) => row(id, { tags, primary, ...overrides });
+	const tagView: SidebarView = { ...DEFAULT_SIDEBAR_VIEW, groupBy: "tag" };
+
+	it("pinned leads as its own group, then one group per tag, untagged last", () => {
+		const rows = [
+			tagged("pin", [WORK], "work", { pinned: true, mtime: at(DAY) }),
+			tagged("a", [LIFE, WORK], "work", { mtime: at(HOUR) }),
+			tagged("b", [RESEARCH], "research", { mtime: at(2 * HOUR) }),
+			tagged("c", [WORK], "work", { mtime: at(3 * HOUR) }),
+			row("none", { mtime: at(4 * HOUR) }),
+		];
+		const groups = arrangeSidebar(rows, tagView, NOON, TAGS_ON);
+		expect(drawn(groups)).toEqual([
+			["pinned", ["pin"]],
+			["tag:work", ["a", "c"]],
+			["tag:research", ["b"]],
+			["untagged", ["none"]],
+		]);
+		expect(groups.find((group) => group.tag?.id === "work")?.tag).toEqual({
+			id: "work",
+			name: "Work",
+			count: 2,
+		});
+	});
+
+	it("orders groups by the registry's `order`, not by the rows' arrival", () => {
+		const rows = [
+			tagged("a", [WORK], "work", { mtime: at(HOUR) }),
+			tagged("b", [RESEARCH], "research", { mtime: at(2 * HOUR) }),
+		];
+		const groups = arrangeSidebar(rows, tagView, NOON, {
+			tagsAvailable: true,
+			tagOrder: ["research", "work", "life"],
+		});
+		// `life` has no rows, so it draws no heading either.
+		expect(drawn(groups)).toEqual([
+			["tag:research", ["b"]],
+			["tag:work", ["a"]],
+		]);
+	});
+
+	it("falls back to first-seen order while the catalogue is unread, unknown tags after known ones", () => {
+		const rows = [
+			tagged("late", [LIFE], "life", { mtime: at(3 * HOUR) }),
+			tagged("first", [LIFE, WORK], "work", { mtime: at(HOUR) }),
+			tagged("known", [RESEARCH], "research", { mtime: at(2 * HOUR) }),
+		];
+		expect(
+			drawn(arrangeSidebar(rows, tagView, NOON, { tagsAvailable: true })),
+		).toEqual([
+			["tag:work", ["first"]],
+			["tag:research", ["known"]],
+			["tag:life", ["late"]],
+		]);
+		expect(
+			drawn(
+				arrangeSidebar(rows, tagView, NOON, {
+					tagsAvailable: true,
+					tagOrder: ["research"],
+				}),
+			),
+		).toEqual([
+			["tag:research", ["known"]],
+			["tag:work", ["first"]],
+			["tag:life", ["late"]],
+		]);
+	});
+
+	it("buckets by PRIMARY only: none, or one no longer assigned, is Untagged", () => {
+		const rows = [
+			tagged("no-primary", [WORK], null, { mtime: at(HOUR) }),
+			tagged("pruned", [WORK], "research", { mtime: at(2 * HOUR) }),
+			tagged("primary", [RESEARCH, WORK], "research", { mtime: at(3 * HOUR) }),
+			row("bare", { mtime: at(4 * HOUR) }),
+		];
+		expect(drawn(arrangeSidebar(rows, tagView, NOON, TAGS_ON))).toEqual([
+			["tag:research", ["primary"]],
+			["untagged", ["no-primary", "pruned", "bare"]],
+		]);
+	});
+
+	it("keeps every row of one group in the existing order and omits empty groups", () => {
+		const rows = [
+			tagged("older", [WORK], "work", { mtime: at(3 * HOUR) }),
+			tagged("newer", [WORK], "work", { mtime: at(MIN) }),
+		];
+		const groups = arrangeSidebar(rows, tagView, NOON, {
+			tagsAvailable: true,
+			tagOrder: ["life", "work"],
+		});
+		expect(drawn(groups)).toEqual([["tag:work", ["newer", "older"]]]);
+	});
+
+	it("an untagged-only list is one Untagged group", () => {
+		expect(
+			drawn(arrangeSidebar([row("a"), row("b")], tagView, NOON, TAGS_ON)),
+		).toEqual([["untagged", ["a", "b"]]]);
+	});
+
+	it("a list the ended filter empties draws no groups, as every grouping", () => {
+		const rows = [
+			tagged("a", [WORK], "work", { ended: true, mtime: at(MIN) }),
+			tagged("b", [WORK], "work", { ended: true, mtime: at(2 * MIN) }),
+		];
+		const view: SidebarView = { ...tagView, showEnded: false };
+		expect(arrangeSidebar(rows, view, NOON, TAGS_ON)).toEqual([]);
+		expect(isEmptiedByView(rows, [])).toBe(true);
+	});
+
+	it("hidden sections do not apply: they govern the time grouping only", () => {
+		const rows = [tagged("a", [WORK], "work", { mtime: at(MIN) })];
+		const view: SidebarView = {
+			...toggleSidebarSection(DEFAULT_SIDEBAR_VIEW, "today"),
+			groupBy: "tag",
+		};
+		expect(drawn(arrangeSidebar(rows, view, NOON, TAGS_ON))).toEqual([
+			["tag:work", ["a"]],
+		]);
+		expect(hiddenSectionCount(view, true)).toBe(0);
+	});
+
+	it("a stored `tag` on a relay without tags draws the time sections and keeps the value", () => {
+		const stored = serializeSidebarView({ ...tagView });
+		const view = parseSidebarView(stored);
+		expect(view.groupBy).toBe("tag");
+		expect(
+			drawn(arrangeSidebar(RELAY_ORDER, view, NOON, NO_TAGS)).map(
+				([key]) => key,
+			),
+		).toEqual(["pinned", "running", "today", "week", "older"]);
+		// The trigger must not fill for a change the list does not show…
+		expect(isCustomSidebarView(view, false)).toBe(false);
+		// …and the stored word survives a write of another field.
+		const over = serializeSidebarViewOver(stored, view, {
+			...view,
+			showEnded: false,
+		});
+		expect(JSON.parse(over).groupBy).toBe("tag");
+	});
+
+	it("drawnGroupBy: `tag` draws as tag only where the relay has it", () => {
+		const view = { groupBy: "tag" } as const;
+		expect(drawnGroupBy(view, true)).toBe("tag");
+		expect(drawnGroupBy(view, false)).toBe("section");
+		expect(drawnGroupBy({ groupBy: "section" }, false)).toBe("section");
+		expect(drawnGroupBy({ groupBy: "flat" }, true)).toBe("flat");
+	});
+
+	it("a tag grouping is custom, and hiding the row lines is custom too", () => {
+		expect(
+			isCustomSidebarView({ ...DEFAULT_SIDEBAR_VIEW, groupBy: "tag" }, true),
+		).toBe(true);
+		expect(
+			isCustomSidebarView({ ...DEFAULT_SIDEBAR_VIEW, showTags: false }, true),
+		).toBe(true);
 	});
 });
 
@@ -263,9 +449,10 @@ describe("parseSidebarView / serializeSidebarView", () => {
 	it("round-trips every field", () => {
 		const custom: SidebarView = {
 			orderBy: "recent",
-			groupBy: "flat",
+			groupBy: "tag",
 			basis: "created",
 			showEnded: false,
+			showTags: false,
 			hidden: ["week", "pinned"],
 		};
 		expect(parseSidebarView(serializeSidebarView(custom))).toEqual(custom);
@@ -282,10 +469,34 @@ describe("parseSidebarView / serializeSidebarView", () => {
 					groupBy: "agent",
 					basis: "flat",
 					showEnded: "no",
+					showTags: "no",
 					hidden: ["older", "older", "agents", 3],
 				}),
 			),
 		).toEqual({ ...DEFAULT_SIDEBAR_VIEW, hidden: ["older"] });
+	});
+
+	it("reads a stored view from before the tag options as their defaults, keeping the rest", () => {
+		// The shipped build stored no `showTags`; the preference must survive.
+		const stored = JSON.stringify({
+			orderBy: "recent",
+			groupBy: "flat",
+			basis: "created",
+		});
+		const view = parseSidebarView(stored);
+		expect(view).toEqual({
+			...DEFAULT_SIDEBAR_VIEW,
+			orderBy: "recent",
+			groupBy: "flat",
+			basis: "created",
+		});
+		// A write of another field records the new field's value (its default),
+		// because the record has no `showTags` yet.
+		expect(
+			JSON.parse(
+				serializeSidebarViewOver(stored, view, { ...view, showEnded: false }),
+			).showTags,
+		).toBe(true);
 	});
 });
 
@@ -306,7 +517,10 @@ describe("review round 1 remediation", () => {
 		const b = row("b", { streaming: true, mtime: at(HOUR) });
 		for (const r of [a, b]) delete (r as { created_at?: number }).created_at;
 		expect(
-			ids(arrangeSidebar([b, a], DEFAULT_SIDEBAR_VIEW, NOON)[0]?.rows ?? []),
+			ids(
+				arrangeSidebar([b, a], DEFAULT_SIDEBAR_VIEW, NOON, NO_TAGS)[0]?.rows ??
+					[],
+			),
 		).toEqual(["b", "a"]);
 	});
 
@@ -315,23 +529,32 @@ describe("review round 1 remediation", () => {
 			RELAY_ORDER,
 			{ ...DEFAULT_SIDEBAR_VIEW, groupBy: "flat" },
 			NOON,
+			NO_TAGS,
 		);
 		expect(flat[0]?.pinnedLead).toBe(2);
-		const sectioned = arrangeSidebar(RELAY_ORDER, DEFAULT_SIDEBAR_VIEW, NOON);
+		const sectioned = arrangeSidebar(
+			RELAY_ORDER,
+			DEFAULT_SIDEBAR_VIEW,
+			NOON,
+			NO_TAGS,
+		);
 		expect(sectioned.every((g) => g.pinnedLead === undefined)).toBe(true);
 	});
 
 	it("D2: a view is custom when any field differs from the default, hidden compared as a set", () => {
-		expect(isCustomSidebarView(DEFAULT_SIDEBAR_VIEW)).toBe(false);
-		expect(isCustomSidebarView({ ...DEFAULT_SIDEBAR_VIEW })).toBe(false);
+		expect(isCustomSidebarView(DEFAULT_SIDEBAR_VIEW, false)).toBe(false);
+		expect(isCustomSidebarView({ ...DEFAULT_SIDEBAR_VIEW }, false)).toBe(false);
 		expect(
-			isCustomSidebarView({ ...DEFAULT_SIDEBAR_VIEW, showEnded: false }),
+			isCustomSidebarView({ ...DEFAULT_SIDEBAR_VIEW, showEnded: false }, false),
 		).toBe(true);
 		expect(
-			isCustomSidebarView({ ...DEFAULT_SIDEBAR_VIEW, basis: "created" }),
+			isCustomSidebarView({ ...DEFAULT_SIDEBAR_VIEW, basis: "created" }, false),
 		).toBe(true);
 		expect(
-			isCustomSidebarView(toggleSidebarSection(DEFAULT_SIDEBAR_VIEW, "older")),
+			isCustomSidebarView(
+				toggleSidebarSection(DEFAULT_SIDEBAR_VIEW, "older"),
+				false,
+			),
 		).toBe(true);
 	});
 
@@ -340,27 +563,30 @@ describe("review round 1 remediation", () => {
 			toggleSidebarSection(DEFAULT_SIDEBAR_VIEW, "today"),
 			"week",
 		);
-		expect(hiddenSectionCount(DEFAULT_SIDEBAR_VIEW)).toBe(0);
-		expect(hiddenSectionCount(hidden)).toBe(2);
-		expect(hiddenSectionCount({ ...hidden, groupBy: "flat" })).toBe(0);
+		expect(hiddenSectionCount(DEFAULT_SIDEBAR_VIEW, false)).toBe(0);
+		expect(hiddenSectionCount(hidden, false)).toBe(2);
+		expect(hiddenSectionCount({ ...hidden, groupBy: "flat" }, false)).toBe(0);
 	});
 
 	it("M1: a list emptied by the view is told apart from a catalogue with no sessions", () => {
 		const ended = [row("e1", { ended: true }), row("e2", { ended: true })];
 		const hideEnded = { ...DEFAULT_SIDEBAR_VIEW, showEnded: false };
-		expect(isEmptiedByView(ended, arrangeSidebar(ended, hideEnded, NOON))).toBe(
-			true,
-		);
+		expect(
+			isEmptiedByView(ended, arrangeSidebar(ended, hideEnded, NOON, NO_TAGS)),
+		).toBe(true);
 		const today = [row("t", { mtime: at(MIN) })];
 		let allHidden = DEFAULT_SIDEBAR_VIEW;
 		for (const key of ["today", "week", "older"] as const)
 			allHidden = toggleSidebarSection(allHidden, key);
-		expect(isEmptiedByView(today, arrangeSidebar(today, allHidden, NOON))).toBe(
-			true,
-		);
+		expect(
+			isEmptiedByView(today, arrangeSidebar(today, allHidden, NOON, NO_TAGS)),
+		).toBe(true);
 		expect(isEmptiedByView([], [])).toBe(false);
 		expect(
-			isEmptiedByView(today, arrangeSidebar(today, DEFAULT_SIDEBAR_VIEW, NOON)),
+			isEmptiedByView(
+				today,
+				arrangeSidebar(today, DEFAULT_SIDEBAR_VIEW, NOON, NO_TAGS),
+			),
 		).toBe(false);
 	});
 });
@@ -377,7 +603,7 @@ describe("running rows order by the person's last message (last_user_at)", () =>
 		row(id, { streaming: true, ...overrides });
 	const runningIds = (rows: SessionSummary[]) =>
 		ids(
-			arrangeSidebar(rows, DEFAULT_SIDEBAR_VIEW, NOON).find(
+			arrangeSidebar(rows, DEFAULT_SIDEBAR_VIEW, NOON, NO_TAGS).find(
 				(g) => g.key === "running",
 			)?.rows ?? [],
 		);
