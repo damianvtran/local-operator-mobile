@@ -268,7 +268,13 @@ const ChoiceRow = ({
 			accessibilityRole={multi ? ROLE.checkbox : ROLE.radio}
 			accessibilityLabel={accessibilityLabel}
 			accessibilityHint={accessibilityHint}
-			accessibilityState={state({ selected, disabled })}
+			/* A checkbox reports `checked`, a radio `selected`: reading `selected`
+			 *  off a checkbox told a screen reader nothing about its tick. */
+			accessibilityState={
+				multi
+					? state({ checked: selected, disabled })
+					: state({ selected, disabled })
+			}
 			disabled={disabled}
 			onPress={onPress}
 			testID={testID}
@@ -1740,10 +1746,16 @@ export const AsksSheet = ({
 								 *  the room. A WAITING ask's door asks why first (hence the
 								 *  ellipsis). */}
 								{progressLine !== null || showDismissLink ? (
-									<View className="flex-row items-center gap-x-3">
-										<Text className="min-w-0 flex-1 text-start text-meta text-ink-dim">
-											{progressLine ?? ""}
-										</Text>
+									<View
+										className={
+											stackPair ? "gap-1" : "flex-row items-center gap-x-3"
+										}
+									>
+										{progressLine === null ? null : (
+											<Text className="min-w-0 flex-1 text-start text-meta text-ink-dim">
+												{progressLine}
+											</Text>
+										)}
 										{showDismissLink ? (
 											<Pressable
 												accessibilityRole={ROLE.button}
@@ -1753,10 +1765,21 @@ export const AsksSheet = ({
 												disabled={openBusy !== null}
 												onPress={() => setDismissingAsk(openRow.ask_id)}
 												testID={CONTROL.askDismiss}
-												style={{ minHeight: TOUCH_FLOOR }}
-												className="shrink-0 justify-center px-1"
+												/* A 44 pt box both ways: the label alone is narrower than
+												 *  the floor in most languages. At large text the link takes
+												 *  its own full-width row under the progress sentence, so it
+												 *  never squeezes that sentence into a sliver. */
+												style={{
+													minHeight: TOUCH_FLOOR,
+													minWidth: TOUCH_FLOOR,
+												}}
+												className={
+													stackPair
+														? "justify-center self-stretch px-1"
+														: "shrink-0 justify-center px-1"
+												}
 											>
-												<Text className="text-meta text-ink-muted">
+												<Text className="text-start text-meta text-ink-muted">
 													{t("mobile.asks.dismiss_open")}
 												</Text>
 											</Pressable>

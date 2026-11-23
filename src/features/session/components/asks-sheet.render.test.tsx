@@ -24,6 +24,8 @@ const host = vi.hoisted(() => ({
 	classes: [] as string[],
 	presses: new Map<string, () => void>(),
 	roles: new Map<string, string | undefined>(),
+	states: new Map<string, Record<string, boolean> | undefined>(),
+	styles: new Map<string, unknown>(),
 	scale: 1,
 	keyboardVisible: false,
 }));
@@ -61,14 +63,22 @@ vi.mock("react-native", () => ({
 		testID,
 		onPress,
 		accessibilityRole,
+		accessibilityState,
+		style,
 	}: {
 		children?: ReactNode | ((state: { pressed: boolean }) => ReactNode);
 		testID?: string;
 		onPress?: () => void;
 		accessibilityRole?: string;
+		accessibilityState?: Record<string, boolean>;
+		style?: unknown;
 	}) => {
 		if (testID && onPress) host.presses.set(testID, onPress);
-		if (testID) host.roles.set(testID, accessibilityRole);
+		if (testID) {
+			host.roles.set(testID, accessibilityRole);
+			host.states.set(testID, accessibilityState);
+			host.styles.set(testID, style);
+		}
 		return (
 			(typeof children === "function"
 				? children({ pressed: false })
@@ -117,6 +127,8 @@ vi.mock("@/ui/components/sheet", () => ({
 		host.classes = [];
 		host.presses.clear();
 		host.roles.clear();
+		host.states.clear();
+		host.styles.clear();
 		return (
 			<>
 				{children}
@@ -282,6 +294,22 @@ describe("the footer", () => {
 		expect(host.presses.has(CONTROL.askDismiss)).toBe(true);
 	});
 
+	it("keeps Dismiss… on the progress row at normal text, on its own row at large text", async () => {
+		await render([OPEN], { initialOpenAsk: "A" });
+		expect(host.classes).toContain("flex-row items-center gap-x-3");
+		/* Never narrower than the touch floor, whatever the language. */
+		expect(host.styles.get(CONTROL.askDismiss)).toEqual({
+			minHeight: 44,
+			minWidth: 44,
+		});
+		host.scale = 2;
+		await render([OPEN], { initialOpenAsk: "A" });
+		expect(host.classes).not.toContain("flex-row items-center gap-x-3");
+		expect(host.classes).toContain("gap-1");
+		expect(host.texts).toContain(t("mobile.asks.dismiss_open"));
+		expect(host.texts).toContain(t("mobile.asks.progress.pick_or_type"));
+	});
+
 	it("steps Dismiss… aside while the keyboard is up", async () => {
 		host.keyboardVisible = true;
 		await render([OPEN], { initialOpenAsk: "A" });
@@ -332,6 +360,18 @@ describe("the option rows' roles", () => {
 	it("gives a multi-select question checkbox rows", async () => {
 		await render([questionWith(true)], { initialOpenAsk: "M" });
 		expect(host.roles.get("ask-other-q1")).toBe("checkbox");
+	});
+	it("reports a multi-select row as checked, a single-select row as selected", async () => {
+		await render([questionWith(true)], { initialOpenAsk: "M" });
+		expect(host.states.get("ask-other-q1")).toEqual({
+			checked: false,
+			disabled: false,
+		});
+		await render([questionWith(false)], { initialOpenAsk: "M" });
+		expect(host.states.get("ask-other-q1")).toEqual({
+			selected: false,
+			disabled: false,
+		});
 	});
 	it("gives a single-select question radio rows", async () => {
 		await render([questionWith(false)], { initialOpenAsk: "M" });

@@ -55,7 +55,7 @@ export type ButtonProps = {
 	/** Grow to the height of the row this button shares, instead of hugging its
 	 *  own label: two buttons side by side must read as one pair even when one
 	 *  label wraps and the other does not. Opt-in; every other button keeps its
-	 *  own height. */
+	 *  own height. For `md` only: `sm`'s floor box sets its own height. */
 	fill?: boolean;
 	/** Short visual labels may need a more descriptive screen-reader name. */
 	accessibilityLabel?: string;

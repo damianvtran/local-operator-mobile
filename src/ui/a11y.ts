@@ -1606,22 +1606,28 @@ export const state = (options: {
 	busy?: boolean;
 	selected?: boolean;
 	expanded?: boolean;
+	/** A checkbox's own state (a multi-select option): `selected` is what a radio
+	 *  or a list row reports, `checked` is what ARIA's checkbox role reads. */
+	checked?: boolean;
 }): {
 	disabled?: boolean;
 	busy?: boolean;
 	selected?: boolean;
 	expanded?: boolean;
+	checked?: boolean;
 } => {
 	const out: {
 		disabled?: boolean;
 		busy?: boolean;
 		selected?: boolean;
 		expanded?: boolean;
+		checked?: boolean;
 	} = {};
 	if (options.disabled !== undefined) out.disabled = options.disabled;
 	if (options.busy !== undefined) out.busy = options.busy;
 	if (options.selected !== undefined) out.selected = options.selected;
 	if (options.expanded !== undefined) out.expanded = options.expanded;
+	if (options.checked !== undefined) out.checked = options.checked;
 	return out;
 };
 

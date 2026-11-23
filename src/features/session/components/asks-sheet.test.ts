@@ -201,7 +201,7 @@ describe("the asks sheet's card layout (ask-panel parity N1/N2/N4)", () => {
 		expect(SOURCE).toContain('t("mobile.asks.decline")');
 		expect(SOURCE).toContain('t("mobile.asks.dismiss_open")');
 		expect(SOURCE).not.toContain('label="Answer"');
-		const progress = at("progressLine ??");
+		const progress = at("{progressLine}");
 		const send = at('t("mobile.asks.send_answer")');
 		const dismiss = at('t("mobile.asks.dismiss_open")');
 		/* The pair, then ONE row holding why Send is grey and the quiet way out. */
