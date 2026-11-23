@@ -16,6 +16,8 @@ import accountRoutingContext from "@/i18n/catalogues/en/mobile.account_routing.c
 import accountRouting from "@/i18n/catalogues/en/mobile.account_routing.json";
 import agentAvatarContext from "@/i18n/catalogues/en/mobile.agent_avatar.context.json";
 import agentAvatar from "@/i18n/catalogues/en/mobile.agent_avatar.json";
+import asksContext from "@/i18n/catalogues/en/mobile.asks.context.json";
+import asks from "@/i18n/catalogues/en/mobile.asks.json";
 import chromeContext from "@/i18n/catalogues/en/mobile.chrome.context.json";
 import chrome from "@/i18n/catalogues/en/mobile.chrome.json";
 import commonContext from "@/i18n/catalogues/en/mobile.common.context.json";
@@ -98,6 +100,16 @@ const NAMESPACES = [
 		messages: signin,
 		context: signinContext,
 		expected: 32, // M3 S4 −1: the dead mobile.signin.diagnostics (no call site; the panel uses show_/hide_diagnostics) removed (33 − 1 = 32). M3 S2a +1: the loopback-unavailable detail (32 + 1 = 33); 18 + 14: S1 sign-in panel, sign-in/welcome screens (M3 slice S1)
+	},
+	{
+		name: "mobile.asks",
+		messages: asks,
+		context: asksContext,
+		// Ask-panel parity: send/decline/dismiss labels and hints, the dismiss
+		// reasons, the "Settled" heading, the footer progress lines, and every
+		// string the panel used to hardcode (14 in the first slice, + 23 in the
+		// review remediation = 37), counted over the en JSON.
+		expected: 37,
 	},
 	{
 		name: "mobile.oauth",
@@ -527,6 +539,10 @@ const IDENTICAL_BY_DESIGN_JUDGED: Readonly<
 > = {
 	en: {},
 	fr: {
+		"mobile.asks.title_fallback":
+			"« Questions » is the French word too, spelled as in English; the relay page's French catalogue uses it for the same panel.",
+		"mobile.asks.urgent":
+			"« · Urgent » is the French word, spelled as in English (the relay page's French suffix is the lowercase `relay.asks.card.urgent`).",
 		"mobile.sidebar.sections":
 			"« Sections » is the French word for the drawer's sections, spelled as in English; the desktop's French catalogue uses the same word (`ui.chat.sidebar_view.sections`).",
 		"mobile.settings.account.app_name":

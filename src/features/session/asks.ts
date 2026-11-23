@@ -101,9 +101,11 @@ export function isAnswerable(status: string): boolean {
  *  disagree (a timed-out ask has no submit path, not merely a hidden button).
  *
  *  Mirrors the desktop's `canAnswer`/`canDecline` (`open` only) and the relay
- *  card's lapsed branch (Dismiss only). Dismiss is `timed_out` only: dismissing
- *  answers nobody, so offering it on an open ask would let it shadow an
- *  in-window answer (the queue's own rule, `asks/store.py` fold order). */
+ *  card's two doors: a LAPSED ask goes at once (Dismiss only, no reason — the
+ *  agent already walked past it), and an OPEN ask can be dismissed too, but only
+ *  with a reason (`DISMISS_REASONS`), because it is still owed an answer and the
+ *  agent has to be told why none is coming. Dismissing answers nobody, so it is
+ *  a third, quiet action and never a second button beside Decline. */
 export function askActions(status: string): {
 	respond: boolean;
 	decline: boolean;
@@ -113,8 +115,21 @@ export function askActions(status: string): {
 	return {
 		respond: answerable,
 		decline: answerable,
-		dismiss: isLapsed(status),
+		dismiss: answerable || isLapsed(status),
 	};
+}
+
+/** Why a WAITING ask is being dismissed — the two reasons the runtime accepts
+ *  (`asks/store.py` `DISMISS_REASONS`), in the order the sheet offers them. A
+ *  lapsed ask carries none: its one-tap dismissal keeps the body every older
+ *  daemon accepts. */
+export const DISMISS_REASONS = ["moot", "answered_in_chat"] as const;
+export type DismissReason = (typeof DISMISS_REASONS)[number];
+
+/** Whether dismissing this ask must say why: only a waiting one (see
+ *  `askActions`). */
+export function dismissNeedsReason(status: string): boolean {
+	return isAnswerable(status);
 }
 
 /** Whether an ask is still WAITING on the reader — `open`, and nothing else.
@@ -387,6 +402,55 @@ export function orderedForDisplay(
 	const first = dockAsk(list);
 	if (first === null) return [...list];
 	return [first, ...list.filter((row) => row.ask_id !== first.ask_id)];
+}
+
+/** The sheet's two bands, in display order: the asks that still show a card
+ *  (waiting, lapsed, and an expired one drawn read-only) and the settled ones
+ *  under "Earlier". Splitting AFTER `orderedForDisplay` keeps the ask the bar
+ *  names first in its band, so the card the reader opens is the one they read.
+ *
+ *  WHY SETTLED ASKS ARE A BAND OF THEIR OWN. An answered ask used to sit between
+ *  the open card's options and the pinned buttons; one that has nothing left to
+ *  do belongs below everything that still does (ask-panel parity, §2). */
+export function askBands(rows: PendingAsk[] | undefined | null): {
+	current: PendingAsk[];
+	earlier: PendingAsk[];
+} {
+	const current: PendingAsk[] = [];
+	const earlier: PendingAsk[] = [];
+	for (const row of orderedForDisplay(rows)) {
+		const status = String(row.status || "open");
+		if (isOutstanding(status) || isLapsed(status) || status === "expired")
+			current.push(row);
+		else earlier.push(row);
+	}
+	return { current, earlier };
+}
+
+/** What the footer's quiet line says while Send is disabled, or `null` when the
+ *  button is live (or was never the reader's to press). A multi-question ask
+ *  names how far along the form is; a single question says what it takes. The
+ *  numbers count the ask's OWN questions: one taken elsewhere counts as
+ *  answered, as it does for the gate. */
+export type AskProgress =
+	| { kind: "tally"; answered: number; total: number }
+	| { kind: "pick_or_type" }
+	| { kind: "type" };
+
+export function askProgress(input: {
+	total: number;
+	unfilled: number;
+	hasOptions: boolean;
+}): AskProgress | null {
+	if (input.unfilled <= 0 || input.total <= 0) return null;
+	if (input.total > 1) {
+		return {
+			kind: "tally",
+			answered: Math.max(0, input.total - input.unfilled),
+			total: input.total,
+		};
+	}
+	return input.hasOptions ? { kind: "pick_or_type" } : { kind: "type" };
 }
 
 /** A signature of the frames' own outstanding-ask population, for the asks

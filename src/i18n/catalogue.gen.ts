@@ -47,6 +47,43 @@ export type CatalogueKey =
 	| "mobile.account_routing.unsaved"
 	| "mobile.agent_avatar.edit_hint"
 	| "mobile.agent_avatar.label"
+	| "mobile.asks.answer_label"
+	| "mobile.asks.answer_placeholder"
+	| "mobile.asks.choose_any"
+	| "mobile.asks.deadline_ago"
+	| "mobile.asks.decline"
+	| "mobile.asks.decline_hint"
+	| "mobile.asks.dismiss"
+	| "mobile.asks.dismiss_open"
+	| "mobile.asks.dismiss_reason.chat"
+	| "mobile.asks.dismiss_reason.chat_note"
+	| "mobile.asks.dismiss_reason.moot"
+	| "mobile.asks.dismiss_reason.moot_note"
+	| "mobile.asks.dismiss_title"
+	| "mobile.asks.empty"
+	| "mobile.asks.honesty"
+	| "mobile.asks.loading"
+	| "mobile.asks.none_recorded"
+	| "mobile.asks.nothing_left"
+	| "mobile.asks.open_conversation"
+	| "mobile.asks.other_hint"
+	| "mobile.asks.other_kept"
+	| "mobile.asks.other_label"
+	| "mobile.asks.progress.pick_or_type"
+	| "mobile.asks.progress.tally"
+	| "mobile.asks.progress.type"
+	| "mobile.asks.recommended"
+	| "mobile.asks.secret_notice"
+	| "mobile.asks.secret_notice_saved"
+	| "mobile.asks.secret_placeholder"
+	| "mobile.asks.send_answer"
+	| "mobile.asks.send_answers"
+	| "mobile.asks.settled"
+	| "mobile.asks.skip"
+	| "mobile.asks.title_fallback"
+	| "mobile.asks.truncated"
+	| "mobile.asks.unskip"
+	| "mobile.asks.urgent"
 	| "mobile.chrome.clear_search"
 	| "mobile.chrome.close_conversations"
 	| "mobile.chrome.composer.dismiss_keyboard"
@@ -1446,6 +1483,39 @@ export type NoParamKey =
 	| "mobile.account_routing.unsaved"
 	| "mobile.agent_avatar.edit_hint"
 	| "mobile.agent_avatar.label"
+	| "mobile.asks.answer_placeholder"
+	| "mobile.asks.choose_any"
+	| "mobile.asks.decline"
+	| "mobile.asks.decline_hint"
+	| "mobile.asks.dismiss"
+	| "mobile.asks.dismiss_open"
+	| "mobile.asks.dismiss_reason.chat"
+	| "mobile.asks.dismiss_reason.chat_note"
+	| "mobile.asks.dismiss_reason.moot"
+	| "mobile.asks.dismiss_reason.moot_note"
+	| "mobile.asks.empty"
+	| "mobile.asks.honesty"
+	| "mobile.asks.loading"
+	| "mobile.asks.none_recorded"
+	| "mobile.asks.nothing_left"
+	| "mobile.asks.open_conversation"
+	| "mobile.asks.other_hint"
+	| "mobile.asks.other_kept"
+	| "mobile.asks.other_label"
+	| "mobile.asks.progress.pick_or_type"
+	| "mobile.asks.progress.type"
+	| "mobile.asks.recommended"
+	| "mobile.asks.secret_notice"
+	| "mobile.asks.secret_notice_saved"
+	| "mobile.asks.secret_placeholder"
+	| "mobile.asks.send_answer"
+	| "mobile.asks.send_answers"
+	| "mobile.asks.settled"
+	| "mobile.asks.skip"
+	| "mobile.asks.title_fallback"
+	| "mobile.asks.truncated"
+	| "mobile.asks.unskip"
+	| "mobile.asks.urgent"
 	| "mobile.chrome.clear_search"
 	| "mobile.chrome.close_conversations"
 	| "mobile.chrome.composer.dismiss_keyboard"
@@ -2598,6 +2668,43 @@ export type MessageParams = {
 	"mobile.account_routing.unsaved": NoParams;
 	"mobile.agent_avatar.edit_hint": NoParams;
 	"mobile.agent_avatar.label": NoParams;
+	"mobile.asks.answer_label": { question: string | number };
+	"mobile.asks.answer_placeholder": NoParams;
+	"mobile.asks.choose_any": NoParams;
+	"mobile.asks.deadline_ago": { duration: string | number };
+	"mobile.asks.decline": NoParams;
+	"mobile.asks.decline_hint": NoParams;
+	"mobile.asks.dismiss": NoParams;
+	"mobile.asks.dismiss_open": NoParams;
+	"mobile.asks.dismiss_reason.chat": NoParams;
+	"mobile.asks.dismiss_reason.chat_note": NoParams;
+	"mobile.asks.dismiss_reason.moot": NoParams;
+	"mobile.asks.dismiss_reason.moot_note": NoParams;
+	"mobile.asks.dismiss_title": { count: number };
+	"mobile.asks.empty": NoParams;
+	"mobile.asks.honesty": NoParams;
+	"mobile.asks.loading": NoParams;
+	"mobile.asks.none_recorded": NoParams;
+	"mobile.asks.nothing_left": NoParams;
+	"mobile.asks.open_conversation": NoParams;
+	"mobile.asks.other_hint": NoParams;
+	"mobile.asks.other_kept": NoParams;
+	"mobile.asks.other_label": NoParams;
+	"mobile.asks.progress.pick_or_type": NoParams;
+	"mobile.asks.progress.tally": { answered: string | number; total: string | number };
+	"mobile.asks.progress.type": NoParams;
+	"mobile.asks.recommended": NoParams;
+	"mobile.asks.secret_notice": NoParams;
+	"mobile.asks.secret_notice_saved": NoParams;
+	"mobile.asks.secret_placeholder": NoParams;
+	"mobile.asks.send_answer": NoParams;
+	"mobile.asks.send_answers": NoParams;
+	"mobile.asks.settled": NoParams;
+	"mobile.asks.skip": NoParams;
+	"mobile.asks.title_fallback": NoParams;
+	"mobile.asks.truncated": NoParams;
+	"mobile.asks.unskip": NoParams;
+	"mobile.asks.urgent": NoParams;
 	"mobile.chrome.clear_search": NoParams;
 	"mobile.chrome.close_conversations": NoParams;
 	"mobile.chrome.composer.dismiss_keyboard": NoParams;
@@ -4013,6 +4120,43 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.account_routing.unsaved": "Not saved yet.",
 	"mobile.agent_avatar.edit_hint": "Change this picture in the desktop app",
 	"mobile.agent_avatar.label": "Agent picture",
+	"mobile.asks.answer_label": "Your answer to: {question}",
+	"mobile.asks.answer_placeholder": "Your answer",
+	"mobile.asks.choose_any": "Choose any that apply",
+	"mobile.asks.deadline_ago": "Deadline passed {duration} ago",
+	"mobile.asks.decline": "Decline",
+	"mobile.asks.decline_hint": "No answer is sent. The agent decides on its own.",
+	"mobile.asks.dismiss": "Dismiss",
+	"mobile.asks.dismiss_open": "Dismiss…",
+	"mobile.asks.dismiss_reason.chat": "Answered in the conversation",
+	"mobile.asks.dismiss_reason.chat_note": "You already replied in the conversation",
+	"mobile.asks.dismiss_reason.moot": "No longer needed",
+	"mobile.asks.dismiss_reason.moot_note": "The agent stops waiting for an answer",
+	"mobile.asks.dismiss_title": "{count, plural, one {Dismiss this question} other {Dismiss these questions}}",
+	"mobile.asks.empty": "Nothing waiting. Questions from the agent will appear here.",
+	"mobile.asks.honesty": "This app shows queued questions while it is open. It cannot reach you while it is closed.",
+	"mobile.asks.loading": "Reading questions…",
+	"mobile.asks.none_recorded": "No answer was recorded for this question.",
+	"mobile.asks.nothing_left": "Nothing left to answer here. These questions were already handled on another screen or device.",
+	"mobile.asks.open_conversation": "Open conversation",
+	"mobile.asks.other_hint": "Type your answer",
+	"mobile.asks.other_kept": "Your text is kept, not sent",
+	"mobile.asks.other_label": "Other",
+	"mobile.asks.progress.pick_or_type": "Pick an option or type your own answer to send.",
+	"mobile.asks.progress.tally": "{answered} of {total} questions answered or skipped",
+	"mobile.asks.progress.type": "Type an answer or skip the question to send.",
+	"mobile.asks.recommended": "· Recommended",
+	"mobile.asks.secret_notice": "Secret: sent directly, not shown in the transcript",
+	"mobile.asks.secret_notice_saved": "Secret: sent directly, not shown in the transcript, and saved on the computer for reuse",
+	"mobile.asks.secret_placeholder": "Secret value",
+	"mobile.asks.send_answer": "Send answer",
+	"mobile.asks.send_answers": "Send answers",
+	"mobile.asks.settled": "Settled",
+	"mobile.asks.skip": "Skip (send no answer)",
+	"mobile.asks.title_fallback": "Questions",
+	"mobile.asks.truncated": "Showing the newest questions. Open a conversation to see the rest.",
+	"mobile.asks.unskip": "Answer this question",
+	"mobile.asks.urgent": "· Urgent",
 	"mobile.chrome.clear_search": "Clear search",
 	"mobile.chrome.close_conversations": "Close conversations",
 	"mobile.chrome.composer.dismiss_keyboard": "Dismiss keyboard",
@@ -5413,6 +5557,43 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.account_routing.unsaved": { role: "status", note: "A selected draft differs from the backend value; changing radio alone does not persist." },
 	"mobile.agent_avatar.edit_hint": { role: "help", note: "Shown as a toast when the reader taps or long-presses the agent's picture in a conversation header, and read as that control's accessibility hint. The phone app cannot edit agent pictures; the Local Operator desktop app can. Keep \"desktop app\" generic (no product name). No final full stop." },
 	"mobile.agent_avatar.label": { role: "button", note: "Accessible name of the agent's profile picture in a conversation header (a decorative picture that is also a button explaining where to change it). A noun phrase, not an action. \"Agent\" is the product term for the AI assistant the conversation runs. No final full stop." },
+	"mobile.asks.answer_label": { role: "help", note: "Accessibility name of the free-text field. {question} is the question text, supplied by the agent and never translated." },
+	"mobile.asks.answer_placeholder": { role: "help", note: "Placeholder of the free-text answer field. No final full stop." },
+	"mobile.asks.choose_any": { role: "help", note: "Caption above the options of a multi-select question. No final full stop." },
+	"mobile.asks.deadline_ago": { role: "meta", note: "Meta line on an ask whose deadline has passed. {duration} is a compact elapsed time such as \"5 m\" or \"2 h\", supplied by the app; it must survive translation. No final full stop." },
+	"mobile.asks.decline": { role: "button", note: "Danger button beside the send button. Tells the agent no answer is coming and it should decide itself; unlike Dismiss it answers the agent. Verb, sentence case, no final full stop." },
+	"mobile.asks.decline_hint": { role: "help", note: "Accessibility hint read after the Decline button. Two short sentences with final full stops: nothing is sent as an answer, and the agent decides on its own." },
+	"mobile.asks.dismiss": { role: "button", note: "Quiet button on an ask whose deadline already passed (the agent went ahead). One press removes it at once and asks nothing. No ellipsis, no final full stop. Use a DIFFERENT phrase from the skip-question action in every language (vi: do not reuse the skip phrase). vi uses \"Đóng\" here and \"Bỏ qua\" only for skip." },
+	"mobile.asks.dismiss_open": { role: "button", note: "Quiet link under the send and decline buttons of a waiting ask. It opens a choice of two reasons rather than acting at once, which the trailing ellipsis says: keep an ellipsis character. Same verb as the plain Dismiss key. Sentence case, no final full stop." },
+	"mobile.asks.dismiss_reason.chat": { role: "button", note: "Second dismissal reason: the reader already gave the answer in the conversation itself. Sentence case, no final full stop. hi and zh-CN: use ONE word for \"conversation\" here and in its note (never chat in one and conversation in the other)." },
+	"mobile.asks.dismiss_reason.chat_note": { role: "help", note: "Second line of the \"Answered in the conversation\" reason: what happened. Sentence case, no final full stop. Same word for \"conversation\" as the label." },
+	"mobile.asks.dismiss_reason.moot": { role: "button", note: "First dismissal reason: the question no longer matters. Sentence case, no final full stop." },
+	"mobile.asks.dismiss_reason.moot_note": { role: "help", note: "Second line of the \"No longer needed\" reason: what the agent will do. Sentence case with a capital first letter, no final full stop." },
+	"mobile.asks.dismiss_title": { role: "heading", note: "Heading above the two dismissal reasons. {count} is the number of questions the ask holds (always at least 1): the singular names one question, the plural all of them. Use the plural arms your language needs (ru: one/few/many/other; es and fr: one/many/other); a language without number may use one neutral form. No final full stop. vi, zh-CN: no number agreement, one neutral form." },
+	"mobile.asks.empty": { role: "status", note: "Empty state of the asks sheet when nothing is waiting. Two short sentences with final full stops. \"The agent\" is the AI agent running on the reader's computer." },
+	"mobile.asks.honesty": { role: "status", note: "Quiet closing line of the asks sheet: the app can only show queued questions while it is open and cannot alert the reader when closed. Two sentences with final full stops." },
+	"mobile.asks.loading": { role: "status", note: "Shown while the sheet reads the queued questions. Ends with the ellipsis character; keep it." },
+	"mobile.asks.none_recorded": { role: "status", note: "Shown in a settled ask that recorded no answer. One sentence with a final full stop." },
+	"mobile.asks.nothing_left": { role: "status", note: "Shown in an ask card whose questions were all taken by another surface (terminal, desktop) so nothing is left to answer here. Two sentences with final full stops." },
+	"mobile.asks.open_conversation": { role: "button", note: "Accessible name of the icon button that opens the conversation an ask came from. Verb phrase, no final full stop." },
+	"mobile.asks.other_hint": { role: "help", note: "Quiet text beside the Other label and the field's accessibility hint: tells the reader they can type their own answer. No final full stop." },
+	"mobile.asks.other_kept": { role: "help", note: "Replaces the Other hint when the free-text row is closed but still holds what the reader typed. States that the text is kept in the app and has NOT been sent. No final full stop." },
+	"mobile.asks.other_label": { role: "button", note: "Label of the free-text answer row at the end of every option list. One word, no final full stop." },
+	"mobile.asks.progress.pick_or_type": { role: "status", note: "Quiet line above the send button while it is disabled, for ONE question that offers options: pick an offered option or type your own answer. Full sentence with a final full stop." },
+	"mobile.asks.progress.tally": { role: "status", note: "Quiet line above the send button while it is disabled, for an ask with several questions. {answered} is how many questions have been answered or skipped; {total} how many there are. Both are non-negative integers and must survive translation; {answered} never exceeds {total}. A label before the numbers avoids participle agreement. No final full stop." },
+	"mobile.asks.progress.type": { role: "status", note: "Quiet line above the send button while it is disabled, for ONE question that offers no options: type an answer, or skip the question. Full sentence with a final full stop." },
+	"mobile.asks.recommended": { role: "meta", note: "Suffix after an option label marking the agent's recommended option. Keep the leading middle dot. Capitalised after the dot (sentence-case rule); the relay web page's lowercase wording is a follow-up. No final full stop." },
+	"mobile.asks.secret_notice": { role: "help", note: "Caption on a question whose answer is a secret: it is sent straight to the agent and not written into the visible transcript. Keep the colon (or the locale's equivalent). No final full stop." },
+	"mobile.asks.secret_notice_saved": { role: "help", note: "Same caption as the plain secret notice, with the extra fact that the value is also saved on the computer for reuse. Keep it a superset of the plain wording. No final full stop, like the plain notice." },
+	"mobile.asks.secret_placeholder": { role: "help", note: "Placeholder of the masked field for a secret answer. No final full stop." },
+	"mobile.asks.send_answer": { role: "button", note: "Primary button of the open ask card, pinned in the sheet footer, when the ask has ONE question. Sends the reader's answer to the agent. Verb phrase, sentence case, capital first letter, no final full stop." },
+	"mobile.asks.send_answers": { role: "button", note: "Primary button when the ask has SEVERAL questions: one press sends every answer together. Same wording family as the singular key; a language that does not mark number may use the same words. Sentence case, no final full stop." },
+	"mobile.asks.settled": { role: "heading", note: "Heading above asks that are already settled (answered, declined or dismissed), below everything still waiting. Matches the desktop app's \"Settled\" asks heading. Mean closed/dealt with, not \"earlier\" or \"first\" in time. Sentence case, one word in English, no final full stop. RISKIEST for translators: hi/ur/vi/zh-CN/ru picked the \"settled / dealt with\" sense; the \"earlier\" sense of the old label is wrong." },
+	"mobile.asks.skip": { role: "button", note: "Link under a question that lets the reader send NO answer to it (an empty answer is accepted by the queue). The parenthesis explains the consequence. Do not reuse the Dismiss phrase. No final full stop." },
+	"mobile.asks.title_fallback": { role: "heading", note: "Title of the asks sheet when it has no count sentence to show (nothing waiting or lapsed). One word, no final full stop." },
+	"mobile.asks.truncated": { role: "status", note: "Line above the list when the relay returned only the newest questions. Two sentences with final full stops." },
+	"mobile.asks.unskip": { role: "button", note: "Link shown after the reader skipped a question: takes the skip back so the question can be answered. No final full stop." },
+	"mobile.asks.urgent": { role: "meta", note: "Suffix after an ask's state line marking it urgent. Keep the leading middle dot. Capitalised after the dot (sentence-case rule); the relay web page's lowercase wording is a follow-up. No final full stop." },
 	"mobile.chrome.clear_search": { role: "button", note: "Accessible name of the small × inside the sidebar's search field; it empties the search text. Shown only while the field has text. No final full stop." },
 	"mobile.chrome.close_conversations": { role: "button", note: "Accessible name (screen readers only, never shown) of two controls that both dismiss the conversations sidebar: the ✕ in the sidebar header and the dimmed page strip beside the open sidebar. 'Conversations' is the sidebar's list of chat sessions, not one conversation. Imperative, no final full stop." },
 	"mobile.chrome.composer.dismiss_keyboard": { role: "button", note: "Build389 shared composer context strip / exclusive home presentation. Preserve {count} plural and {host} parameters where present." },
@@ -6827,6 +7008,43 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.account_routing.unsaved": "Aún sin guardar.",
 		"mobile.agent_avatar.edit_hint": "Cambia esta imagen en la aplicación de escritorio",
 		"mobile.agent_avatar.label": "Imagen del agente",
+		"mobile.asks.answer_label": "Tu respuesta a: {question}",
+		"mobile.asks.answer_placeholder": "Tu respuesta",
+		"mobile.asks.choose_any": "Elige las que correspondan",
+		"mobile.asks.deadline_ago": "Plazo vencido hace {duration}",
+		"mobile.asks.decline": "Rechazar",
+		"mobile.asks.decline_hint": "No se envía ninguna respuesta. El agente decide por su cuenta.",
+		"mobile.asks.dismiss": "Descartar",
+		"mobile.asks.dismiss_open": "Descartar…",
+		"mobile.asks.dismiss_reason.chat": "Respondida en la conversación",
+		"mobile.asks.dismiss_reason.chat_note": "Ya respondiste en la conversación",
+		"mobile.asks.dismiss_reason.moot": "Ya no hace falta",
+		"mobile.asks.dismiss_reason.moot_note": "El agente deja de esperar una respuesta",
+		"mobile.asks.dismiss_title": "{count, plural, one {Descartar esta pregunta} many {Descartar estas preguntas} other {Descartar estas preguntas}}",
+		"mobile.asks.empty": "Nada en espera. Las preguntas del agente aparecerán aquí.",
+		"mobile.asks.honesty": "Esta aplicación muestra las preguntas en espera mientras está abierta. No puede avisarte cuando está cerrada.",
+		"mobile.asks.loading": "Leyendo preguntas…",
+		"mobile.asks.none_recorded": "No se registró ninguna respuesta para esta pregunta.",
+		"mobile.asks.nothing_left": "No queda nada que responder aquí. Estas preguntas ya se atendieron en otra pantalla o dispositivo.",
+		"mobile.asks.open_conversation": "Abrir conversación",
+		"mobile.asks.other_hint": "Escribe tu respuesta",
+		"mobile.asks.other_kept": "Tu texto se conserva, no se envía",
+		"mobile.asks.other_label": "Otro",
+		"mobile.asks.progress.pick_or_type": "Elige una opción o escribe tu propia respuesta para enviar.",
+		"mobile.asks.progress.tally": "{answered} de {total} preguntas respondidas u omitidas",
+		"mobile.asks.progress.type": "Escribe una respuesta u omite la pregunta para enviar.",
+		"mobile.asks.recommended": "· Recomendado",
+		"mobile.asks.secret_notice": "Secreto: se envía directamente y no aparece en la transcripción",
+		"mobile.asks.secret_notice_saved": "Secreto: se envía directamente, no aparece en la transcripción y se guarda en el ordenador para reutilizarlo",
+		"mobile.asks.secret_placeholder": "Valor secreto",
+		"mobile.asks.send_answer": "Enviar respuesta",
+		"mobile.asks.send_answers": "Enviar respuestas",
+		"mobile.asks.settled": "Atendidas",
+		"mobile.asks.skip": "Omitir (no enviar respuesta)",
+		"mobile.asks.title_fallback": "Preguntas",
+		"mobile.asks.truncated": "Se muestran las preguntas más recientes. Abre una conversación para ver el resto.",
+		"mobile.asks.unskip": "Responder esta pregunta",
+		"mobile.asks.urgent": "· Urgente",
 		"mobile.chrome.clear_search": "Borrar búsqueda",
 		"mobile.chrome.close_conversations": "Cerrar conversaciones",
 		"mobile.chrome.composer.dismiss_keyboard": "Ocultar teclado",
@@ -8225,6 +8443,43 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.account_routing.unsaved": "Pas encore enregistré.",
 		"mobile.agent_avatar.edit_hint": "Modifiez cette photo dans l’application de bureau",
 		"mobile.agent_avatar.label": "Photo de l’agent",
+		"mobile.asks.answer_label": "Votre réponse à : {question}",
+		"mobile.asks.answer_placeholder": "Votre réponse",
+		"mobile.asks.choose_any": "Choisissez tout ce qui s’applique",
+		"mobile.asks.deadline_ago": "Échéance dépassée depuis {duration}",
+		"mobile.asks.decline": "Refuser",
+		"mobile.asks.decline_hint": "Aucune réponse n’est envoyée. L’agent décide seul.",
+		"mobile.asks.dismiss": "Ignorer",
+		"mobile.asks.dismiss_open": "Ignorer…",
+		"mobile.asks.dismiss_reason.chat": "Répondu dans la conversation",
+		"mobile.asks.dismiss_reason.chat_note": "Vous avez déjà répondu dans la conversation",
+		"mobile.asks.dismiss_reason.moot": "Plus nécessaire",
+		"mobile.asks.dismiss_reason.moot_note": "L’agent cesse d’attendre une réponse",
+		"mobile.asks.dismiss_title": "{count, plural, one {Ignorer cette question} many {Ignorer ces questions} other {Ignorer ces questions}}",
+		"mobile.asks.empty": "Rien en attente. Les questions de l’agent apparaîtront ici.",
+		"mobile.asks.honesty": "Cette application affiche les questions en attente tant qu’elle est ouverte. Elle ne peut pas vous joindre lorsqu’elle est fermée.",
+		"mobile.asks.loading": "Lecture des questions…",
+		"mobile.asks.none_recorded": "Aucune réponse n’a été enregistrée pour cette question.",
+		"mobile.asks.nothing_left": "Plus rien à répondre ici. Ces questions ont déjà été traitées sur un autre écran ou appareil.",
+		"mobile.asks.open_conversation": "Ouvrir la conversation",
+		"mobile.asks.other_hint": "Saisissez votre réponse",
+		"mobile.asks.other_kept": "Votre texte est conservé, non envoyé",
+		"mobile.asks.other_label": "Autre",
+		"mobile.asks.progress.pick_or_type": "Choisissez une option ou saisissez votre propre réponse pour envoyer.",
+		"mobile.asks.progress.tally": "{answered} sur {total} questions répondues ou passées",
+		"mobile.asks.progress.type": "Saisissez une réponse ou passez la question pour envoyer.",
+		"mobile.asks.recommended": "· Recommandé",
+		"mobile.asks.secret_notice": "Secret : envoyé directement, non affiché dans la transcription",
+		"mobile.asks.secret_notice_saved": "Secret : envoyé directement, non affiché dans la transcription, et enregistré sur l’ordinateur pour être réutilisé",
+		"mobile.asks.secret_placeholder": "Valeur secrète",
+		"mobile.asks.send_answer": "Envoyer la réponse",
+		"mobile.asks.send_answers": "Envoyer les réponses",
+		"mobile.asks.settled": "Traitées",
+		"mobile.asks.skip": "Passer (sans réponse)",
+		"mobile.asks.title_fallback": "Questions",
+		"mobile.asks.truncated": "Affichage des questions les plus récentes. Ouvrez une conversation pour voir le reste.",
+		"mobile.asks.unskip": "Répondre à cette question",
+		"mobile.asks.urgent": "· Urgent",
 		"mobile.chrome.clear_search": "Effacer la recherche",
 		"mobile.chrome.close_conversations": "Fermer les conversations",
 		"mobile.chrome.composer.dismiss_keyboard": "Masquer le clavier",
@@ -9623,6 +9878,43 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.account_routing.unsaved": "अभी सहेजा नहीं गया।",
 		"mobile.agent_avatar.edit_hint": "यह तस्वीर डेस्कटॉप ऐप में बदलें",
 		"mobile.agent_avatar.label": "एजेंट की तस्वीर",
+		"mobile.asks.answer_label": "इस सवाल पर आपका उत्तर: {question}",
+		"mobile.asks.answer_placeholder": "आपका उत्तर",
+		"mobile.asks.choose_any": "जो लागू हों, उन्हें चुनें",
+		"mobile.asks.deadline_ago": "समय-सीमा {duration} पहले बीत गई",
+		"mobile.asks.decline": "अस्वीकार करें",
+		"mobile.asks.decline_hint": "कोई उत्तर नहीं भेजा जाता। एजेंट खुद तय करता है।",
+		"mobile.asks.dismiss": "हटाएँ",
+		"mobile.asks.dismiss_open": "हटाएँ…",
+		"mobile.asks.dismiss_reason.chat": "बातचीत में जवाब दिया गया",
+		"mobile.asks.dismiss_reason.chat_note": "आप पहले ही बातचीत में जवाब दे चुके हैं",
+		"mobile.asks.dismiss_reason.moot": "अब ज़रूरत नहीं",
+		"mobile.asks.dismiss_reason.moot_note": "एजेंट जवाब का इंतज़ार करना बंद कर देता है",
+		"mobile.asks.dismiss_title": "{count, plural, one {इस सवाल को हटाएँ} other {इन सवालों को हटाएँ}}",
+		"mobile.asks.empty": "कुछ भी प्रतीक्षा में नहीं है। एजेंट के सवाल यहाँ दिखाई देंगे।",
+		"mobile.asks.honesty": "यह ऐप खुले रहने पर कतार में लगे सवाल दिखाता है। बंद होने पर यह आप तक नहीं पहुँच सकता।",
+		"mobile.asks.loading": "सवाल पढ़े जा रहे हैं…",
+		"mobile.asks.none_recorded": "इस सवाल का कोई उत्तर दर्ज नहीं हुआ।",
+		"mobile.asks.nothing_left": "यहाँ उत्तर देने के लिए कुछ नहीं बचा। किसी और जगह ने ये सवाल पहले ही ले लिए हैं।",
+		"mobile.asks.open_conversation": "बातचीत खोलें",
+		"mobile.asks.other_hint": "अपना उत्तर लिखें",
+		"mobile.asks.other_kept": "आपका टेक्स्ट सहेजा गया है, भेजा नहीं गया",
+		"mobile.asks.other_label": "अन्य",
+		"mobile.asks.progress.pick_or_type": "भेजने के लिए कोई विकल्प चुनें या अपना जवाब लिखें।",
+		"mobile.asks.progress.tally": "{total} में से {answered} सवालों के जवाब दिए गए या छोड़े गए",
+		"mobile.asks.progress.type": "भेजने के लिए जवाब लिखें या सवाल छोड़ दें।",
+		"mobile.asks.recommended": "· अनुशंसित",
+		"mobile.asks.secret_notice": "गुप्त: सीधे भेजा गया, ट्रांसक्रिप्ट में नहीं दिखाया गया",
+		"mobile.asks.secret_notice_saved": "गुप्त: सीधे भेजा गया, ट्रांसक्रिप्ट में नहीं दिखाया गया, और दोबारा उपयोग के लिए कंप्यूटर पर सहेजा गया",
+		"mobile.asks.secret_placeholder": "गुप्त मान",
+		"mobile.asks.send_answer": "उत्तर भेजें",
+		"mobile.asks.send_answers": "उत्तर भेजें",
+		"mobile.asks.settled": "निपटाए गए",
+		"mobile.asks.skip": "छोड़ें (उत्तर न भेजें)",
+		"mobile.asks.title_fallback": "सवाल",
+		"mobile.asks.truncated": "सबसे नए सवाल दिखाए जा रहे हैं। बाकी देखने के लिए कोई बातचीत खोलें।",
+		"mobile.asks.unskip": "इस सवाल का उत्तर दें",
+		"mobile.asks.urgent": "· अत्यावश्यक",
 		"mobile.chrome.clear_search": "खोज साफ़ करें",
 		"mobile.chrome.close_conversations": "बातचीत बंद करें",
 		"mobile.chrome.composer.dismiss_keyboard": "कीबोर्ड छिपाएँ",
@@ -11021,6 +11313,43 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.account_routing.unsaved": "Ещё не сохранено.",
 		"mobile.agent_avatar.edit_hint": "Изменить это изображение можно в приложении для компьютера",
 		"mobile.agent_avatar.label": "Изображение агента",
+		"mobile.asks.answer_label": "Ваш ответ на вопрос: {question}",
+		"mobile.asks.answer_placeholder": "Ваш ответ",
+		"mobile.asks.choose_any": "Выберите все подходящие",
+		"mobile.asks.deadline_ago": "Срок истёк {duration} назад",
+		"mobile.asks.decline": "Отклонить",
+		"mobile.asks.decline_hint": "Ответ не отправляется. Агент решает сам.",
+		"mobile.asks.dismiss": "Убрать",
+		"mobile.asks.dismiss_open": "Убрать…",
+		"mobile.asks.dismiss_reason.chat": "Ответ дан в беседе",
+		"mobile.asks.dismiss_reason.chat_note": "Вы уже ответили в беседе",
+		"mobile.asks.dismiss_reason.moot": "Больше не нужно",
+		"mobile.asks.dismiss_reason.moot_note": "Агент перестаёт ждать ответа",
+		"mobile.asks.dismiss_title": "{count, plural, one {Убрать этот вопрос} few {Убрать эти вопросы} many {Убрать эти вопросы} other {Убрать эти вопросы}}",
+		"mobile.asks.empty": "Ничего не ждёт. Вопросы агента появятся здесь.",
+		"mobile.asks.honesty": "Это приложение показывает вопросы в очереди, пока оно открыто. Когда оно закрыто, оно не может вас уведомить.",
+		"mobile.asks.loading": "Чтение вопросов…",
+		"mobile.asks.none_recorded": "Для этого вопроса ответ не записан.",
+		"mobile.asks.nothing_left": "Здесь больше нечего отвечать. Эти вопросы уже обработаны на другом экране или устройстве.",
+		"mobile.asks.open_conversation": "Открыть беседу",
+		"mobile.asks.other_hint": "Введите ваш ответ",
+		"mobile.asks.other_kept": "Ваш текст сохранён, но не отправлен",
+		"mobile.asks.other_label": "Другое",
+		"mobile.asks.progress.pick_or_type": "Выберите вариант или напишите свой ответ, чтобы отправить.",
+		"mobile.asks.progress.tally": "Отвечено или пропущено вопросов: {answered} из {total}",
+		"mobile.asks.progress.type": "Введите ответ или пропустите вопрос, чтобы отправить.",
+		"mobile.asks.recommended": "· Рекомендовано",
+		"mobile.asks.secret_notice": "Секрет: отправлен напрямую, в транскрипте не отображается",
+		"mobile.asks.secret_notice_saved": "Секрет: отправлен напрямую, в транскрипте не отображается и сохранён на компьютере для повторного использования",
+		"mobile.asks.secret_placeholder": "Секретное значение",
+		"mobile.asks.send_answer": "Отправить ответ",
+		"mobile.asks.send_answers": "Отправить ответы",
+		"mobile.asks.settled": "Закрытые",
+		"mobile.asks.skip": "Пропустить (без ответа)",
+		"mobile.asks.title_fallback": "Вопросы",
+		"mobile.asks.truncated": "Показаны самые новые вопросы. Откройте беседу, чтобы увидеть остальные.",
+		"mobile.asks.unskip": "Ответить на этот вопрос",
+		"mobile.asks.urgent": "· Срочно",
 		"mobile.chrome.clear_search": "Очистить поиск",
 		"mobile.chrome.close_conversations": "Закрыть список бесед",
 		"mobile.chrome.composer.dismiss_keyboard": "Скрыть клавиатуру",
@@ -12419,6 +12748,43 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.account_routing.unsaved": "ابھی محفوظ نہیں کیا گیا۔",
 		"mobile.agent_avatar.edit_hint": "یہ تصویر ڈیسک ٹاپ ایپ میں بدلیں",
 		"mobile.agent_avatar.label": "ایجنٹ کی تصویر",
+		"mobile.asks.answer_label": "اس سوال پر آپ کا جواب: {question}",
+		"mobile.asks.answer_placeholder": "آپ کا جواب",
+		"mobile.asks.choose_any": "جو بھی لاگو ہوں، منتخب کریں",
+		"mobile.asks.deadline_ago": "مقررہ وقت کو گزرے {duration} ہو گئے",
+		"mobile.asks.decline": "انکار کریں",
+		"mobile.asks.decline_hint": "کوئی جواب نہیں بھیجتا۔ ایجنٹ خود فیصلہ کرتا ہے۔",
+		"mobile.asks.dismiss": "خارج کریں",
+		"mobile.asks.dismiss_open": "خارج کریں…",
+		"mobile.asks.dismiss_reason.chat": "گفتگو میں جواب دیا گیا",
+		"mobile.asks.dismiss_reason.chat_note": "آپ گفتگو میں پہلے ہی جواب دے چکے ہیں",
+		"mobile.asks.dismiss_reason.moot": "اب ضرورت نہیں",
+		"mobile.asks.dismiss_reason.moot_note": "ایجنٹ جواب کا انتظار بند کر دیتا ہے",
+		"mobile.asks.dismiss_title": "{count, plural, one {یہ سوال خارج کریں} other {یہ سوالات خارج کریں}}",
+		"mobile.asks.empty": "کچھ انتظار میں نہیں۔ ایجنٹ کے سوالات یہاں دکھائی دیں گے۔",
+		"mobile.asks.honesty": "یہ ایپ کھلی ہونے پر قطار میں موجود سوالات دکھاتی ہے۔ بند ہونے پر یہ آپ تک نہیں پہنچ سکتی۔",
+		"mobile.asks.loading": "سوالات پڑھے جا رہے ہیں…",
+		"mobile.asks.none_recorded": "اس سوال کا کوئی جواب درج نہیں ہوا۔",
+		"mobile.asks.nothing_left": "یہاں جواب دینے کو کچھ نہیں بچا۔ کسی اور جگہ نے یہ سوالات پہلے ہی لے لیے ہیں۔",
+		"mobile.asks.open_conversation": "گفتگو کھولیں",
+		"mobile.asks.other_hint": "اپنا جواب لکھیں",
+		"mobile.asks.other_kept": "آپ کا متن محفوظ ہے، بھیجا نہیں گیا",
+		"mobile.asks.other_label": "دیگر",
+		"mobile.asks.progress.pick_or_type": "بھیجنے کے لیے کوئی آپشن چنیں یا اپنا جواب لکھیں۔",
+		"mobile.asks.progress.tally": "{total} میں سے {answered} سوالات کے جواب دیے گئے یا چھوڑے گئے",
+		"mobile.asks.progress.type": "بھیجنے کے لیے جواب لکھیں یا سوال چھوڑ دیں۔",
+		"mobile.asks.recommended": "· تجویز کردہ",
+		"mobile.asks.secret_notice": "خفیہ: براہ راست بھیجا گیا، ٹرانسکرپٹ میں نہیں دکھایا گیا",
+		"mobile.asks.secret_notice_saved": "خفیہ: براہ راست بھیجا گیا، ٹرانسکرپٹ میں نہیں دکھایا گیا، اور دوبارہ استعمال کے لیے کمپیوٹر پر محفوظ کر دیا گیا",
+		"mobile.asks.secret_placeholder": "خفیہ قدر",
+		"mobile.asks.send_answer": "جواب بھیجیں",
+		"mobile.asks.send_answers": "جوابات بھیجیں",
+		"mobile.asks.settled": "نمٹائے گئے",
+		"mobile.asks.skip": "چھوڑ دیں (جواب نہ بھیجیں)",
+		"mobile.asks.title_fallback": "سوالات",
+		"mobile.asks.truncated": "تازہ ترین سوالات دکھائے جا رہے ہیں۔ باقی دیکھنے کے لیے کوئی گفتگو کھولیں۔",
+		"mobile.asks.unskip": "اس سوال کا جواب دیں",
+		"mobile.asks.urgent": "· فوری",
 		"mobile.chrome.clear_search": "تلاش صاف کریں",
 		"mobile.chrome.close_conversations": "گفتگوئیں بند کریں",
 		"mobile.chrome.composer.dismiss_keyboard": "کی بورڈ بند کریں",
@@ -13817,6 +14183,43 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.account_routing.unsaved": "Chưa lưu.",
 		"mobile.agent_avatar.edit_hint": "Hãy đổi ảnh này trong ứng dụng máy tính",
 		"mobile.agent_avatar.label": "Ảnh của tác nhân",
+		"mobile.asks.answer_label": "Câu trả lời của bạn cho: {question}",
+		"mobile.asks.answer_placeholder": "Câu trả lời của bạn",
+		"mobile.asks.choose_any": "Chọn tất cả mục phù hợp",
+		"mobile.asks.deadline_ago": "Đã quá hạn cách đây {duration}",
+		"mobile.asks.decline": "Từ chối",
+		"mobile.asks.decline_hint": "Không gửi câu trả lời nào. Tác nhân tự quyết định.",
+		"mobile.asks.dismiss": "Đóng",
+		"mobile.asks.dismiss_open": "Đóng…",
+		"mobile.asks.dismiss_reason.chat": "Đã trả lời trong cuộc trò chuyện",
+		"mobile.asks.dismiss_reason.chat_note": "Bạn đã trả lời trong cuộc trò chuyện",
+		"mobile.asks.dismiss_reason.moot": "Không còn cần nữa",
+		"mobile.asks.dismiss_reason.moot_note": "Tác nhân sẽ không chờ câu trả lời nữa",
+		"mobile.asks.dismiss_title": "{count, plural, other {Đóng câu hỏi}}",
+		"mobile.asks.empty": "Không có gì đang chờ. Câu hỏi của tác nhân sẽ hiện ở đây.",
+		"mobile.asks.honesty": "Ứng dụng này hiển thị các câu hỏi đang chờ khi đang mở. Khi đã đóng, ứng dụng không thể báo cho bạn.",
+		"mobile.asks.loading": "Đang đọc câu hỏi…",
+		"mobile.asks.none_recorded": "Chưa ghi nhận câu trả lời nào cho câu hỏi này.",
+		"mobile.asks.nothing_left": "Không còn gì để trả lời ở đây. Một giao diện khác đã nhận những câu hỏi này.",
+		"mobile.asks.open_conversation": "Mở cuộc trò chuyện",
+		"mobile.asks.other_hint": "Nhập câu trả lời của bạn",
+		"mobile.asks.other_kept": "Văn bản của bạn được giữ lại, chưa gửi",
+		"mobile.asks.other_label": "Khác",
+		"mobile.asks.progress.pick_or_type": "Chọn một lựa chọn hoặc tự nhập câu trả lời để gửi.",
+		"mobile.asks.progress.tally": "Đã trả lời hoặc bỏ qua {answered} trên {total} câu hỏi",
+		"mobile.asks.progress.type": "Nhập câu trả lời hoặc bỏ qua câu hỏi để gửi.",
+		"mobile.asks.recommended": "· Được đề xuất",
+		"mobile.asks.secret_notice": "Bí mật: gửi trực tiếp, không hiển thị trong bản ghi",
+		"mobile.asks.secret_notice_saved": "Bí mật: gửi trực tiếp, không hiển thị trong bản ghi và được lưu trên máy tính để dùng lại",
+		"mobile.asks.secret_placeholder": "Giá trị bí mật",
+		"mobile.asks.send_answer": "Gửi câu trả lời",
+		"mobile.asks.send_answers": "Gửi các câu trả lời",
+		"mobile.asks.settled": "Đã xử lý",
+		"mobile.asks.skip": "Bỏ qua (không gửi câu trả lời)",
+		"mobile.asks.title_fallback": "Câu hỏi",
+		"mobile.asks.truncated": "Đang hiển thị các câu hỏi mới nhất. Mở một cuộc trò chuyện để xem phần còn lại.",
+		"mobile.asks.unskip": "Trả lời câu hỏi này",
+		"mobile.asks.urgent": "· Khẩn cấp",
 		"mobile.chrome.clear_search": "Xóa tìm kiếm",
 		"mobile.chrome.close_conversations": "Đóng danh sách cuộc trò chuyện",
 		"mobile.chrome.composer.dismiss_keyboard": "Ẩn bàn phím",
@@ -15215,6 +15618,43 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.account_routing.unsaved": "尚未保存。",
 		"mobile.agent_avatar.edit_hint": "请在桌面应用中更改此头像",
 		"mobile.agent_avatar.label": "智能体头像",
+		"mobile.asks.answer_label": "你对此问题的回答：{question}",
+		"mobile.asks.answer_placeholder": "你的回答",
+		"mobile.asks.choose_any": "可多选",
+		"mobile.asks.deadline_ago": "已超过截止时间 {duration}",
+		"mobile.asks.decline": "拒绝",
+		"mobile.asks.decline_hint": "不发送回答。由智能体自行决定。",
+		"mobile.asks.dismiss": "忽略",
+		"mobile.asks.dismiss_open": "忽略……",
+		"mobile.asks.dismiss_reason.chat": "已在对话中回答",
+		"mobile.asks.dismiss_reason.chat_note": "你已在对话中回复",
+		"mobile.asks.dismiss_reason.moot": "不再需要",
+		"mobile.asks.dismiss_reason.moot_note": "智能体不再等待回答",
+		"mobile.asks.dismiss_title": "{count, plural, other {忽略问题}}",
+		"mobile.asks.empty": "暂无待答问题。智能体提出的问题会显示在这里。",
+		"mobile.asks.honesty": "此应用在打开时显示排队的问题，关闭后无法通知你。",
+		"mobile.asks.loading": "正在读取问题……",
+		"mobile.asks.none_recorded": "此问题没有记录到回答。",
+		"mobile.asks.nothing_left": "这里没有需要回答的问题了。另一个界面已经接手了这些问题。",
+		"mobile.asks.open_conversation": "打开对话",
+		"mobile.asks.other_hint": "输入你的回答",
+		"mobile.asks.other_kept": "你的文字已保留，尚未发送",
+		"mobile.asks.other_label": "其他",
+		"mobile.asks.progress.pick_or_type": "选择一个选项，或输入你自己的回答后发送。",
+		"mobile.asks.progress.tally": "已回答或跳过 {answered}/{total} 个问题",
+		"mobile.asks.progress.type": "输入回答，或跳过该问题后发送。",
+		"mobile.asks.recommended": "· 推荐",
+		"mobile.asks.secret_notice": "机密：直接发送，不显示在记录中",
+		"mobile.asks.secret_notice_saved": "机密：直接发送，不显示在记录中，并保存在电脑上以便重复使用",
+		"mobile.asks.secret_placeholder": "机密值",
+		"mobile.asks.send_answer": "发送回答",
+		"mobile.asks.send_answers": "发送回答",
+		"mobile.asks.settled": "已处理",
+		"mobile.asks.skip": "跳过（不回答）",
+		"mobile.asks.title_fallback": "问题",
+		"mobile.asks.truncated": "正在显示最新的问题。打开一个对话可查看其余问题。",
+		"mobile.asks.unskip": "回答这个问题",
+		"mobile.asks.urgent": "· 紧急",
 		"mobile.chrome.clear_search": "清除搜索",
 		"mobile.chrome.close_conversations": "关闭对话列表",
 		"mobile.chrome.composer.dismiss_keyboard": "收起键盘",

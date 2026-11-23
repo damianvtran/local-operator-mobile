@@ -23,7 +23,11 @@ runs:
       run: |
         set -euo pipefail
         node scripts/ci/check-secrets.ts --mode release --need APPLE_TEAM_ID,APPLE_ASC_KEY_ID,APPLE_ASC_ISSUER_ID,APPLE_ASC_PRIVATE_KEY_BASE64,APPLE_DIST_CERT_P12_BASE64,APPLE_DIST_CERT_PASSWORD
-        fastlane --version
+
+    # The repository's pinned fastlane (Gemfile.lock), not the macos-26 image's:
+    # one version across every job that runs a lane, and no dependence on an image
+    # keeping it (ubuntu-26.04 already dropped it). Prints the version it installed.
+    - uses: ./.github/actions/setup-fastlane
 
     - name: Prepare the ephemeral signing keychain
       id: signing
@@ -41,7 +45,7 @@ runs:
       env:
         LO_IOS_SIGNING_DIR: ${{ steps.signing.outputs.directory }}
         LO_IOS_PROFILE_NAME: ${{ inputs.profile-name }}
-      run: fastlane ios prepare_distribution
+      run: bundle exec fastlane ios prepare_distribution
 
     - name: Archive, export and verify the distribution IPA
       shell: bash

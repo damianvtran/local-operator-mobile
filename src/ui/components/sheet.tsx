@@ -67,7 +67,7 @@ import {
 	settleResize,
 	sheetResizeSizes,
 } from "@/ui/sheet-resize";
-import { focusScrollTarget } from "@/ui/sheet-scroll";
+import { FOCUS_HEADER_GAP, focusScrollTarget } from "@/ui/sheet-scroll";
 import { useTextScale } from "@/ui/text-scale-provider";
 import { DURATIONS, EASINGS } from "@/ui/tokens.gen";
 import {
@@ -824,7 +824,28 @@ export const Sheet = ({
 		},
 		[resizable, reduceMotion],
 	);
-	const bodyScroll = useMemo(() => ({ revealField }), [revealField]);
+	const scrollToBlock = useCallback(
+		(block: View | null) => {
+			const scroll = bodyRef.current;
+			if (block === null || scroll === null) return;
+			/* Measured against the scroll view, like `revealField`: a content
+			 *  position is the space `scrollTo` takes. */
+			block.measureLayout(
+				scroll as unknown as number,
+				(_x, y) =>
+					scroll.scrollTo({
+						y: Math.max(0, y - FOCUS_HEADER_GAP),
+						animated: !reduceMotion,
+					}),
+				() => undefined,
+			);
+		},
+		[reduceMotion],
+	);
+	const bodyScroll = useMemo(
+		() => ({ revealField, scrollToBlock }),
+		[revealField, scrollToBlock],
+	);
 	/* A KEYBOARD THAT GOES AWAY CANCELS THE PENDING RE-REVEAL: the second pass
 	 *  exists for the keyboard's own move, and a field the reader has left must
 	 *  not drag the body under their next scroll when the keyboard is later put

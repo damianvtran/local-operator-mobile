@@ -83,6 +83,14 @@ describe("the detail keeps read-only ask context separate from answering", () =>
 		expect(detail).toContain(
 			"mobile.notifications.detail.answer_in_conversation",
 		);
+		/* The sheet expands the row whose `ask_id` equals `initialOpenAsk`, so the
+		 * detail must hand it the BARE ask id. It used to hand the item's own
+		 * composite id (`ask:<session>:<ask_id>`), which no row matches and which
+		 * opened the card's own ask collapsed (Ben, 2026-11-23). The invariant is
+		 * asserted behaviourally in notifications-model.test.ts; here it is the
+		 * wiring that can silently regress. */
+		expect(detail).toContain("openAskIdFor(state.detail)");
+		expect(detail).not.toContain("state.detail.item.id");
 	});
 });
 
