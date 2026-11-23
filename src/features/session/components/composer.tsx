@@ -291,6 +291,10 @@ export type ComposerProps = {
 	/** A web paste event's image file. Only the web build can raise the event;
 	 *  the listener that reads it lives here, the read lives with the host. */
 	onPasteFile: (file: File) => void;
+	/** Images pasted INTO the message field on iOS/Android: `file://` copies the
+	 *  field's native wrapper wrote (`paste-image-field.tsx`). The read lives with
+	 *  the host, like `onAttach`'s. */
+	onPasteImages: (uris: string[]) => void;
 	attaching?: boolean;
 	/** Called on every Attach press, before the sheet opens. The owner abandons
 	 *  a pick still in flight: on native Attach stays pressable while picking,
@@ -735,6 +739,7 @@ export const Composer = ({
 	onRemoveImage,
 	onAttach,
 	onPasteFile,
+	onPasteImages,
 	attaching = false,
 	onAttachOpen,
 	voice = null,
@@ -1663,7 +1668,14 @@ export const Composer = ({
 			    is read before the control that is pressed. */}
 			{images.length > 0 ? (
 				<View className="pb-2">
-					<ScrollView horizontal showsHorizontalScrollIndicator={false}>
+					{/* "handled": with the keyboard up (a field paste leaves it up) the
+					    first tap on a chip's remove badge dismissed the keyboard and only
+					    the second removed the chip (QA round 2, Q1). */}
+					<ScrollView
+						horizontal
+						showsHorizontalScrollIndicator={false}
+						keyboardShouldPersistTaps="handled"
+					>
 						<View className="flex-row gap-1.5">
 							{images.map((image, index) => (
 								<View key={`${index}-${image.mime_type}`} className="relative">
@@ -2372,6 +2384,7 @@ export const Composer = ({
 							if (canSendRef.current) sendRef.current();
 						}}
 						fieldRef={inputRef}
+						onPasteImages={onPasteImages}
 						onFocus={() => {
 							setFocused(true);
 							skills?.onFocus();

@@ -1599,6 +1599,7 @@ export function createRelay(options: RelayOptions = {}) {
 
 	const sessionFrames = (
 		projection: SessionProjection,
+		serialize: (frame: SessionProjection) => SessionProjection,
 	): ((tick: number) => StreamFrame | "end" | null) => {
 		const stream = state.world.stream ?? { mode: "idle" };
 		if (stream.mode === "idle") {
@@ -1613,7 +1614,7 @@ export function createRelay(options: RelayOptions = {}) {
 				const current = projection.version ?? 1;
 				if (current <= sent) return null;
 				sent = current;
-				return { event: "projection", data: structuredClone(projection) };
+				return { event: "projection", data: serialize(projection) };
 			};
 		}
 		if (stream.mode !== "streaming") return () => null;
@@ -1632,7 +1633,7 @@ export function createRelay(options: RelayOptions = {}) {
 					? `${text}\n\nReconciliation finished: 214 files scanned, 3 edits applied.`
 					: `${text}${" ".repeat(0)}${tick === 0 ? "" : "\n"}pass ${tick}: scanning shard ${tick}…`;
 			}
-			const frame = structuredClone(projection);
+			const frame = { ...projection };
 			frame.version = version;
 			frame.streaming = !settled;
 			frame.activity = settled ? "" : "responding";
@@ -1677,7 +1678,7 @@ export function createRelay(options: RelayOptions = {}) {
 			// the client must drop `incoming.version < current.version`.
 			if (state.faults.sse.staleVersion && tick === settleAfter - 1)
 				frame.version = Math.max(1, version - 5);
-			return { event: "projection", data: frame };
+			return { event: "projection", data: serialize(frame) };
 		};
 	};
 
@@ -3423,6 +3424,24 @@ export function createRelay(options: RelayOptions = {}) {
 			const sessionId = decodeURIComponent(sessionMatch[1] ?? "");
 			const rest = sessionMatch[2] ?? "";
 			const projection = projectionFor(sessionId);
+			const chartMessages =
+				url.searchParams.get("inline_ui") === "1" &&
+				world.inlineUi?.sessionId === sessionId
+					? world.inlineUi.messages
+					: undefined;
+			const withChartMessages = <T extends { id: string }>(
+				entries: readonly T[],
+			) => {
+				if (!chartMessages) return {};
+				const messages = Object.fromEntries(
+					entries.flatMap(({ id }) =>
+						Object.hasOwn(chartMessages, id) ? [[id, chartMessages[id]]] : [],
+					),
+				);
+				return Object.keys(messages).length
+					? { inline_ui: { version: 1, messages } }
+					: {};
+			};
 
 			if (rest === "/events" && method === "GET") {
 				const stream: StreamSpec = world.stream ?? { mode: "idle" };
@@ -3461,19 +3480,25 @@ export function createRelay(options: RelayOptions = {}) {
 						frames: () => null,
 					});
 				}
-				const seedProjection = structuredClone(projection);
+				// As on the real relay, negotiation applies at serialization of
+				// every outgoing snapshot, not just the stream's initial seed.
+				const snapshot = (frame: SessionProjection) => ({
+					...structuredClone(frame),
+					...withChartMessages(frame.transcript),
+				});
+				const seedProjection = snapshot(projection);
 				return openStream(req, res, {
 					kind: "projection",
 					seed:
 						stream.mode === "keepalive-only"
 							? null
 							: { event: "projection", data: seedProjection },
-					frames: sessionFrames(projection),
+					frames: sessionFrames(projection, snapshot),
 					// The duplicate provider reads the live projection, so the second copy
 					// carries the admitted command's row and the version that announces it.
 					duplicate: () => ({
 						event: "projection",
-						data: structuredClone(projection),
+						data: snapshot(projection),
 					}),
 				});
 			}
@@ -3514,7 +3539,11 @@ export function createRelay(options: RelayOptions = {}) {
 				}
 				const sliceEnd = end < 0 ? all.length : end;
 				const entries = all.slice(Math.max(0, sliceEnd - limit), sliceEnd);
-				sendJson(res, 200, { entries, has_more: sliceEnd - limit > 0 });
+				sendJson(res, 200, {
+					entries,
+					has_more: sliceEnd - limit > 0,
+					...withChartMessages(entries),
+				});
 				return;
 			}
 

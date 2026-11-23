@@ -86,16 +86,17 @@ describe("mobile.time renders the English it replaced", () => {
 		expect(en("mobile.session.sheet_title.commands")).toBe("commands");
 	});
 
-	/* #248: the attach sheet's title shipped as lower-case "attach" beside
-	 * "Model" and "Effort". Title case in English; in the other cased scripts
-	 * the same word, capitalised — a casing fix, not a retranslation. */
-	it("the attach sheet's title is capitalised in every cased locale", () => {
-		expect(en("mobile.session.sheet_title.attach")).toBe("Attach");
+	/* #248 shipped the attach sheet's title lower-case ("attach"); 67d60400
+	 * capitalised it. The 2026-11-22 design consult then named it for what the
+	 * sheet does — the relay takes images only, so "Attach" promised files it
+	 * cannot carry — and kept it Title Case beside "Model" and "Effort". */
+	it("the attach sheet's title names the image it adds, capitalised in every cased locale", () => {
+		expect(en("mobile.session.sheet_title.attach")).toBe("Add Image");
 		const cased = {
-			fr: "Joindre",
-			es: "Adjuntar",
-			ru: "Прикрепить",
-			vi: "Đính kèm",
+			fr: "Ajouter une image",
+			es: "Añadir imagen",
+			ru: "Добавить изображение",
+			vi: "Thêm hình ảnh",
 		} as const;
 		for (const [locale, title] of Object.entries(cased))
 			expect(renderFor("mobile.session.sheet_title.attach", {}, locale)).toBe(

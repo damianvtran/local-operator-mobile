@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 import type { TranscriptEntry } from "@/contracts";
+import { withInlineUi } from "@/features/session/live-inline-ui";
 import {
 	barAccessibleName,
 	barPhrases,
@@ -349,6 +350,49 @@ describe("the condense decision", () => {
 /* -------------------------------------------------------------------- latch */
 
 describe("the latch: a condensed turn cannot be un-condensed by a frame", () => {
+	it("keeps fresh and newly decoded chart-only handovers outside the same work bar", () => {
+		const plain = [
+			user("u1"),
+			tool("t1", 2),
+			answer("chart", ""),
+			answer("a1"),
+			user("u2"),
+		];
+		const decorated = withInlineUi(
+			{
+				version: 1,
+				messages: {
+					chart: {
+						version: 1,
+						text: "",
+						widgets: [
+							{
+								offset: 0,
+								payload: {
+									type: "bar",
+									title: "Reading",
+									data: [["Mon", 7]],
+								},
+							},
+						],
+					},
+				},
+			},
+			plain,
+		);
+		const expanded = new Set<string>();
+		const first = condensePlan({ entries: plain, expanded, latch: new Map() });
+		expect(first.turns[0]?.hiddenIds).toEqual(["t1", "chart"]);
+		for (const latch of [new Map(), first.latch]) {
+			const next = condensePlan({ entries: decorated, expanded, latch });
+			expect(next.turns[0]?.hiddenIds).toEqual(["t1"]);
+			expect(next.turns[0]?.bar).toEqual(first.turns[0]?.bar);
+			expect(
+				next.items.filter(({ kind }) => kind === "entry").map(({ id }) => id),
+			).toEqual(["u1", "chart", "a1", "u2"]);
+		}
+	});
+
 	it("survives a later frame that regresses the closing answer", () => {
 		const settledFrames = [user("u1"), tool("t1", 2), answer("a1"), user("u2")];
 		const first = condensePlan({

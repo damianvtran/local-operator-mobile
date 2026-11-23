@@ -33,6 +33,7 @@ import { TeamBridgeFixturePresentation } from "@/testing/team-bridge-presentatio
 import { ThemeProvider, useTheme } from "@/ui/appearance";
 import { ToastHost } from "@/ui/components";
 import { DirectionProvider, DirectionView } from "@/ui/direction";
+import { STACK_SCREEN_OPTIONS } from "@/ui/stack-options";
 import { TextScaleProvider } from "@/ui/text-scale-provider";
 
 /**
@@ -83,7 +84,7 @@ export default function RootLayout() {
 									 *  connection, the text scale) and below the router's context. */}
 									<ComputerSwitcherProvider>
 										<BridgeWorkspaceDrawer>
-											<Stack screenOptions={{ headerShown: false }} />
+											<Stack screenOptions={STACK_SCREEN_OPTIONS} />
 										</BridgeWorkspaceDrawer>
 									</ComputerSwitcherProvider>
 									{/* The first-run notification primer: one in-context sheet that

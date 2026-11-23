@@ -1,5 +1,6 @@
 {
 	"mobile.session.conversation_details": "Chi tiết cuộc trò chuyện",
+	"mobile.session.inline_chart_data": "Dữ liệu biểu đồ",
 	"mobile.session.chip.model_default": "Mặc định",
 	"mobile.session.chip.model_unknown": "Không rõ",
 	"mobile.session.status_tray.hint": "Mở dòng làm việc, tác vụ và tác nhân con",
@@ -93,7 +94,7 @@
 	"mobile.session.outbox.composer_stopped": "Tin nhắn trước của bạn đã ngừng gửi. Hãy thử lại hoặc bỏ tin đó ở trên để gửi tin này.",
 	"mobile.session.outbox.composer_discarding": "Đang bỏ tin nhắn trước của bạn. Bạn có thể gửi tin này trong giây lát.",
 	"mobile.session.sheet_title.commands": "lệnh",
-	"mobile.session.sheet_title.attach": "Đính kèm",
+	"mobile.session.sheet_title.attach": "Thêm hình ảnh",
 	"mobile.session.diagram.label": "Sơ đồ {type}",
 	"mobile.session.diagram.label_titled": "Sơ đồ {type}: {title}",
 	"mobile.session.diagram.copied": "đã sao chép",

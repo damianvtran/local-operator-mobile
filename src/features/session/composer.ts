@@ -187,11 +187,19 @@ export const attachFailureLine = (source: AttachSource): string =>
  * and "Copy an image" sends the reader after something they already did (UX
  * review round 1, U3). Android has no paste prompt, so a chip miss there is the
  * image having gone, which `pasteEmpty` already says.
+ *
+ * The sheet's Paste row on iOS (2026-11-22 design consult): an empty answer is
+ * either an empty clipboard or a refusal, and the reader cannot tell which, so
+ * the line names both remedies — copy an image, and choose Allow Paste if the
+ * system asks (`paste.empty_ios`). `pasteEmpty` was true but left a reader who
+ * had just refused the prompt with only "copy an image".
  */
-export const pasteNothingLine = (via: PasteVia, os: string): string =>
-	via === "offer" && os === "ios"
+export const pasteNothingLine = (via: PasteVia, os: string): string => {
+	if (os !== "ios") return composerCopy().pasteEmpty;
+	return via === "offer"
 		? t("mobile.composer_input.paste.denied")
-		: composerCopy().pasteEmpty;
+		: t("mobile.composer_input.paste.empty_ios");
+};
 
 /* ------------------------------------------------------------------- the op */
 

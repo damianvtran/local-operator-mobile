@@ -26,6 +26,8 @@
  * over the shapes this contract actually has (strings, numbers, booleans, null,
  * plain objects, arrays of the same).
  */
+import { LIVE_INLINE_UI } from "./live-inline-ui";
+
 export const sameValue = (a: unknown, b: unknown): boolean => {
 	if (a === b) return true;
 	if (typeof a !== typeof b) return false;
@@ -51,6 +53,14 @@ export const sameValue = (a: unknown, b: unknown): boolean => {
 	}
 	return true;
 };
+
+// Symbol metadata is deliberately absent from the wire keys sameValue compares.
+const sameRow = (a: object, b: object): boolean =>
+	sameValue(a, b) &&
+	sameValue(
+		LIVE_INLINE_UI in a ? a[LIVE_INLINE_UI] : undefined,
+		LIVE_INLINE_UI in b ? b[LIVE_INLINE_UI] : undefined,
+	);
 
 /**
  * Canonical identity of a transcript-like row across live (`tc-<call>`) and
@@ -106,7 +116,7 @@ export function reuseRows<
 			for (let at = 0; at < next.length; at += 1) {
 				const row = next[at] as T;
 				const old = previous[at] as T;
-				if (sameValue(old, row)) {
+				if (sameRow(old, row)) {
 					out[at] = old;
 					reusedAligned += 1;
 				} else {
@@ -127,7 +137,7 @@ export function reuseRows<
 	for (let at = 0; at < next.length; at += 1) {
 		const row = next[at] as T;
 		const old = buckets.get(canonicalKeyOf(row))?.shift();
-		if (old !== undefined && sameValue(old, row)) {
+		if (old !== undefined && sameRow(old, row)) {
 			out[at] = old;
 		} else {
 			out[at] = row;

@@ -1,6 +1,5 @@
 import { memo, type RefObject, useRef } from "react";
 import { Pressable, Text, View } from "react-native";
-import type { TranscriptEntry } from "@/contracts";
 import { AskResponseRow } from "@/features/session/components/ask-response-row";
 import {
 	type BridgeBodyLoader,
@@ -27,6 +26,10 @@ import {
 import { TranscriptImage } from "@/features/session/components/transcript-image";
 import { UserMessageClamp } from "@/features/session/components/user-message-clamp";
 import { imageGenView } from "@/features/session/imagegen";
+import {
+	type DisplayTranscriptEntry,
+	LIVE_INLINE_UI,
+} from "@/features/session/live-inline-ui";
 import {
 	bridgeReceiptLabel,
 	bridgeReceiptMeta,
@@ -91,7 +94,7 @@ import { TranscriptFiles } from "./transcript-files";
  * stable.
  */
 export type TranscriptRowProps = {
-	entry: TranscriptEntry;
+	entry: DisplayTranscriptEntry;
 	/** The anchor `transcript-streaming` belongs on this row. */
 	streaming?: boolean;
 	streamArrival?: StreamArrival | null;
@@ -344,6 +347,7 @@ const TranscriptRowBody = ({
 			<View className="px-4 py-1" testID={testID}>
 				<Markdown
 					text={entry.text}
+					assistantParts={entry[LIVE_INLINE_UI]}
 					streaming={streaming}
 					arrival={streamArrival}
 					motion={streamMotion}

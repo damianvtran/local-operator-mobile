@@ -1,5 +1,6 @@
 {
 	"mobile.session.conversation_details": "बातचीत का विवरण",
+	"mobile.session.inline_chart_data": "चार्ट का डेटा",
 	"mobile.session.chip.model_default": "डिफ़ॉल्ट",
 	"mobile.session.chip.model_unknown": "अज्ञात",
 	"mobile.session.status_tray.hint": "कार्यरत पंक्ति, कार्य और उप-एजेंट खोलता है",
@@ -93,7 +94,7 @@
 	"mobile.session.outbox.composer_stopped": "आपका पिछला संदेश भेजना रुक गया है। यह संदेश भेजने के लिए ऊपर उसे दोबारा भेजें या छोड़ें।",
 	"mobile.session.outbox.composer_discarding": "आपका पिछला संदेश छोड़ा जा रहा है। आप यह संदेश कुछ ही पल में भेज सकेंगे।",
 	"mobile.session.sheet_title.commands": "कमांड",
-	"mobile.session.sheet_title.attach": "संलग्न करें",
+	"mobile.session.sheet_title.attach": "छवि जोड़ें",
 	"mobile.session.diagram.label": "{type} आरेख",
 	"mobile.session.diagram.label_titled": "{type} आरेख: {title}",
 	"mobile.session.diagram.copied": "कॉपी किया गया",

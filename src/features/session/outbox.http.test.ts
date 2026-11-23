@@ -77,6 +77,7 @@ type Behaviour =
 interface Relay {
 	baseUrl: string;
 	posts: string[];
+	inlineUiDeclarations: unknown[];
 	admissions: number;
 	/** Whether `/history` shows admitted ids as user rows. */
 	transcriptWrites: boolean;
@@ -93,6 +94,7 @@ async function relay(
 	const state: Relay = {
 		baseUrl: "",
 		posts: [],
+		inlineUiDeclarations: [],
 		admissions: 0,
 		transcriptWrites: options.transcriptWrites ?? false,
 		close: async () => {},
@@ -124,8 +126,13 @@ async function relay(
 				raw += chunk;
 			});
 			request.on("end", () => {
-				const body = JSON.parse(raw) as { command_id: string; text: string };
+				const body = JSON.parse(raw) as {
+					command_id: string;
+					text: string;
+					inline_ui?: unknown;
+				};
 				state.posts.push(body.command_id);
+				state.inlineUiDeclarations.push(body.inline_ui);
 				const behaviour = script(state.posts.length);
 				switch (behaviour) {
 					case "admit-stall":
@@ -280,6 +287,7 @@ describe("reproduction: a relay slower than the transport default", () => {
 		expect(outcome.kind).toBe("delivered");
 		expect(server.posts).toHaveLength(1);
 		expect(server.admissions).toBe(1);
+		expect(server.inlineUiDeclarations).toEqual([true]);
 		expect(await envelopes.peek(SESSION)).toBeNull();
 	});
 });
@@ -306,6 +314,7 @@ describe("stall → retry → delivered once", () => {
 		await until(() => box.entryFor(SESSION) === null);
 		expect(server.posts.length).toBeGreaterThanOrEqual(2);
 		expect(new Set(server.posts)).toEqual(new Set([id]));
+		expect(server.inlineUiDeclarations).toEqual(server.posts.map(() => true));
 		expect(server.admissions).toBe(1);
 		const echo = pendingEchoFor(SESSION, id);
 		expect(echo?.accepted).toBe(true);

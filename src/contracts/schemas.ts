@@ -1018,6 +1018,8 @@ export const sessionProjectionSchema = z.looseObject({
 	supplements: z
 		.record(z.string(), z.record(z.string(), z.unknown()))
 		.optional(),
+	/** Optional viewer presentation; malformed bytes must not reject the frame. */
+	inline_ui: z.unknown().optional(),
 });
 
 /* ----------------------------------------------------- conversation tags */
@@ -1642,6 +1644,7 @@ export const historyResponseSchema = z.looseObject({
 	entries: z.array(transcriptEntrySchema),
 	has_more: z.boolean(),
 	unavailable: z.string().optional(),
+	inline_ui: z.unknown().optional(),
 });
 
 export const slashCommandSchema = z.looseObject({
