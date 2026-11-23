@@ -113,7 +113,7 @@ const NAMESPACES = [
 		name: "mobile.composer_input",
 		messages: composerInput,
 		context: composerInputContext,
-		expected: 24, // +2: the failure notice's short Retry / Dismiss actions (visual audit D6); +10: the attach sheet's row labels and Take Photo's notices/error
+		expected: 25, // +2: the failure notice's short Retry / Dismiss actions (visual audit D6); +10: the attach sheet's row labels and Take Photo's notices/error
 	},
 	{
 		name: "mobile.library",
@@ -652,7 +652,14 @@ describe("the English catalogues", () => {
 		 * Untagged, the group heading's spoken name) = 1385, derived by summing
 		 * the keys of all 26 merged en catalogue files (mobile.sidebar 58,
 		 * mobile.home 95, mobile.session 103). */
-		expect(total).toBe(1385);
+		/* Attach-sheet rows (design consult 2026-11-22): + mobile.composer_input
+		 * paste.empty_ios (the sheet's Paste row on iOS names both remedies):
+		 * 1380 + 1 = 1381, counted over all 26 English JSON catalogues. */
+		/* Convergence with main 21e8f330 (#367): both chains above kept; 1381
+		 * + this branch's 5 mobile.sidebar keys = 1386, derived by summing the
+		 * keys of all 26 merged en catalogue files (mobile.sidebar 58,
+		 * mobile.home 95, mobile.session 103, mobile.composer_input 25). */
+		expect(total).toBe(1386);
 	});
 
 	it("lists every catalogue file this suite checks", () => {

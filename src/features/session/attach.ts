@@ -9,8 +9,9 @@ import {
 	fromDataUrl,
 	isIosSimulatorSandbox,
 	readClipboardImage,
+	sniffImageMime,
 } from "@/features/session/attach-rule";
-import { removePickedCacheCopy } from "./picker-cache";
+import { removePastedCopy, removePickedCacheCopy } from "./picker-cache";
 import { consumePickerAsset, pickerPrivacy } from "./picker-privacy";
 
 /**
@@ -146,6 +147,45 @@ export const takePhotoWithCamera = async (): Promise<PromptImage | null> => {
 		return consumePickerAsset(result.assets[0], removePickedCacheCopy);
 	});
 };
+
+/**
+ * Read the images a reader pasted INTO THE MESSAGE FIELD (`expo-paste-input`
+ * hands over `file://` URIs of copies it wrote), onto the wire form.
+ *
+ * The same privacy path as a pick: `pickerPrivacy.run` refuses a paste that
+ * lands after sign-out, and every copy is deleted once read (`removePastedCopy`)
+ * whether or not the read worked, so no clipboard image is left in the cache.
+ * All-or-nothing: if any image of a multi-image paste fails, none is attached
+ * and the reader is told, rather than half the paste vanishing without a word.
+ */
+export const readPastedImages = (uris: string[]): Promise<PromptImage[]> =>
+	pickerPrivacy.run(async (isCurrent) => {
+		const { File } = await import("expo-file-system");
+		const images: PromptImage[] = [];
+		let failure: unknown;
+		for (const uri of uris) {
+			try {
+				if (!isCurrent()) throw new Error("the image could not be read");
+				const file = new File(uri);
+				const data = await file.base64();
+				if (data.length === 0) throw new Error("the image could not be read");
+				images.push({
+					data_b64: data,
+					mime_type: sniffImageMime(data, file.type ?? ""),
+				});
+			} catch (error) {
+				failure ??= error;
+			} finally {
+				try {
+					await removePastedCopy(uri);
+				} catch (error) {
+					failure ??= error;
+				}
+			}
+		}
+		if (failure !== undefined) throw failure;
+		return images;
+	});
 
 /**
  * Read an image from the source the reader chose on the attach sheet.

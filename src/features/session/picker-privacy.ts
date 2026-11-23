@@ -8,6 +8,33 @@ const ENCODED_SEPARATOR = /%2f|%5c|%00/i;
  * arbitrary picker URI: Photos/content/remote files are not our storage to own.
  * Check raw segments before URL normalization can erase traversal evidence. */
 export function isOwnedPickerCacheFile(uri: string, cacheUri: string): boolean {
+	return isDirectChildOf(uri, cacheUri, "ImagePicker");
+}
+
+/** The same ownership test for a PASTED image: `expo-paste-input` writes the
+ *  clipboard image to a file of its own, directly in the app's cache directory
+ *  on Android and in `tmp/` on iOS (0.2.2 source), never under `ImagePicker/`.
+ *  The roots are passed in (the caller reads them from expo-file-system) so the
+ *  rule stays testable in Node. */
+export function isOwnedPasteFile(uri: string, rootUris: string[]): boolean {
+	const plain = withoutPrivatePrefix(uri);
+	return rootUris.some((root) =>
+		isDirectChildOf(plain, withoutPrivatePrefix(root), undefined),
+	);
+}
+
+/** On a device expo-file-system spells the app container `file:///var/mobile/…`
+ *  while `FileManager.temporaryDirectory` (what the paste module writes to) is
+ *  `file:///private/var/mobile/…`: the same directory, two spellings. Compare
+ *  both sides without the `/private` so the real-device spelling matches. */
+const withoutPrivatePrefix = (uri: string): string =>
+	uri.replace(/^file:\/\/\/private\/(var|tmp)\//, "file:///$1/");
+
+function isDirectChildOf(
+	uri: string,
+	cacheUri: string,
+	subdirectory: string | undefined,
+): boolean {
 	try {
 		if (
 			!uri.startsWith("file://") ||
@@ -48,7 +75,8 @@ export function isOwnedPickerCacheFile(uri: string, cacheUri: string): boolean {
 		);
 		const slash = path.lastIndexOf("/");
 		return (
-			path.slice(0, slash) === `${root}/ImagePicker` &&
+			path.slice(0, slash) ===
+				(subdirectory === undefined ? root : `${root}/${subdirectory}`) &&
 			path.slice(slash + 1).length > 0
 		);
 	} catch {
