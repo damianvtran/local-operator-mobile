@@ -7,6 +7,7 @@ import { backToParentLabel } from "@/features/session/back-label";
 import { TodosPanel } from "@/features/session/components/todos-panel";
 import { TranscriptList } from "@/features/session/components/transcript-list";
 import { middleTruncate, projectTodos } from "@/features/session/projection";
+import { subagentBadge } from "@/features/session/subagent-status";
 import { useSessionRuntime } from "@/features/session/use-session";
 import { t } from "@/i18n";
 import { elapsedLabel } from "@/lib/format";
@@ -73,16 +74,9 @@ export default function Subagent() {
 		[detail?.todos],
 	);
 
-	/** The child's state, as a word AND a tone: colour alone would be an audit
-	 *  failure (`U-03`), so every state carries its own text. */
-	const statusTone =
-		detail?.status === "failed"
-			? "danger"
-			: detail?.status === "completed"
-				? "success"
-				: detail?.status === "running" || detail?.status === "queued"
-					? "info"
-					: "neutral";
+	/** The child's state, as a word AND a tone (`subagent-status.ts`): the badge
+	 *  says `unavailable` when the body does, never `loading` (audit D6). */
+	const badge = subagentBadge(detail, missing);
 
 	return (
 		<Screen
@@ -120,8 +114,8 @@ export default function Subagent() {
 							{detail?.label ?? childId}
 						</Text>
 						<Badge
-							label={detail?.status ?? "loading"}
-							tone={statusTone}
+							label={badge.label}
+							tone={badge.tone}
 							testID={SURFACE.subagentStatus}
 						/>
 						{/* The running marker is a SIBLING of the badge, not the badge's own id, so

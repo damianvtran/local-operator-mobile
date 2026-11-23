@@ -967,12 +967,17 @@ export type CatalogueKey =
 	| "mobile.session.sheet_title.commands"
 	| "mobile.session.sheet_title.effort"
 	| "mobile.session.sheet_title.model"
+	| "mobile.session.sheet_title.search"
 	| "mobile.session.sheet_title.status"
+	| "mobile.session.slash.filter"
+	| "mobile.session.slash.load_failed"
+	| "mobile.session.slash.no_matches"
 	| "mobile.session.status_tray.hint"
 	| "mobile.session.subagent.no_rows"
 	| "mobile.session.subagent.prompt_label"
 	| "mobile.session.subagent.result_label"
 	| "mobile.session.subagent.screen_title"
+	| "mobile.session.subagent.status"
 	| "mobile.session.subagent.unavailable_headline"
 	| "mobile.session.subagent.unavailable_next"
 	| "mobile.session.subagent_open"
@@ -2244,7 +2249,11 @@ export type NoParamKey =
 	| "mobile.session.sheet_title.commands"
 	| "mobile.session.sheet_title.effort"
 	| "mobile.session.sheet_title.model"
+	| "mobile.session.sheet_title.search"
 	| "mobile.session.sheet_title.status"
+	| "mobile.session.slash.filter"
+	| "mobile.session.slash.load_failed"
+	| "mobile.session.slash.no_matches"
 	| "mobile.session.status_tray.hint"
 	| "mobile.session.subagent.no_rows"
 	| "mobile.session.subagent.prompt_label"
@@ -3588,12 +3597,17 @@ export type MessageParams = {
 	"mobile.session.sheet_title.commands": NoParams;
 	"mobile.session.sheet_title.effort": NoParams;
 	"mobile.session.sheet_title.model": NoParams;
+	"mobile.session.sheet_title.search": NoParams;
 	"mobile.session.sheet_title.status": NoParams;
+	"mobile.session.slash.filter": NoParams;
+	"mobile.session.slash.load_failed": NoParams;
+	"mobile.session.slash.no_matches": NoParams;
 	"mobile.session.status_tray.hint": NoParams;
 	"mobile.session.subagent.no_rows": NoParams;
 	"mobile.session.subagent.prompt_label": NoParams;
 	"mobile.session.subagent.result_label": NoParams;
 	"mobile.session.subagent.screen_title": NoParams;
+	"mobile.session.subagent.status": { status: string };
 	"mobile.session.subagent.unavailable_headline": NoParams;
 	"mobile.session.subagent.unavailable_next": NoParams;
 	"mobile.session.subagent_open": { agent: string | number };
@@ -5037,15 +5051,20 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.session.region.label_working": "activity",
 	"mobile.session.region.more_below": "more below · scroll ↓",
 	"mobile.session.sheet_title.attach": "Add Image",
-	"mobile.session.sheet_title.commands": "commands",
+	"mobile.session.sheet_title.commands": "Commands",
 	"mobile.session.sheet_title.effort": "Effort",
 	"mobile.session.sheet_title.model": "Model",
+	"mobile.session.sheet_title.search": "Search",
 	"mobile.session.sheet_title.status": "Tasks and agents",
+	"mobile.session.slash.filter": "Filter commands",
+	"mobile.session.slash.load_failed": "Couldn’t load commands from your computer. Reopen this conversation to try again.",
+	"mobile.session.slash.no_matches": "No matching commands",
 	"mobile.session.status_tray.hint": "Opens the working line, tasks and subagents",
 	"mobile.session.subagent.no_rows": "This subagent has no transcript rows of its own.",
 	"mobile.session.subagent.prompt_label": "prompt",
 	"mobile.session.subagent.result_label": "result",
 	"mobile.session.subagent.screen_title": "Subagent",
+	"mobile.session.subagent.status": "{status, select, queued {queued} running {running} completed {completed} failed {failed} parked {parked} cancelled {cancelled} loading {loading} unavailable {unavailable} other {unknown}}",
 	"mobile.session.subagent.unavailable_headline": "This subagent is no longer available.",
 	"mobile.session.subagent.unavailable_next": "Its transcript was not kept, or the computer is not answering.",
 	"mobile.session.subagent_open": "Open {agent}",
@@ -6474,15 +6493,20 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.session.region.label_working": { role: "meta", note: "Lower-case noun spliced into mobile.session.region.below_labels {labels} (joined with ' · '): names the 'activity' band that is scrolled out of view. Must read inside 'X below'. Lower case, one word if possible." },
 	"mobile.session.region.more_below": { role: "meta", note: "Cue under the capped activity region when more rows are hidden below and there are no region names to list. Keep the middle dot and the down arrow; lower case." },
 	"mobile.session.sheet_title.attach": { role: "heading", note: "Title of the bottom sheet that lists image sources in the composer (Photo Library, Take Photo, Image from Files and Paste Image on iOS and Android; Choose Image and Paste Image on web). It says what the sheet adds — an image — because the relay accepts images only, so 'Attach' promised files it cannot take. Title case like the Model and Effort sheet titles; scripts without letter case need no change. ~16 characters. No placeholders." },
-	"mobile.session.sheet_title.commands": { role: "heading", note: "Title of the bottom sheet listing slash commands the reader can run in a conversation. Lower case as currently shipped (other sheet titles are Title case; a casing change is a separate design decision) — use your language's natural form. ~16 characters. No placeholders." },
+	"mobile.session.sheet_title.commands": { role: "heading", note: "Title of the bottom sheet listing slash commands the reader can run in a conversation. One noun in Title case in English, like its sibling sheet titles (Model, Effort, Search); use your language's natural capitalisation for a title. ~16 characters. No placeholders." },
 	"mobile.session.sheet_title.effort": { role: "heading", note: "Title of the sheet that lists the reasoning-effort levels to choose from. Title case in English." },
 	"mobile.session.sheet_title.model": { role: "heading", note: "Title of the sheet that lists the models to choose from. Title case in English." },
+	"mobile.session.sheet_title.search": { role: "heading", note: "Title of the bottom sheet that searches the messages of the open conversation on this phone. One noun in Title case in English, like its sibling sheet titles (Model, Effort, Commands). Keep it one short word: a longer phrase was cut off at large text on a 320 pt phone. No placeholders." },
 	"mobile.session.sheet_title.status": { role: "heading", note: "Title of the sheet opened from the counts on the activity line above the composer; it lists the conversation's tasks and its sub-agents. Sentence-style capitalisation after the first word in English." },
+	"mobile.session.slash.filter": { role: "meta", note: "The commands sheet's text field: both its placeholder and its accessible name. Typing narrows the list of slash commands (such as /compact) to those whose name matches. An instruction-like label, sentence case, no final full stop. Keep it short: the field is one line on a 320 pt phone." },
+	"mobile.session.slash.load_failed": { role: "status", note: "Muted line in the commands sheet when this phone could not read the list of slash commands from the reader's computer and holds none. It replaces the list, so it must not suggest that nothing matched. The second sentence is the remedy: leaving and reopening the conversation reads the list again. Two short sentences with final full stops; the apostrophe is a typographic ’." },
+	"mobile.session.slash.no_matches": { role: "status", note: "Muted line in the commands sheet when the filter text matches none of the slash commands the computer offers. A short status in sentence case, no final full stop." },
 	"mobile.session.status_tray.hint": { role: "help", note: "Accessibility hint read after the status tray's label. Describes what activating the tray opens; no final full stop. \"Subagents\" is a product term." },
 	"mobile.session.subagent.no_rows": { role: "status", note: "Muted line shown when a subagent's transcript is empty. One sentence." },
 	"mobile.session.subagent.prompt_label": { role: "meta", note: "Lower-case label above the instruction the subagent was given. One word, lower case to match its sibling label." },
 	"mobile.session.subagent.result_label": { role: "meta", note: "Lower-case label above the text the subagent returned. One word, lower case to match its sibling label." },
 	"mobile.session.subagent.screen_title": { role: "heading", note: "Title of the screen that shows one subagent's run. One word; 'subagent' is the product's word for a helper agent started by the main agent." },
+	"mobile.session.subagent.status": { role: "status", note: "The status badge beside a subagent's name on its own screen. {status} selects the arm and is never shown itself. queued: waiting to start; running: working now; completed: finished successfully; failed: finished with an error; parked: paused, can resume later; cancelled: stopped by someone before it finished; loading: this phone is still fetching the subagent's details; unavailable: the fetch finished and the computer has no record of this subagent (the screen's body says so too); other: a state this app does not know yet. Each arm is one short lower-case word (no full stop) that fits a small pill beside a title on a 320 pt phone." },
 	"mobile.session.subagent.unavailable_headline": { role: "status", note: "Empty-state headline on the subagent screen when the computer has no record of it. Sentence with a final full stop." },
 	"mobile.session.subagent.unavailable_next": { role: "help", note: "Empty-state follow-up giving the two possible reasons the subagent cannot be shown. One sentence." },
 	"mobile.session.subagent_open": { role: "button", note: "Accessibility label of the small `open` control on a subagent's message in the transcript; activating it opens that subagent's own view. {agent} is the subagent's label or job ID exactly as the app shows it, never translated. An imperative verb, no final full stop." },
@@ -7925,15 +7949,20 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.region.label_working": "actividad",
 		"mobile.session.region.more_below": "más abajo · desplazar ↓",
 		"mobile.session.sheet_title.attach": "Añadir imagen",
-		"mobile.session.sheet_title.commands": "comandos",
+		"mobile.session.sheet_title.commands": "Comandos",
 		"mobile.session.sheet_title.effort": "Esfuerzo",
 		"mobile.session.sheet_title.model": "Modelo",
+		"mobile.session.sheet_title.search": "Búsqueda",
 		"mobile.session.sheet_title.status": "Tareas y agentes",
+		"mobile.session.slash.filter": "Filtrar comandos",
+		"mobile.session.slash.load_failed": "No se pudieron cargar los comandos desde tu máquina. Vuelve a abrir esta conversación para intentarlo de nuevo.",
+		"mobile.session.slash.no_matches": "Ningún comando coincide",
 		"mobile.session.status_tray.hint": "Abre la línea de trabajo, las tareas y los subagentes",
 		"mobile.session.subagent.no_rows": "Este subagente no tiene entradas propias en la transcripción.",
 		"mobile.session.subagent.prompt_label": "prompt",
 		"mobile.session.subagent.result_label": "resultado",
 		"mobile.session.subagent.screen_title": "Subagente",
+		"mobile.session.subagent.status": "{status, select, queued {en cola} running {en curso} completed {completado} failed {fallido} parked {en pausa} cancelled {cancelado} loading {cargando} unavailable {no disponible} other {desconocido}}",
 		"mobile.session.subagent.unavailable_headline": "Este subagente ya no está disponible.",
 		"mobile.session.subagent.unavailable_next": "Su transcripción no se conservó o la máquina no responde.",
 		"mobile.session.subagent_open": "Abrir {agent}",
@@ -9360,15 +9389,20 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.region.label_working": "activité",
 		"mobile.session.region.more_below": "la suite plus bas · défiler ↓",
 		"mobile.session.sheet_title.attach": "Ajouter une image",
-		"mobile.session.sheet_title.commands": "commandes",
+		"mobile.session.sheet_title.commands": "Commandes",
 		"mobile.session.sheet_title.effort": "Effort",
 		"mobile.session.sheet_title.model": "Modèle",
+		"mobile.session.sheet_title.search": "Recherche",
 		"mobile.session.sheet_title.status": "Tâches et agents",
+		"mobile.session.slash.filter": "Filtrer les commandes",
+		"mobile.session.slash.load_failed": "Impossible de charger les commandes depuis votre ordinateur. Rouvrez cette conversation pour réessayer.",
+		"mobile.session.slash.no_matches": "Aucune commande ne correspond",
 		"mobile.session.status_tray.hint": "Ouvre la ligne d’activité, les tâches et les sous-agents",
 		"mobile.session.subagent.no_rows": "Ce sous-agent n’a aucune ligne de transcription qui lui soit propre.",
 		"mobile.session.subagent.prompt_label": "prompt",
 		"mobile.session.subagent.result_label": "résultat",
 		"mobile.session.subagent.screen_title": "Sous-agent",
+		"mobile.session.subagent.status": "{status, select, queued {en attente} running {en cours} completed {terminé} failed {en échec} parked {en pause} cancelled {annulé} loading {chargement} unavailable {indisponible} other {inconnu}}",
 		"mobile.session.subagent.unavailable_headline": "Ce sous-agent n’est plus disponible.",
 		"mobile.session.subagent.unavailable_next": "Sa transcription n’a pas été conservée, ou l’ordinateur ne répond pas.",
 		"mobile.session.subagent_open": "Ouvrir {agent}",
@@ -10798,12 +10832,17 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.sheet_title.commands": "कमांड",
 		"mobile.session.sheet_title.effort": "प्रयास",
 		"mobile.session.sheet_title.model": "मॉडल",
+		"mobile.session.sheet_title.search": "खोज",
 		"mobile.session.sheet_title.status": "कार्य और एजेंट",
+		"mobile.session.slash.filter": "कमांड फ़िल्टर करें",
+		"mobile.session.slash.load_failed": "आपके कंप्यूटर से कमांड लोड नहीं हो सकीं। फिर से कोशिश करने के लिए यह बातचीत दोबारा खोलें।",
+		"mobile.session.slash.no_matches": "कोई कमांड मेल नहीं खाती",
 		"mobile.session.status_tray.hint": "कार्यरत पंक्ति, कार्य और उप-एजेंट खोलता है",
 		"mobile.session.subagent.no_rows": "इस उप-एजेंट की ट्रांसक्रिप्ट में अपनी कोई पंक्ति नहीं है।",
 		"mobile.session.subagent.prompt_label": "प्रॉम्प्ट",
 		"mobile.session.subagent.result_label": "परिणाम",
 		"mobile.session.subagent.screen_title": "उप-एजेंट",
+		"mobile.session.subagent.status": "{status, select, queued {कतार में} running {चल रहा} completed {पूरा} failed {विफल} parked {रुका हुआ} cancelled {रद्द} loading {लोड हो रहा} unavailable {उपलब्ध नहीं} other {अज्ञात}}",
 		"mobile.session.subagent.unavailable_headline": "यह उप-एजेंट अब उपलब्ध नहीं है।",
 		"mobile.session.subagent.unavailable_next": "इसका ट्रांसक्रिप्ट सहेजा नहीं गया था, या कंप्यूटर जवाब नहीं दे रहा है।",
 		"mobile.session.subagent_open": "{agent} खोलें",
@@ -12230,15 +12269,20 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.region.label_working": "активность",
 		"mobile.session.region.more_below": "ещё ниже · прокрутить ↓",
 		"mobile.session.sheet_title.attach": "Добавить изображение",
-		"mobile.session.sheet_title.commands": "слэш-команды",
+		"mobile.session.sheet_title.commands": "Команды",
 		"mobile.session.sheet_title.effort": "Усилие",
 		"mobile.session.sheet_title.model": "Модель",
+		"mobile.session.sheet_title.search": "Поиск",
 		"mobile.session.sheet_title.status": "Задачи и агенты",
+		"mobile.session.slash.filter": "Фильтровать команды",
+		"mobile.session.slash.load_failed": "Не удалось загрузить команды с вашего компьютера. Откройте эту беседу снова, чтобы повторить попытку.",
+		"mobile.session.slash.no_matches": "Нет подходящих команд",
 		"mobile.session.status_tray.hint": "Открывает строку текущей работы, задачи и субагентов",
 		"mobile.session.subagent.no_rows": "У этого субагента нет собственных строк транскрипта.",
 		"mobile.session.subagent.prompt_label": "промпт",
 		"mobile.session.subagent.result_label": "результат",
 		"mobile.session.subagent.screen_title": "Субагент",
+		"mobile.session.subagent.status": "{status, select, queued {в очереди} running {выполняется} completed {завершён} failed {ошибка} parked {приостановлен} cancelled {отменён} loading {загрузка} unavailable {недоступен} other {неизвестно}}",
 		"mobile.session.subagent.unavailable_headline": "Этот субагент больше недоступен.",
 		"mobile.session.subagent.unavailable_next": "Его транскрипт не сохранён или компьютер не отвечает.",
 		"mobile.session.subagent_open": "Открыть {agent}",
@@ -13668,12 +13712,17 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.sheet_title.commands": "کمانڈز",
 		"mobile.session.sheet_title.effort": "شدت",
 		"mobile.session.sheet_title.model": "ماڈل",
+		"mobile.session.sheet_title.search": "تلاش",
 		"mobile.session.sheet_title.status": "کام اور ایجنٹس",
+		"mobile.session.slash.filter": "کمانڈز فلٹر کریں",
+		"mobile.session.slash.load_failed": "آپ کے کمپیوٹر سے کمانڈز لوڈ نہیں ہو سکیں۔ دوبارہ کوشش کے لیے یہ گفتگو پھر سے کھولیں۔",
+		"mobile.session.slash.no_matches": "کوئی کمانڈ مماثل نہیں",
 		"mobile.session.status_tray.hint": "جاری سرگرمی کی لائن، کام اور ذیلی ایجنٹس کھولتا ہے",
 		"mobile.session.subagent.no_rows": "اس ذیلی ایجنٹ کے اپنے ٹرانسکرپٹ میں کوئی سطر نہیں۔",
 		"mobile.session.subagent.prompt_label": "پرامپٹ",
 		"mobile.session.subagent.result_label": "نتیجہ",
 		"mobile.session.subagent.screen_title": "ذیلی ایجنٹ",
+		"mobile.session.subagent.status": "{status, select, queued {قطار میں} running {جاری} completed {مکمل} failed {ناکام} parked {موقوف} cancelled {منسوخ} loading {لوڈ ہو رہا} unavailable {دستیاب نہیں} other {نامعلوم}}",
 		"mobile.session.subagent.unavailable_headline": "یہ ذیلی ایجنٹ اب دستیاب نہیں ہے۔",
 		"mobile.session.subagent.unavailable_next": "اس کا ٹرانسکرپٹ محفوظ نہیں رکھا گیا، یا کمپیوٹر جواب نہیں دے رہا۔",
 		"mobile.session.subagent_open": "{agent} کھولیں",
@@ -15100,15 +15149,20 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.region.label_working": "hoạt động",
 		"mobile.session.region.more_below": "còn thêm bên dưới · cuộn ↓",
 		"mobile.session.sheet_title.attach": "Thêm hình ảnh",
-		"mobile.session.sheet_title.commands": "lệnh",
+		"mobile.session.sheet_title.commands": "Lệnh",
 		"mobile.session.sheet_title.effort": "Mức suy luận",
 		"mobile.session.sheet_title.model": "Mô hình",
+		"mobile.session.sheet_title.search": "Tìm kiếm",
 		"mobile.session.sheet_title.status": "Tác vụ và tác nhân",
+		"mobile.session.slash.filter": "Lọc lệnh",
+		"mobile.session.slash.load_failed": "Không thể tải lệnh từ máy tính của bạn. Hãy mở lại cuộc trò chuyện này để thử lại.",
+		"mobile.session.slash.no_matches": "Không có lệnh phù hợp",
 		"mobile.session.status_tray.hint": "Mở dòng làm việc, tác vụ và tác nhân con",
 		"mobile.session.subagent.no_rows": "Tác nhân con này không có dòng bản ghi riêng nào.",
 		"mobile.session.subagent.prompt_label": "prompt",
 		"mobile.session.subagent.result_label": "kết quả",
 		"mobile.session.subagent.screen_title": "Tác nhân con",
+		"mobile.session.subagent.status": "{status, select, queued {đang chờ} running {đang chạy} completed {đã xong} failed {thất bại} parked {tạm dừng} cancelled {đã hủy} loading {đang tải} unavailable {không khả dụng} other {không rõ}}",
 		"mobile.session.subagent.unavailable_headline": "Tác nhân con này không còn khả dụng.",
 		"mobile.session.subagent.unavailable_next": "Bản ghi không được lưu giữ hoặc máy tính không phản hồi.",
 		"mobile.session.subagent_open": "Mở {agent}",
@@ -16538,12 +16592,17 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.sheet_title.commands": "命令",
 		"mobile.session.sheet_title.effort": "推理强度",
 		"mobile.session.sheet_title.model": "模型",
+		"mobile.session.sheet_title.search": "搜索",
 		"mobile.session.sheet_title.status": "任务和智能体",
+		"mobile.session.slash.filter": "筛选命令",
+		"mobile.session.slash.load_failed": "无法从你的电脑加载命令。请重新打开此对话以重试。",
+		"mobile.session.slash.no_matches": "没有匹配的命令",
 		"mobile.session.status_tray.hint": "打开工作状态行、任务和子智能体",
 		"mobile.session.subagent.no_rows": "此子智能体没有自己的会话记录条目。",
 		"mobile.session.subagent.prompt_label": "提示词",
 		"mobile.session.subagent.result_label": "结果",
 		"mobile.session.subagent.screen_title": "子智能体",
+		"mobile.session.subagent.status": "{status, select, queued {排队中} running {运行中} completed {已完成} failed {失败} parked {已暂停} cancelled {已取消} loading {加载中} unavailable {不可用} other {未知}}",
 		"mobile.session.subagent.unavailable_headline": "此子智能体已不可用。",
 		"mobile.session.subagent.unavailable_next": "其会话记录未保留，或电脑没有响应。",
 		"mobile.session.subagent_open": "打开{agent}",

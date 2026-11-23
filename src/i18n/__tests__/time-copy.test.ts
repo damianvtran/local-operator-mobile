@@ -83,7 +83,14 @@ describe("mobile.time renders the English it replaced", () => {
 		expect(en("mobile.projects.section.linked_sessions")).toBe(
 			"linked sessions",
 		);
-		expect(en("mobile.session.sheet_title.commands")).toBe("commands");
+	});
+
+	it("conversation sheet titles share one Title-case idiom (visual audit D7)", () => {
+		/* The slash sheet's title was the last lower-case one beside `Model` and
+		 *  `Effort`; the attach title has its own test below. */
+		expect(en("mobile.session.sheet_title.model")).toBe("Model");
+		expect(en("mobile.session.sheet_title.effort")).toBe("Effort");
+		expect(en("mobile.session.sheet_title.commands")).toBe("Commands");
 	});
 
 	/* #248 shipped the attach sheet's title lower-case ("attach"); 67d60400
