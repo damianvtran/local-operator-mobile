@@ -19,6 +19,29 @@ module UI
   def self.user_error!(message)
     raise message
   end
+  def self.message(*) end
+end
+module Spaceship
+  module ConnectAPI
+    class App
+      def self.find(bundle)
+        raise 'wrong recovery bundle' unless bundle == 'com.localoperator.mobile'
+        $called << :lookup_app
+        $recovery[:app]
+      end
+    end
+    def self.get_builds(filter:, includes:)
+      raise 'wrong recovery build query' unless filter == { app: 'synthetic-app', 'preReleaseVersion.version' => '0.1.0', version: '1517' } && includes.nil?
+      $called << :lookup_build
+      raise 'synthetic authorization error' if $recovery[:build] == :denied
+      $recovery[:build]
+    end
+    def self.get_build_uploads(app_id:, filter:)
+      raise 'wrong recovery upload query' unless app_id == 'synthetic-app' && filter == { cfBundleShortVersionString: '0.1.0', cfBundleVersion: '1517' }
+      $called << :lookup_upload
+      $recovery[:upload]
+    end
+  end
 end
 module Xcodeproj
   module Project
@@ -63,6 +86,7 @@ def update_code_signing_settings(**options)
 end
 def upload_to_testflight(**options)
   raise 'relative IPA directory must resolve from root' unless options[:ipa] == File.join($fixture, 'artifacts', 'synthetic.ipa')
+  raise 'upload is not internal-only and non-waiting' unless options.values_at(:distribute_external, :notify_external_testers, :skip_waiting_for_build_processing) == [false, false, true]
   $called << :testflight
 end
 def supply(**options)
@@ -119,5 +143,64 @@ Dir.mktmpdir('fastlane-cwd-test-', base) do |root|
     absolute = File.join(root, 'artifacts')
     raise 'absolute path changed' unless dsl.repo_path(absolute) == absolute
     puts 'PASS Fastfile lanes from fastlane/: project, entitlements, signing/profile output, IPA/API key, AAB/service key resolve against repository root; absolute paths preserved'
+
+    # Empty collections must be affirmatively identified before the same lane
+    # can call Pilot. Adapters check exact query arguments and record ordering.
+    response = Struct.new(:status, :body)
+    empty = response.new(200, { 'data' => [], 'links' => {} })
+    present = response.new(200, { 'data' => [{}], 'links' => {} })
+    unknown = response.new(200, { 'links' => {} })
+    partial = response.new(200, { 'data' => [], 'links' => { 'next' => 'synthetic' } })
+    app = Struct.new(:id).new('synthetic-app')
+    testflight = $lanes[[:ios, :testflight]]
+    null_next = response.new(200, { 'data' => [], 'links' => { 'next' => nil } })
+    { 'missing' => empty, 'null' => null_next }.each do |label, result|
+      $recovery = { app: app, build: result, upload: result }
+      $called.clear
+      testflight.call(recovery_v010: true)
+      raise 'recovery did not check both collections before Pilot' unless $called == [:key, :lookup_app, :lookup_build, :lookup_upload, :testflight]
+      puts "PASS recovery: both exact read queries empty with links.next #{label}, then internal Pilot call"
+    end
+
+    [
+      [:app, nil, 'Cannot confirm Local Operator'],
+      [:build, present, 'already has a build for'],
+      [:upload, present, 'already has a build upload for'],
+      [:build, unknown, 'Cannot confirm App Store Connect build absence'],
+      [:upload, partial, 'Cannot confirm App Store Connect build upload absence'],
+      [:build, :denied, 'synthetic authorization error']
+    ].each do |field, value, expected|
+      $called.clear
+      $recovery = { app: app, build: empty, upload: empty }.merge(field => value)
+      begin
+        testflight.call(recovery_v010: true)
+        raise 'recovery did not stop before Pilot'
+      rescue RuntimeError => error
+        raise unless error.message.include?(expected) && !$called.include?(:testflight)
+      end
+      puts "PASS recovery blocked before Pilot: #{expected}"
+    end
+
+    # A plausible final-page envelope is not evidence of absence when `next`
+    # has a non-null value (in particular, JSON false is also falsy in Ruby).
+    { build: 'build', upload: 'build upload' }.each do |field, collection|
+      [false, true, '', {}].each do |next_value|
+        path = field == :build ? 'builds' : 'apps/synthetic-app/buildUploads'
+        links = { 'self' => "https://api.appstoreconnect.apple.com/v1/#{path}", 'next' => next_value }
+        malformed = response.new(200, { 'data' => [], 'links' => links })
+        $recovery = { app: app, build: empty, upload: empty }.merge(field => malformed)
+        $called.clear
+        cutoff = [:key, :lookup_app, :lookup_build]
+        cutoff << :lookup_upload if field == :upload
+        label = "#{collection} links.next: #{JSON.generate(next_value)}"
+        begin
+          testflight.call(recovery_v010: true)
+          raise "#{label} did not stop before Pilot: #{$called.inspect}"
+        rescue RuntimeError => error
+          raise unless error.message == "Cannot confirm App Store Connect #{collection} absence; refusing recovery" && $called == cutoff
+        end
+        puts "PASS recovery blocked before Pilot: #{label}"
+      end
+    end
   end
 end
