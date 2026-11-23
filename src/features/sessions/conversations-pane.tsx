@@ -78,10 +78,8 @@ import { SidebarViewButton } from "@/features/sessions/sidebar-view-sheet";
 import { canAssignSessionTags } from "@/features/sessions/tags";
 import { SessionTagsSheet } from "@/features/sessions/tags-sheet";
 import { useSidebarView } from "@/features/sessions/use-sidebar-view";
-import {
-	useOptionalWorkspaceDrawer,
-	WorkspaceModeBar,
-} from "@/features/sessions/workspace-drawer";
+import { useOptionalWorkspaceDrawer } from "@/features/sessions/workspace-drawer-context";
+import { WorkspaceModeBar } from "@/features/sessions/workspace-mode-bar";
 import { t } from "@/i18n";
 import { useUiStore } from "@/state/ui-store";
 import { TeamBridgeEntry } from "@/team-bridge/navigation";
