@@ -229,6 +229,8 @@ export function StartupTranscript({
 				sessionId={sessionId}
 				entries={runtime.entries}
 				streamingRowId={runtime.streamingRowId}
+				streamArrivalEpoch={runtime.streamArrivalEpoch}
+				streamArrivalTail={runtime.streamArrivalTail}
 				// This screen threads no turn interrupt, so the list cannot read
 				// "running" off `onCancelTurn`: between streamed rows a first turn
 				// would look idle and condense mid-run. The projection says.
