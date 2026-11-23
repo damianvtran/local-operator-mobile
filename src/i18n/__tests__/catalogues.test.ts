@@ -113,7 +113,7 @@ const NAMESPACES = [
 		name: "mobile.composer_input",
 		messages: composerInput,
 		context: composerInputContext,
-		expected: 24, // +2: the failure notice's short Retry / Dismiss actions (visual audit D6); +10: the attach sheet's row labels and Take Photo's notices/error
+		expected: 25, // +2: the failure notice's short Retry / Dismiss actions (visual audit D6); +10: the attach sheet's row labels and Take Photo's notices/error
 	},
 	{
 		name: "mobile.library",
@@ -646,7 +646,10 @@ describe("the English catalogues", () => {
 		 * home work list: +5 mobile.home.work.* keys, −2 pool chips
 		 * (suggestion.phone_access, suggestion.last_turn): 1377 + 3 = 1380,
 		 * home 92 → 95. */
-		expect(total).toBe(1380);
+		/* Attach-sheet rows (design consult 2026-11-22): + mobile.composer_input
+		 * paste.empty_ios (the sheet's Paste row on iOS names both remedies):
+		 * 1380 + 1 = 1381, counted over all 26 English JSON catalogues. */
+		expect(total).toBe(1381);
 	});
 
 	it("lists every catalogue file this suite checks", () => {

@@ -80,7 +80,11 @@ import {
 } from "@/features/new-session/startup-transcript";
 import { useStartup } from "@/features/new-session/use-startup";
 import { notificationsEnabled } from "@/features/notifications/notifications-model";
-import { readImageFrom, readWebImageFile } from "@/features/session/attach";
+import {
+	readImageFrom,
+	readPastedImages,
+	readWebImageFile,
+} from "@/features/session/attach";
 import { createAttachLatch } from "@/features/session/attach-latch";
 import type { AttachSource, PasteVia } from "@/features/session/attach-rule";
 import { Composer } from "@/features/session/components/composer";
@@ -771,6 +775,29 @@ export default function Home({
 		[attachLatch, setImages],
 	);
 
+	/** Images pasted into the message field on a phone (`paste-image-field.tsx`):
+	 *  the same latch, strip and failure line as the sheet's rows
+	 *  (`use-composer.ts`'s `pasteImages` is the session view's copy). */
+	const pasteImages = useCallback(
+		(uris: string[]) => {
+			void (async () => {
+				const endAttach = attachLatch.begin();
+				setComposerError(null);
+				try {
+					const pasted = await readPastedImages(uris);
+					if (!endAttach.current()) return;
+					setImages((current) => [...current, ...pasted]);
+				} catch {
+					if (!endAttach.current()) return;
+					setComposerError(composerCopy().attachError);
+				} finally {
+					endAttach();
+				}
+			})();
+		},
+		[attachLatch, setImages],
+	);
+
 	/** The web paste event's image file: same strip, same failure line as the
 	 *  sheet's own rows (`use-composer.ts`'s `pasteFile` is the session view's
 	 *  copy of this handler). */
@@ -1204,6 +1231,7 @@ export default function Home({
 				}
 				onAttach={attach}
 				onPasteFile={pasteFile}
+				onPasteImages={pasteImages}
 				attaching={attaching}
 				onAttachOpen={attachLatch.abandon}
 				/* A send takes the composer: a take still live is dropped and said at

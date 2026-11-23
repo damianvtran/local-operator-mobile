@@ -69,6 +69,41 @@ export const sniffImageMime = (dataB64: string, reported: string): string => {
 	return reported.startsWith("image/") ? reported : "image/jpeg";
 };
 
+/* ------------------------------------------------- pasting into the field */
+
+/**
+ * What `expo-paste-input`'s wrapper reports when the reader pastes into the
+ * message field (its `PasteEventPayload`, restated here so Node can test the
+ * decision without importing the native module). `images` carries `file://`
+ * URIs of copies the module wrote for us; `text` is left to the field.
+ */
+export type FieldPastePayload =
+	| { type: "text"; value: string }
+	| { type: "images"; uris: string[] }
+	| { type: "unsupported" };
+
+/** The image URIs a field paste carries, or none. A text paste is the field's own
+ *  (the wrapper does not take it from the field), and `unsupported` is a paste
+ *  of something that is neither, which says nothing and attaches nothing. */
+export const pastedImageUris = (payload: FieldPastePayload): string[] =>
+	payload.type === "images"
+		? payload.uris.filter((uri) => typeof uri === "string" && uri.length > 0)
+		: [];
+
+/**
+ * The directories `expo-paste-input` writes a pasted image into: the app's cache
+ * directory (Android `context.cacheDir`) and, on iOS, `tmp/` beside `Library/`
+ * (`FileManager.temporaryDirectory`) — expo-file-system offers no path for the
+ * latter, so it is derived from the cache directory, which sits at
+ * `<container>/Library/Caches`. Anything else is not ours to delete.
+ */
+export const pasteTempRoots = (cacheUri: string): string[] => {
+	const roots = [cacheUri];
+	const tmp = cacheUri.replace(/\/Library\/Caches\/?$/, "/tmp");
+	if (tmp !== cacheUri) roots.push(tmp);
+	return roots;
+};
+
 /* ------------------------------------------------------------ the sources */
 
 /**

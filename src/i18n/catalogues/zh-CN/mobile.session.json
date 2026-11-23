@@ -93,7 +93,7 @@
 	"mobile.session.outbox.composer_stopped": "上一条消息已停止发送。请在上方重试或放弃它，再发送这一条。",
 	"mobile.session.outbox.composer_discarding": "正在放弃上一条消息。稍后即可发送这一条。",
 	"mobile.session.sheet_title.commands": "命令",
-	"mobile.session.sheet_title.attach": "添加附件",
+	"mobile.session.sheet_title.attach": "添加图片",
 	"mobile.session.diagram.label": "{type} 图表",
 	"mobile.session.diagram.label_titled": "{type} 图表：{title}",
 	"mobile.session.diagram.copied": "已复制",

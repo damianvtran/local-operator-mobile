@@ -13,7 +13,11 @@ import {
 } from "@/connection/startup-authorization";
 
 import type { Capabilities, PromptImage, SlashCommand } from "@/contracts";
-import { readImageFrom, readWebImageFile } from "@/features/session/attach";
+import {
+	readImageFrom,
+	readPastedImages,
+	readWebImageFile,
+} from "@/features/session/attach";
 import { createAttachLatch } from "@/features/session/attach-latch";
 import type { AttachSource, PasteVia } from "@/features/session/attach-rule";
 import {
@@ -112,6 +116,8 @@ export interface ComposerState {
 	 *  hands the raw file here so the read and its failure copy live beside the
 	 *  pickers' own. */
 	pasteFile: (file: File) => void;
+	/** Images pasted into the message field on a phone (`paste-image-field.tsx`). */
+	pasteImages: (uris: string[]) => void;
 	/** A picker is open or an image is being read. */
 	attaching: boolean;
 	/** Attach was pressed: a pick still in flight is not on screen, so it stops
@@ -1006,6 +1012,28 @@ export const useComposer = (input: {
 		[attachLatch, setImages],
 	);
 
+	/** Images pasted INTO the message field on a phone: the same latch, strip and
+	 *  failure copy as `attach`, from `file://` copies the field's wrapper wrote. */
+	const pasteImages = useCallback(
+		(uris: string[]) => {
+			void (async () => {
+				const endAttach = attachLatch.begin();
+				setError(null);
+				try {
+					const pasted = await readPastedImages(uris);
+					if (!endAttach.current()) return;
+					setImages((current) => [...current, ...pasted]);
+				} catch {
+					if (!endAttach.current()) return;
+					setError(composerCopy().attachError);
+				} finally {
+					endAttach();
+				}
+			})();
+		},
+		[attachLatch, setImages],
+	);
+
 	/** The web paste EVENT's file. Same failure copy as the pickers, same strip
 	 *  as its destination: the event and the sheet's Paste row are two doors into
 	 *  one attachment path. */
@@ -1132,6 +1160,7 @@ export const useComposer = (input: {
 		dismissError: () => setError(null),
 		attach,
 		pasteFile,
+		pasteImages,
 		attaching,
 		abandonAttach: attachLatch.abandon,
 		retained,

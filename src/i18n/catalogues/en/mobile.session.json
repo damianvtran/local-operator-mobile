@@ -93,7 +93,7 @@
 	"mobile.session.outbox.composer_stopped": "Your earlier message stopped sending. Retry or discard it above to send this one.",
 	"mobile.session.outbox.composer_discarding": "Discarding your earlier message. You can send this one in a moment.",
 	"mobile.session.sheet_title.commands": "commands",
-	"mobile.session.sheet_title.attach": "Attach",
+	"mobile.session.sheet_title.attach": "Add Image",
 	"mobile.session.diagram.label": "{type} diagram",
 	"mobile.session.diagram.label_titled": "{type} diagram: {title}",
 	"mobile.session.diagram.copied": "copied",

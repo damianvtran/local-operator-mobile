@@ -191,6 +191,21 @@ describe("the add-image sheet", () => {
 		expect([...order].sort((a, b) => a - b)).toEqual(order);
 	});
 
+	/* 2026-11-22 design consult: the relay carries images only, so the sheet says
+	 * so — a "Files" row that greys out a PDF reads as broken. */
+	it("says each row's real job: images from Files, and Paste Image", async () => {
+		await renderSheet(async () => "ready");
+		const text = shown();
+		for (const label of [
+			"Photo Library",
+			"Take Photo",
+			"Image from Files",
+			"Paste Image",
+		])
+			expect(text).toContain(label);
+		expect(text).not.toContain("Paste image");
+	});
+
 	it("offers no camera on the web build", async () => {
 		host.os = "web";
 		await renderSheet(async () => "ready");
