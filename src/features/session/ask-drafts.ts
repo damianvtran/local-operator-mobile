@@ -31,6 +31,20 @@ export type AskDraftRecord = {
 export const askDraftKey = (sessionId: string, askId: string): string =>
 	`${sessionId}\u0000${askId}`;
 
+/** The row's own conversation, not the sheet's current one.
+ *
+ *  The ask sheet lists asks from OTHER conversations too (an aggregate read),
+ *  and a draft written under the sheet's session was pruned by the very next
+ *  re-read: the write key said `<current>\0<ask>`, the live set held
+ *  `<foreign>\0<ask>`, so `retainAskDrafts` deleted the answer the reader had
+ *  just typed (review r1 F2 / QA r1 Q2). Every caller — write, read, prune,
+ *  settle drop — derives its key HERE, so the four cannot drift apart again. */
+export const askDraftKeyFor = (
+	row: { ask_id: string; session_id?: string | null },
+	currentSessionId: number | string | null | undefined,
+): string =>
+	askDraftKey(String(row.session_id || currentSessionId || ""), row.ask_id);
+
 const drafts = new Map<string, AskDraftRecord>();
 
 export const readAskDraft = (key: string): AskDraftRecord | null =>

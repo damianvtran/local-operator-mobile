@@ -9,6 +9,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+	dragMode,
 	forgetResizeSizes,
 	openingResizeSize,
 	recallResizeSize,
@@ -148,5 +149,28 @@ describe("the size chosen this run", () => {
 	it("has no choice before the reader makes one, so the opening size applies", () => {
 		forgetResizeSizes();
 		expect(recallResizeSize("asks")).toBeNull();
+	});
+});
+
+describe("what a drag is for", () => {
+	it("resizes when no keyboard was there to begin with", () => {
+		expect(dragMode({ startedWithKeyboard: false, keyboardUp: false })).toBe(
+			"resize",
+		);
+	});
+
+	it("dismisses when the keyboard was up at touch-down", () => {
+		// The latch: even after the keyboard has gone mid-gesture, the rest of
+		// this drag must not start resizing (measured: it resized after the
+		// keyboard went down, review r1 round 0).
+		expect(dragMode({ startedWithKeyboard: true, keyboardUp: false })).toBe(
+			"dismiss",
+		);
+	});
+
+	it("dismisses when the keyboard arrives mid-gesture", () => {
+		expect(dragMode({ startedWithKeyboard: false, keyboardUp: true })).toBe(
+			"dismiss",
+		);
 	});
 });

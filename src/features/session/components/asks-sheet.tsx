@@ -19,7 +19,7 @@ import {
 
 import type { AskQuestion, PendingAsk, SessionSummary } from "@/contracts";
 import {
-	askDraftKey,
+	askDraftKeyFor,
 	dropAskDraft,
 	readAskDraft,
 	retainAskDrafts,
@@ -238,6 +238,20 @@ const QuestionField = ({
 	/* One ref for whichever field this question shows: only one is ever mounted,
 	 *  and focus is what makes it the reader's position. */
 	const fieldRef = useRef<TextInput | null>(null);
+	/* Set by the DOOR's own press, so the field it just revealed takes the caret —
+	 *  one tap, keyboard up, exactly as the approved prototype behaves (UX r1 U2).
+	 *  A draft restored on reopen arrives with this false, so it comes back
+	 *  quietly (no keyboard over the sheet the reader just opened). */
+	const [focusDoorField, setFocusDoorField] = useState(false);
+	useEffect(() => {
+		if (!focusDoorField) return;
+		setFocusDoorField(false);
+		/* After the commit that mounted the field: iOS raises the keyboard for a
+		 *  field that is already in the tree, and the sheet's reveal then runs
+		 *  from the field's own `onFocus`. */
+		const frame = requestAnimationFrame(() => fieldRef.current?.focus());
+		return () => cancelAnimationFrame(frame);
+	}, [focusDoorField]);
 	if (options.length === 0) {
 		return (
 			<View>
@@ -258,6 +272,11 @@ const QuestionField = ({
 					placeholder={question.secret ? "Secret value" : "Your answer"}
 					placeholderTextColor={placeholderColour}
 					secureTextEntry={question.secret}
+					/* Done puts the keyboard away and NEVER submits — the same rule the
+					 *  `Other` field follows (design D6 / review r1 N4): a phone Return
+					 *  must not send an irreversible answer. */
+					returnKeyType="done"
+					submitBehavior="blurAndSubmit"
 					// 16 pt or the OS zooms the whole page on focus, which moves
 					// every control the reader was about to press.
 					style={{ fontSize: 16 }}
@@ -346,15 +365,18 @@ const QuestionField = ({
 					accessibilityState={state({ selected: other.open, disabled })}
 					disabled={disabled}
 					onPress={() => {
-						/* Picking the door ends any typing elsewhere: the reader has
-						   chosen where the answer goes. */
-						Keyboard.dismiss();
 						/* A ticked multi-select `Other` unticks, as any checkbox does;
-						   the single-select radio re-selects rather than toggling off. */
+						 *  the single-select radio re-selects rather than toggling off. */
 						if (question.multi && other.open) {
+							Keyboard.dismiss();
 							onOtherChange({ ...other, open: false });
 							return;
 						}
+						/* ONE TAP puts the caret in the field this press reveals (UX r1 U2),
+						 *  and deliberately does NOT dismiss the keyboard first: the field
+						 *  asks for it in the next frame, and a dismiss in between made the
+						 *  keyboard drop and rise again. */
+						setFocusDoorField(true);
 						onOtherChange({ ...other, open: true });
 					}}
 					testID={askOtherId(String(question.id))}
@@ -671,19 +693,30 @@ export const AsksSheet = ({
 	 *  frame exists with the two asks mixed. */
 	const [draft, setDraft] = useState<AnswerDraft>(() => emptyDraft(null));
 	const expansion = openAsk ?? null;
+	/* The ROW of the expanded ask, whatever list drew it: the draft's key is the
+	 *  ask's OWN conversation (`askDraftKeyFor`), so a foreign row's answer is
+	 *  written, read and pruned under one key. */
+	const expansionRow = useMemo(() => {
+		if (expansion === null) return null;
+		return (
+			[...rows, ...(frameRows ?? [])].find(
+				(candidate) => candidate.ask_id === expansion,
+			) ?? null
+		);
+	}, [expansion, rows, frameRows]);
 	/* The expanded ask's questions, secret ones included: the store strips secret
 	 *  answers on write, so the WRITE needs to know which they are. */
-	const expansionQuestions = useMemo(() => {
-		if (expansion === null) return [] as AskQuestion[];
-		const row = [...rows, ...(frameRows ?? [])].find(
-			(candidate) => candidate.ask_id === expansion,
-		);
-		return Array.isArray(row?.questions) ? row.questions : [];
-	}, [expansion, rows, frameRows]);
+	const expansionQuestions = useMemo(
+		() =>
+			Array.isArray(expansionRow?.questions)
+				? (expansionRow.questions as AskQuestion[])
+				: ([] as AskQuestion[]),
+		[expansionRow],
+	);
 	const draftKey =
 		expansion === null
 			? null
-			: askDraftKey(String(currentSessionId ?? ""), expansion);
+			: askDraftKeyFor(expansionRow ?? { ask_id: expansion }, currentSessionId);
 	if (draft.ask !== expansion) {
 		/* A DRAFT THE READER ALREADY TYPED COMES BACK (Ben, a-5712: "Keep it").
 		 *  Keyed by conversation + ask, so it survives the expansion reset below
@@ -874,10 +907,7 @@ export const AsksSheet = ({
 		if (!loaded) return;
 		const live = new Set(
 			outstandingAsks(shownRows).map((row) =>
-				askDraftKey(
-					String(row.session_id || currentSessionId || ""),
-					row.ask_id,
-				),
+				askDraftKeyFor(row, currentSessionId),
 			),
 		);
 		retainAskDrafts(live);
@@ -1009,12 +1039,7 @@ export const AsksSheet = ({
 				 *  list the ask as open, and the merge must not resurrect it. */
 				setSettled((previous) => new Set(previous).add(row.ask_id));
 				/* Settled is settled: the typed text has no ask left to belong to. */
-				dropAskDraft(
-					askDraftKey(
-						String(row.session_id || currentSessionId || ""),
-						row.ask_id,
-					),
-				);
+				dropAskDraft(askDraftKeyFor(row, currentSessionId));
 				/* Advance the walk from the list as it stood: the re-read below
 				 *  refreshes the truth, but the reader's next ask is already
 				 *  visible here. Any row with a verb — a lapsed ask's Dismiss

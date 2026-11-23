@@ -182,3 +182,26 @@ export const settleResize = ({
 	const projected = height - velocityY * SHEET_RESIZE_PROJECTION;
 	return projected > (min + max) / 2 ? "large" : "medium";
 };
+
+/**
+ * What a drag is FOR, decided from what the keyboard was doing when the finger
+ * landed (`startedWithKeyboard`) and what it is doing now (`keyboardUp`).
+ *
+ * A header drag while the keyboard is up puts the keyboard away and never picks
+ * a size: the surface the reader was typing on is already lifted, its body is
+ * the space above the keyboard, and turning that same downward gesture into a
+ * resize both fights the keyboard's own dismissal and writes a size the reader
+ * never chose. The latch (not just the live flag) is what makes the rest of the
+ * gesture behave the same after the keyboard has gone (spec D3).
+ */
+export const dragMode = ({
+	startedWithKeyboard,
+	keyboardUp,
+}: {
+	startedWithKeyboard: boolean;
+	keyboardUp: boolean;
+}): "dismiss" | "resize" => {
+	// Read from the pan's UI-thread callbacks; see `resistResizeDrag`.
+	"worklet";
+	return startedWithKeyboard || keyboardUp ? "dismiss" : "resize";
+};

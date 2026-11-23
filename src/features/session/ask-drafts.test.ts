@@ -12,6 +12,7 @@ import type { AskQuestion } from "@/contracts";
 import {
 	type AskDraftRecord,
 	askDraftKey,
+	askDraftKeyFor,
 	dropAskDraft,
 	forgetAskDrafts,
 	readAskDraft,
@@ -138,5 +139,52 @@ describe("settling and the outstanding set", () => {
 			new Set(),
 		);
 		expect(readAskDraft(KEY)?.others.q2?.open).toBe(false);
+	});
+});
+
+/**
+ * ONE KEY, DERIVED FROM THE ROW (review r1 F2 / QA r1 Q2). The ask sheet lists
+ * asks from other conversations; when the write used the SHEET's session and
+ * the prune used the ROW's, the next re-read deleted the answer the reader had
+ * just typed. These cases pin the helper the four callers share.
+ */
+describe("the draft key every caller derives", () => {
+	const foreign = { ask_id: "ask-9", session_id: "session-foreign" };
+	const own = { ask_id: "ask-9", session_id: "session-current" };
+
+	it("uses the row's own conversation over the sheet's", () => {
+		expect(askDraftKeyFor(foreign, "session-current")).toBe(
+			askDraftKey("session-foreign", "ask-9"),
+		);
+	});
+
+	it("falls back to the sheet's conversation when the row carries none", () => {
+		expect(askDraftKeyFor({ ask_id: "ask-9" }, "session-current")).toBe(
+			askDraftKey("session-current", "ask-9"),
+		);
+	});
+
+	it("keeps a foreign ask's draft through a re-read's prune", () => {
+		forgetAskDrafts();
+		const key = askDraftKeyFor(foreign, "session-current");
+		writeAskDraft(key, draft("answer for another conversation"), new Set());
+		// The re-read's live set, exactly as the sheet builds it.
+		retainAskDrafts(new Set([askDraftKeyFor(foreign, "session-current")]));
+		expect(readAskDraft(key)?.others.q1?.text).toBe(
+			"answer for another conversation",
+		);
+	});
+
+	it("keeps one ask_id's drafts in two conversations apart", () => {
+		forgetAskDrafts();
+		const a = askDraftKeyFor(foreign, "session-current");
+		const b = askDraftKeyFor(own, "session-current");
+		expect(a).not.toBe(b);
+		writeAskDraft(a, draft("foreign"), new Set());
+		writeAskDraft(b, draft("current"), new Set());
+		// One conversation's ask goes away: only ITS draft goes.
+		retainAskDrafts(new Set([b]));
+		expect(readAskDraft(a)).toBeNull();
+		expect(readAskDraft(b)?.others.q1?.text).toBe("current");
 	});
 });

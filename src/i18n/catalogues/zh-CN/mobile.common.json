@@ -15,8 +15,8 @@
 	"mobile.common.close": "关闭",
 	"mobile.common.loading": "正在加载",
 	"mobile.common.resize_panel": "调整面板大小",
-	"mobile.common.size.medium": "中",
+	"mobile.common.size.medium": "中等",
 	"mobile.common.size.large": "大",
 	"mobile.common.size.taller": "更高",
-	"mobile.common.size.shorter": "更矮"
+	"mobile.common.size.shorter": "更低"
 }

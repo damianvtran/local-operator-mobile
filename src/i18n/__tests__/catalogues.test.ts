@@ -107,7 +107,7 @@ const NAMESPACES = [
 		name: "mobile.common",
 		messages: common,
 		context: commonContext,
-		expected: 15, // O3-b +2: the shared sheet Close and skeleton Loading labels (13 + 2 = 15, counted over the en JSON). M3 S2b-1 +3: the command block's Copy / Copied / copy hint (10 + 3 = 13); +4: the not-found screen (app/ scan)
+		expected: 20, // O3-b +2: the shared sheet Close and skeleton Loading labels (13 + 2 = 15, counted over the en JSON). M3 S2b-1 +3: the command block's Copy / Copied / copy hint (10 + 3 = 13); +4: the not-found screen (app/ scan); +5 the resizable sheet's Resize panel / Medium / Large / Taller / Shorter (#378: 15 + 5 = 20)
 	},
 	{
 		name: "mobile.composer_input",
@@ -645,8 +645,10 @@ describe("the English catalogues", () => {
 		 * labels and the arrow-free accessible name): 1374 + 3 = 1377. Then the
 		 * home work list: +5 mobile.home.work.* keys, −2 pool chips
 		 * (suggestion.phone_access, suggestion.last_turn): 1377 + 3 = 1380,
-		 * home 92 → 95. */
-		expect(total).toBe(1380);
+		 * home 92 → 95. Then the resizable sheet's five
+		 * mobile.common.size.* / resize_panel keys (#378): 1380 + 5 = 1385.
+		 * #375 changes these again at the merge gate — expected. */
+		expect(total).toBe(1385);
 	});
 
 	it("lists every catalogue file this suite checks", () => {

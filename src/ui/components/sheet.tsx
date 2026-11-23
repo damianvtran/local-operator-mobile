@@ -58,6 +58,7 @@ import {
 import { effectiveDuration, parseCubicBezier } from "@/ui/motion";
 import { sheetKeyboardLift, sheetKeyboardRoom } from "@/ui/sheet-keyboard";
 import {
+	dragMode,
 	openingResizeSize,
 	recallResizeSize,
 	rememberResizeSize,
@@ -636,6 +637,10 @@ export const Sheet = ({
 		/* Mid-drag the finger owns the height: a measurement or a keyboard frame
 		 *  landing between begin and end would otherwise jump the sheet under it. */
 		if (resizeDragging.value) return;
+		/* Already where the release's own spring left it: that spring ran WITH the
+		 *  finger's velocity, and a second one here would drop it and re-settle a
+		 *  value that is already in place (review r1 F7). */
+		if (Math.abs(resizeBody.value - restingBodyHeight) < 0.5) return;
 		resizeBody.value = reduceMotion
 			? withTiming(restingBodyHeight, { duration: 120 })
 			: withSpring(restingBodyHeight, { damping: 28, stiffness: 300 });
@@ -671,7 +676,12 @@ export const Sheet = ({
 		})
 		.onUpdate((event) => {
 			"worklet";
-			if (dragStartedWithKeyboard.value || keyboardUp.value) {
+			if (
+				dragMode({
+					startedWithKeyboard: dragStartedWithKeyboard.value,
+					keyboardUp: keyboardUp.value,
+				}) === "dismiss"
+			) {
 				/* Downward only: an upward drag on a sheet that already fills its room
 				 *  has nothing to grow into. Once per drag, so a long pull does not
 				 *  re-dismiss repeatedly. */
@@ -691,7 +701,12 @@ export const Sheet = ({
 			"worklet";
 			resizeDragging.value = false;
 			keyboardDismissedByDrag.value = false;
-			if (dragStartedWithKeyboard.value || keyboardUp.value) {
+			if (
+				dragMode({
+					startedWithKeyboard: dragStartedWithKeyboard.value,
+					keyboardUp: keyboardUp.value,
+				}) === "dismiss"
+			) {
 				/* A keyboard-dismissing drag never picks a size: put the body back on
 				 *  the resting height, whatever the finger left it at. On the JS side,
 				 *  because the resting height may have changed while the keyboard was
@@ -741,9 +756,9 @@ export const Sheet = ({
 	 * own handlers. */
 	const scrollFacts = useRef({ contentH: 0, viewportH: 0, y: 0 });
 	/* Bring a focused field into view (see `@/ui/sheet-scroll` for the two
-	 *  anchors and the arithmetic). Both nodes are measured in WINDOW coordinates
-	 *  and the scroll view's own frame is subtracted, which works on iOS, Android
-	 *  and react-native-web without a native host reference to measure against. */
+	 *  anchors and the arithmetic). Both nodes are measured with `measureLayout`
+	 *  AGAINST THE SCROLL VIEW, so the numbers are content positions — the space
+	 *  `scrollTo` takes — and no window frame or offset is involved. */
 	const bodyRef = useRef<ScrollView>(null);
 	/* The last field asked to be revealed, so the reveal can be repeated once the
 	 *  keyboard has finished moving the sheet (see the effect below). */
@@ -792,8 +807,15 @@ export const Sheet = ({
 		[resizable, reduceMotion],
 	);
 	const bodyScroll = useMemo(() => ({ revealField }), [revealField]);
-	/*
-	 * THE KEYBOARD MOVES THE TARGET AFTER FOCUS. `onFocus` fires while the sheet is
+	/* A KEYBOARD THAT GOES AWAY CANCELS THE PENDING RE-REVEAL: the second pass
+	 *  exists for the keyboard's own move, and a field the reader has left must
+	 *  not drag the body under their next scroll when the keyboard is later put
+	 *  away or the size is changed (review r1 F4). Declared BEFORE the settle
+	 *  effect, so a dismissal's effect pass clears the target first. */
+	useEffect(() => {
+		if (!keyboard.visible) lastReveal.current = null;
+	}, [keyboard.visible]);
+	/* THE KEYBOARD MOVES THE TARGET AFTER FOCUS. `onFocus` fires while the sheet is
 	 * still where it was with the keyboard down, and the keyboard then lifts the
 	 * surface and SHRINKS the body over ~300 ms — so a reveal computed on the focus
 	 * event lands the field where the body used to be, and the field the reader is
@@ -888,8 +910,10 @@ export const Sheet = ({
 	const Body = resizable ? Animated2.ScrollView : ScrollView;
 	const grabColour = useTokenColor("ink-muted");
 	const ModalRoot = resizable ? GestureHandlerRootView : View;
-	/* GestureDetector is a wrapper, so a non-resizable sheet renders the row alone:
-	 *  every other sheet keeps exactly the tree it had. */
+	/* GestureDetector is a wrapper, so a non-resizable sheet renders the row alone.
+	 *  A resizable one mounts one extra `GestureHandlerRootView` inside the Modal
+	 *  (`ModalRoot`) and all sheets get one extra flex `View` around the column
+	 *  (`DirectionView`) — layout-neutral, but not literally the same tree. */
 	const headerRow = (
 		<View
 			className="flex-row items-center gap-2 px-4 py-3"
@@ -918,12 +942,14 @@ export const Sheet = ({
 				 *  and the control never fired (measured in the evidence run: the tap
 				 *  "succeeded" at Medium and nothing moved).
 				 *
-				 *  Its own frame is the pill, and `hitSlop` grows the target to the
-				 *  44 pt floor around it — a full-width band would have covered the
-				 *  close button's upper half. A tap toggles Medium/Large without a
-				 *  drag; the whole header row stays the drag zone; and a reader who
-				 *  cannot drag adjusts the same size from the VoiceOver/TalkBack
-				 *  action list (spec 3.6). */
+				 *  THE PRESSABLE IS A REAL 44 pt-TALL FRAME containing the pill, not a
+				 *  5 pt pill grown by `hitSlop`: hit slop does not grow the frame
+				 *  VoiceOver reads, so the adjustable control was announced 5 pt tall
+				 *  (design r1 D3 / review N2). The close button is a later sibling and
+				 *  stays on top of the band's right end. A tap toggles Medium/Large
+				 *  without a drag; the whole header row stays the drag zone; and a
+				 *  reader who cannot drag adjusts the same size from the VoiceOver /
+				 *  TalkBack action list (spec 3.6). */
 				<Pressable
 					accessibilityRole={ROLE.adjustable}
 					accessibilityLabel={t("mobile.common.resize_panel")}
@@ -933,26 +959,39 @@ export const Sheet = ({
 								? t("mobile.common.size.large")
 								: t("mobile.common.size.medium"),
 					}}
-					accessibilityActions={[
-						{ name: "increment", label: t("mobile.common.size.taller") },
-						{ name: "decrement", label: t("mobile.common.size.shorter") },
-					]}
+					/* Only the action that can happen at THIS size is offered: an
+					 *  "adjust up" already at Large is a control that does nothing
+					 *  (review r1 N1). */
+					accessibilityActions={
+						resizeSize === "large"
+							? [{ name: "decrement", label: t("mobile.common.size.shorter") }]
+							: [{ name: "increment", label: t("mobile.common.size.taller") }]
+					}
 					onAccessibilityAction={(event) => {
 						const action = event.nativeEvent.actionName;
 						if (action === "increment") remember("large");
 						if (action === "decrement") remember("medium");
 					}}
-					onPress={() =>
-						remember(resizeSizeRef.current === "large" ? "medium" : "large")
-					}
-					hitSlop={{ top: 19, bottom: 20, left: 42, right: 42 }}
+					onPress={() => {
+						/* With the keyboard up the bar is not a size control: a tap there
+						 *  puts the keyboard away and writes nothing, so the size the
+						 *  reader chose with the keyboard down is not overwritten by a
+						 *  stray tap while they were typing (UX r1 U5). */
+						if (keyboard.visible) {
+							Keyboard.dismiss();
+							return;
+						}
+						remember(resizeSizeRef.current === "large" ? "medium" : "large");
+					}}
 					testID={CONTROL.sheetGrabBar}
 					style={{
 						position: "absolute",
-						top: 6,
+						top: 0,
 						left: 0,
 						right: 0,
+						height: 44,
 						alignItems: "center",
+						paddingTop: 6,
 					}}
 				>
 					<View
@@ -961,7 +1000,7 @@ export const Sheet = ({
 							height: 5,
 							borderRadius: 3,
 							backgroundColor: grabColour,
-							opacity: 0.4,
+							opacity: 0.6,
 						}}
 					/>
 				</Pressable>
@@ -1127,6 +1166,13 @@ export const Sheet = ({
 											? () => Keyboard.dismiss()
 											: onClose
 									}
+									/* A SCREEN READER'S ACTIVATION ALWAYS CLOSES. The visual first
+									 *  tap's "keyboard away, stay open" is a refinement for a
+									 *  finger; VoiceOver already announces this element "Close", and
+									 *  a control that says Close and only hides a keyboard is a lie
+									 *  (review r1). `onAccessibilityTap` is the path a double-tap
+									 *  takes, so the announcement and the result agree. */
+									onAccessibilityTap={onClose}
 								/>
 							</Animated.View>
 
@@ -1259,10 +1305,19 @@ export const Sheet = ({
 									{/* The body's own space, as one press target UNDER the content:
 									 *  an option card or a field handles its own press and wins, so
 									 *  only a tap on copy or empty space reaches this and puts the
-									 *  keyboard away (opt-in, see the prop). */}
+									 *  keyboard away (opt-in, see the prop).
+									 *
+									 *  INVISIBLE TO THE ACCESSIBILITY TREE. A Pressable is an
+									 *  accessibility element by default and an accessible parent
+									 *  GROUPS its children: as shipped, it announced the whole body as
+									 *  one node and the ask sheet's Other field left the tree (QA r1
+									 *  Q1 / review F3, reproduced with `maestro hierarchy`). The same
+									 *  opt-out `selectable-message.tsx` uses for its rows. */}
 									<SheetBodyScrollContext.Provider value={bodyScroll}>
 										{dismissKeyboardOnBodyTap ? (
 											<Pressable
+												accessible={false}
+												importantForAccessibility="no"
 												onPress={() => Keyboard.dismiss()}
 												style={{ minHeight: "100%" }}
 											>

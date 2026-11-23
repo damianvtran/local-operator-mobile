@@ -1,7 +1,23 @@
 import { act, createElement, Fragment, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
+
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { SheetProps } from "@/ui/components/sheet";
+
+/* `Sheet` imports reanimated and gesture-handler; Node has neither (see the
+ * shared reduction's own note). */
+vi.mock("react-native-reanimated", async () => {
+	const { reanimatedModuleMock } = await import(
+		"@/testing/native-gesture-mocks"
+	);
+	return reanimatedModuleMock();
+});
+vi.mock("react-native-gesture-handler", async () => {
+	const { gestureHandlerModuleMock } = await import(
+		"@/testing/native-gesture-mocks"
+	);
+	return gestureHandlerModuleMock();
+});
 
 /**
  * THE KIT'S MODALS AND SETTINGS' REVEAL, together (PR #122 QA round 6, Q9 / A1;
