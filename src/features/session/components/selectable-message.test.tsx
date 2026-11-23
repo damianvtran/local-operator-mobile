@@ -565,7 +565,8 @@ describe("host-driven selection (Team Bridge actions sheet)", () => {
 	});
 
 	it("a nested pressable's hold opens the host's sheet, not the mode", async () => {
-		const module = await load("ios");
+		// Android: the nested Pressable is the responder, so it forwards the hold.
+		const module = await load("android");
 		const onLongPress = vi.fn();
 		let enter: (() => void) | undefined;
 		const Probe = () => {
@@ -587,6 +588,32 @@ describe("host-driven selection (Team Bridge actions sheet)", () => {
 		);
 		await act(async () => enter?.());
 		expect(onLongPress).toHaveBeenCalledTimes(1);
+		expect(host.inputs).toHaveLength(0);
+	});
+
+	it("iOS: a nested block's hold does not call the sheet itself (the row's touch does, once)", async () => {
+		const module = await load("ios");
+		const onLongPress = vi.fn();
+		let enter: (() => void) | undefined;
+		const Probe = () => {
+			enter = module.useTextSelection().enter;
+			return null;
+		};
+		await act(async () =>
+			root.render(
+				message(
+					module.SelectableMessage,
+					{
+						text: "x",
+						textClassName: "x",
+						host: { id: "h3", onLongPress, accessibility: {} },
+					},
+					createElement(Probe),
+				),
+			),
+		);
+		await act(async () => enter?.());
+		expect(onLongPress).not.toHaveBeenCalled();
 		expect(host.inputs).toHaveLength(0);
 	});
 

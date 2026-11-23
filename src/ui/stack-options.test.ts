@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { BACK_SWIPE_EDGE_PT, stackScreenOptions } from "@/ui/stack-options";
 
 describe("stack screen options: back is the left-edge swipe, never a mid-screen one", () => {
-	it("iOS 26 and later keep the native swipe but only from the leading edge", () => {
+	it("iOS 26 and later keep the native swipe but only from the left edge", () => {
 		for (const version of ["26.0", "26", 27, "27.2"]) {
 			expect(stackScreenOptions("ios", version)).toEqual({
 				headerShown: false,

@@ -150,6 +150,8 @@ const SELECT_TEXT_ACTIONS = [
 
 const NO_ACCESSIBILITY: SelectTextAccessibility = {};
 
+const NOOP_ENTER = () => {};
+
 const NOOP_CONTEXT: TextSelectionContextValue = {
 	enter: () => {},
 	selectionColor: undefined,
@@ -312,13 +314,17 @@ export function SelectableMessage({
 		: LEAF_SELECTABLE;
 	const context = useMemo(
 		() => ({
-			// A nested pressable's hold opens the host's sheet, not the mode.
-			enter: hostLongPress ?? enter,
+			// A nested pressable's hold opens the host's sheet, not the mode. On iOS
+			// the nested wrapper reads raw touches and never claims the responder
+			// (`ScrollSafePressable`), so the hold bubbles to the row's own
+			// long-press: calling the sheet here too would open it twice.
+			enter:
+				hosted && Platform.OS === "ios" ? NOOP_ENTER : (hostLongPress ?? enter),
 			selectionColor,
 			accessibility,
 			leafSelectable: leaves,
 		}),
-		[enter, hostLongPress, selectionColor, accessibility, leaves],
+		[enter, hosted, hostLongPress, selectionColor, accessibility, leaves],
 	);
 
 	if (hosted && !usesSelectionMode()) {

@@ -11,8 +11,10 @@
  * surface in the transcript (markdown tables, code blocks, diagrams).
  *
  * WHAT WE DO ON iOS 26+: keep that native recognizer but restrict it to the
- * leading edge with `gestureResponseDistance: { end }` (screens only starts it
- * when the touch is within `end` pt of the leading edge, mirrored for RTL:
+ * LEFT edge with `gestureResponseDistance: { end }` (screens only starts it
+ * when the touch is within `end` pt of the physical left edge: the app's RTL
+ * layout is a Yoga style, not a UIKit direction, so the native check is never
+ * mirrored and the system's own edge swipe is the left edge in every language:
  * `RNSScreenStack.mm` `isInGestureResponseDistance` and its use in
  * `gestureRecognizerShouldBegin`). Turning the full-screen swipe OFF instead
  * (`fullScreenGestureEnabled: false`) removed swipe-back altogether on the
@@ -30,7 +32,7 @@
  */
 import { Platform } from "react-native";
 
-/** The width (pt) of the leading-edge strip a back swipe may start in. screens
+/** The width (pt) of the left-edge strip a back swipe may start in (the physical left edge). screens
  *  measures the finger where the swipe BEGINS, after it has already travelled a
  *  few points, so this is wider than the system's ~20 pt edge zone (a 20 pt limit
  *  refused real edge swipes in the simulator) and is a touch target's width. A
