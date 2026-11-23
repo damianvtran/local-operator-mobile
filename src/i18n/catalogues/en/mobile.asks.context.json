@@ -1,0 +1,150 @@
+{
+	"mobile.asks.send_answer": {
+		"role": "button",
+		"note": "Primary button of the open ask card, pinned in the sheet footer, when the ask has ONE question. Sends the reader's answer to the agent. Verb phrase, sentence case, capital first letter, no final full stop."
+	},
+	"mobile.asks.send_answers": {
+		"role": "button",
+		"note": "Primary button when the ask has SEVERAL questions: one press sends every answer together. Same wording family as the singular key; a language that does not mark number may use the same words. Sentence case, no final full stop."
+	},
+	"mobile.asks.decline": {
+		"role": "button",
+		"note": "Danger button beside the send button. Tells the agent no answer is coming and it should decide itself; unlike Dismiss it answers the agent. Verb, sentence case, no final full stop."
+	},
+	"mobile.asks.decline_hint": {
+		"role": "help",
+		"note": "Accessibility hint read after the Decline button. Two short sentences with final full stops: nothing is sent as an answer, and the agent decides on its own."
+	},
+	"mobile.asks.dismiss": {
+		"role": "button",
+		"note": "Quiet button on an ask whose deadline already passed (the agent went ahead). One press removes it at once and asks nothing. No ellipsis, no final full stop. Use a DIFFERENT phrase from the skip-question action in every language (vi: do not reuse the skip phrase). vi uses \"Đóng\" here and \"Bỏ qua\" only for skip."
+	},
+	"mobile.asks.dismiss_open": {
+		"role": "button",
+		"note": "Quiet link under the send and decline buttons of a waiting ask. It opens a choice of two reasons rather than acting at once, which the trailing ellipsis says: keep an ellipsis character. Same verb as the plain Dismiss key. Sentence case, no final full stop."
+	},
+	"mobile.asks.dismiss_title": {
+		"role": "heading",
+		"note": "Heading above the two dismissal reasons. {count} is the number of questions the ask holds (always at least 1): the singular names one question, the plural all of them. Use the plural arms your language needs (ru: one/few/many/other; es and fr: one/many/other); a language without number may use one neutral form. No final full stop. vi, zh-CN: no number agreement, one neutral form."
+	},
+	"mobile.asks.dismiss_reason.moot": {
+		"role": "button",
+		"note": "First dismissal reason: the question no longer matters. Sentence case, no final full stop."
+	},
+	"mobile.asks.dismiss_reason.moot_note": {
+		"role": "help",
+		"note": "Second line of the \"No longer needed\" reason: what the agent will do. Sentence case with a capital first letter, no final full stop."
+	},
+	"mobile.asks.dismiss_reason.chat": {
+		"role": "button",
+		"note": "Second dismissal reason: the reader already gave the answer in the conversation itself. Sentence case, no final full stop. hi and zh-CN: use ONE word for \"conversation\" here and in its note (never chat in one and conversation in the other)."
+	},
+	"mobile.asks.dismiss_reason.chat_note": {
+		"role": "help",
+		"note": "Second line of the \"Answered in the conversation\" reason: what happened. Sentence case, no final full stop. Same word for \"conversation\" as the label."
+	},
+	"mobile.asks.settled": {
+		"role": "heading",
+		"note": "Heading above asks that are already settled (answered, declined or dismissed), below everything still waiting. Matches the desktop app's \"Settled\" asks heading. Mean closed/dealt with, not \"earlier\" or \"first\" in time. Sentence case, one word in English, no final full stop. RISKIEST for translators: hi/ur/vi/zh-CN/ru picked the \"settled / dealt with\" sense; the \"earlier\" sense of the old label is wrong."
+	},
+	"mobile.asks.progress.tally": {
+		"role": "status",
+		"note": "Quiet line above the send button while it is disabled, for an ask with several questions. {answered} is how many questions have been answered or skipped; {total} how many there are. Both are non-negative integers and must survive translation; {answered} never exceeds {total}. A label before the numbers avoids participle agreement. No final full stop."
+	},
+	"mobile.asks.progress.pick_or_type": {
+		"role": "status",
+		"note": "Quiet line above the send button while it is disabled, for ONE question that offers options: pick an offered option or type your own answer. Full sentence with a final full stop."
+	},
+	"mobile.asks.progress.type": {
+		"role": "status",
+		"note": "Quiet line above the send button while it is disabled, for ONE question that offers no options: type an answer, or skip the question. Full sentence with a final full stop."
+	},
+	"mobile.asks.empty": {
+		"role": "status",
+		"note": "Empty state of the asks sheet when nothing is waiting. Two short sentences with final full stops. \"The agent\" is the AI agent running on the reader's computer."
+	},
+	"mobile.asks.loading": {
+		"role": "status",
+		"note": "Shown while the sheet reads the queued questions. Ends with the ellipsis character; keep it."
+	},
+	"mobile.asks.title_fallback": {
+		"role": "heading",
+		"note": "Title of the asks sheet when it has no count sentence to show (nothing waiting or lapsed). One word, no final full stop."
+	},
+	"mobile.asks.skip": {
+		"role": "button",
+		"note": "Link under a question that lets the reader send NO answer to it (an empty answer is accepted by the queue). The parenthesis explains the consequence. Do not reuse the Dismiss phrase. No final full stop."
+	},
+	"mobile.asks.unskip": {
+		"role": "button",
+		"note": "Link shown after the reader skipped a question: takes the skip back so the question can be answered. No final full stop."
+	},
+	"mobile.asks.choose_any": {
+		"role": "help",
+		"note": "Caption above the options of a multi-select question. No final full stop."
+	},
+	"mobile.asks.secret_notice": {
+		"role": "help",
+		"note": "Caption on a question whose answer is a secret: it is sent straight to the agent and not written into the visible transcript. Keep the colon (or the locale's equivalent). No final full stop."
+	},
+	"mobile.asks.secret_notice_saved": {
+		"role": "help",
+		"note": "Same caption as the plain secret notice, with the extra fact that the value is also saved on the computer for reuse. Keep it a superset of the plain wording. No final full stop, like the plain notice."
+	},
+	"mobile.asks.other_label": {
+		"role": "button",
+		"note": "Label of the free-text answer row at the end of every option list. One word, no final full stop."
+	},
+	"mobile.asks.other_hint": {
+		"role": "help",
+		"note": "Quiet text beside the Other label and the field's accessibility hint: tells the reader they can type their own answer. No final full stop."
+	},
+	"mobile.asks.other_kept": {
+		"role": "help",
+		"note": "Replaces the Other hint when the free-text row is closed but still holds what the reader typed. States that the text is kept in the app and has NOT been sent. No final full stop."
+	},
+	"mobile.asks.answer_placeholder": {
+		"role": "help",
+		"note": "Placeholder of the free-text answer field. No final full stop."
+	},
+	"mobile.asks.secret_placeholder": {
+		"role": "help",
+		"note": "Placeholder of the masked field for a secret answer. No final full stop."
+	},
+	"mobile.asks.answer_label": {
+		"role": "help",
+		"note": "Accessibility name of the free-text field. {question} is the question text, supplied by the agent and never translated."
+	},
+	"mobile.asks.open_conversation": {
+		"role": "button",
+		"note": "Accessible name of the icon button that opens the conversation an ask came from. Verb phrase, no final full stop."
+	},
+	"mobile.asks.truncated": {
+		"role": "status",
+		"note": "Line above the list when the relay returned only the newest questions. Two sentences with final full stops."
+	},
+	"mobile.asks.honesty": {
+		"role": "status",
+		"note": "Quiet closing line of the asks sheet: the app can only show queued questions while it is open and cannot alert the reader when closed. Two sentences with final full stops."
+	},
+	"mobile.asks.nothing_left": {
+		"role": "status",
+		"note": "Shown in an ask card whose questions were all taken by another surface (terminal, desktop) so nothing is left to answer here. Two sentences with final full stops."
+	},
+	"mobile.asks.none_recorded": {
+		"role": "status",
+		"note": "Shown in a settled ask that recorded no answer. One sentence with a final full stop."
+	},
+	"mobile.asks.recommended": {
+		"role": "meta",
+		"note": "Suffix after an option label marking the agent's recommended option. Keep the leading middle dot. Capitalised after the dot (sentence-case rule); the relay web page's lowercase wording is a follow-up. No final full stop."
+	},
+	"mobile.asks.urgent": {
+		"role": "meta",
+		"note": "Suffix after an ask's state line marking it urgent. Keep the leading middle dot. Capitalised after the dot (sentence-case rule); the relay web page's lowercase wording is a follow-up. No final full stop."
+	},
+	"mobile.asks.deadline_ago": {
+		"role": "meta",
+		"note": "Meta line on an ask whose deadline has passed. {duration} is a compact elapsed time such as \"5 m\" or \"2 h\", supplied by the app; it must survive translation. No final full stop."
+	}
+}

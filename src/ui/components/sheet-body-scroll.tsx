@@ -19,6 +19,14 @@ export type SheetBodyScroll = {
 	 * views to measure; either may be null when a caller only has one.
 	 */
 	revealField: (target: { block: View | null; field: View | null }) => void;
+	/**
+	 * Scroll so the BLOCK's top sits just under the header, whether or not the
+	 * block fits. `revealField` cannot say this: a block taller than the viewport
+	 * pins its FIELD's bottom instead, which is right for a caret and wrong for
+	 * "start reading this card from its first line" (the ask sheet moving to the
+	 * next ask).
+	 */
+	scrollToBlock: (block: View | null) => void;
 };
 
 export const SheetBodyScrollContext = createContext<SheetBodyScroll | null>(

@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { TYPE_STEPS } from "@/ui/tokens.gen";
+import { PALETTE, TYPE_STEPS } from "@/ui/tokens.gen";
 import {
 	alertActionClasses,
 	alertActionLayout,
@@ -11,6 +11,7 @@ import {
 	buttonClasses,
 	COMPOSER_FIELD_MAX_LINES,
 	chipClasses,
+	choiceRowClasses,
 	emptyStateClasses,
 	emptyStateScrollingClasses,
 	FIELD_BORDER_Y,
@@ -483,5 +484,81 @@ describe("icon button", () => {
 		expect(
 			iconButtonClasses({ disabled: true }, { active: true }),
 		).not.toContain("bg-row-selected");
+	});
+});
+
+describe("ask option row (ask-panel parity N2)", () => {
+	it("steps the fill and thickens the edge on selection, and never fades by opacity", () => {
+		const rest = choiceRowClasses();
+		const pressed = choiceRowClasses({ pressed: true });
+		const selected = choiceRowClasses({ selected: true });
+		const disabled = choiceRowClasses({ disabled: true });
+		expect(rest.row).toContain("bg-accent-wash");
+		expect(rest.edge).toContain("w-0.5");
+		expect(pressed.row).toContain("bg-accent-muted");
+		expect(selected.row).toContain("bg-accent-muted");
+		expect(selected.edge).toContain("w-1");
+		/* An empty ring at rest (a square for multi-select) that fills when
+		 * selected, and a semibold label: selection is shape and weight too. */
+		expect(rest.indicator).toContain("rounded-full");
+		expect(rest.indicator).not.toContain("bg-accent");
+		expect(choiceRowClasses({ multi: true }).indicator).toContain("rounded-sm");
+		expect(selected.indicator).toContain("bg-accent");
+		expect(selected.label).toContain("font-semibold");
+		expect(rest.label).not.toContain("font-semibold");
+		/* Disabled is a colour change (components.md § 0), never opacity. */
+		expect(disabled.row).toContain("bg-sunken");
+		expect(disabled.label).toBe("text-ink-disabled");
+		for (const state of [rest, pressed, selected, disabled]) {
+			expect(`${state.row} ${state.edge} ${state.label}`).not.toContain(
+				"opacity",
+			);
+		}
+		/* A selected row that goes disabled mid-send still shows the choice. */
+		const selectedBusy = choiceRowClasses({ selected: true, disabled: true });
+		expect(selectedBusy.row).toContain("bg-accent-muted");
+		expect(selectedBusy.edge).toContain("bg-accent");
+	});
+
+	it("keeps every text pair on the row at 4.5:1 or better, in both themes", () => {
+		/* The numbers the PR states: ink on the two tints, the description's
+		 * `ink-dim`, the ring, and the filled disc with its check. */
+		const channel = (hex: string, at: number) => {
+			const c = Number.parseInt(hex.slice(at, at + 2), 16) / 255;
+			return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+		};
+		const luminance = (hex: string) =>
+			0.2126 * channel(hex, 1) +
+			0.7152 * channel(hex, 3) +
+			0.0722 * channel(hex, 5);
+		const ratio = (a: string, b: string) => {
+			const hi = Math.max(luminance(a), luminance(b));
+			const lo = Math.min(luminance(a), luminance(b));
+			return (hi + 0.05) / (lo + 0.05);
+		};
+		for (const theme of ["light", "dark"] as const) {
+			const palette = PALETTE[theme];
+			for (const ground of ["accent-wash", "accent-muted"] as const) {
+				expect(ratio(palette.ink, palette[ground])).toBeGreaterThanOrEqual(4.5);
+				expect(
+					ratio(palette["ink-dim"], palette[ground]),
+				).toBeGreaterThanOrEqual(4.5);
+			}
+			/* The empty ring against both fills (3:1 non-text floor; muted is the
+			 * pressed state), the selected disc against the selected fill, and the
+			 * check on the disc. */
+			expect(
+				ratio(palette["border-control"], palette["accent-wash"]),
+			).toBeGreaterThanOrEqual(3);
+			expect(
+				ratio(palette["border-control"], palette["accent-muted"]),
+			).toBeGreaterThanOrEqual(3);
+			expect(
+				ratio(palette.accent, palette["accent-muted"]),
+			).toBeGreaterThanOrEqual(3);
+			expect(
+				ratio(palette["on-accent"], palette.accent),
+			).toBeGreaterThanOrEqual(4.5);
+		}
 	});
 });
