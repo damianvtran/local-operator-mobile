@@ -146,5 +146,57 @@
 	"mobile.asks.deadline_ago": {
 		"role": "meta",
 		"note": "Meta line on an ask whose deadline has passed. {duration} is a compact elapsed time such as \"5 m\" or \"2 h\", supplied by the app; it must survive translation. No final full stop."
+	},
+	"mobile.asks.chip.open": {
+		"role": "status",
+		"note": "One-word state of an ask, shown after its id in a chip inside the agent's prose (states: open, answered, declined, timed out, late, dismissed, withdrawn, expired). Lower case, no final full stop; it labels a status, not a sentence. {id} is the ask's id such as a-745e and is never translated. This one is the word for \"open\"."
+	},
+	"mobile.asks.chip.answered": {
+		"role": "status",
+		"note": "One-word state of an ask, shown after its id in a chip inside the agent's prose (states: open, answered, declined, timed out, late, dismissed, withdrawn, expired). Lower case, no final full stop; it labels a status, not a sentence. {id} is the ask's id such as a-745e and is never translated. This one is the word for \"answered\"."
+	},
+	"mobile.asks.chip.declined": {
+		"role": "status",
+		"note": "One-word state of an ask, shown after its id in a chip inside the agent's prose (states: open, answered, declined, timed out, late, dismissed, withdrawn, expired). Lower case, no final full stop; it labels a status, not a sentence. {id} is the ask's id such as a-745e and is never translated. This one is the word for \"declined\"."
+	},
+	"mobile.asks.chip.timed_out": {
+		"role": "status",
+		"note": "One-word state of an ask, shown after its id in a chip inside the agent's prose (states: open, answered, declined, timed out, late, dismissed, withdrawn, expired). Lower case, no final full stop; it labels a status, not a sentence. {id} is the ask's id such as a-745e and is never translated. This one is the word for \"timed out\"."
+	},
+	"mobile.asks.chip.late": {
+		"role": "status",
+		"note": "One-word state of an ask, shown after its id in a chip inside the agent's prose (states: open, answered, declined, timed out, late, dismissed, withdrawn, expired). Lower case, no final full stop; it labels a status, not a sentence. {id} is the ask's id such as a-745e and is never translated. This one is the word for \"late\"."
+	},
+	"mobile.asks.chip.dismissed": {
+		"role": "status",
+		"note": "One-word state of an ask, shown after its id in a chip inside the agent's prose (states: open, answered, declined, timed out, late, dismissed, withdrawn, expired). Lower case, no final full stop; it labels a status, not a sentence. {id} is the ask's id such as a-745e and is never translated. This one is the word for \"dismissed\"."
+	},
+	"mobile.asks.chip.withdrawn": {
+		"role": "status",
+		"note": "One-word state of an ask, shown after its id in a chip inside the agent's prose (states: open, answered, declined, timed out, late, dismissed, withdrawn, expired). Lower case, no final full stop; it labels a status, not a sentence. {id} is the ask's id such as a-745e and is never translated. This one is the word for \"withdrawn\"."
+	},
+	"mobile.asks.chip.expired": {
+		"role": "status",
+		"note": "One-word state of an ask, shown after its id in a chip inside the agent's prose (states: open, answered, declined, timed out, late, dismissed, withdrawn, expired). Lower case, no final full stop; it labels a status, not a sentence. {id} is the ask's id such as a-745e and is never translated. This one is the word for \"expired\"."
+	},
+	"mobile.asks.chip.label": {
+		"role": "help",
+		"note": "Accessible name of an ask-id chip in the agent's prose when the session knows the ask. {id} is the id such as a-745e (never translated); {state} is the one-word state already translated; {question} is the first question's own text, copied verbatim. Ends with an instruction to activate the chip."
+	},
+	"mobile.asks.chip.label_bare": {
+		"role": "help",
+		"note": "Same accessible name as the chip label, for an ask the app knows but whose question text it does not hold. {id} is the ask id, {state} the one-word state. Ends with an instruction to activate the chip."
+	},
+	"mobile.asks.chip.unknown_label": {
+		"role": "help",
+		"note": "Accessible name of an ask id the agent quoted that is NOT in this conversation's ask list (it belongs to another conversation, or has been purged). It is also the sentence shown when such an id is tapped. Two short sentences, final full stops. {id} is the id such as a-745e, never translated."
+	},
+	"mobile.asks.chip.copy_label": {
+		"role": "button",
+		"note": "Accessible name of the copy control beside an ask id, and the hint on long-pressing an ask-id chip. {id} is the ask id such as a-745e, never translated. No final full stop."
+	},
+	"mobile.asks.chip.copied": {
+		"role": "status",
+		"note": "Toast confirming an ask id was copied to the clipboard. {id} is the ask id such as a-745e, never translated. No final full stop."
 	}
 }

@@ -35,5 +35,18 @@
 	"mobile.asks.none_recorded": "इस सवाल का कोई उत्तर दर्ज नहीं हुआ।",
 	"mobile.asks.recommended": "· अनुशंसित",
 	"mobile.asks.urgent": "· अत्यावश्यक",
-	"mobile.asks.deadline_ago": "समय-सीमा {duration} पहले बीत गई"
+	"mobile.asks.deadline_ago": "समय-सीमा {duration} पहले बीत गई",
+	"mobile.asks.chip.open": "खुला",
+	"mobile.asks.chip.answered": "उत्तर दिया गया",
+	"mobile.asks.chip.declined": "अस्वीकृत",
+	"mobile.asks.chip.timed_out": "समय समाप्त",
+	"mobile.asks.chip.late": "देर से",
+	"mobile.asks.chip.dismissed": "खारिज",
+	"mobile.asks.chip.withdrawn": "वापस लिया गया",
+	"mobile.asks.chip.expired": "समय सीमा समाप्त",
+	"mobile.asks.chip.label": "प्रश्न {id}, {state}: {question}. दिखाने के लिए सक्रिय करें।",
+	"mobile.asks.chip.label_bare": "प्रश्न {id}, {state}. दिखाने के लिए सक्रिय करें।",
+	"mobile.asks.chip.unknown_label": "प्रश्न {id} इस सत्र की सूची में नहीं है। हो सकता है यह किसी दूसरे सत्र का हो या पुराना हो चुका हो।",
+	"mobile.asks.chip.copy_label": "प्रश्न आईडी {id} कॉपी करें",
+	"mobile.asks.chip.copied": "कॉपी किया गया {id}"
 }

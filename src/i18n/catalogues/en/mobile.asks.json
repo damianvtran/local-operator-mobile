@@ -35,5 +35,18 @@
 	"mobile.asks.none_recorded": "No answer was recorded for this question.",
 	"mobile.asks.recommended": "· Recommended",
 	"mobile.asks.urgent": "· Urgent",
-	"mobile.asks.deadline_ago": "Deadline passed {duration} ago"
+	"mobile.asks.deadline_ago": "Deadline passed {duration} ago",
+	"mobile.asks.chip.open": "open",
+	"mobile.asks.chip.answered": "answered",
+	"mobile.asks.chip.declined": "declined",
+	"mobile.asks.chip.timed_out": "timed out",
+	"mobile.asks.chip.late": "late",
+	"mobile.asks.chip.dismissed": "dismissed",
+	"mobile.asks.chip.withdrawn": "withdrawn",
+	"mobile.asks.chip.expired": "expired",
+	"mobile.asks.chip.label": "Ask {id}, {state}: {question}. Activate to show.",
+	"mobile.asks.chip.label_bare": "Ask {id}, {state}. Activate to show.",
+	"mobile.asks.chip.unknown_label": "Ask {id} is not in this session's list. It may belong to another session or have aged out.",
+	"mobile.asks.chip.copy_label": "Copy ask id {id}",
+	"mobile.asks.chip.copied": "Copied {id}"
 }

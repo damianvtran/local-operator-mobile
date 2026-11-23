@@ -35,5 +35,18 @@
 	"mobile.asks.none_recorded": "Chưa ghi nhận câu trả lời nào cho câu hỏi này.",
 	"mobile.asks.recommended": "· Được đề xuất",
 	"mobile.asks.urgent": "· Khẩn cấp",
-	"mobile.asks.deadline_ago": "Đã quá hạn cách đây {duration}"
+	"mobile.asks.deadline_ago": "Đã quá hạn cách đây {duration}",
+	"mobile.asks.chip.open": "đang mở",
+	"mobile.asks.chip.answered": "đã trả lời",
+	"mobile.asks.chip.declined": "đã từ chối",
+	"mobile.asks.chip.timed_out": "quá hạn",
+	"mobile.asks.chip.late": "trả lời muộn",
+	"mobile.asks.chip.dismissed": "đã bỏ qua",
+	"mobile.asks.chip.withdrawn": "đã rút lại",
+	"mobile.asks.chip.expired": "đã hết hạn",
+	"mobile.asks.chip.label": "Câu hỏi {id}, {state}: {question}. Kích hoạt để xem.",
+	"mobile.asks.chip.label_bare": "Câu hỏi {id}, {state}. Kích hoạt để xem.",
+	"mobile.asks.chip.unknown_label": "Câu hỏi {id} không có trong danh sách của phiên này. Có thể nó thuộc phiên khác hoặc đã bị loại bỏ.",
+	"mobile.asks.chip.copy_label": "Sao chép id câu hỏi {id}",
+	"mobile.asks.chip.copied": "Đã sao chép {id}"
 }

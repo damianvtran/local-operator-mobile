@@ -35,5 +35,18 @@
 	"mobile.asks.none_recorded": "No se registró ninguna respuesta para esta pregunta.",
 	"mobile.asks.recommended": "· Recomendado",
 	"mobile.asks.urgent": "· Urgente",
-	"mobile.asks.deadline_ago": "Plazo vencido hace {duration}"
+	"mobile.asks.deadline_ago": "Plazo vencido hace {duration}",
+	"mobile.asks.chip.open": "abierta",
+	"mobile.asks.chip.answered": "respondida",
+	"mobile.asks.chip.declined": "rechazada",
+	"mobile.asks.chip.timed_out": "plazo agotado",
+	"mobile.asks.chip.late": "con retraso",
+	"mobile.asks.chip.dismissed": "descartada",
+	"mobile.asks.chip.withdrawn": "retirada",
+	"mobile.asks.chip.expired": "caducada",
+	"mobile.asks.chip.label": "Pregunta {id}, {state}: {question}. Activa para mostrarla.",
+	"mobile.asks.chip.label_bare": "Pregunta {id}, {state}. Activa para mostrarla.",
+	"mobile.asks.chip.unknown_label": "La pregunta {id} no está en la lista de esta sesión. Puede pertenecer a otra sesión o haber caducado.",
+	"mobile.asks.chip.copy_label": "Copiar el id de la pregunta {id}",
+	"mobile.asks.chip.copied": "Copiado {id}"
 }
