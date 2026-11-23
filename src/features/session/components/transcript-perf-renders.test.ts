@@ -156,12 +156,14 @@ vi.mock("@/features/session/markdown", async (importOriginal) => {
 		parseMarkdown: (
 			text: string,
 			checkpoint?: Parameters<typeof actual.parseMarkdown>[1],
+			blockStart?: Parameters<typeof actual.parseMarkdown>[2],
 		) => {
 			counts.parses += 1;
 			counts.parsedUnits += text.length;
 			return actual.parseMarkdown(
 				text,
 				process.env.LOP_STREAM_FULL_PARSE_CONTROL ? undefined : checkpoint,
+				blockStart,
 			);
 		},
 		parseInline: (text: string) => {

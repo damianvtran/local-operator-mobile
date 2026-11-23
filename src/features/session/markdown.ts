@@ -176,6 +176,7 @@ export function startsTable(lines: string[], index: number): boolean {
 export const parseMarkdown = (
 	text: string,
 	checkpoint?: (offset: number, blockCount: number) => void,
+	blockStart?: (offset: number) => void,
 ): Block[] => {
 	const blocks: Block[] = [];
 	const lines = text.split("\n");
@@ -185,8 +186,27 @@ export const parseMarkdown = (
 	let lastBlank = -1;
 	let stableBlocks = 0;
 	let index = 0;
+	let sourceLine = 0;
+	let sourceOffset = 0;
 	while (index < lines.length) {
 		const line = lines[index] ?? "";
+		if (line.trim().length === 0) {
+			if (checkpoint && index < lines.length - 1) {
+				lastBlank = index;
+				stableBlocks = blocks.length;
+			}
+			index += 1;
+			continue;
+		}
+		if (blockStart) {
+			// Report raw UTF-16 offsets. Rendered block text might discard syntax
+			// or normalize cells, so it cannot tell whether a block adopts old text.
+			while (sourceLine < index) {
+				sourceOffset += (lines[sourceLine]?.length ?? 0) + 1;
+				sourceLine += 1;
+			}
+			blockStart(sourceOffset);
+		}
 		const fence = FENCE.exec(line);
 		if (fence) {
 			const language = fence[1] ?? "";
@@ -288,14 +308,6 @@ export const parseMarkdown = (
 				index += 1;
 			}
 			blocks.push({ kind: "table", header, rows });
-			continue;
-		}
-		if (line.trim().length === 0) {
-			if (checkpoint && index < lines.length - 1) {
-				lastBlank = index;
-				stableBlocks = blocks.length;
-			}
-			index += 1;
 			continue;
 		}
 		const paragraph: string[] = [line];

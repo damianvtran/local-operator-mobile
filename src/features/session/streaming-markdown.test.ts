@@ -21,7 +21,11 @@ describe("streaming Markdown checkpoints", () => {
 		for (let end = 0; end <= STREAM.length; end++) {
 			const text = STREAM.slice(0, end);
 			old = parseMarkdownFrame(text, true, old);
-			expect(old.blocks).toEqual(parseMarkdown(text));
+			const starts: number[] = [];
+			expect(old.blocks).toEqual(
+				parseMarkdown(text, undefined, (offset) => starts.push(offset)),
+			);
+			expect(old.starts).toEqual(starts);
 		}
 	});
 

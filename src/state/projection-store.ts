@@ -34,8 +34,8 @@ export interface ProjectionEntry {
 	/** True between a connection opening and its seed frame: the state the contract
 	 *  calls `awaitingSnapshot`. */
 	awaitingSnapshot: boolean;
-	/** Local identity of the accepted snapshot. Unlike a wire version it changes
-	 *  even when a replacement connection resumes at the same version. */
+	/** Identity of a reveal baseline. It changes on the first accepted frame of
+	 *  each HTTP body, independently of the wire version and projection fence. */
 	streamEpoch?: number;
 	/** The version held for the CURRENT connection, or `null`. Diagnostics only; it
 	 *  is never compared across connections. */
@@ -64,6 +64,7 @@ export interface ProjectionActions {
 	applyFrame: (
 		sessionId: string,
 		projection: SessionProjection,
+		startsAttempt?: boolean,
 	) => "accepted-snapshot" | "accepted-newer" | "dropped-older";
 	/** Paints a cached frame (the warm cache) for a session this process holds
 	 *  nothing for. A no-op when the entry already has a projection: a live or
@@ -126,7 +127,7 @@ export function createProjectionStore() {
 			}));
 		},
 
-		applyFrame(sessionId, projection) {
+		applyFrame(sessionId, projection, startsAttempt = false) {
 			const fence = fences.get(sessionId) ?? new ProjectionFence();
 			fences.set(sessionId, fence);
 			const decision = fence.accept(projection.version);
@@ -155,7 +156,7 @@ export function createProjectionStore() {
 						connected: true,
 						awaitingSnapshot: false,
 						streamEpoch:
-							decision === "accepted-snapshot"
+							decision === "accepted-snapshot" || startsAttempt
 								? ++nextStreamEpoch
 								: current.streamEpoch,
 						version: projection.version,

@@ -5,6 +5,7 @@ type Checkpoint = { offset: number; count: number };
 export type MarkdownFrame = {
 	text: string;
 	blocks: Block[];
+	starts: number[];
 	checkpoint: Checkpoint | null;
 };
 
@@ -19,6 +20,7 @@ export function parseMarkdownFrame(
 	const offset = stable?.offset ?? 0;
 	const count = stable?.count ?? 0;
 	let checkpoint = stable;
+	const starts = stable && previous ? previous.starts.slice(0, count) : [];
 	// The parser certifies the boundary, rather than the caller guessing at two
 	// newlines (which may still be in a code fence). Any rewrite parses normally.
 	const tail = parseMarkdown(
@@ -28,9 +30,11 @@ export function parseMarkdownFrame(
 					checkpoint = { offset: offset + next, count: count + blocks };
 				}
 			: undefined,
+		(start) => starts.push(offset + start),
 	);
 	return {
 		text,
+		starts,
 		checkpoint,
 		blocks:
 			stable && previous ? [...previous.blocks.slice(0, count), ...tail] : tail,

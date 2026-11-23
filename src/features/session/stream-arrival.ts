@@ -53,7 +53,11 @@ export function useStreamArrival(
 			(old.rowId === undefined ||
 				entries.some((entry) => entry.id === old.rowId)) &&
 			!old.entries.some((entry) => entry.id === rowId);
-		const revision = sameRow && append ? old.revision : {};
+		// Cancelling motion retires its identity, not just the current effect. A
+		// later preference change (or a row resuming after settle) must not revive
+		// a mounted block whose birth already happened under the old revision.
+		const revision =
+			sameRow && append && assistLive && !reduceMotion ? old.revision : {};
 		const arrival: StreamArrival | null =
 			!reduceMotion &&
 			assistLive &&

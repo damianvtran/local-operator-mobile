@@ -445,6 +445,10 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 				lastFrameAt.current = null;
 			}
 			sessions.getState().beginStream(sessionId);
+			// The reader can reopen an HTTP body inside this one stream object.
+			// Mark its accepted seed as already-present paint, without resetting
+			// the projection fence or changing how this connection retries.
+			let pendingAttemptSeed = true;
 			setError(null);
 			const stream = endpoints.sessionStream(sessionId, {
 				// Read per connect, not per effect: a stream opened before the first
@@ -473,7 +477,10 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 							gateOpen: resumeGateOpen,
 							frameOverlapsHeld: historyRef.current.overlapsHeld(frame.data),
 						});
-					sessions.getState().applyFrame(sessionId, frame.data);
+					const decision = sessions
+						.getState()
+						.applyFrame(sessionId, frame.data, pendingAttemptSeed);
+					if (decision !== "dropped-older") pendingAttemptSeed = false;
 					if (readOnResume) {
 						const reader = historyRef.current;
 						heldHistoryRead.current?.();
@@ -511,6 +518,7 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 				onState: (status) => {
 					if (!active || !sameProjectionOwner(owner, currentIdentity.current))
 						return;
+					if (status.state === "open") pendingAttemptSeed = true;
 					if (status.lastEnd === "error" || status.state === "stalled")
 						recovering.current = true;
 					setFacts((current) => ({

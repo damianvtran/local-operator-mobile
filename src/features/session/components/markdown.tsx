@@ -2,6 +2,7 @@
 import * as Clipboard from "expo-clipboard";
 import {
 	memo,
+	type RefObject,
 	useCallback,
 	useContext,
 	useEffect,
@@ -28,6 +29,7 @@ import {
 	useTextSelection,
 } from "@/features/session/components/selectable-message";
 import {
+	CODE_CARD_INITIAL_OPACITY,
 	StreamBlock,
 	useWebStreamFade,
 } from "@/features/session/components/stream-fade";
@@ -152,10 +154,28 @@ const SAME_STYLE = (a: InlineSpan, b: InlineSpan): boolean =>
 	a.href === b.href &&
 	a.strike === b.strike;
 
-function InlineSuffix({ value }: { value: string }) {
-	const ref = useRef<Text>(null);
-	useWebStreamFade(ref, value);
-	return <Text ref={ref}>{value}</Text>;
+function InlineSuffix({
+	value,
+	nodeRef,
+	animate,
+}: {
+	value: string;
+	nodeRef: RefObject<Text | null>;
+	animate: boolean;
+}) {
+	useWebStreamFade(nodeRef, animate ? value : null);
+	return <Text ref={nodeRef}>{value}</Text>;
+}
+
+type SuffixSplit = { span: number; start: number; end: number; value: string };
+
+function selectedSuffix(node: Node | null): boolean {
+	const selection = node?.ownerDocument?.getSelection();
+	if (!node || !selection || selection.isCollapsed) return false;
+	for (let index = 0; index < selection.rangeCount; index += 1) {
+		if (selection.getRangeAt(index).intersectsNode(node)) return true;
+	}
+	return false;
 }
 
 const Inline = memo(function Inline({
@@ -172,12 +192,16 @@ const Inline = memo(function Inline({
 	 *  same text: on a long answer that is the frame budget spent on work whose
 	 *  input did not change. */
 	const spans = useMemo(() => parseInline(text), [text]);
-	const previous = useRef<{ text: string; spans: InlineSpan[] } | null>(null);
+	const previous = useRef<{
+		text: string;
+		spans: InlineSpan[];
+		split: SuffixSplit | null;
+	} | null>(null);
+	const nodeRef = useRef<Text>(null);
+	const node = nodeRef.current as unknown as Node | null;
+	const [, releaseSelection] = useState(false);
 	const old = previous.current;
-	useLayoutEffect(() => {
-		previous.current = { text, spans };
-	}, [spans, text]);
-	let suffix = "";
+	let fresh: SuffixSplit | null = null;
 	const last = spans.at(-1);
 	const oldLast = old?.spans.at(-1);
 	if (
@@ -211,9 +235,43 @@ const Inline = memo(function Inline({
 			(SUFFIX_BOUNDARY.test(oldLast.text.slice(-1)) ||
 				SUFFIX_BOUNDARY.test(next[0] ?? ""))
 		) {
-			suffix = next;
+			fresh = {
+				span: spans.length - 1,
+				start: oldLast.text.length,
+				end: last.text.length,
+				value: next,
+			};
 		}
 	}
+	// A matching final frame cancels paint, but deleting the wrapper would
+	// collapse a live DOM Range inside it. Hold at most one split per Inline,
+	// only until the selection leaves; later arrivals never accumulate wrappers.
+	const priorSplit = old?.split;
+	const priorSpan = priorSplit ? old?.spans[priorSplit.span] : undefined;
+	const sameSpan = priorSplit ? spans[priorSplit.span] : undefined;
+	const held =
+		!fresh &&
+		priorSplit &&
+		priorSpan &&
+		sameSpan &&
+		SAME_STYLE(priorSpan, sameSpan) &&
+		sameSpan.text.startsWith(priorSpan.text.slice(0, priorSplit.end)) &&
+		selectedSuffix(node)
+			? priorSplit
+			: null;
+	const split = fresh ?? held;
+	useLayoutEffect(() => {
+		previous.current = { text, spans, split };
+	}, [spans, split, text]);
+	useLayoutEffect(() => {
+		const doc = node?.ownerDocument;
+		if (!held || !doc) return;
+		const release = () => {
+			if (!selectedSuffix(node)) releaseSelection((value) => !value);
+		};
+		doc.addEventListener("selectionchange", release);
+		return () => doc.removeEventListener("selectionchange", release);
+	}, [held, node]);
 	const { selectionColor, accessibility, leafSelectable } = useTextSelection();
 	return (
 		<Text
@@ -250,10 +308,16 @@ const Inline = memo(function Inline({
 							: undefined
 					}
 				>
-					{span === last && suffix ? (
+					{split?.span === index ? (
 						<>
-							{span.text.slice(0, -suffix.length)}
-							<InlineSuffix key={span.text.length} value={suffix} />
+							{span.text.slice(0, split.start)}
+							<InlineSuffix
+								key={split.end}
+								value={split.value}
+								nodeRef={nodeRef}
+								animate={fresh !== null}
+							/>
+							{span.text.slice(split.end)}
 						</>
 					) : (
 						span.text
@@ -792,19 +856,10 @@ export const Markdown = memo(function Markdown({
 	const from =
 		!arrival || arrival.sealed || motion === null ? null : arrival.previousText;
 	const oldBlocks = from !== null && old?.text === from ? old.blocks : null;
-	// A Markdown delimiter can turn existing prose into new structure. Only fade
-	// an inserted block if the preceding rendered block was already complete.
-	const oldLast = oldBlocks?.at(-1);
-	const retainedLast = oldBlocks ? blocks[oldBlocks.length - 1] : undefined;
-	const newBlocksStart =
-		from === ""
-			? 0
-			: oldBlocks &&
-					blocks.length > oldBlocks.length &&
-					(oldLast === retainedLast ||
-						JSON.stringify(oldLast) === JSON.stringify(retainedLast))
-				? oldBlocks.length
-				: blocks.length;
+	// A single update can grow prose and insert a card. Its raw source start,
+	// not equality of the preceding rendered block, decides whether it is new.
+	// A delimiter that adopts older source is not a birth.
+	const boundary = from === "" || oldBlocks ? from?.length : undefined;
 	const plainText = useCallback(() => blocksPlainText(blocks), [blocks]);
 	return (
 		/* The whole answer is ONE selection surface, so a drag can run across
@@ -823,8 +878,11 @@ export const Markdown = memo(function Markdown({
 			<View className="gap-3">
 				{blocks.map((block, index) => {
 					const prior = oldBlocks?.[index];
+					const start = frame.starts[index];
+					const born =
+						boundary !== undefined && start !== undefined && start >= boundary;
 					const appendFrom =
-						index < newBlocksStart &&
+						!born &&
 						prior?.kind === block.kind &&
 						"text" in prior &&
 						"text" in block &&
@@ -837,7 +895,7 @@ export const Markdown = memo(function Markdown({
 							key={index}
 							block={block}
 							appendFrom={appendFrom}
-							birth={index >= newBlocksStart ? motion : null}
+							birth={born ? motion : null}
 							motion={motion}
 						/>
 					);
@@ -859,7 +917,13 @@ const MarkdownBlock = memo(function MarkdownBlock({
 	motion: object | null;
 }) {
 	return (
-		<StreamBlock birth={birth} motion={motion}>
+		<StreamBlock
+			birth={birth}
+			motion={motion}
+			initialOpacity={
+				block.kind === "code" ? CODE_CARD_INITIAL_OPACITY : undefined
+			}
+		>
 			<BlockBody block={block} appendFrom={appendFrom} />
 		</StreamBlock>
 	);

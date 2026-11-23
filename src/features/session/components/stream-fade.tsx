@@ -10,6 +10,9 @@ import { parseCubicBezier } from "@/ui/motion";
 import { DURATIONS, EASINGS } from "@/ui/tokens.gen";
 
 const INITIAL_OPACITY = 0.55;
+// The smaller, dimmer language label is the limiting pair on a light code
+// card. This floor keeps it readable over the canvas without delaying paint.
+export const CODE_CARD_INITIAL_OPACITY = 0.96;
 const CURVE = EASINGS["out-quart"];
 
 /** RN Web doesn't have the native Animated driver. WAAPI paints opacity without
@@ -17,6 +20,7 @@ const CURVE = EASINGS["out-quart"];
 export function useWebStreamFade(
 	ref: RefObject<unknown>,
 	motion: object | string | null,
+	initialOpacity = INITIAL_OPACITY,
 ) {
 	useLayoutEffect(() => {
 		if (Platform.OS !== "web" || motion === null) return;
@@ -32,7 +36,7 @@ export function useWebStreamFade(
 		const selection = node.ownerDocument.getSelection();
 		if (selection && !selection.isCollapsed) return;
 		const animation = node.animate(
-			[{ opacity: INITIAL_OPACITY }, { opacity: 1 }],
+			[{ opacity: initialOpacity }, { opacity: 1 }],
 			{
 				duration: DURATIONS.fast,
 				easing: CURVE,
@@ -40,17 +44,19 @@ export function useWebStreamFade(
 		);
 		animation.id = "transcript-arrival";
 		return () => animation.cancel();
-	}, [motion, ref]);
+	}, [initialOpacity, motion, ref]);
 }
 
 function NativeFade({
 	active,
 	children,
+	initialOpacity,
 }: {
 	active: boolean;
 	children: ReactNode;
+	initialOpacity: number;
 }) {
-	const [opacity] = useState(() => new Animated.Value(INITIAL_OPACITY));
+	const [opacity] = useState(() => new Animated.Value(initialOpacity));
 	useLayoutEffect(() => {
 		if (!active) {
 			opacity.setValue(1);
@@ -73,12 +79,14 @@ function NativeFade({
 function WebFade({
 	active,
 	children,
+	initialOpacity,
 }: {
 	active: object | null;
 	children: ReactNode;
+	initialOpacity: number;
 }) {
 	const ref = useRef<View>(null);
-	useWebStreamFade(ref, active);
+	useWebStreamFade(ref, active, initialOpacity);
 	return <View ref={ref}>{children}</View>;
 }
 
@@ -89,17 +97,25 @@ export function StreamBlock({
 	birth,
 	motion,
 	children,
+	initialOpacity = INITIAL_OPACITY,
 }: {
 	birth: object | null;
 	motion: object | null;
 	children: ReactNode;
+	initialOpacity?: number;
 }) {
-	const [born] = useState(() => birth);
-	if (born === null) return children;
-	const active = born === motion ? born : null;
+	// The birth carries paint parameters as well as identity. Reinterpreting an
+	// open fence into another block type later must not restart its animation.
+	const [born] = useState(() => ({ motion: birth, initialOpacity }));
+	if (born.motion === null) return children;
+	const active = born.motion === motion ? born.motion : null;
 	return Platform.OS === "web" ? (
-		<WebFade active={active}>{children}</WebFade>
+		<WebFade active={active} initialOpacity={born.initialOpacity}>
+			{children}
+		</WebFade>
 	) : (
-		<NativeFade active={active !== null}>{children}</NativeFade>
+		<NativeFade active={active !== null} initialOpacity={born.initialOpacity}>
+			{children}
+		</NativeFade>
 	);
 }
