@@ -122,7 +122,12 @@ import {
 	subscribeKeyboardFrame,
 	useKeyboardFrame,
 } from "@/features/session/keyboard-frame";
-import { rideOffset, settleOffset } from "@/features/session/keyboard-motion";
+import {
+	frameAction,
+	keyboardMotionHandlers,
+	SETTLE_SNAP_LIMIT,
+	settleDecision,
+} from "@/features/session/keyboard-motion";
 import {
 	type SkillTrayFrame,
 	shouldRevealSkillTray,
@@ -1124,6 +1129,14 @@ export const Composer = ({
 	 *  are writing `keyboardOffset`, so the store's timed lift must not start a
 	 *  second tween over them. */
 	const motionActive = useSharedValue(false);
+	/* A store frame arrived while a library motion ran (`frameAction` -> hold) and
+	 *  is not yet applied: the end of the motion brings the offset to it
+	 *  (`settleDecision`). JS thread only, like both of its writers. */
+	const frameSeenDuringMotion = useRef(false);
+	/* For `settleLift`, which the library's handlers call from a registration
+	 *  made once (`[]` deps) and so cannot see a later render's value. */
+	const reducedMotionRef = useRef(reducedMotion);
+	reducedMotionRef.current = reducedMotion;
 	/* The overlap the lift is heading for (the latest keyboard frame's). A box
 	 *  measured while the offset is anywhere else is a mid-lift layout and is not
 	 *  published (`publishBox`), so the screen keeps the last SETTLED box and can
@@ -1276,12 +1289,16 @@ export const Composer = ({
 		const unsubscribe = subscribeKeyboardFrame((frame) => {
 			keyboardDuration.current = frame.duration;
 			liftTarget.current = frame.visible ? frame.overlap : 0;
-			/* While the keyboard's own frames drive the lift, a hide or a show event
-			 *  must neither snap nor tween it: `onEnd` settles and remeasures. This
-			 *  subscriber stays the whole driver when no motion runs (a frame the
-			 *  library never reports, a platform without the native module). */
-			if (!frame.visible) {
-				if (motionActive.value) return;
+			/* While the keyboard's own frames drive the lift, a SHOW frame must not
+			 *  tween over them: it is remembered and `onEnd` settles on it. A hide
+			 *  frame always applies, which also frees a motion that never ended
+			 *  (`frameAction`). This subscriber stays the whole driver when no motion
+			 *  runs (a frame the library never reports, a platform without the
+			 *  native module). */
+			const action = frameAction(frame.visible, motionActive.value);
+			if (action === "snap") {
+				motionActive.value = false;
+				frameSeenDuringMotion.current = false;
 				keyboardOffset.value = 0;
 				remeasure();
 				return;
@@ -1293,7 +1310,10 @@ export const Composer = ({
 				lifting.current = true;
 				onLiftRef.current?.(true);
 			}
-			if (motionActive.value) return;
+			if (action === "hold") {
+				frameSeenDuringMotion.current = true;
+				return;
+			}
 			keyboardOffset.value = withTiming(
 				frame.overlap,
 				{ duration: frame.duration },
@@ -1315,6 +1335,49 @@ export const Composer = ({
 		if (present.visible) remeasure();
 		return unsubscribe;
 	}, [keyboardOffset, motionActive]);
+	const publishSoon = useCallback(() => {
+		requestAnimationFrame(() => publishBoxRef.current());
+	}, []);
+	const settleLift = useCallback(() => {
+		const current = keyboardOffset.value;
+		const settled = settleDecision({
+			current,
+			target: liftTarget.current,
+			frameSeenDuringMotion: frameSeenDuringMotion.current,
+		});
+		frameSeenDuringMotion.current = false;
+		if (settled === current) {
+			publishSoon();
+			return;
+		}
+		/* A repair of a real divergence (iPad floating / split view) is moved, not
+		 *  jumped, on the store's own duration; the box is published when it
+		 *  lands. Reduced motion, and a sub-2 pt rounding snap, assign. */
+		if (
+			!reducedMotionRef.current &&
+			Math.abs(settled - current) >= SETTLE_SNAP_LIMIT
+		) {
+			keyboardOffset.value = withTiming(
+				settled,
+				{ duration: keyboardDuration.current },
+				(finished) => {
+					if (finished) runOnJS(publishSoon)();
+				},
+			);
+			return;
+		}
+		keyboardOffset.value = settled;
+		publishSoon();
+	}, [keyboardOffset, publishSoon]);
+	/* A motion that will move the offset is a lift: the screen freezes its slack
+	 *  until `publishBox` ends it. Raised from `onStart` because on Android the
+	 *  store's frame comes after `onEnd`, when the offset already equals it
+	 *  (`shouldHoldLift`). `publishBox` clears it, as for a store-driven lift. */
+	const holdLift = useCallback(() => {
+		if (lifting.current) return;
+		lifting.current = true;
+		onLiftRef.current?.(true);
+	}, []);
 	/* The lift rides the keyboard frame by frame (`react-native-keyboard-controller`)
 	 *  instead of a fixed-duration tween started when the event lands. On iOS that
 	 *  is the same motion, now exact to the keyboard's frame; on Android the lift
@@ -1323,30 +1386,18 @@ export const Composer = ({
 	 *  Each handler carries its own `"worklet"` directive: the library does not
 	 *  workletize them, and a plain callback is a launch crash on the UI runtime
 	 *  (`composer-worklets.test.ts` pins the directive). `[]` deps: the handlers
-	 *  touch only shared values and `settleLift`, which is stable. */
-	const settleLift = useCallback(() => {
-		const settled = settleOffset(keyboardOffset.value, liftTarget.current);
-		if (settled !== keyboardOffset.value) keyboardOffset.value = settled;
-		requestAnimationFrame(() => publishBoxRef.current());
-	}, [keyboardOffset]);
+	 *  touch only shared values, `holdLift` and `settleLift`, all stable (the last
+	 *  reads `reducedMotion` through a ref). The handlers themselves live in
+	 *  `keyboard-motion.ts`, where a Node test drives them. */
 	useKeyboardHandler(
-		{
-			onStart: () => {
-				"worklet";
-				motionActive.value = true;
-				cancelAnimation(keyboardOffset);
-			},
-			onMove: (event) => {
-				"worklet";
-				keyboardOffset.value = rideOffset(event.height);
-			},
-			onEnd: (event) => {
-				"worklet";
-				keyboardOffset.value = rideOffset(event.height);
-				motionActive.value = false;
-				runOnJS(settleLift)();
-			},
-		},
+		keyboardMotionHandlers({
+			keyboardOffset,
+			motionActive,
+			cancelAnimation,
+			runOnJS,
+			holdLift,
+			settleLift,
+		}),
 		[],
 	);
 	useEffect(() => {

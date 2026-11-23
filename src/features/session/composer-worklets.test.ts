@@ -233,19 +233,14 @@ describe("the composer's worklets run on the UI runtime", () => {
 const KEYBOARD_MOTION = read("src/features/session/keyboard-motion.ts");
 
 const keyboardHandlers = (() => {
+	/* The handlers live in `keyboard-motion.ts` (`keyboardMotionHandlers`), so a
+	 *  Node test can drive them; the scan reads them there. */
 	const found: { name: string; body: string }[] = [];
-	const comment = stripComments(COMPONENT);
-	let from = 0;
-	for (;;) {
-		const at = comment.indexOf("useKeyboardHandler(", from);
-		if (at < 0) break;
-		const call = sliceBalanced(comment, at + "useKeyboardHandler".length);
-		for (const match of call.matchAll(
-			/\b(on[A-Z]\w*)\s*:\s*(?:\([^)]*\)|\w+)\s*=>/g,
-		)) {
-			found.push({ name: match[1] ?? "", body: call.slice(match.index) });
-		}
-		from = at + "useKeyboardHandler".length;
+	const text = stripComments(KEYBOARD_MOTION);
+	for (const match of text.matchAll(
+		/\b(on[A-Z]\w*)\s*:\s*(?:\([^)]*\)|\w+)\s*=>/g,
+	)) {
+		found.push({ name: match[1] ?? "", body: text.slice(match.index) });
 	}
 	return found;
 })();
@@ -266,28 +261,57 @@ describe("the composer's keyboard handlers run on the UI runtime", () => {
 		expect(plain).toEqual([]);
 	});
 
-	it("marks the motion helpers those handlers call as worklets", () => {
-		const names = ["rideOffset", "settleOffset"];
+	it("marks every motion helper a worklet", () => {
+		const names = [
+			"rideOffset",
+			"shouldHoldLift",
+			"frameAction",
+			"settleOffset",
+			"settleDecision",
+		];
 		for (const name of names) {
 			const at = KEYBOARD_MOTION.indexOf(`export const ${name} =`);
 			expect(at).toBeGreaterThan(-1);
 			expect(declaresWorklet(KEYBOARD_MOTION.slice(at))).toBe(true);
 		}
-		/* `rideOffset` is the one the UI-thread handlers call. */
-		expect(calledIn(stripComments(COMPONENT), "rideOffset")).toBe(true);
+		/* The UI-thread handlers call these two. */
+		const handlers = stripComments(KEYBOARD_MOTION);
+		expect(
+			calledIn(handlers.slice(handlers.indexOf("onStart")), "shouldHoldLift"),
+		).toBe(true);
+		expect(
+			calledIn(handlers.slice(handlers.indexOf("onMove")), "rideOffset"),
+		).toBe(true);
 	});
 
-	it("keeps the store's timed lift as the fallback, silent while a motion runs", () => {
+	/* WIRING PINS. The handlers' behaviour is tested by driving them in
+	 * `keyboard-motion.test.ts`; the component cannot mount in Node, so only the
+	 * wiring between it and them is a source pin. */
+	const componentText = stripComments(COMPONENT).replace(/\s+/g, " ");
+
+	it("registers the handlers the module builds, with the component's own callbacks", () => {
+		expect(componentText).toContain(
+			"useKeyboardHandler( keyboardMotionHandlers({ keyboardOffset, motionActive, cancelAnimation, runOnJS, holdLift, settleLift, }), [], );",
+		);
+	});
+
+	it("keeps the store's timed lift as the fallback, decided by `frameAction`", () => {
 		/* Two writers of one shared value: the handlers while the keyboard moves,
-		 *  the store's `withTiming` otherwise. Source pins, because the component
-		 *  cannot mount in Node (the same reason as `keyboard-frame.test.ts`). */
-		const text = stripComments(COMPONENT).replace(/\s+/g, " ");
-		expect(text).toContain(
-			"if (motionActive.value) return; keyboardOffset.value = withTiming(",
+		 *  the store's `withTiming` otherwise. */
+		expect(componentText).toContain(
+			"const action = frameAction(frame.visible, motionActive.value);",
 		);
-		expect(text).toContain(
-			"if (motionActive.value) return; keyboardOffset.value = 0;",
+		expect(componentText).toContain(
+			'if (action === "hold") { frameSeenDuringMotion.current = true; return; } keyboardOffset.value = withTiming(',
 		);
-		expect(text).toContain("runOnJS(settleLift)();");
+		expect(componentText).toContain(
+			'if (action === "snap") { motionActive.value = false; frameSeenDuringMotion.current = false; keyboardOffset.value = 0;',
+		);
+	});
+
+	it("settles on the frame held during the motion and clears it", () => {
+		expect(componentText).toContain(
+			"frameSeenDuringMotion: frameSeenDuringMotion.current, }); frameSeenDuringMotion.current = false;",
+		);
 	});
 });
