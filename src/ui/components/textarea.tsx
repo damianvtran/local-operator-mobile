@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
 	Platform,
 	Text,
@@ -18,6 +18,7 @@ import {
 	fieldClasses,
 	fieldScrollEnabled,
 	fieldScrollsWithContent,
+	singleLineFieldStyle,
 	textareaContentCap,
 	webFieldOverflow,
 	webFieldResize,
@@ -60,6 +61,12 @@ export type TextareaProps = {
 	maxHeightPx?: number;
 	/** Six lines by default; the composer may raise it, never remove it. */
 	maxLines?: number;
+	/** Clip the field to EXACTLY ONE text line: no vertical padding, a box one line
+	 *  tall at the reader's scale, no scrolling on either platform. The composer's
+	 *  scroll-made pill, which shows the first line of a draft and nothing of the
+	 *  second (padding is scrollable area, so a taller box shows line two's top).
+	 *  The caller centres it in a row sized for the line (`composerPillRow`). */
+	singleLine?: boolean;
 	/** The most lines a WRAPPED placeholder may add to the field's resting height.
 	 *  Unset keeps the shipped growth (design round D20: the box grows so a wrapped
 	 *  placeholder is not cut mid-word). The composer passes `1` instead — its resting
@@ -173,6 +180,7 @@ export const Textarea = ({
 	hideLabel = false,
 	integrated = false,
 	maxLines = 6,
+	singleLine = false,
 	maxHeightPx,
 	placeholderMaxLines,
 	onSubmitEditing,
@@ -266,6 +274,18 @@ export const Textarea = ({
 	/* The caller's handle wins: it exists so the home can focus the field, and
 	 *  the internal one is never read — only forwarded to the element. */
 	const resolvedRef = fieldRef ?? inputRef;
+	/* A one-line field shows the draft's FIRST line (review R3). A web `<textarea>`
+	 *  keeps its `scrollTop` — the caret at the end of a long draft left it at the
+	 *  last lines — and `overflow: hidden` still allows the property, so it is set
+	 *  back to the top whenever the clip applies or the text changes under it. */
+	// biome-ignore lint/correctness/useExhaustiveDependencies: `value` is the trigger, not an input — the offset is reset whenever the text changes
+	useEffect(() => {
+		if (!singleLine || Platform.OS !== "web") return;
+		const element = resolvedRef.current as unknown as {
+			scrollTop?: number;
+		} | null;
+		if (element && "scrollTop" in element) element.scrollTop = 0;
+	}, [singleLine, value, resolvedRef]);
 	// React Native takes the placeholder as a colour VALUE, not a class.
 	const placeholderColour = useTokenColor("ink-muted");
 	const keyboardAppearance = useKeyboardAppearance();
@@ -380,6 +400,8 @@ export const Textarea = ({
 											: {}),
 									}
 								: {}),
+							/* Last, so it wins over the box rules above: one line, flush. */
+							...(singleLine ? singleLineFieldStyle(bodyLine) : {}),
 						}}
 						/* On WEB, an EMPTY field whose placeholder is capped to one line is an
 						 * `<input>`, not a `<textarea>`: Chrome does not ellipsize a textarea's
@@ -401,6 +423,11 @@ export const Textarea = ({
 						// The transcript scrolls, not the page: the field clips its own
 						// overflow once it hits the cap.
 						scrollEnabled={nativeScroll}
+						/* A one-line field never scrolls: a native text view that did would
+						 *  keep an offset and show the draft's LAST lines in the pill. A spread
+						 *  AFTER the shared decision, so that decision stays the one place the
+						 *  prop is derived from (`textarea-scroll.test.ts`). */
+						{...(singleLine ? { scrollEnabled: false } : null)}
 						onContentSizeChange={handleContentSize}
 						accessibilityRole={ROLE.text}
 						accessibilityLabel={label}

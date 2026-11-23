@@ -23,6 +23,7 @@ import {
 	segmentedItemClasses,
 	segmentedLabelClasses,
 	segmentedLabelWeight,
+	singleLineFieldStyle,
 	skeletonBarClasses,
 	skeletonClasses,
 	TEXTAREA_MAX_PX,
@@ -484,6 +485,34 @@ describe("icon button", () => {
 		expect(
 			iconButtonClasses({ disabled: true }, { active: true }),
 		).not.toContain("bg-row-selected");
+	});
+});
+
+describe("a field clipped to one line (composer pill, R3/W3)", () => {
+	it("is one line tall at the reader's scale, flush, and nothing else moves it", () => {
+		for (const scale of [1, 1.5, 2]) {
+			const line = 24 * scale;
+			expect(singleLineFieldStyle(line)).toEqual({
+				height: line,
+				minHeight: line,
+				maxHeight: line,
+				paddingVertical: 0,
+				overflow: "hidden",
+			});
+		}
+	});
+
+	it("exists because the one-line cap is under the line it must hold", () => {
+		/* maxLines 1 caps the box at 22 x scale; the line is 24 x scale plus 16 of
+		 *  padding. At 200 % that is 44 against 64: the cut the web frame showed. */
+		const cap = textareaContentCap({
+			maxLines: 1,
+			scale: 2,
+			bodyLine: 24,
+			pad: 16,
+		});
+		expect(cap).toBe(44);
+		expect(cap).toBeLessThan(24 * 2 + 16);
 	});
 });
 

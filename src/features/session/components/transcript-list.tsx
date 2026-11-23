@@ -44,6 +44,7 @@ import {
 } from "@/features/session/components/transcript-edge-fades";
 import { TranscriptRow } from "@/features/session/components/transcript-row";
 import { TurnBar } from "@/features/session/components/turn-bar";
+import type { ComposerCompaction } from "@/features/session/composer-compaction";
 import { type RevealSubject, revealTarget } from "@/features/session/find";
 import { groupContainment } from "@/features/session/group-containment";
 import {
@@ -272,6 +273,12 @@ export type TranscriptListProps = {
 	 *  checkpoint rail (`transcript-presence.ts`). Optional: a host with no rail
 	 *  to drive simply keeps its marks static. */
 	presence?: ScrollPresence;
+	/** The composer's scroll-compaction signal (`composer-compaction.ts`), owned
+	 *  by the screen. The list reports the READER'S gestures into it — drag
+	 *  begin/end with release velocity, momentum, offset and distance to the
+	 *  tail — and asks it to grow on a jump/send. Optional: a host with no
+	 *  composer to shrink passes none. */
+	compaction?: ComposerCompaction;
 	testID: string;
 };
 
@@ -414,6 +421,7 @@ export const TranscriptList = ({
 	highlightId = null,
 	reveal = null,
 	presence,
+	compaction,
 	testID,
 }: TranscriptListProps) => {
 	// This reveal is optional; don't start one before the OS preference arrives.
@@ -1410,12 +1418,20 @@ export const TranscriptList = ({
 			 *  included; the presence itself discards the ones no reader gesture
 			 *  made. */
 			presence?.noteMovement(contentOffset.y);
+			/* Every offset, the tail pin's included: the signal itself shrinks only
+			 *  inside a reader's drag and records the rest as a distance. */
+			compaction?.noteOffset(
+				contentOffset.y,
+				distance,
+				layoutMeasurement.height,
+			);
 			driveFades();
 			recompute();
 		},
 		[
 			driveFades,
 			presence,
+			compaction,
 			sessionId,
 			recompute,
 			requestOlder,
@@ -1439,7 +1455,11 @@ export const TranscriptList = ({
 		snapArriving.current = false;
 		scrollHold.current.beginDrag();
 		presence?.setHeld(true);
-	}, [presence, releaseWebAnchor]);
+		/* The compaction's net distance is measured from where the finger went
+		 *  down: the offset the last scroll event reported, which is the one the
+		 *  finger is holding. */
+		compaction?.beginDrag(factsRef.current.offsetY);
+	}, [presence, compaction, releaseWebAnchor]);
 	/* The rest offset from the drag/momentum END event (TestFlight 1157):
 	 *  scroll events can lag a glide, and the end events carry the offset the
 	 *  list actually stopped at. Content height keeps its own, newer source. */
@@ -1456,8 +1476,14 @@ export const TranscriptList = ({
 			observeRest(event);
 			scrollHold.current.endDrag();
 			presence?.setHeld(false);
+			/* `velocity` is points per MILLISECOND on both platforms (Android's is
+			 *  converted to dp in `ScrollEvent.kt`); the policy reads points/s. Its
+			 *  SIGN is platform-dependent (iOS: the offset's rate; Android: the
+			 *  finger's, so opposite) and is not used: the policy takes the
+			 *  direction from the drag's own offset motion. */
+			compaction?.endDrag((event?.nativeEvent?.velocity?.y ?? 0) * 1000);
 		},
-		[presence, observeRest],
+		[presence, compaction, observeRest],
 	);
 	/* The glide after a flick is still the reader's gesture: the presence counts
 	 *  movement only inside a drag or its momentum, which is what keeps the tail
@@ -1465,14 +1491,16 @@ export const TranscriptList = ({
 	const onMomentumScrollBegin = useCallback(() => {
 		scrollHold.current.beginMomentum();
 		presence?.setCoasting(true);
-	}, [presence]);
+		compaction?.setCoasting(true);
+	}, [presence, compaction]);
 	const onMomentumScrollEnd = useCallback(
 		(event?: NativeSyntheticEvent<NativeScrollEvent>) => {
 			observeRest(event);
 			scrollHold.current.endMomentum();
 			presence?.setCoasting(false);
+			compaction?.setCoasting(false);
 		},
-		[presence, observeRest],
+		[presence, compaction, observeRest],
 	);
 
 	/**
@@ -1527,7 +1555,10 @@ export const TranscriptList = ({
 			offset: TAIL_CLAMP_OFFSET_PT,
 			animated: false,
 		});
-	}, [markAtTail, releaseWebAnchor]);
+		/* Jump-to-latest and a send both land here, and both are the reader asking
+		 *  for the composer back: it does not wait for the dwell at the tail. */
+		compaction?.grow();
+	}, [markAtTail, releaseWebAnchor, compaction]);
 	/* SENDING IS A SNAP (operator, 2026-11-21): the reader who just pressed send
 	 *  is done reading where they were. Typing never moves the list. The mark
 	 *  changes only when the composer admits a message (a prompt, or a typed slash

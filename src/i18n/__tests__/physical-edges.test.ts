@@ -296,6 +296,25 @@ const ALLOWLIST: {
 		reason:
 			"the dictation clock's per-platform trailing alignment: web needs the physical flip, native must not have it",
 	},
+	/* The dock's animated side margin (review W2). Reanimated's web driver writes an
+	 * animated style STRAIGHT through react-native-web's `createReactDOMStyle`, which
+	 * skips the `start`/`end`/`marginStart` map its static styles get (measured:
+	 * `marginStart` comes out as a CSS `marginStart`, not a property, so the frame is
+	 * dropped — the W2 bug again). The two longhands are real CSS and real RN, and both
+	 * sides always carry the same value, so the box is RTL-neutral either way. */
+	{
+		file: "src/features/session/composer-presentation.ts",
+		token: "marginLeft",
+		count: 1,
+		reason:
+			"symmetric dock margin: the animated web path needs physical longhands (see the site comment), and both edges always carry the same value",
+	},
+	{
+		file: "src/features/session/composer-presentation.ts",
+		token: "marginRight",
+		count: 1,
+		reason: "the other half of the same symmetric dock margin",
+	},
 	/* Physical-axis motion. A shimmer segment sweeping across a track is a
 	 * decoration on a physical axis; its mirror in RTL is a design decision, not a
 	 * conversion. The drawer's translateX is the documented holdout above. */

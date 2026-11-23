@@ -192,6 +192,7 @@ describe("the composer's worklets run on the UI runtime", () => {
 		 *  code, instead of a number that quietly grew. */
 		expect(reachable).toEqual([
 			"composerShellRadius",
+			"dockMotionStyle",
 			"morphHeight",
 			"morphPillRadius",
 		]);

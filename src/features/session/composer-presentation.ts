@@ -86,6 +86,20 @@ export const composerPaintedHeight = (
 		? pad.top + floor + COMPOSER_CONTROLS_GAP + floor + pad.bottom
 		: pad.top + composerRestRow(floor) + pad.bottom;
 };
+/** The dock's side margin as the card (the dock's own, 12) and as the scroll-made
+ *  pill: the pill is inset further so it reads as a lighter, smaller object than
+ *  the card it shrank from. Both are painted off the SAME `progress` value as the
+ *  height and radius, so the three travel together. Design value (spec
+ *  2026-11-23, tunable 8–40), not measured. Short landscape, whose pill is its
+ *  resting form, keeps the card's 12. */
+export const COMPOSER_CARD_MARGIN = 12;
+export const COMPOSER_PILL_MARGIN = 16;
+/** The card<->pill morph, for the scroll-driven shape (spec 2026-11-23 §4.1:
+ *  220 ms, cubic-bezier(0.2, 0, 0, 1)). A snap, not a continuous follow: the
+ *  composer is a flex sibling of the list, so a height tied to scroll distance
+ *  would resize the list on every scroll pixel. */
+export const COMPOSER_MORPH_MS = 220;
+export const COMPOSER_MORPH_EASING = "cubic-bezier(0.2, 0, 0, 1)";
 /** Build389 presentation only: never derives auth or modifies draft content. */
 export type ComposerPresentationFacts = {
 	focused: boolean;
@@ -106,7 +120,46 @@ export type ComposerPresentationFacts = {
 	 *  band above the composer. Short landscape passes `false` and keeps its
 	 *  pill; absent means `false`, so every earlier caller and pin is unchanged. */
 	card?: boolean;
+	/** The reader is moving the transcript and the dock has yielded its room
+	 *  (`composer-compaction.ts`). Honoured only while nothing pins the card
+	 *  (`composerPinsCard`); absent means `false`, so Home and every earlier
+	 *  caller are unchanged. A shrunk dock is the pill even with a draft, a live
+	 *  turn (Stop) or `card: true`: those force the card only when the dock is
+	 *  not shrunk. */
+	shrunk?: boolean;
+	/** The `$skill` tray is showing. A pin: the list under the field is the thing
+	 *  the reader is choosing from. */
+	skillTray?: boolean;
+	/** The `/` slash sheet is open. A pin, for the same reason. */
+	slashSheet?: boolean;
 };
+/** Facts that keep the dock a CARD whatever the reader's scrolling does: what
+ *  the reader is editing or must be able to read. Scrolling never shrinks a
+ *  dock holding any of them, and one appearing grows a shrunk dock back.
+ *
+ *  Deliberately NOT here, per the operator (2026-11-23): a typed draft of any
+ *  length (the pill shows its first line; the text is never touched) and a
+ *  running turn (the pill keeps the Stop disc). Focus and a visible keyboard ARE
+ *  here: shrinking is only for the unfocused, keyboard-down dock. */
+export const composerPinsCard = (
+	facts: Pick<
+		ComposerPresentationFacts,
+		| "focused"
+		| "keyboard"
+		| "attachments"
+		| "dictation"
+		| "error"
+		| "skillTray"
+		| "slashSheet"
+	>,
+) =>
+	facts.focused ||
+	facts.keyboard ||
+	facts.attachments > 0 ||
+	facts.dictation ||
+	facts.error ||
+	facts.skillTray === true ||
+	facts.slashSheet === true;
 /** Clearance is outside the shell; one radius applies to all corners. Whitespace
  * is still a draft, so geometry must never normalize the reader's content.
  *
@@ -117,14 +170,16 @@ export type ComposerPresentationFacts = {
  * and reproduce the same synchronous-call crash one call deeper. It is only ever
  * called during render. */
 export const composerPresentation = (facts: ComposerPresentationFacts) => {
+	const shrunk = facts.shrunk === true && !composerPinsCard(facts);
 	const expanded =
-		facts.card === true ||
-		facts.focused ||
-		facts.draft.length > 0 ||
-		facts.attachments > 0 ||
-		facts.dictation ||
-		facts.stop ||
-		facts.error;
+		!shrunk &&
+		(facts.card === true ||
+			facts.focused ||
+			facts.draft.length > 0 ||
+			facts.attachments > 0 ||
+			facts.dictation ||
+			facts.stop ||
+			facts.error);
 	const floor = facts.floor ?? COMPOSER_FIELD_BOX;
 	/* The painted pill, on the SAME floor the component paints, plus the large-text
 	 *  growth. Reporting 56/28 over a 60/30 paint was a second source of truth for
@@ -248,4 +303,197 @@ export const morphHeight = (progress: number, from: number, to: number) => {
 export const composerShellRadius = (progress: number, base: number) => {
 	"worklet";
 	return morphHeight(progress, morphPillRadius(base), 24);
+};
+
+/**
+ * The dock's animated margins (review W2). Left and right, NOT `marginHorizontal`:
+ * Reanimated's web driver writes an animated style straight onto the element, and
+ * `marginHorizontal` is a React Native shorthand with no CSS property of its own,
+ * so every frame after the first render was dropped and the pill stayed at the
+ * card's 12 pt (measured: first painted pixel at x = 24 px at 2x). The two longhand
+ * keys are real CSS and real RN, and the margin is symmetric so RTL needs nothing.
+ * They are allowlisted in `src/i18n/__tests__/physical-edges.test.ts` by the same
+ * reason: Reanimated's web path emits `marginStart` as a CSS `marginStart`, which
+ * is not a property, so the logical spelling would be dropped on web.
+ *
+ * `"worklet"`: called from `useAnimatedStyle` (see `morphPillRadius`).
+ */
+export const dockMotionStyle = (
+	progress: number,
+	keyboardOffset: number,
+	pillMargin: number,
+) => {
+	"worklet";
+	const side = morphHeight(progress, pillMargin, COMPOSER_CARD_MARGIN);
+	return {
+		marginBottom: keyboardOffset + 8,
+		marginLeft: side,
+		marginRight: side,
+	};
+};
+
+/**
+ * The scroll-made pill's ROW height: the 48 resting row, or the one text line at
+ * the reader's scale plus the field's own 8 pt top and bottom padding, whichever
+ * is taller (review W3). The shell's `4 + row + 4` is then exactly the
+ * `ceil(24 * scale + 24)` `composerPresentation` reports, so what is announced is
+ * what is painted. Without it the row stayed the 48 touch floor while the line
+ * doubled at 200 % and the draft was cut at the pill's bottom edge.
+ */
+export const composerPillRow = (
+	floor: number = COMPOSER_FIELD_BOX,
+	scale = 1,
+) => Math.max(composerRestRow(floor), Math.ceil(24 * scale + 16));
+
+/**
+ * Whether the pill shows its Send disc for this draft (review R6). A draft that is
+ * only whitespace has nothing to send, so the pill hides the dead disc the card
+ * keeps for layout stability. A DECISION about the control only: the draft itself
+ * is still a draft, `composerPresentation` still treats whitespace as content, and
+ * nothing here normalises what the reader typed.
+ */
+export const pillShowsSend = (draft: string) => draft.trim().length > 0;
+
+/**
+ * Whether the pill's field shows a trailing "…" (design D1, UX U1; spec §4.1 "first
+ * line with an ellipsis"). The pill shows the draft's FIRST line only, so a draft
+ * with more lines after a non-blank one needs a cue that there is more.
+ *
+ * NEWLINE ONLY, deliberately. A single paragraph that wraps past one line is also
+ * "more", but nothing here can know it: the field is clipped to one line, the
+ * native content-size report fires only on a layout change (see `Textarea`), and a
+ * character count is a guess at a width that depends on the font, the text scale
+ * and the screen — it would paint a cue under a short draft or miss a long one. A
+ * wrong cue is worse than none, so the line break, which is exact, is the whole rule.
+ * Trailing whitespace is not "more" (a draft ending in a newline shows all its
+ * words), and a blank draft has no first line to be cut after (`pillShowsPlaceholder`).
+ */
+export const pillShowsEllipsis = (draft: string) =>
+	draft.trim().length > 0 &&
+	(draft.trimEnd().includes("\n") || draft.trimEnd().includes("\r"));
+
+/**
+ * Whether the pill shows the placeholder over a draft that is only whitespace
+ * (design D5). A native input paints its placeholder only for an EMPTY value, and
+ * the draft is never normalised, so a blank draft would otherwise read as an empty
+ * field that is not the resting "Message" one. A DECISION about what is painted over
+ * the field: `value` is untouched and a tap still restores the whitespace.
+ */
+export const pillShowsPlaceholder = (draft: string) =>
+	draft.length > 0 && draft.trim().length === 0;
+
+/** The room the "…" cue takes at the right end of the pill's field, in points, at
+ *  text scale 1. The glyph's advance is about one em (16 pt); the field keeps this
+ *  much clear so the cue never sits over the last glyph of the line. */
+export const PILL_ELLIPSIS_CUE_PT = 16;
+
+/**
+ * Whether the dock is open ONLY because of dictation: with no take it would be the
+ * collapsed pill (UX round 1, U2).
+ *
+ * `blankIsEmpty` reads a whitespace-only draft as no draft. The pill hides Send for
+ * one (`pillShowsSend`), so a take that began there, with nothing else holding the
+ * card open, must drop the dead Send too, or the mic slides one disc left under the
+ * finger that pressed it (review R2-2). Stop, focus, an attachment or an error still
+ * open the card for their own reasons, and the Stop disc must stay.
+ */
+export const openOnlyForDictation = (
+	facts: ComposerPresentationFacts,
+	{ blankIsEmpty = false }: { blankIsEmpty?: boolean } = {},
+) => {
+	const draft = blankIsEmpty && !pillShowsSend(facts.draft) ? "" : facts.draft;
+	return (
+		/* A take (or its outcome line) is what this asks about. Without the fact a
+		 *  blank draft alone would read as "dictation-only" and a card left open by
+		 *  nothing but whitespace would drop its Send after the take ended. */
+		facts.dictation &&
+		composerPresentation(facts).expanded &&
+		/* `shrunk: false`: "open only because of dictation" asks what the dock would
+		 *  be with no take, and a draft or Stop opens it for its own reasons — a
+		 *  scroll-made pill must not make those read as dictation-only. */
+		!composerPresentation({
+			...facts,
+			draft,
+			dictation: false,
+			shrunk: false,
+		}).expanded
+	);
+};
+
+/**
+ * Whether the card that dictation opened drops its dead Send disc (review R2).
+ *
+ * The scroll-made pill has no Send beside an empty field, so its mic is the
+ * right-most control. The card that dictation then pins renders `mic · Send`, which
+ * moved the mic one disc LEFT of the finger that pressed it, over a disabled Send —
+ * and a tap-again-to-finish reader silently did nothing. When the take STARTED FROM
+ * THE PILL the card therefore drops Send, and the mic (or ✓) takes the right-most
+ * slot, the spot the finger is already on. When it started on the card the mic was
+ * already beside Send, so that layout is unchanged (`controlsTrailing`, U2/U7).
+ */
+export const dictationDropsSend = (input: {
+	openForDictationOnly: boolean;
+	startedFromPill: boolean;
+}) => input.openForDictationOnly && input.startedFromPill;
+
+/**
+ * The card's trailing slot and whether its Send is dropped, decided TOGETHER
+ * (review R4-1 / QA Q2). They used to read two different rules for a blank draft:
+ * the slot the strict one (`actions`, which renders no mic while recording) and
+ * the Send the blank-aware one (dropped), so a ' ' draft with a take begun on the
+ * pill left an EMPTY slot and slid the ✓ off the finger. One function means they
+ * cannot disagree: Send is dropped only when the slot holds the mic or ✓ in its
+ * place.
+ *
+ * `restsAsCard` picks the rule. The card reads a whitespace-only draft as no draft
+ * (the pill's Send is already dead there, `pillShowsSend`). Short landscape keeps
+ * its one row and its Send, so ' ' stays a draft there and the slot stays
+ * `actions` through a take (R3-2), and nothing is dropped.
+ */
+export const dictationSlots = (input: {
+	facts: ComposerPresentationFacts;
+	restsAsCard: boolean;
+	startedFromPill: boolean;
+	recording: boolean;
+	micShown: boolean;
+}): { trailing: ControlsTrailing; dropSend: boolean } => {
+	const openForDictationOnly = openOnlyForDictation(input.facts, {
+		blankIsEmpty: input.restsAsCard,
+	});
+	const trailing = controlsTrailing({
+		openForDictationOnly,
+		recording: input.recording,
+		micShown: input.micShown,
+	});
+	return {
+		trailing,
+		dropSend:
+			input.restsAsCard &&
+			trailing !== "actions" &&
+			dictationDropsSend({
+				openForDictationOnly,
+				startedFromPill: input.startedFromPill,
+			}),
+	};
+};
+
+/**
+ * The `selection` the composer forces on its field, or `null` for none (review R3).
+ *
+ * A native text view keeps its scroll offset, so a draft typed over several lines
+ * leaves the pill showing its LAST lines, not the first. While the dock is the pill
+ * the caret is therefore held at the start (`{0, 0}`), which brings the first line
+ * into view without touching `value`. When the reader taps the pill, `restoreCaretAt`
+ * puts the caret at the end of the draft for the one render that focuses it, which
+ * is where a reader returning to a draft expects it. `null` leaves the field the
+ * skills tray's, exactly as before (its one-shot selection, or uncontrolled).
+ */
+export const fieldSelectionOverride = (input: {
+	shrunkPill: boolean;
+	restoreCaretAt: number | null;
+}): { start: number; end: number } | null => {
+	if (input.shrunkPill) return { start: 0, end: 0 };
+	if (input.restoreCaretAt !== null)
+		return { start: input.restoreCaretAt, end: input.restoreCaretAt };
+	return null;
 };

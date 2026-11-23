@@ -69,6 +69,7 @@ import {
 	PinnedWorkingLine,
 	WorkingLine,
 } from "@/features/session/components/working-line";
+import { createComposerCompaction } from "@/features/session/composer-compaction";
 import { isRouteRefused } from "@/features/session/connection-view";
 import { headerHealth, healthDetailKey } from "@/features/session/health";
 import {
@@ -469,6 +470,11 @@ function Session() {
 	 */
 	const scrollPresence = useMemo(() => createScrollPresence(), []);
 	useEffect(() => () => scrollPresence.dispose(), [scrollPresence]);
+	/* The composer's scroll compaction: the transcript reports the reader's
+	 *  gestures here and the Composer subscribes to the one boolean it yields
+	 *  (`composer-compaction.ts`) — never React state at scroll rate. */
+	const composerCompaction = useMemo(() => createComposerCompaction(), []);
+	useEffect(() => () => composerCompaction.dispose(), [composerCompaction]);
 
 	/** Whether the completion's anchor row bottom is inside the transcript's
 	 *  viewport — measured by `TranscriptList` (the list owns the geometry; this
@@ -1161,6 +1167,7 @@ function Session() {
 					// The scroll signal the edge fades and the transient rail both read
 					// (design items 8 and 10).
 					presence={scrollPresence}
+					compaction={composerCompaction}
 					// The find session's two outputs into the list: the wash on the current
 					// hit, and the jump to reveal it (opening a condensed turn on the way
 					// when one hides it).
@@ -1909,6 +1916,7 @@ function Session() {
 					</View>
 
 					<Composer
+						compaction={composerCompaction}
 						glass={chromeGlass}
 						onLayout={(event) =>
 							measureRecovery("composer", event.nativeEvent.layout.height)
