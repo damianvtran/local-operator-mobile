@@ -157,9 +157,11 @@ describe("D8: the row owns the gutter in the conversations pane", () => {
 		expect(pane).not.toContain("marginHorizontal: -16");
 	});
 	it("pads section headers, the stale line and the empty state themselves", () => {
-		expect(pane).toContain(
-			'<View className="px-4"> <SectionHeader label={item.label} testID={item.testID} /> </View>',
-		);
+		/* A header is its own `px-4` box; both heading components (a section's
+		 *  `SectionHeader` and a tag group's composed one) sit inside it. */
+		expect(pane).toContain('<View className="px-4">');
+		expect(pane).toContain("<SectionHeader label={item.label}");
+		expect(pane).toContain("<TagGroupHeader");
 		expect(pane).toContain('<View className="px-4 pt-2">');
 		expect(pane).toContain('"flex-none px-4" : "flex-1 px-4"');
 	});

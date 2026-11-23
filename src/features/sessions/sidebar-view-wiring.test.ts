@@ -16,6 +16,8 @@ const read = (name: string) =>
 	readFileSync(fileURLToPath(new URL(name, import.meta.url)), "utf8");
 const PANE = read("./conversations-pane.tsx");
 const SHEET = read("./sidebar-view-sheet.tsx");
+const CONTROLS = read("./sidebar-view-controls.tsx");
+const SETTINGS = read("../settings/sidebar-section.tsx");
 
 describe("the drawer draws the view's cues", () => {
 	it("D1: the flat list draws a divider after its pinned run", () => {
@@ -25,9 +27,11 @@ describe("the drawer draws the view's cues", () => {
 	});
 
 	it("D2: hidden sections are announced in the list, and the trigger fills when custom", () => {
-		expect(PANE).toContain("hiddenSectionCount(sidebarView)");
+		expect(PANE).toContain("hiddenSectionCount(sidebarView, tagsAssignable)");
 		expect(PANE).toContain('t("mobile.sidebar.hidden_sections"');
-		expect(SHEET).toContain("active={isCustomSidebarView(view)}");
+		expect(SHEET).toContain(
+			"active={isCustomSidebarView(view, tagsAvailable)}",
+		);
 	});
 
 	it("M1: a list the view emptied gets its own empty state, with a reset", () => {
@@ -38,6 +42,37 @@ describe("the drawer draws the view's cues", () => {
 
 	it("Q2: the sheet title may take two lines rather than ellipsize at 320 pt / 200 %", () => {
 		expect(SHEET).toContain("titleLines={2}");
+	});
+});
+
+/**
+ * The tag view options (mobile sidebar tag view options, 2026-11-22): the pane
+ * and the sheet draw the capability-gated controls, the grouping's own
+ * headings, and the row's line switch. The RULES are unit-tested in
+ * `sidebar-view.test.ts`; this pins the surfaces that must read them.
+ */
+describe("the drawer draws the tag view options", () => {
+	it("gates both controls on the relay's tag capability and passes the drawn grouping", () => {
+		expect(SHEET).toContain("canAssignSessionTags(capabilities)");
+		expect(SHEET).toContain("tagsAvailable={tagsAvailable}");
+		expect(SETTINGS).toContain("canAssignSessionTags(capabilities)");
+		expect(SETTINGS).toContain("tagsAvailable={tagsAvailable}");
+		expect(CONTROLS).toContain("drawnGroupBy(view, tagsAvailable)");
+		expect(CONTROLS).toContain('t("mobile.sidebar.group.tag")');
+		expect(CONTROLS).toContain('t("mobile.sidebar.show_tags")');
+		expect(CONTROLS).toContain('t("mobile.sidebar.show_tags_hint")');
+	});
+
+	it("draws the tag groups' headings from the arrangement and withholds row lines", () => {
+		expect(PANE).toContain("arrangeSidebar(filtered, sidebarView, now, {");
+		expect(PANE).toContain("tagsAvailable: tagsAssignable");
+		// The group order is the registry's, read only while that grouping draws.
+		expect(PANE).toContain(".tags()");
+		expect(PANE).toContain("group.tag.name");
+		expect(PANE).toContain('t("mobile.sidebar.section.untagged")');
+		expect(PANE).toContain('t("mobile.sidebar.tag_group.announcement"');
+		expect(PANE).toContain("labelDir={composedDir}");
+		expect(PANE).toContain("showTags={sidebarView.showTags}");
 	});
 });
 

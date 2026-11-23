@@ -24,6 +24,10 @@ export type SectionHeaderProps = {
 	label: string;
 	testID?: string;
 	labelDir?: ComposedDirProps;
+	/** A longer spoken name when the painted label is composed from data — the
+	 *  tag groups' `{name} · {count}` — so a screen reader hears sentences
+	 *  ("Research, 4 conversations") rather than a dot and a bare number. */
+	accessibilityLabel?: string;
 };
 
 /** The label's classes. `ink-muted`, the kit's PANEL-HEADER ink (tokens.json
@@ -37,6 +41,7 @@ export const SectionHeader = ({
 	label,
 	testID,
 	labelDir = {},
+	accessibilityLabel,
 }: SectionHeaderProps) => {
 	const direction = useDirection();
 	/* Tracking separates Urdu's cursive joins. Limit the override to Arabic-script
@@ -54,7 +59,12 @@ export const SectionHeader = ({
 	const web: object = labelDir;
 	return (
 		<View className="pb-1 pt-4" testID={testID}>
-			<Text {...web} className={SECTION_HEADER_LABEL_CLASS} style={style}>
+			<Text
+				{...web}
+				accessibilityLabel={accessibilityLabel}
+				className={SECTION_HEADER_LABEL_CLASS}
+				style={style}
+			>
 				{label}
 			</Text>
 		</View>

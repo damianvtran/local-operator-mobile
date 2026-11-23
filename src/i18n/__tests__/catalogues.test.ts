@@ -304,7 +304,7 @@ const NAMESPACES = [
 		name: "mobile.sidebar",
 		messages: sidebar,
 		context: sidebarContext,
-		expected: 53, // On-device slice +2: the remote row's device line (row.on_device) and the screen-reader label separator (row_label.join) (51 + 2 = 53, counted over the en JSON). O3-c +9: the row's five status words (row_status.*) and four screen-reader label fragments (row_label.*) (42 + 9 = 51, counted over the en JSON). O3-b +15: the Tags sheet and row tag announcement (10) and the row's new marker and plural counts (5) (27 + 15 = 42, counted over the en JSON). PR #275 +2: the conversation row's outbox lines, sending and stopped (25 + 2 = 27)
+		expected: 58, // Sidebar tag view options (2026-11-22): +5 (group.tag, show_tags, show_tags_hint, section.untagged, tag_group.announcement) (53 + 5 = 58, counted over the en JSON). On-device slice +2: the remote row's device line (row.on_device) and the screen-reader label separator (row_label.join) (51 + 2 = 53, counted over the en JSON). O3-c +9: the row's five status words (row_status.*) and four screen-reader label fragments (row_label.*) (42 + 9 = 51, counted over the en JSON). O3-b +15: the Tags sheet and row tag announcement (10) and the row's new marker and plural counts (5) (27 + 15 = 42, counted over the en JSON). PR #275 +2: the conversation row's outbox lines, sending and stopped (25 + 2 = 27)
 	},
 	{
 		/* This app's own short chrome words the relay has no key for: the sidebar
