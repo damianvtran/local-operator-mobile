@@ -7,6 +7,7 @@ import {
 	parseKey,
 	pickSkill,
 	type SkillDraft,
+	shouldRevealSkillTray,
 	skillView,
 } from "./skill-state";
 
@@ -143,5 +144,29 @@ describe("pickSkill", () => {
 		const out = pick("$research ", 9, "research");
 		expect(out.text).toBe("$research ");
 		expect(out.selection).toBe(10);
+	});
+});
+
+describe("shouldRevealSkillTray", () => {
+	const frame = (rows: number, capped: boolean) => ({ rows, capped });
+
+	it("scrolls when the tray opens in a capped scroller", () => {
+		expect(shouldRevealSkillTray(frame(0, true), frame(3, true))).toBe(true);
+	});
+	it("scrolls when the tray gains rows", () => {
+		expect(shouldRevealSkillTray(frame(2, true), frame(5, true))).toBe(true);
+	});
+	it("scrolls when the cap arrives while the tray is already open", () => {
+		expect(shouldRevealSkillTray(frame(3, false), frame(3, true))).toBe(true);
+	});
+	it("never scrolls an uncapped scroller", () => {
+		expect(shouldRevealSkillTray(frame(0, false), frame(3, false))).toBe(false);
+		expect(shouldRevealSkillTray(frame(0, true), frame(3, false))).toBe(false);
+	});
+	it("does not scroll when the tray is closed, shrinks or merely stays open", () => {
+		expect(shouldRevealSkillTray(frame(3, true), frame(0, true))).toBe(false);
+		expect(shouldRevealSkillTray(frame(5, true), frame(2, true))).toBe(false);
+		expect(shouldRevealSkillTray(frame(3, true), frame(3, true))).toBe(false);
+		expect(shouldRevealSkillTray(frame(0, true), frame(0, true))).toBe(false);
 	});
 });

@@ -104,6 +104,10 @@ import {
 	subscribeKeyboardFrame,
 	useKeyboardFrame,
 } from "@/features/session/keyboard-frame";
+import {
+	type SkillTrayFrame,
+	shouldRevealSkillTray,
+} from "@/features/session/skills/skill-state";
 import type { DictationState } from "@/features/session/use-dictation";
 import { t } from "@/i18n";
 import { formatDuration } from "@/stt/dictation";
@@ -1552,6 +1556,23 @@ export const Composer = ({
 		if (noticeKey === "|") return;
 		extrasScrollRef.current?.scrollTo({ y: 0, animated: false });
 	}, [noticeKey]);
+	/* The `$skill` tray is the extras' LAST child, so in the capped (compact)
+	 *  scroller it can open below the fold. Declared AFTER the notice reset so a
+	 *  commit that does both ends on the tray: the reader is typing into it. The
+	 *  decision is `shouldRevealSkillTray`; a rows-grew commit also arms
+	 *  `revealOnGrowth`, because the scroller has not laid the new rows out yet
+	 *  when this effect runs and would scroll to the OLD end. */
+	const trayRows = skills?.rows.length ?? 0;
+	const trayCapped = extrasMaxHeight !== undefined;
+	const trayFrame = useRef<SkillTrayFrame>({ rows: 0, capped: false });
+	const revealOnGrowth = useRef(false);
+	useEffect(() => {
+		const next = { rows: trayRows, capped: trayCapped };
+		const reveal = shouldRevealSkillTray(trayFrame.current, next);
+		revealOnGrowth.current = reveal && trayRows > trayFrame.current.rows;
+		trayFrame.current = next;
+		if (reveal) extrasScrollRef.current?.scrollToEnd({ animated: false });
+	}, [trayRows, trayCapped]);
 	const failureNotice =
 		feedback.retainedText !== null || feedback.errorText !== null ? (
 			<View
@@ -2539,9 +2560,13 @@ export const Composer = ({
 						style={{ flexGrow: 0, flexShrink: 0, maxHeight: extrasMaxHeight }}
 						showsVerticalScrollIndicator={Platform.OS !== "web"}
 						scrollEnabled={extrasMaxHeight !== undefined}
-						onContentSizeChange={(_width, height) =>
-							setExtrasHeight(Math.round(height))
-						}
+						onContentSizeChange={(_width, height) => {
+							setExtrasHeight(Math.round(height));
+							if (revealOnGrowth.current) {
+								revealOnGrowth.current = false;
+								extrasScrollRef.current?.scrollToEnd({ animated: false });
+							}
+						}}
 						nestedScrollEnabled
 						keyboardShouldPersistTaps="handled"
 					>

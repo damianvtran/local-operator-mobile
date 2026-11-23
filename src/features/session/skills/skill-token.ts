@@ -44,8 +44,8 @@
  *    `components/composer.tsx`), so `/team x $skill` is out of scope and no
  *    second copy of the claim rule exists here. One caret, one list.
  *  - NO FUZZY MATCHING. The TUI ranks with its corpus-wide scorer; the phone
- *    picker has no ranked keyboard selection (the arrows walk the list in
- *    catalogue order), so rows are a case-insensitive PREFIX of the typed
+ *    picker has no ranked selection (rows stay in catalogue order and a
+ *    tap picks one), so rows are a case-insensitive PREFIX of the typed
  *    name. The lowercase-noise gate is kept (`$PATH`, `$5`, a bare inline `$`
  *    stay closed), because a wrongly opened list is a draft-rewriting hazard,
  *    not merely noise — see `skillMatches`.
@@ -219,14 +219,14 @@ export function isLeadingSkillToken(text: string, token: SkillToken): boolean {
  * bare inline `$` and every uppercase-prefixed token, because skill names are
  * lowercase by convention while environment variables are uppercase by an
  * equally strong one. Skipping it would let `translate to $LANG` open a list
- * over prose, and Enter — which the open list re-routes to a completion — would
- * rewrite the draft with nothing sent.
+ * over prose, and a stray tap on that list would rewrite the draft with
+ * nothing sent.
  *
  * LEADING has no such rule (the sigil is the first thing typed; nothing else
  * can be meant): a bare `$` lists everything and any prefix narrows it.
  *
  * Matching is a case-insensitive PREFIX, never the TUI's fuzzy scorer — a list
- * walked in catalogue order has no ranking to earn, and a prefix is the rule a
+ * shown in catalogue order has no ranking to earn, and a prefix is the rule a
  * user can predict from what they typed. See the module note for the named
  * divergence.
  */

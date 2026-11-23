@@ -183,6 +183,40 @@ describe("expand_skills on a real send", () => {
 	});
 });
 
+describe("Retry of a held envelope", () => {
+	/* The relaunch shape (`use-composer-echo.test.ts`): the envelope is persisted,
+	 * the in-memory outbox job is gone, so Retry runs the composer's own replay. */
+	const retryAfterLostAck = async (text: string) => {
+		let fail = true;
+		await mount(
+			clientFor(() => {
+				if (fail) throw new RelayError("transport", "lost ack");
+				return ok;
+			}),
+			text,
+		);
+		await send();
+		outbox.abandonAll();
+		fail = false;
+		bodies.length = 0;
+		await act(async () => c().retry());
+		await settle();
+	};
+
+	it("carries expand_skills: true when the first attempt asked for it", async () => {
+		await retryAfterLostAck("use $research please");
+		expect(bodies).toHaveLength(1);
+		expect(bodies[0]?.expand_skills).toBe(true);
+		expect(bodies[0]?.text).toBe("use $research please");
+	});
+
+	it("has no expand_skills key when the first attempt had no $", async () => {
+		await retryAfterLostAck("plain words");
+		expect(bodies).toHaveLength(1);
+		expect("expand_skills" in (bodies[0] ?? {})).toBe(false);
+	});
+});
+
 describe("the receipt", () => {
 	const skipped = (names: string[]) =>
 		clientFor(() => ({

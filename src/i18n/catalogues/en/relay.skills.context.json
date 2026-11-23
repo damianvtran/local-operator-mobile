@@ -1,18 +1,18 @@
 {
 	"relay.skills.tray.label": {
 		"role": "heading",
-		"note": "Mirrored verbatim from the core relay catalogue (local_operator/i18n/catalogues/en/relay.skills.json at f815ea7b7). Accessible name of the list of skills docked above the message field while the user types a $name. The noun 'skills' as the product names them; no punctuation."
+		"note": "Mirrored verbatim from the core relay catalogue (local_operator/i18n/catalogues/en/relay.skills.json at bfa3df2ac). Accessible name of the list of skills docked above the message field while the user types a $name. The noun 'skills' as the product names them; no punctuation."
 	},
 	"relay.skills.tray.hidden": {
 		"role": "meta",
-		"note": "Mirrored verbatim from the core relay catalogue (local_operator/i18n/catalogues/en/relay.skills.json at f815ea7b7). Small tag on a skill row whose author marked it as not offered automatically (frontmatter 'hide'); the skill is still listed because the user typed its name. One lowercase word, no punctuation."
+		"note": "Mirrored verbatim from the core relay catalogue (local_operator/i18n/catalogues/en/relay.skills.json at bfa3df2ac). Small tag on a skill row whose author marked it as not offered automatically (frontmatter 'hide'); the skill is still listed because the user typed its name. One lowercase word, no punctuation."
 	},
 	"relay.skills.skipped": {
 		"role": "status",
-		"note": "Mirrored verbatim from the core relay catalogue (local_operator/i18n/catalogues/en/relay.skills.json at f815ea7b7). Notice after a message was sent: the listed skills had no content to attach, so the message went without them. {names} is a comma-separated list of $-prefixed skill names (technical tokens, never translated); {count} is how many. The message WAS sent."
+		"note": "Mirrored verbatim from the core relay catalogue (local_operator/i18n/catalogues/en/relay.skills.json at bfa3df2ac). Notice after a message was sent: the listed skills had no content to attach, so the message went without them. {names} is a comma-separated list of $-prefixed skill names (technical tokens, never translated); {count} is how many. The message WAS sent."
 	},
 	"relay.skills.too_large": {
 		"role": "status",
-		"note": "Mirrored verbatim from the core relay catalogue (local_operator/i18n/catalogues/en/relay.skills.json at f815ea7b7). Error under the message field: the skills named in the draft are too large to send together, so nothing was sent and the draft is kept. States the remedy: remove one skill and send again."
+		"note": "Mirrored verbatim from the core relay catalogue (local_operator/i18n/catalogues/en/relay.skills.json at bfa3df2ac). Error under the message field: the skills named in the draft are too large to send together, so nothing was sent and the draft is kept. States the remedy: remove one skill and send again."
 	}
 }

@@ -158,3 +158,29 @@ export const pickSkill = (
 		selection: edit.caret,
 	};
 };
+
+/** What the tray looked like to the extras scroller on one commit. */
+export type SkillTrayFrame = {
+	/** Rows showing (0 = the tray is closed). */
+	rows: number;
+	/** True when the extras scroller is capped (compact composer), i.e. it can hide content. */
+	capped: boolean;
+};
+
+/**
+ * Whether the capped extras scroller must be brought to its end so the tray is
+ * on screen. The tray is the LAST child of `extras`, so with an attachment or a
+ * notice above it a compact composer (short landscape, 320x568, 200 % text) can
+ * leave it below the fold. Reveal when it opens, when it gains rows, or when the
+ * cap arrives while it is already open (the cap is measured one layout later);
+ * never when the scroller is uncapped (nothing can be hidden) or the tray is
+ * closed/shrinking, so a reader who scrolled up is not pulled back down by the
+ * tray merely staying open.
+ */
+export const shouldRevealSkillTray = (
+	previous: SkillTrayFrame,
+	next: SkillTrayFrame,
+): boolean =>
+	next.capped &&
+	next.rows > 0 &&
+	(previous.rows === 0 || next.rows > previous.rows || !previous.capped);

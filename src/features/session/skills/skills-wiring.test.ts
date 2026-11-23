@@ -26,6 +26,11 @@ const FIELD_USES_HOOK = /onDraftChange=\{skills\.onChangeText\}/;
 const SELECTION_PASSTHROUGH =
 	/onSelectionChange=\{skills\?\.onSelectionChange\}\s*selection=\{skills\?\.selection\}/;
 const TRAY_RENDERED = /<SkillTray\s+rows=\{skills\.rows\}/;
+const REVEAL_DECISION = /shouldRevealSkillTray\(trayFrame\.current, next\)/;
+const REVEAL_SCROLL =
+	/if \(reveal\) extrasScrollRef\.current\?\.scrollToEnd\(\{ animated: false \}\)/;
+const REVEAL_AFTER_LAYOUT =
+	/if \(revealOnGrowth\.current\) \{\s*revealOnGrowth\.current = false;\s*extrasScrollRef\.current\?\.scrollToEnd/;
 
 describe("the session screen", () => {
 	it("derives the licence ONCE, from the already remote-stripped capabilities", () => {
@@ -47,6 +52,19 @@ describe("the composer", () => {
 		expect(COMPOSER.indexOf("<SkillTray")).toBeLessThan(
 			COMPOSER.indexOf("const main = ("),
 		);
+	});
+});
+
+describe("the composer's compact extras scroller", () => {
+	it("scrolls to the end through the pure decision, declared after the notice reset", () => {
+		expect(COMPOSER).toMatch(REVEAL_DECISION);
+		expect(COMPOSER).toMatch(REVEAL_SCROLL);
+		expect(COMPOSER.indexOf("[trayRows, trayCapped]")).toBeGreaterThan(
+			COMPOSER.indexOf("[noticeKey]"),
+		);
+	});
+	it("scrolls again once newly opened rows have been laid out", () => {
+		expect(COMPOSER).toMatch(REVEAL_AFTER_LAYOUT);
 	});
 });
 
