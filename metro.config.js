@@ -52,7 +52,9 @@ const config = getDefaultConfig(__dirname);
 const escapeForRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 config.resolver.blockList = [
 	...(config.resolver.blockList ?? []),
-	new RegExp(`^${escapeForRegExp(__dirname)}[\\\\/]vendor[\\\\/]bundle(?:[\\\\/]|$)`),
+	new RegExp(
+		`^${escapeForRegExp(__dirname)}[\\\\/]vendor[\\\\/]bundle(?:[\\\\/]|$)`,
+	),
 ];
 
 const uniwind = withUniwindConfig(config, {
