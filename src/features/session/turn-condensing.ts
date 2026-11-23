@@ -40,24 +40,29 @@
  * THE BAR STANDS FOR WORK, NEVER FOR WHAT THE READER IS OWED. Two kinds of row
  * stay on screen beside the bar in EVERY turn, prose or tool
  * (`staysVisibleOutsideTurnBar`):
- *   - every assistant message that hands something over (`isHandoverContent`: has
- *     content, no `calls_tools`), however long it is and whether or not more
- *     work followed it. A turn that answered and was then continued — a steer,
- *     a hub reply, a wake, the todo guardrail's "stop, then more work" — used to
- *     fold its FIRST answer into the bar, and a merged/extended latch swallowed
- *     replies the reader had already seen (operator report on TestFlight 1411:
- *     "final responses are being tucked into condensed messages"). This is a
- *     SUPERSET of the relay web client's partition (`partitionRun` V3/V5,
+ *   - every assistant message that carries words or media (`isAssistantProse`),
+ *     however long it is, whether or not more work followed it, and whether or
+ *     not the row also declares `calls_tools`. A turn that answered and was
+ *     then continued — a steer, a hub reply, a wake, the todo guardrail's "stop,
+ *     then more work" — used to fold its FIRST answer into the bar, and a
+ *     merged/extended latch swallowed replies the reader had already seen
+ *     (operator report on TestFlight 1411: "final responses are being tucked
+ *     into condensed messages"). The `calls_tools` half of that was the same
+ *     loss one message later: the relay stamps it from
+ *     `bool(message.tool_calls)`, a model message can answer AND carry calls,
+ *     and the answer then folded in with the work it introduced (operator
+ *     report, 2026-11-21: the answer and its table inside the collapsed
+ *     `Took 5s · 4 actions` group, tool rows after them). This is a SUPERSET of
+ *     the relay web client's partition (`partitionRun` V3/V5,
  *     `isFinalResponse`, `condense-segments.ts` in local-operator), not a
  *     match: web pins a final response only inside a RESPONSE cycle, while
- *     this rule has no cycle scoping and pins every handover. Showing more is
- *     the safe direction for the report above.
+ *     this rule has no cycle scoping and pins every assistant message that
+ *     says anything. Showing more is the safe direction for both reports.
  *   - every `user` / `steer` row inside the span: the one row in a turn the
  *     READER wrote (`partitionRun` V3). A mid-turn steer used to vanish under
  *     the bar with the work it steered, together with the answers to it.
- * Mid-turn narration (carries `calls_tools`), tool rows and finished reasoning
- * are still what the bar stands for, so a tool turn still reads as one line of
- * work followed by the words it produced.
+ * Tool rows and finished reasoning are still what the bar stands for, so a tool
+ * turn still reads as one line of work followed by the words it produced.
  *
  * Completion is NOT invented here: a turn may condense only when its closing
  * answer is `entryComplete` (final AND text_complete — see
@@ -248,39 +253,43 @@ function isUnhandledErrorNotice(entry: TranscriptEntry): boolean {
 }
 
 /**
- * An assistant row that HANDS something over: it has content (text, images,
- * files, or a validated widget) and does not declare calls of its own. Mid-turn narration ("Reading
- * the ledger first.") carries `calls_tools` and is work commentary the bar may
- * stand for; a message without calls is what the reader asked for, however
- * long it is and whether or not a later message closes the turn.
+ * An assistant row that carries words, media or a validated widget: anything the model said, in a
+ * turn that did tool work or not.
+ *
+ * `calls_tools` is deliberately NOT part of this test. The relay stamps it from
+ * `bool(message.tool_calls)` on the message that carries the text, so a model
+ * message that answers and calls tools in one step arrives with both; treating
+ * those rows as narration folded the answer into the bar along with the work it
+ * introduced. A tool-only message carries no text at all
+ * (`isBlankAssistantEntry`), so the calls still fold: the bar stands for the
+ * calls, never for the words.
  *
  * Not gated on `final` / `text_complete`: a prefix the relay cut is still the
  * reader's text, and a bar that swallowed it would read as a lost message.
  * The relay web client keeps the same rows on screen (`isFinalResponse`,
  * `condense-segments.ts` in local-operator).
  */
-const isWidgetHandover = (entry: DisplayTranscriptEntry): boolean =>
+const isAssistantProse = (entry: DisplayTranscriptEntry): boolean =>
 	entry.kind === "assistant" &&
-	!hasExplicitCallsTools(entry) &&
-	entry[LIVE_INLINE_UI] !== undefined;
-
-const isHandoverContent = (entry: DisplayTranscriptEntry): boolean =>
-	entry.kind === "assistant" &&
-	!hasExplicitCallsTools(entry) &&
 	(entry.text.length > 0 ||
 		entry[LIVE_INLINE_UI] !== undefined ||
 		entry.images.length > 0 ||
 		(entry.files?.length ?? 0) > 0);
 
+/** A validated widget row: it surfaces from a latched bar even when it was
+ *  blank at the condense moment, calls or no calls (same rule as the prose). */
+const isWidgetHandover = (entry: DisplayTranscriptEntry): boolean =>
+	entry.kind === "assistant" && entry[LIVE_INLINE_UI] !== undefined;
+
 /** Rows that stay on screen outside the collapsed span even when the
  *  surrounding turn condenses: visible media artifacts, unhandled error
  *  notices, compactions, the reader's own messages (`user` / `steer`) and the
- *  agent's handover prose — in every turn, tool work or not (see the module
- *  note "THE BAR STANDS FOR WORK"). */
+ *  agent's prose — in every turn, tool work or not (see the module note
+ *  "THE BAR STANDS FOR WORK"). */
 export function staysVisibleOutsideTurnBar(entry: TranscriptEntry): boolean {
 	if (isUnhandledErrorNotice(entry)) return true;
 	if (entry.kind === "user" || entry.kind === "steer") return true;
-	if (isHandoverContent(entry)) return true;
+	if (isAssistantProse(entry)) return true;
 	if (entry.kind === "compaction") return true;
 	if (entry.kind === "tool") {
 		if (MEDIA_ARTIFACT_TOOLS.has(entry.tool_name.trim().toLowerCase())) {
@@ -322,7 +331,14 @@ function closingAnswerIndex(
 		}
 		if (STATEMENT_KINDS.has(entry.kind)) continue;
 		if (isQuietCloseEntry(entry)) return index + 1;
-		return isHandoverContent(entry) && entryComplete(entry) ? index : null;
+		// A row that also requests tools is mid-work prose, not the turn's closing
+		// answer: the calls it declares still have to run and be answered. Pinning
+		// it (`isAssistantProse`) must not close the turn.
+		return isAssistantProse(entry) &&
+			entryComplete(entry) &&
+			!hasExplicitCallsTools(entry)
+			? index
+			: null;
 	}
 	return null;
 }
@@ -558,14 +574,18 @@ export function condensePlan(input: CondenseInput): CondensePlan {
 		 * frame, because the alternative reinstates exactly the jitter this module
 		 * exists to prevent. When `live === false` (session idle), a completed
 		 * newest turn also condenses and latches immediately.
+		 *
+		 * `spanIds.length > 0` is the whole prose guard: an assistant message is
+		 * never in the span (`staysVisibleOutsideTurnBar`), so a turn whose only
+		 * content is prose has an empty span and stays open rather than painting a
+		 * bar with nothing to state.
 		 */
 		const condensed =
 			latchedTurn !== undefined ||
 			(turn.opensWithUserRow &&
 				!isActive &&
 				closing !== null &&
-				spanIds.length > 0 &&
-				!spanHidesProseWithoutWork(entries, turn, closing));
+				spanIds.length > 0);
 		if (latchedTurn === undefined && condensed && closing !== null) {
 			latch.set(turn.key, latchedTurnFor(entries, turn, closing, spanIds));
 		}
@@ -694,32 +714,6 @@ function spanBetween(
 	return ids;
 }
 
-/**
- * A span whose only content is assistant prose has nothing for a bar to state:
- * no counted tool, no whole second of work, no steer. Its bar would read
- * `Turn condensed` where the message text should be — the narration whose calls
- * the relay's fold dropped (quiet or hidden sends, diverted asks) is the live
- * shape. Such a turn stays open; the prose is the content, not chrome.
- */
-function spanHidesProseWithoutWork(
-	entries: readonly TranscriptEntry[],
-	turn: TranscriptTurn,
-	closing: number,
-): boolean {
-	const rows = rowsBetween(entries, turn, closing);
-	const facts = factsOverRows(rows);
-	if (facts.steps > 0 || Math.floor(facts.durationS) >= 1 || facts.steered) {
-		return false;
-	}
-	return rows.some(
-		(row) =>
-			row.kind === "assistant" &&
-			(row.text.length > 0 ||
-				row.images.length > 0 ||
-				(row.files?.length ?? 0) > 0),
-	);
-}
-
 /** The latch record for a span the frame can see: facts, ids, and the
  *  canonical keys the continuation extension matches by. */
 function latchedTurnFor(
@@ -770,7 +764,7 @@ function extendLatchedTurn(
 	const isKnown = (row: TranscriptEntry): boolean =>
 		known.has(canonicalRowKey(row)) || latched.hiddenIds.includes(row.id);
 	// The span re-scans from the opening row, so the PREVIOUS closing answer is
-	// inside it now; `rowsBetween` keeps it out (handover prose is never
+	// inside it now; `rowsBetween` keeps it out (assistant prose is never
 	// hidden), which is what stops a continuation from swallowing an answer the
 	// reader has already seen.
 	const spanRows = rowsBetween(entries, turn, closing);
