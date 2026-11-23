@@ -1,5 +1,6 @@
 {
 	"mobile.session.conversation_details": "Conversation details",
+	"mobile.session.inline_chart_data": "Chart data",
 	"mobile.session.status_tray.hint": "Opens the working line, tasks and subagents",
 	"mobile.session.highlights.withheld": "{count, plural, one {# file not shown} other {# files not shown}}: {reasons}",
 	"mobile.session.highlights.withheld_outside": "outside allowed locations",

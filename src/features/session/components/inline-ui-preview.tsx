@@ -1,13 +1,19 @@
 // biome-ignore-all lint/suspicious/noArrayIndexKey: a decoded payload replaces the whole matrix; positions identify cells even when labels repeat.
-import { ScrollView, Text, View } from "react-native";
+import { useState } from "react";
+import { Pressable, ScrollView, Text, View } from "react-native";
+import Svg, { Path } from "react-native-svg";
+import type { InlineChart } from "@/features/session/inline-chart-model";
 import type { InlineUi } from "@/features/session/inline-ui-parts";
+import { t } from "@/i18n";
+import { useTokenColor } from "@/ui/appearance";
+import { InlineChartPlot } from "./inline-chart";
 
 export type InlineUiData = {
 	title: string;
 	header?: string[];
 	rows: string[][];
 	marks?: (number | null)[][];
-	markStyle?: "bar" | "heat";
+	chart?: InlineChart;
 };
 
 const cell = (value: string | number | null) =>
@@ -34,17 +40,18 @@ export function inlineUiData(value: InlineUi): InlineUiData {
 					...row.map((n) => (n === null ? cell(n) : measure(n, value.unit))),
 				]),
 				marks: value.rows.map((row) => [null, ...row]),
-				markStyle: "heat",
 			};
 		case "scatter":
 			return {
 				title,
+				chart: value,
 				header: [value.xLabel, value.yLabel],
 				rows: value.data.map((point) => point.map(cell)),
 			};
 		case "series":
 			return {
 				title,
+				chart: value,
 				header: ["", ...value.series.map(({ label }) => label)],
 				// Preview original values, not percent/stack transformations. Dual-axis
 				// values keep their own units rather than sharing a misleading scale.
@@ -60,16 +67,12 @@ export function inlineUiData(value: InlineUi): InlineUiData {
 					}),
 				]),
 			};
-		default: {
-			const showBars = value.type === "bar" || value.type === "histogram";
+		default:
 			return {
 				title,
+				chart: value,
 				rows: value.data.map(([label, n]) => [label, measure(n, value.unit)]),
-				...(showBars
-					? { marks: value.data.map(([, n]) => [null, n]), markStyle: "bar" }
-					: {}),
 			};
-		}
 	}
 }
 
@@ -80,70 +83,110 @@ export const inlineUiPlainText = ({ title, header, rows }: InlineUiData) =>
 		...rows.map((row) => row.join("\t")),
 	].join("\n");
 
+function ChartDisclosure({
+	chart,
+	data,
+}: {
+	chart: InlineChart;
+	data: InlineUiData;
+}) {
+	const [expanded, setExpanded] = useState(false);
+	const ink = useTokenColor("ink-muted");
+	const label = t("mobile.session.inline_chart_data");
+	return (
+		<>
+			<InlineChartPlot chart={chart} />
+			{/* Secondary detail stays local to the plot, not a modal. Selection
+			 * still copies exact data even before this disclosure is opened. */}
+			<Pressable
+				accessibilityRole="button"
+				accessibilityLabel={`${label} · ${data.title}`}
+				aria-expanded={expanded}
+				className="min-h-12 flex-row items-center gap-2 border border-transparent px-3 active:bg-row-hover web:focus-visible:border-accent"
+				onPress={() => setExpanded((open) => !open)}
+			>
+				<Text className="shrink text-body-sm text-ink-muted">{label}</Text>
+				<Svg aria-hidden width={16} height={16} viewBox="0 0 16 16">
+					<Path
+						d={expanded ? "M4 10l4-4 4 4" : "M4 6l4 4 4-4"}
+						fill="none"
+						stroke={ink}
+						strokeWidth={1.5}
+						strokeLinecap="round"
+						strokeLinejoin="round"
+					/>
+				</Svg>
+			</Pressable>
+			{expanded ? <InlineUiGrid data={data} /> : null}
+		</>
+	);
+}
+
 export function InlineUiPreview({ data }: { data: InlineUiData }) {
-	const { title, header, rows, marks, markStyle } = data;
-	const max = Math.max(0, ...(marks ?? []).flat().map((n) => Math.abs(n ?? 0)));
-	const columnClass = "w-28 px-2 py-1";
 	return (
 		<View className="rounded-sm border border-hairline bg-sunken">
 			<Text
 				accessibilityRole="header"
-				className="px-2 py-2 text-body-lg font-medium text-ink"
+				className="px-3 py-2 text-body-lg font-medium text-ink"
 			>
-				{title}
+				{data.title}
 			</Text>
-			<ScrollView horizontal>
-				<View>
-					{header ? (
-						<View className="flex-row border-b border-hairline">
-							{header.map((label, index) => (
-								<Text
-									key={index}
-									className={`${columnClass} text-body-sm font-medium text-ink`}
-								>
-									{label}
-								</Text>
-							))}
-						</View>
-					) : null}
-					{rows.map((row, i) => (
-						<View key={i} className="flex-row border-b border-hairline">
-							{row.map((text, j) => {
-								const mark = marks?.[i]?.[j];
-								const ratio = mark == null || max === 0 ? 0 : mark / max;
-								const label = header?.[j];
-								return (
-									<View key={j} className={columnClass}>
-										{/* Marks are supplementary: signs and missing values stay legible without colour. */}
-										{markStyle === "heat" && mark != null ? (
-											<View
-												aria-hidden
-												className="absolute inset-0 bg-accent"
-												style={{ opacity: (ratio + 1) / 10 }}
-											/>
-										) : null}
-										<Text
-											accessibilityLabel={
-												label ? `${label}: ${text}` : undefined
-											}
-											className="text-body-sm text-ink"
-										>
-											{text}
-										</Text>
-										{markStyle === "bar" && ratio !== 0 ? (
-											<View
-												aria-hidden
-												className="h-1 rounded-full bg-accent"
-												style={{ width: `${Math.abs(ratio) * 100}%` }}
-											/>
-										) : null}
-									</View>
-								);
-							})}
-						</View>
-					))}
-				</View>
-			</ScrollView>
+			{data.chart ? (
+				<ChartDisclosure chart={data.chart} data={data} />
+			) : (
+				<InlineUiGrid data={data} />
+			)}
 		</View>
+	);
+}
+
+function InlineUiGrid({ data }: { data: InlineUiData }) {
+	const { header, rows, marks } = data;
+	const max = Math.max(0, ...(marks ?? []).flat().map((n) => Math.abs(n ?? 0)));
+	const columnClass = "w-28 px-2 py-1";
+	return (
+		<ScrollView horizontal>
+			<View>
+				{header ? (
+					<View className="flex-row border-b border-hairline">
+						{header.map((label, index) => (
+							<Text
+								key={index}
+								className={`${columnClass} text-body-sm font-medium text-ink`}
+							>
+								{label}
+							</Text>
+						))}
+					</View>
+				) : null}
+				{rows.map((row, i) => (
+					<View key={i} className="flex-row border-b border-hairline">
+						{row.map((text, j) => {
+							const mark = marks?.[i]?.[j];
+							const ratio = mark == null || max === 0 ? 0 : mark / max;
+							const label = header?.[j];
+							return (
+								<View key={j} className={columnClass}>
+									{/* Marks are supplementary: signs and missing values stay legible without colour. */}
+									{mark != null ? (
+										<View
+											aria-hidden
+											className="absolute inset-0 bg-accent"
+											style={{ opacity: (ratio + 1) / 10 }}
+										/>
+									) : null}
+									<Text
+										accessibilityLabel={label ? `${label}: ${text}` : undefined}
+										className="text-body-sm text-ink"
+									>
+										{text}
+									</Text>
+								</View>
+							);
+						})}
+					</View>
+				))}
+			</View>
+		</ScrollView>
 	);
 }

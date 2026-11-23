@@ -885,6 +885,7 @@ export type CatalogueKey =
 	| "mobile.session.history.loading"
 	| "mobile.session.history.refresh_failed"
 	| "mobile.session.history.stalled"
+	| "mobile.session.inline_chart_data"
 	| "mobile.session.jump_to_latest"
 	| "mobile.session.jump_to_latest_name"
 	| "mobile.session.jump_to_latest_short"
@@ -2114,6 +2115,7 @@ export type NoParamKey =
 	| "mobile.session.history.loading"
 	| "mobile.session.history.refresh_failed"
 	| "mobile.session.history.stalled"
+	| "mobile.session.inline_chart_data"
 	| "mobile.session.jump_to_latest"
 	| "mobile.session.jump_to_latest_name"
 	| "mobile.session.jump_to_latest_short"
@@ -3401,6 +3403,7 @@ export type MessageParams = {
 	"mobile.session.history.loading": NoParams;
 	"mobile.session.history.refresh_failed": NoParams;
 	"mobile.session.history.stalled": NoParams;
+	"mobile.session.inline_chart_data": NoParams;
 	"mobile.session.jump_to_latest": NoParams;
 	"mobile.session.jump_to_latest_name": NoParams;
 	"mobile.session.jump_to_latest_short": NoParams;
@@ -4797,6 +4800,7 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.session.history.loading": "Loading earlier messages…",
 	"mobile.session.history.refresh_failed": "The latest messages could not be loaded.",
 	"mobile.session.history.stalled": "Earlier messages stopped loading. Try again, or reopen this conversation.",
+	"mobile.session.inline_chart_data": "Chart data",
 	"mobile.session.jump_to_latest": "↓ Jump to latest",
 	"mobile.session.jump_to_latest_name": "Jump to latest",
 	"mobile.session.jump_to_latest_short": "↓ Latest",
@@ -6178,6 +6182,7 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.session.history.loading": { role: "status", note: "Busy state while reading one earlier transcript page." },
 	"mobile.session.history.refresh_failed": { role: "status", note: "Reading the newest transcript page failed (returning to the app, Check again, or reloading history). Shown at the newest edge with a Try again button; do not repeat that label. Must not say EARLIER messages failed." },
 	"mobile.session.history.stalled": { role: "status", note: "The server returned a cursor that did not advance; automatic reads stop. Name the button's own action (Try again) or reopening; plain wording, no engineering terms." },
+	"mobile.session.inline_chart_data": { role: "button", note: "Disclosure below a chart in an assistant reply. Opens and closes the chart's exact values as a table. The button label stays the same and the expanded state is read separately. Short noun phrase, no final full stop." },
 	"mobile.session.jump_to_latest": { role: "button", note: "The visible and accessible name of the floating chip over the transcript that takes a reader who scrolled up back to the newest message. It appears only after new output arrived while they were away. Keep the leading down arrow; imperative, sentence case, no final full stop. The arrow points at the newest content below, not at the reading direction." },
 	"mobile.session.jump_to_latest_name": { role: "button", note: "The ACCESSIBLE name of the floating \"jump to latest\" chip: the same sentence as mobile.session.jump_to_latest WITHOUT the leading down arrow, because a screen reader would read the glyph as \"down arrow\". Imperative, sentence case, no final full stop. Shown visually only by screen readers, never on the chip itself." },
 	"mobile.session.jump_to_latest_short": { role: "button", note: "The visible form of mobile.session.jump_to_latest on phones narrower than 360 pt, where the full sentence crowds the row beside it. Keep the leading down arrow; one or two words at most. The accessible name stays the full sentence, so this label may be an abbreviation." },
@@ -7573,6 +7578,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.history.loading": "Cargando mensajes anteriores…",
 		"mobile.session.history.refresh_failed": "No se pudieron cargar los mensajes más recientes.",
 		"mobile.session.history.stalled": "Los mensajes anteriores dejaron de cargarse. Reintenta o abre de nuevo esta conversación.",
+		"mobile.session.inline_chart_data": "Datos del gráfico",
 		"mobile.session.jump_to_latest": "↓ Ir a lo más reciente",
 		"mobile.session.jump_to_latest_name": "Ir a lo más reciente",
 		"mobile.session.jump_to_latest_short": "↓ Lo último",
@@ -8952,6 +8958,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.history.loading": "Chargement des messages précédents…",
 		"mobile.session.history.refresh_failed": "Les derniers messages n’ont pas pu être chargés.",
 		"mobile.session.history.stalled": "Le chargement des messages précédents s’est arrêté. Réessayez ou rouvrez cette conversation.",
+		"mobile.session.inline_chart_data": "Données du graphique",
 		"mobile.session.jump_to_latest": "↓ Aller au plus récent",
 		"mobile.session.jump_to_latest_name": "Aller au plus récent",
 		"mobile.session.jump_to_latest_short": "↓ Plus récent",
@@ -10331,6 +10338,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.history.loading": "पहले के संदेश लोड हो रहे हैं…",
 		"mobile.session.history.refresh_failed": "सबसे नए संदेश लोड नहीं हो सके।",
 		"mobile.session.history.stalled": "पहले के संदेश लोड होना रुक गया। फिर से कोशिश करें, या यह बातचीत दोबारा खोलें।",
+		"mobile.session.inline_chart_data": "चार्ट का डेटा",
 		"mobile.session.jump_to_latest": "↓ नवीनतम पर जाएँ",
 		"mobile.session.jump_to_latest_name": "नवीनतम पर जाएँ",
 		"mobile.session.jump_to_latest_short": "↓ नवीनतम",
@@ -11710,6 +11718,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.history.loading": "Загрузка предыдущих сообщений…",
 		"mobile.session.history.refresh_failed": "Не удалось загрузить последние сообщения.",
 		"mobile.session.history.stalled": "Загрузка предыдущих сообщений остановилась. Повторите или откройте беседу заново.",
+		"mobile.session.inline_chart_data": "Данные диаграммы",
 		"mobile.session.jump_to_latest": "↓ К последнему сообщению",
 		"mobile.session.jump_to_latest_name": "К последнему сообщению",
 		"mobile.session.jump_to_latest_short": "↓ Последнее",
@@ -13089,6 +13098,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.history.loading": "پہلے کے پیغامات لوڈ ہو رہے ہیں…",
 		"mobile.session.history.refresh_failed": "تازہ ترین پیغامات لوڈ نہیں ہو سکے۔",
 		"mobile.session.history.stalled": "تاریخچے کے پہلے کے پیغامات لوڈ ہونا رک گئے۔ دوبارہ کوشش کریں، یا یہ گفتگو دوبارہ کھولیں۔",
+		"mobile.session.inline_chart_data": "چارٹ کا ڈیٹا",
 		"mobile.session.jump_to_latest": "↓ تازہ ترین پر جائیں",
 		"mobile.session.jump_to_latest_name": "تازہ ترین پر جائیں",
 		"mobile.session.jump_to_latest_short": "↓ تازہ ترین",
@@ -14468,6 +14478,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.history.loading": "Đang tải tin nhắn trước đó…",
 		"mobile.session.history.refresh_failed": "Không tải được các tin nhắn mới nhất.",
 		"mobile.session.history.stalled": "Tin nhắn trước đó đã ngừng tải. Hãy thử lại hoặc mở lại cuộc trò chuyện này.",
+		"mobile.session.inline_chart_data": "Dữ liệu biểu đồ",
 		"mobile.session.jump_to_latest": "↓ Đến mới nhất",
 		"mobile.session.jump_to_latest_name": "Đến mới nhất",
 		"mobile.session.jump_to_latest_short": "↓ Mới nhất",
@@ -15847,6 +15858,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.history.loading": "正在加载更早的消息…",
 		"mobile.session.history.refresh_failed": "无法加载最新的消息。",
 		"mobile.session.history.stalled": "无法继续加载更早的消息。请重试或重新打开此对话。",
+		"mobile.session.inline_chart_data": "图表数据",
 		"mobile.session.jump_to_latest": "↓ 跳到最新",
 		"mobile.session.jump_to_latest_name": "跳到最新",
 		"mobile.session.jump_to_latest_short": "↓ 最新",

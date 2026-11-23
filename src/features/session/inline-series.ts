@@ -20,6 +20,37 @@ const isLabel = (value: unknown): value is string =>
 const isNumber = (value: unknown): value is number =>
 	typeof value === "number" && Number.isFinite(value);
 
+/** Work in relative units before adding stacks: the wire allows finite values
+ * near Number.MAX_VALUE, whose raw sum (or signed domain width) can overflow. */
+export function scaledSeries(values: readonly number[]): number {
+	return values.reduce((max, n) => Math.max(max, Math.abs(n)), 0) || 1;
+}
+
+/** A percent stack normalizes each category independently; at least one
+ * positive member is guaranteed by the decoder. Pie shares the same math. */
+export function proportions(values: readonly number[]): number[] {
+	const scale = scaledSeries(values);
+	const scaled = values.map((n) => n / scale);
+	const total = scaled.reduce((sum, n) => sum + n, 0);
+	return scaled.map((n) => (total === 0 ? 0 : n / total));
+}
+
+/** Positive and negative segments build outwards from zero independently. */
+export function stackSegments(values: readonly number[]): [number, number][] {
+	let positive = 0;
+	let negative = 0;
+	return values.map((n) => {
+		if (n < 0) {
+			const start = negative;
+			negative += n;
+			return [start, negative];
+		}
+		const start = positive;
+		positive += n;
+		return [start, positive];
+	});
+}
+
 export function decodeInlineSeries(
 	value: Record<string, unknown>,
 ): InlineSeries | null {

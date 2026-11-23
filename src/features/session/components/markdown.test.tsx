@@ -88,9 +88,13 @@ vi.mock("react-native", async () => {
 			onLongPress,
 			accessible,
 			accessibilityRole,
+			"aria-expanded": expanded,
+			accessibilityLabel,
 		}: {
 			children: ReactNode;
 			onLongPress?: () => void;
+			"aria-expanded"?: boolean;
+			accessibilityLabel?: string;
 			accessible?: boolean;
 			accessibilityRole?: string;
 		}) => {
@@ -100,7 +104,13 @@ vi.mock("react-native", async () => {
 				accessibilityRole,
 				longPress: onLongPress !== undefined,
 			});
-			return view({ children });
+			return expanded !== undefined
+				? createElement(
+						"button",
+						{ "aria-expanded": expanded, "aria-label": accessibilityLabel },
+						children,
+					)
+				: view({ children });
 		},
 		Platform: {
 			get OS() {
@@ -119,8 +129,12 @@ vi.mock("react-native-svg", async () => {
 		createElement("svg", null, children);
 	return {
 		default: node,
+		Circle: node,
 		Defs: node,
+		Line: node,
 		LinearGradient: node,
+		Path: node,
+		Polyline: node,
 		Rect: node,
 		Stop: node,
 	};
@@ -128,7 +142,10 @@ vi.mock("react-native-svg", async () => {
 vi.mock("expo-clipboard", () => ({
 	setStringAsync: vi.fn(async () => undefined),
 }));
-vi.mock("@/ui/appearance", () => ({ useTokenColor: () => "#ffffff" }));
+vi.mock("@/ui/appearance", () => ({
+	useTokenColor: () => "#ffffff",
+	useTheme: () => ({ active: { colors: {} } }),
+}));
 vi.mock("@/ui/direction", () => ({
 	useIsRTL: () => false,
 	LTR_TEXT: { writingDirection: "ltr" },
@@ -140,6 +157,7 @@ vi.mock("@/features/session/table-scroll-hook", () => ({
 	forcedTableScroll: () => null,
 }));
 
+import { inlineUiData, inlineUiPlainText } from "./inline-ui-preview";
 import { Markdown } from "./markdown";
 import { GroupInsetContext } from "./trace-rail";
 
@@ -180,6 +198,33 @@ describe("rendered assistant markdown dispatch", () => {
 		);
 		expect(markup).toMatch(INLINE_UI_ORDER);
 		expect(markup).not.toContain("Source code");
+	});
+
+	it("adds one accessible disclosure without visually repeating the exact grid", () => {
+		const value = {
+			type: "series" as const,
+			mode: "dual" as const,
+			title: "Mixed units",
+			labels: ["Monday"],
+			unit: "items",
+			rightUnit: "ms",
+			series: [
+				{ label: "Volume", values: [17009], axis: "left" as const },
+				{ label: "Latency", values: [-12.375], axis: "right" as const },
+			],
+		};
+		const markup = renderToStaticMarkup(
+			createElement(Markdown, {
+				text: "Legacy",
+				assistantParts: [{ kind: "ui", value }],
+			}),
+		);
+		expect(markup).toContain('aria-expanded="false"');
+		expect(markup).toContain('aria-label="Chart data · Mixed units"');
+		expect(markup).not.toContain("-12.375");
+		expect(inlineUiPlainText(inlineUiData(value))).toBe(
+			"Mixed units\n\tVolume\tLatency\nMonday\t17009 items\t-12.375 ms",
+		);
 	});
 
 	it.each([

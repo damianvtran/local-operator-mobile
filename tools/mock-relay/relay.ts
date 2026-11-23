@@ -3346,6 +3346,24 @@ export function createRelay(options: RelayOptions = {}) {
 			const sessionId = decodeURIComponent(sessionMatch[1] ?? "");
 			const rest = sessionMatch[2] ?? "";
 			const projection = projectionFor(sessionId);
+			const chartMessages =
+				url.searchParams.get("inline_ui") === "1" &&
+				world.inlineUi?.sessionId === sessionId
+					? world.inlineUi.messages
+					: undefined;
+			const withChartMessages = <T extends { id: string }>(
+				entries: readonly T[],
+			) => {
+				if (!chartMessages) return {};
+				const messages = Object.fromEntries(
+					entries.flatMap(({ id }) =>
+						Object.hasOwn(chartMessages, id) ? [[id, chartMessages[id]]] : [],
+					),
+				);
+				return Object.keys(messages).length
+					? { inline_ui: { version: 1, messages } }
+					: {};
+			};
 
 			if (rest === "/events" && method === "GET") {
 				const stream: StreamSpec = world.stream ?? { mode: "idle" };
@@ -3384,7 +3402,11 @@ export function createRelay(options: RelayOptions = {}) {
 						frames: () => null,
 					});
 				}
-				const seedProjection = structuredClone(projection);
+				const snapshot = () => ({
+					...structuredClone(projection),
+					...withChartMessages(projection.transcript ?? []),
+				});
+				const seedProjection = snapshot();
 				return openStream(req, res, {
 					kind: "projection",
 					seed:
@@ -3396,7 +3418,7 @@ export function createRelay(options: RelayOptions = {}) {
 					// carries the admitted command's row and the version that announces it.
 					duplicate: () => ({
 						event: "projection",
-						data: structuredClone(projection),
+						data: snapshot(),
 					}),
 				});
 			}
@@ -3437,7 +3459,11 @@ export function createRelay(options: RelayOptions = {}) {
 				}
 				const sliceEnd = end < 0 ? all.length : end;
 				const entries = all.slice(Math.max(0, sliceEnd - limit), sliceEnd);
-				sendJson(res, 200, { entries, has_more: sliceEnd - limit > 0 });
+				sendJson(res, 200, {
+					entries,
+					has_more: sliceEnd - limit > 0,
+					...withChartMessages(entries),
+				});
 				return;
 			}
 

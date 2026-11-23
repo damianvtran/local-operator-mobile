@@ -1,5 +1,6 @@
 {
 	"mobile.session.conversation_details": "Детали беседы",
+	"mobile.session.inline_chart_data": "Данные диаграммы",
 	"mobile.session.chip.model_default": "По умолчанию",
 	"mobile.session.chip.model_unknown": "Неизвестно",
 	"mobile.session.status_tray.hint": "Открывает строку текущей работы, задачи и субагентов",
