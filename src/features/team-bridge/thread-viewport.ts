@@ -34,6 +34,45 @@ import {
 	WEB_IDLE_MS,
 } from "../session/reader-scroll-hold";
 
+/**
+ * VirtualizedList's own `initialNumToRender` default, restated so a landed
+ * transcript windows exactly as it did before `landingRenderCount` existed.
+ */
+export const LANDED_RENDER_COUNT = 10;
+
+/**
+ * How many rows the transcript's FlatList renders up front (its
+ * `initialNumToRender`).
+ *
+ * WHY: VirtualizedList mounts only its first `initialNumToRender` rows and adds
+ * the rest in later batches. The landing measures whatever is mounted, so an
+ * open landed on a PARTIAL page: ten short rows fit the window and the "fits"
+ * shortcut finished the landing at the top, or the list scrolled to the end of
+ * those ten. The rows were then revealed, and every later batch grew the
+ * content and pulled the following reader down again. The reader saw older
+ * messages flash in before the list settled at the newest one (TestFlight,
+ * "flickers between the message at the bottom and some other message from
+ * higher up"). Measured on the hosted web export, opening a 50-row page: the
+ * revealed list walked scrollTop 0 → 59 → 617 → 1091 → 1564 → 1801 over about
+ * 1.3 s, showing rows 31-39 first and the newest row last (PR body).
+ *
+ * So while the open is still unpositioned (rows hidden), every held row is
+ * mounted, and the first measurement the viewport trusts is of the whole page.
+ * No viewport change is needed: content growth still re-targets, it just has
+ * nothing left to grow by. Once positioned, the default returns, so ordinary
+ * windowing (and an older page's prepend) is exactly as before. The count is
+ * what the reader already holds (one 50-row page on an ordinary open; an
+ * anchored open's walk adds the pages it fetched), not a new cap.
+ */
+export function landingRenderCount(
+	itemCount: number,
+	positioned: boolean,
+): number {
+	return positioned
+		? LANDED_RENDER_COUNT
+		: Math.max(LANDED_RENDER_COUNT, itemCount);
+}
+
 /** Sub-pixel slack for "at the exact end": web scrollTop is fractional
  * (2043.5) and device-pixel rounding can leave the host < 1 px short of max. */
 export const POSITION_SLACK = 1;
@@ -79,7 +118,65 @@ export type ThreadViewportOptions = {
 	 * instead of moving the list. `false` once they are back at the end.
 	 */
 	newBelow?: (present: boolean) => void;
+	/**
+	 * Identity of the rows the list renders right now (the screen passes its
+	 * items' keys). It lets a content measurement taken while `dataReady` was
+	 * still false be trusted once data is admitted, PROVIDED the list still
+	 * renders the very rows that were measured.
+	 *
+	 * WHY (#304 QA R4 Q1, warm notification tap on Android API 29/31): the
+	 * rows' only `onContentSizeChange` can arrive while the open is still held
+	 * (an anchored open resolving), and admission itself is a React state
+	 * change that raises no native size event. Native cannot re-read its host
+	 * (`measure` is web-only), so a thread that already fits waited for an
+	 * event that never came and its rows stayed hidden for good. Matching
+	 * the measured rows to the admitted rows is the proof `contentReady` was
+	 * standing in for: PR #228 Q1-1's stale case (rows prepended after the
+	 * measurement) changes the keys and stays untrusted.
+	 */
+	dataKey?: () => string;
+	/**
+	 * Proof-only diagnostics sink (`src/testing/thread-viewport-trace.ts`):
+	 * null in every committed build; only the installed-app proof job
+	 * substitutes a logger. Never read for behaviour.
+	 */
+	trace?: ThreadViewportTrace | null;
 };
+
+/** One viewport diagnostic: an event name and the geometry behind it. */
+export type ThreadViewportTrace = (
+	event: string,
+	detail: Record<string, unknown>,
+) => void;
+
+/**
+ * Whether the thread screen lays its metadata loading block ("Loading
+ * conversation…") over the message area.
+ *
+ * The block is absolutely positioned (#304 QA R4 Q1: in normal layout it took
+ * height from the list mid-landing), so it no longer pushes anything down —
+ * which means it must never share the area with content that has its own
+ * place there, or the two overlap (#315 design D1). It shows only when:
+ * - nothing else occupies the area yet (`content` false: neither the list nor
+ *   the not-joined preview is mounted), or
+ * - the list holds rows it has not positioned yet (`initialRowsHidden`), so
+ *   the area paints empty and the block stands in for them.
+ * Never over the not-joined preview (title, help, Join), nor over the list's
+ * own empty/loading/error block (`rows` 0), nor over positioned rows.
+ */
+export function showsMetadataOverlay(state: {
+	metadataLoading: boolean;
+	/** The list or the not-joined preview is mounted in the message area. */
+	content: boolean;
+	/** The list is the mounted content (not the preview). */
+	list: boolean;
+	rows: number;
+	positioned: boolean;
+}): boolean {
+	if (!state.metadataLoading) return false;
+	if (!state.content) return true;
+	return state.list && state.rows > 0 && !state.positioned;
+}
 
 /** The hold timings live with the shared hold (`reader-scroll-hold.ts`). */
 export { DRAG_RELEASE_MS, WEB_IDLE_MS };
@@ -154,6 +251,19 @@ export function createThreadViewport(options: ThreadViewportOptions) {
 	 * at the oldest row.
 	 */
 	let contentReady = false;
+	/** `dataKey()` when `content` was measured; see `dataKey`. */
+	let contentKey: string | null = null;
+	const trace = options.trace ?? null;
+	/**
+	 * `content` describes the admitted rows: measured while admitted, or
+	 * measured over exactly the rows that are now admitted (`dataKey`).
+	 */
+	const measuredAdmitted = () =>
+		contentReady ||
+		(options.dataKey !== undefined &&
+			contentKey !== null &&
+			options.dataReady() &&
+			contentKey === options.dataKey());
 	let lastY: number | null = null;
 	/**
 	 * The offset last requested from a host that cannot read back (native),
@@ -216,6 +326,7 @@ export function createThreadViewport(options: ThreadViewportOptions) {
 		// viewability callbacks reported rows that were never at rest (seven
 		// marks in ~200 ms, PR #208 Q2), so they are not replayed here.
 		if (atNewest) readSeq = Math.max(readSeq, options.newestSeq());
+		trace?.("positioned", { atNewest, readSeq });
 		options.positioned();
 		if (readSeq > 0) options.read();
 	};
@@ -278,9 +389,13 @@ export function createThreadViewport(options: ThreadViewportOptions) {
 	};
 
 	const position = () => {
-		if (hold.active) return;
-		if (content === null || height <= 0 || !options.dataReady()) return;
-		if (!initial && !following) return;
+		if (hold.active) return void trace?.("position", { skip: "held" });
+		if (content === null || height <= 0)
+			return void trace?.("position", { skip: "geometry", content, height });
+		if (!options.dataReady())
+			return void trace?.("position", { skip: "not-ready" });
+		if (!initial && !following)
+			return void trace?.("position", { skip: "not-following" });
 		const target = Math.max(0, content - height);
 		/* PAST the end is not AT the end (TestFlight 836: ~150 pt of empty
 		 *  canvas between the newest message and the Bridge composer with the
@@ -303,7 +418,15 @@ export function createThreadViewport(options: ThreadViewportOptions) {
 			// would happen, so no scroll event would ever confirm one. Trusted
 			// only from a measurement of the admitted rows (`contentReady`); a
 			// stale one waits for the layout event those rows will raise.
-			if (initial && contentReady) finish(true);
+			const trusted = measuredAdmitted();
+			trace?.("position", {
+				fits: true,
+				initial,
+				trusted,
+				target,
+				lastY,
+			});
+			if (initial && trusted) finish(true);
 			return;
 		}
 		if (
@@ -311,7 +434,8 @@ export function createThreadViewport(options: ThreadViewportOptions) {
 			Math.abs(requested.target - target) <= POSITION_SLACK &&
 			now() - requested.at < IN_FLIGHT_MS
 		)
-			return;
+			return void trace?.("position", { skip: "in-flight", target });
+		trace?.("position", { write: target, lastY, initial });
 		write(target);
 	};
 
@@ -400,6 +524,7 @@ export function createThreadViewport(options: ThreadViewportOptions) {
 	const handlers = {
 		onLayout: (event: { nativeEvent: { layout: { height: number } } }) => {
 			height = event.nativeEvent.layout.height;
+			trace?.("layout", { height });
 			// Keyboard/header resize keeps a follower at the tail and leaves a
 			// history reader where they are.
 			position();
@@ -407,6 +532,8 @@ export function createThreadViewport(options: ThreadViewportOptions) {
 		onContentSizeChange: (_width: number, contentHeight: number) => {
 			content = contentHeight;
 			contentReady = options.dataReady();
+			contentKey = options.dataKey?.() ?? null;
+			trace?.("content", { height: contentHeight, dataReady: contentReady });
 			noteArrivals();
 			position();
 		},
@@ -419,6 +546,11 @@ export function createThreadViewport(options: ThreadViewportOptions) {
 		}) => {
 			const { contentOffset, layoutMeasurement, contentSize } =
 				event.nativeEvent;
+			trace?.("scroll", {
+				y: contentOffset.y,
+				viewport: layoutMeasurement.height,
+				content: contentSize.height,
+			});
 			// The host has reported: whatever was requested is now grounded.
 			requested = null;
 			cancelRecheck();
@@ -473,9 +605,12 @@ export function createThreadViewport(options: ThreadViewportOptions) {
 		 * `dataReady` turned true from a state change rather than a layout event
 		 * (an anchored open that fell back to newest): run the initial positioning
 		 * it was holding. The last layout event may predate the rows it now has to
-		 * position against, so re-read the host where the platform allows (web);
-		 * elsewhere the stale measurement is not trusted to finish (`contentReady`)
-		 * and the rows' own layout event completes the landing.
+		 * position against, so re-read the host where the platform allows (web).
+		 * Native re-evaluates the STORED measurement: it finishes a fitting
+		 * thread at once when that measurement was taken over the rows now
+		 * admitted (`dataKey`), because no further size event is coming for
+		 * them (#304 QA R4 Q1). A measurement of other rows is still not
+		 * trusted to finish (`contentReady`); their own layout event lands them.
 		 */
 		dataChanged() {
 			const now = options.measure?.();
@@ -484,7 +619,13 @@ export function createThreadViewport(options: ThreadViewportOptions) {
 				height = now.viewport;
 				lastY = now.y;
 				contentReady = options.dataReady();
+				contentKey = options.dataKey?.() ?? null;
 			}
+			trace?.("dataChanged", {
+				dataReady: options.dataReady(),
+				content,
+				height,
+			});
 			noteArrivals();
 			position();
 		},
@@ -492,6 +633,7 @@ export function createThreadViewport(options: ThreadViewportOptions) {
 		settledEmpty() {
 			content = 0;
 			contentReady = true;
+			trace?.("settledEmpty", {});
 			position();
 		},
 		/** Viewability of message seqs; only a positioned viewport can mark read. */

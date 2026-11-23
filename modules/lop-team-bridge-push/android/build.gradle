@@ -1,0 +1,36 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+group = 'dev.localoperator.teambridge'
+version = '1.0.0'
+android {
+  namespace 'dev.localoperator.teambridge'
+  defaultConfig {
+    versionCode 1; versionName '1.0.0'
+    // Framework-only instrumentation, the same choice as lop-notification-sound:
+    // no new test dependency; the runner is an Instrumentation subclass.
+    testInstrumentationRunner 'dev.localoperator.teambridge.TeamBridgePushTestRunner'
+  }
+}
+dependencies {
+  // The delegates subclass expo-notifications' own extension points
+  // (NotificationsService, ExpoPresentationDelegate). Expo SDK 57 links
+  // expo-notifications as a PREBUILT artifact from its `local-maven-repo`
+  // (`publication` in its expo-module.config.json), not as a Gradle project, so
+  // this is the same coordinate the app resolves and Gradle keeps one copy.
+  // The version must equal node_modules/expo-notifications/package.json's:
+  // `push-avatar-contract.test.ts` fails when an Expo bump moves one alone.
+  implementation 'host.exp.exponent:expo.modules.notifications:57.0.21'
+  // The same coordinates and versions expo-notifications 57.0.21 declares as
+  // `implementation` (so they are not visible to us transitively): RemoteMessage
+  // for the session channel remap, ShortcutManagerCompat/IconCompat for the
+  // conversation shortcut. Keep them equal to expo-notifications' build.gradle
+  // so Gradle resolves one copy.
+  implementation 'com.google.firebase:firebase-messaging:25.0.1'
+  implementation 'androidx.core:core:1.17.0'
+  implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2'
+  // Same client as React Native; cancellable calls keep the avatar budget
+  // independent of individual connect/read timeouts.
+  implementation 'com.squareup.okhttp3:okhttp:4.9.2'
+}

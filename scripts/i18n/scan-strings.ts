@@ -54,6 +54,23 @@
  *    there, so activation can only ever be green. `app/` is read by rules 1-3 too
  *    (the tree walk has covered it since #227), so activation scopes only rule 4.
  *
+ * 5. `label-part-literal` — a string or template literal pushed straight into an
+ *    array (`parts.push("working")`, or a template reading "on ${device}") in a file
+ *    listed in `LABEL_PART_SCOPE`: modules that assemble a label from fragments
+ *    and join them, like the conversation row's accessible name. Rule 4 cannot
+ *    see these (a push argument is no conditional, `??` or return), and its prose
+ *    test drops a lowercase single word, which is exactly what a label fragment
+ *    is. Here a literal counts if, with `${…}` removed, it is nothing but words —
+ *    any case, one word or several — because in a label builder every pushed word
+ *    is spoken. Scoped to named files because elsewhere `.push("x")` is as often
+ *    an id or a class as a word (O3-c).
+ *
+ *    STATED BLIND SPOT, shared with rule 4: a lowercase ONE-word literal in a
+ *    conditional or return (`ended ? "ended" : null`) still reads as an enum. A
+ *    status projection should therefore hold identifiers, not words: since O3-c
+ *    `list-row-status.ts` spells its multi-word states `not_answering` /
+ *    `not_reachable`, so rule 4 sees prose there only if prose comes back.
+ *
  * TOKENISER. Strings are stripped by a small state machine. An apostrophe glued
  * to a word (`relay's`) is read as JSX prose, not a quote, for every rule:
  * before that, one in-word apostrophe in JSX text silently blinded the scanner
@@ -79,7 +96,8 @@ export type FindingRule =
 	| "jsx-text"
 	| "jsx-attribute"
 	| "copy-module-literal"
-	| "expression-literal";
+	| "expression-literal"
+	| "label-part-literal";
 
 /**
  * Where rule 4 (`expression-literal`) is active. A path matches when it equals
@@ -107,8 +125,27 @@ export const EXPRESSION_LITERAL_SCOPE: readonly string[] = [
 	"src/features/settings/settings.tsx",
 	"src/ui/components/command-block.tsx",
 	"src/ui/components/list-row.tsx",
+	/* O3-c: the row's status projection and its spoken-label builder. Their
+	 *  words reached the screen through `{statusWord}` and the row's one
+	 *  accessible name, two paths no attribute or JSX rule sees. */
+	"src/ui/components/list-row-meta.ts",
+	"src/ui/components/list-row-status.ts",
 	"src/ui/components/refusal-surface.tsx",
 ];
+
+/**
+ * Where rule 5 (`label-part-literal`) is active: modules that BUILD a spoken or
+ * painted label by pushing fragments into an array that is later joined. Same
+ * contract as `EXPRESSION_LITERAL_SCOPE` — exact paths, widened only together
+ * with keying what the rule then finds.
+ */
+export const LABEL_PART_SCOPE: readonly string[] = [
+	"src/ui/components/list-row-meta.ts",
+];
+
+export function labelPartRuleActive(file: string): boolean {
+	return LABEL_PART_SCOPE.includes(file);
+}
 
 export function expressionRuleActive(file: string): boolean {
 	return EXPRESSION_LITERAL_SCOPE.some((entry) =>
@@ -186,6 +223,12 @@ const TERNARY_ELSE = /:\s*\(?\s*$/;
  *  too short (QA Q1); the bracket-aware walk below, not this cap, is what keeps
  *  a longer window from reaching an unrelated `?`. */
 const TERNARY_LOOKBACK = 12;
+/** Rule 5: the literal is the direct argument of an array `.push(` call. */
+const PUSH_ARGUMENT = /\.push\(\s*$/;
+/** Rule 5's text test: words only (letters, spaces, apostrophes, hyphens) once
+ *  `${…}` is removed — so a one-word `"working"` counts, while a catalogue key
+ *  (`"mobile.sidebar.row.new"`, dotted) or a path never does. */
+const PLAIN_WORDS = /^[A-Za-z][A-Za-z' -]*$/;
 const COPIES_COPY = /-copy\.ts$/;
 
 /** Words after dropping `{placeholder}` and `${expression}` parts: `every ${x}`
@@ -529,6 +572,22 @@ export function stringLiterals(
 	}));
 }
 
+/** Rule 5. A literal that is a push argument and reads as words only. */
+function labelPartFindings(
+	file: string,
+	literals: readonly Literal[],
+): Finding[] {
+	const findings: Finding[] = [];
+	for (const entry of literals) {
+		const text = entry.text.trim();
+		const words = text.replace(PLACEHOLDER_EXPRESSION, " ").trim();
+		if (words === "" || !PLAIN_WORDS.test(words)) continue;
+		if (!PUSH_ARGUMENT.test(entry.before)) continue;
+		findings.push({ rule: "label-part-literal", file, line: entry.line, text });
+	}
+	return findings;
+}
+
 /** Every un-keyed literal in one file. Exported so a test can drive the same
  *  rules on a string instead of on the tree.
  *
@@ -542,9 +601,12 @@ export function scanSource(
 	/* One tokenisation serves every rule now that prose apostrophes are handled
 	 * for rules 1-3 as well as rule 4 (previously rule 4 alone had them). */
 	const { codeByLine, literals } = splitCodeAndLiterals(source);
-	const expression = expressionRuleActive(file)
-		? expressionFindings(file, literals, codeByLine)
-		: [];
+	const expression = [
+		...(expressionRuleActive(file)
+			? expressionFindings(file, literals, codeByLine)
+			: []),
+		...(labelPartRuleActive(file) ? labelPartFindings(file, literals) : []),
+	];
 	/* `app/` is scanned by rules 1-3 too since #227 (fa2bc5e0); rule 4 stays
 	 * activation-scoped there, so `app/` files get rules 1-3 plus rule 4 only
 	 * where `EXPRESSION_LITERAL_SCOPE` names them. */

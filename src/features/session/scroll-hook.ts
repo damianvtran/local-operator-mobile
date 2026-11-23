@@ -23,14 +23,17 @@
 
 import { Platform } from "react-native";
 
-/** The anchors a cell may pin. `top` is the state a settled frame cannot show. */
-export type ScrollAnchor = "top";
+/** The anchors a cell may pin. `top` is a state a settled frame cannot show;
+ *  `away` additionally shows the "Jump to latest" chip, whose state is two
+ *  events (leave the end; new output arrives) that a URL cannot produce. */
+export type ScrollAnchor = "top" | "away";
 
 /** The anchor a `lo-scroll` value names, or `null` for absent or unknown. */
 export function scrollAnchorFromValue(
 	value: string | null,
 ): ScrollAnchor | null {
-	return value === "top" ? "top" : null;
+	if (value === "top" || value === "away") return value;
+	return null;
 }
 
 /** The anchor this page carries, or `null` when it is not a web page. */

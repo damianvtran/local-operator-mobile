@@ -10,6 +10,7 @@
 export function createPushLifecycle(deps: {
 	register: (isCurrent: () => boolean) => Promise<void>;
 	unregister: () => Promise<void>;
+	closePresentation?: () => void;
 }) {
 	let epoch = 0;
 	let active = false;
@@ -27,6 +28,7 @@ export function createPushLifecycle(deps: {
 		suspend() {
 			active = false;
 			epoch++;
+			deps.closePresentation?.();
 		},
 		register(): Promise<void> {
 			if (!active) return Promise.resolve();
@@ -53,12 +55,14 @@ export function createPushLifecycle(deps: {
 		 */
 		withdraw(): Promise<void> {
 			epoch++;
+			deps.closePresentation?.();
 			pending = null;
 			return append(deps.unregister);
 		},
 		retire(): Promise<void> {
 			active = false;
 			epoch++;
+			deps.closePresentation?.();
 			pending = null;
 			return append(deps.unregister);
 		},

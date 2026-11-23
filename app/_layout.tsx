@@ -13,6 +13,7 @@ import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import type { ReactNode } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { CommunityProvider } from "@/community/provider";
 import { ComputerSwitcherProvider } from "@/features/auth/computer-switcher-sheet";
 import {
 	ConnectionProvider,
@@ -32,6 +33,7 @@ import { TeamBridgeFixturePresentation } from "@/testing/team-bridge-presentatio
 import { ThemeProvider, useTheme } from "@/ui/appearance";
 import { ToastHost } from "@/ui/components";
 import { DirectionProvider, DirectionView } from "@/ui/direction";
+import { STACK_SCREEN_OPTIONS } from "@/ui/stack-options";
 import { TextScaleProvider } from "@/ui/text-scale-provider";
 
 /**
@@ -64,29 +66,34 @@ export default function RootLayout() {
 					<TextScaleProvider>
 						<DirectionRoot>
 							<TeamBridgeProvider>
-								<ThemedStatusBar />
-								<SavedComputersHydration />
-								<DeepLinkResolution />
-								<NotificationTapRouting />
-								{/* The durable outbox's lifecycle (resume on launch and
-								 *  foreground): above the router so a send outlives the
-								 *  conversation screen that started it. */}
-								<OutboxHost />
-								{/* The ONE computer switcher sheet, above every route so any screen
-								 *  can open it with `useComputerSwitcher().open()` and two screens
-								 *  can never show two lists. Inside the providers it reads (the
-								 *  connection, the text scale) and below the router's context. */}
-								<ComputerSwitcherProvider>
-									<BridgeWorkspaceDrawer>
-										<Stack screenOptions={{ headerShown: false }} />
-									</BridgeWorkspaceDrawer>
-								</ComputerSwitcherProvider>
-								{/* The first-run notification primer: one in-context sheet that
-								 *  asks before the OS does (ADR 0006 §5 as amended 2026-11-14).
-								 *  Root-mounted like the switcher so it reads the route and list
-								 *  without touching a screen; it offers itself on Home only. */}
-								<NotificationPermissionPrimer />
-								<ToastHost />
+								{/* The public community client's store, BESIDE the private
+								 *  Team Bridge store (RFC v2.4 §7.2: no shared state). Dark
+								 *  behind EXPO_PUBLIC_COMMUNITY; costs nothing until read. */}
+								<CommunityProvider>
+									<ThemedStatusBar />
+									<SavedComputersHydration />
+									<DeepLinkResolution />
+									<NotificationTapRouting />
+									{/* The durable outbox's lifecycle (resume on launch and
+									 *  foreground): above the router so a send outlives the
+									 *  conversation screen that started it. */}
+									<OutboxHost />
+									{/* The ONE computer switcher sheet, above every route so any screen
+									 *  can open it with `useComputerSwitcher().open()` and two screens
+									 *  can never show two lists. Inside the providers it reads (the
+									 *  connection, the text scale) and below the router's context. */}
+									<ComputerSwitcherProvider>
+										<BridgeWorkspaceDrawer>
+											<Stack screenOptions={STACK_SCREEN_OPTIONS} />
+										</BridgeWorkspaceDrawer>
+									</ComputerSwitcherProvider>
+									{/* The first-run notification primer: one in-context sheet that
+									 *  asks before the OS does (ADR 0006 §5 as amended 2026-11-14).
+									 *  Root-mounted like the switcher so it reads the route and list
+									 *  without touching a screen; it offers itself on Home only. */}
+									<NotificationPermissionPrimer />
+									<ToastHost />
+								</CommunityProvider>
 							</TeamBridgeProvider>
 						</DirectionRoot>
 					</TextScaleProvider>

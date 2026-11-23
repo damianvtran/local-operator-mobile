@@ -1,0 +1,138 @@
+{
+ "record_kind": "i18n-audit",
+ "audit_id": "o3c-es-aa2326",
+ "slice": "O3-c",
+ "locale": "es",
+ "namespace": "mobile.sidebar",
+ "audit_date": "2026-11-18",
+ "key_count": 9,
+ "keys_audited": [
+  "mobile.sidebar.row_status.approval",
+  "mobile.sidebar.row_status.question",
+  "mobile.sidebar.row_status.not_reachable",
+  "mobile.sidebar.row_status.ended",
+  "mobile.sidebar.row_status.not_answering",
+  "mobile.sidebar.row_label.waiting",
+  "mobile.sidebar.row_label.working",
+  "mobile.sidebar.row_label.on_device",
+  "mobile.sidebar.row_label.open"
+ ],
+ "translator_session": "a0a12eebb67d",
+ "auditor": {
+  "agent": "i18n-auditor (team lopdev)",
+  "session": "aa2326d64c30",
+  "model": "anthropic/claude-opus-5-5",
+  "actual_model_source": "harness system prompt 'Model:' line for this session; no fallback observed",
+  "independent_from_translator_session": true
+ },
+ "read_route": "ordinary file reads (bash/python) of draft, brief, worktree catalogues, glossary and es style guide; English via git show at e7ebc391; checker ran via worktree tsx on a sha-verified scratchpad copy of the draft (guardrail refused passing the translator-session path to tsx). read_public_copy not used.",
+ "draft": {
+  "path": "/Users/damian/.local-operator/sessions/a0a12eebb67d/scratchpad/o3c/draft-es.json",
+  "sha256": "e86851c57eaaddd6d615a1cff8ec5fb12422be6c3501dae6d31e880b330d84dd",
+  "auditor_copy": {
+   "path": "/Users/damian/.local-operator/sessions/aa2326d64c30/scratchpad/o3c-audit/draft-es.copy.json",
+   "sha256": "e86851c57eaaddd6d615a1cff8ec5fb12422be6c3501dae6d31e880b330d84dd"
+  }
+ },
+ "brief": {
+  "path": "/Users/damian/.local-operator/sessions/162198c78bcb/scratchpad/o3c-translation-brief.json",
+  "sha256": "e88beb09366b9ff795bf0ac916f30cef1c9a93c35fa4617575e904c7a6f5fd17"
+ },
+ "source_commit": "e7ebc3917537d83cc772148fc5b2fc2ad3f43a41",
+ "input_hashes": {
+  "draft": {
+   "path": "/Users/damian/.local-operator/sessions/a0a12eebb67d/scratchpad/o3c/draft-es.json",
+   "sha256": "e86851c57eaaddd6d615a1cff8ec5fb12422be6c3501dae6d31e880b330d84dd"
+  },
+  "brief": {
+   "path": "/Users/damian/.local-operator/sessions/162198c78bcb/scratchpad/o3c-translation-brief.json",
+   "sha256": "e88beb09366b9ff795bf0ac916f30cef1c9a93c35fa4617575e904c7a6f5fd17"
+  },
+  "en": {
+   "path": "local-operator-mobile@e7ebc391:src/i18n/catalogues/en/mobile.sidebar.json",
+   "sha256": "beaba7baeffe546ce65430d6cb18213da2fbb88d23128c071c286fb32a08ecdf"
+  },
+  "context": {
+   "path": "local-operator-mobile@e7ebc391:src/i18n/catalogues/en/mobile.sidebar.context.json",
+   "sha256": "858f7c51c595862306120be7833c4274439b436bb8bd1f547b88139f8d0f2fd3"
+  },
+  "es_shipped_reference": {
+   "src/i18n/catalogues/es/mobile.sidebar.json": "f90ad13be9be33579026977fb2a37cd36f89ee2256004f32cfe3f321aba4f197",
+   "src/i18n/catalogues/es/mobile.settings.json": "8095f67921ce79ff26648091d7a881ef4eeb792e48887d9673040540505c0ba5",
+   "src/i18n/catalogues/es/relay.chrome.json": "047c5dcfc70e0add879c896df3fcc811e95cf665e7d0041d6efd8261af215944",
+   "src/i18n/catalogues/es/mobile.remote_sessions.json": "465cb080574f5398ad7a4adb0907239986603c872e9d676bd84e578628c77881"
+  },
+  "glossary": {
+   "path": "~/local-operator/i18n/glossary.md",
+   "sha256": "0eb34437a8c3d6f564f278ef957a603b1d9f51bb07d5ddae5ea8f37deba962f8"
+  },
+  "style_guide": {
+   "path": "~/local-operator/i18n/style-guides/es.md",
+   "sha256": "77b9227213802d14c74d4298d6b346ad842bbf2a5ca3b9d46fc6144430d26c3e"
+  }
+ },
+ "checks": {
+  "keys_missing": 0,
+  "keys_extra": 0,
+  "brief_vs_source_mismatches": 0,
+  "placeholder_icu": "pass (repo parseMessage)",
+  "select_arms": [
+   "approval",
+   "other"
+  ],
+  "nfc": "pass",
+  "lowercase": "pass",
+  "edge_punctuation": "pass",
+  "negative_controls": "9/9 caught",
+  "width_vs_hint": {
+   "approval": "10/10",
+   "question": "8/10",
+   "not_reachable": "12/14",
+   "ended": "10/10",
+   "not_answering": "11/14"
+  }
+ },
+ "redaction_marker_hits": {
+  "draft": 0,
+  "english_sources": 0,
+  "brief": 0,
+  "brief_note": "brief scanned with its own redaction_scan.pattern field excluded"
+ },
+ "verdict": "passed",
+ "current_report_verdict": {
+  "status": "passed",
+  "unresolved_blocker_major_count": 0,
+  "finding_ids": [
+   "ES-S1"
+  ]
+ },
+ "findings": [
+  {
+   "id": "ES-S1",
+   "severity": "NIT",
+   "key": "mobile.sidebar.row_status.not_reachable",
+   "current": "sin conexión",
+   "proposed": "Keep \"sin conexión\" (no change required); \"no disponible\" (13) only if a later slice must keep the phone's own Offline state distinct on the same screen.",
+   "reason": "\"sin conexión\" is the shipped es rendering of en \"offline\" (mobile.settings.status.offline, diagnostics.stream_offline), so two distinct en states share one es word. On a remote row after \"en {device}\" it reads correctly and neutrally (no connection to that device) and fits 12/14; the shipped \"No se puede contactar…\" phrasing would not fit the chip."
+  }
+ ],
+ "out_of_scope_observations": [
+  "src/ui/components/list-row.tsx:356 paints 'On {remote.device}' as hard-coded English at e7ebc391 (visible line untranslated while row_label.on_device is keyed)."
+ ],
+ "artifacts": {
+  "report": {
+   "path": "report.md",
+   "sha256": "3a76f1d1c71f108fb9f8bc645cabdbb722990b3b17d1b44c13d7c622d6637f22"
+  },
+  "audit_log": {
+   "path": "audit.log",
+   "sha256": "5c18fb502f6a33f76d5fc3fc7952c49b0df268af9fc1d3e5269b645c9def9b58"
+  },
+  "checker": {
+   "path": "/Users/damian/.local-operator/sessions/aa2326d64c30/scratchpad/o3c-audit/check-es.ts",
+   "sha256": "6ca177a35d48ecd9373ac1748a02f799f2cfab8b92973c863cf6e5010dc7133e"
+  }
+ },
+ "audit_notes_not_execution_log": "report.md is the auditor's notes; audit.log carries the printed command output",
+ "ledger_appended": false
+}

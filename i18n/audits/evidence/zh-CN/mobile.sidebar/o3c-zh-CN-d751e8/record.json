@@ -1,0 +1,151 @@
+{
+ "record_kind": "i18n-audit",
+ "audit_id": "o3c-zh-CN-d751e8",
+ "slice": "O3-c",
+ "revision": 2,
+ "supersedes": {
+  "audit_id": "o3c-zh-CN-de40a5",
+  "path": "/Users/damian/.local-operator/sessions/de40a5fa6cff/scratchpad/o3c-audit/zh-CN/mobile.sidebar/o3c-zh-CN-de40a5/",
+  "verdict": "failed",
+  "resolved_findings": {
+   "ZH-C1": "resolved — row_status.approval now 待审批",
+   "ZH-C2": "resolved — row_label.on_device now 在{device}上",
+   "ZH-C3": "carried as ZH-R2-N4 (code, out of scope)"
+  }
+ },
+ "locale": "zh-CN",
+ "namespace": "mobile.sidebar",
+ "audit_date": "2026-11-18",
+ "key_count": 9,
+ "keys_audited": [
+  "mobile.sidebar.row_status.approval",
+  "mobile.sidebar.row_status.question",
+  "mobile.sidebar.row_status.not_reachable",
+  "mobile.sidebar.row_status.ended",
+  "mobile.sidebar.row_status.not_answering",
+  "mobile.sidebar.row_label.waiting",
+  "mobile.sidebar.row_label.working",
+  "mobile.sidebar.row_label.on_device",
+  "mobile.sidebar.row_label.open"
+ ],
+ "translator_session": "6323bd03d1a2",
+ "translator_model_claimed": "anthropic/claude-opus-5-5",
+ "auditor": {
+  "agent": "i18n-auditor (team lopdev)",
+  "session": "d751e813fdef",
+  "model": "anthropic/claude-opus-5-5",
+  "actual_model_source": "harness system prompt 'Model:' line for this session; no fallback observed",
+  "independent_from_translator_session": true,
+  "independent_from_prior_auditor_session": true
+ },
+ "draft": {
+  "path": "/Users/damian/.local-operator/sessions/6323bd03d1a2/scratchpad/o3c/draft-zh-CN-r2.json",
+  "sha256": "e203a3c0dd267b8b043c89d8c63d12acc92e1862c860d9c73af7ef5e2b05edbf",
+  "revision_of_sha256": "c019694104901cbe725aad4c997224898e6757a8ea0145bde00dfc459acc5912"
+ },
+ "brief_sha256": "e88beb09366b9ff795bf0ac916f30cef1c9a93c35fa4617575e904c7a6f5fd17",
+ "brief_path": "/Users/damian/.local-operator/sessions/162198c78bcb/scratchpad/o3c-translation-brief.json",
+ "source_commit": "e7ebc3917537d83cc772148fc5b2fc2ad3f43a41",
+ "read_route": "ordinary file reads (shasum, cat, python json.load) of draft, brief, prior audit, catalogues, style guide and glossary; English via git show at e7ebc391 inside the checker; read_public_copy not used; no MT/translation service",
+ "input_hashes": {
+  "en": {
+   "path": "local-operator-mobile@e7ebc391:src/i18n/catalogues/en/mobile.sidebar.json",
+   "sha256": "beaba7baeffe546ce65430d6cb18213da2fbb88d23128c071c286fb32a08ecdf"
+  },
+  "context": {
+   "path": "local-operator-mobile@e7ebc391:src/i18n/catalogues/en/mobile.sidebar.context.json",
+   "sha256": "858f7c51c595862306120be7833c4274439b436bb8bd1f547b88139f8d0f2fd3"
+  },
+  "zh-CN": {
+   "path": "/Users/damian/.local-operator/sessions/6323bd03d1a2/scratchpad/o3c/draft-zh-CN-r2.json",
+   "sha256": "e203a3c0dd267b8b043c89d8c63d12acc92e1862c860d9c73af7ef5e2b05edbf"
+  },
+  "zh-CN_shipped_mobile.sidebar": {
+   "path": "local-operator-mobile worktree src/i18n/catalogues/zh-CN/mobile.sidebar.json",
+   "sha256": "7775bffdcb80c26e035062a5d9ccd7f09df756d594604f57da6a2711375fe8e7"
+  },
+  "style_guide": {
+   "path": "~/local-operator/i18n/style-guides/zh-CN.md",
+   "sha256": "8f95d89debbd0af848e72e4805e256ef9566632e520a5c6d9b37928cd617142c"
+  },
+  "glossary": {
+   "path": "~/local-operator/i18n/glossary.md",
+   "sha256": "0eb34437a8c3d6f564f278ef957a603b1d9f51bb07d5ddae5ea8f37deba962f8"
+  }
+ },
+ "checks": {
+  "keys_missing": 0,
+  "keys_extra": 0,
+  "overlap_with_shipped_zh-CN": 0,
+  "brief_vs_source_hash_mismatches": 0,
+  "placeholder_icu": "pass (repo parseMessage; params and select arms identical to en for 9/9)",
+  "negative_controls": "5/5 caught",
+  "cldr_zh_categories": [
+   "other"
+  ],
+  "nfc": "pass",
+  "trailing_punctuation": "none",
+  "leading_trailing_space": "none",
+  "width": "all within width_hint_chars (chips 3–4ch/6–8 cells vs 10/14 hint; labels ≤12ch vs 24)",
+  "repo_validator": "npm run i18n:check not run (draft outside catalogue tree; worktree read-only)"
+ },
+ "redaction_marker_hits": {
+  "draft": 0,
+  "en": 0,
+  "context": 0,
+  "brief_excluding_redaction_scan.pattern": 0
+ },
+ "verdict": "passed",
+ "current_report_verdict": {
+  "status": "passed",
+  "unresolved_blocker_major_count": 0,
+  "finding_ids": [
+   "ZH-R2-N1",
+   "ZH-R2-N2",
+   "ZH-R2-N3",
+   "ZH-R2-N4"
+  ]
+ },
+ "findings": [
+  {
+   "id": "ZH-R2-N1",
+   "severity": "NIT",
+   "key": "mobile.sidebar.row_status.question (draft note, not shipped)",
+   "current": "note: '待回答 ... parallels 待批准'",
+   "proposed": "note: '... parallels 待审批'",
+   "reason": "The note went stale after ZH-C1 changed the approval chip to 待审批. The value 待回答 is correct. Notes don't ship, so this doesn't gate."
+  },
+  {
+   "id": "ZH-R2-N2",
+   "severity": "NIT",
+   "key": "mobile.sidebar.row_label.on_device (draft note, not shipped)",
+   "current": "note: 'mobile.remote_sessions.subtitle_owner (在 {owner} 上) is the outlier'",
+   "proposed": "note: 'the mobile.remote_sessions.* {owner} family (7 keys) spaces the placeholder; this follows style-guides/zh-CN.md:67 and the computers/refusal families (8 keys)'",
+   "reason": "The value 在{device}上 is correct per the style guide. The shipped corpus is split 8 to 7, not one outlier. The spaced remote_sessions family is pre-existing drift and doesn't gate. The rendered fragment is spoken only."
+  },
+  {
+   "id": "ZH-R2-N3",
+   "severity": "NIT",
+   "key": "mobile.sidebar.row_label.open (draft note, not shipped)",
+   "current": "note: 'bare 打开 (as in relay.chrome.drawer.open)'",
+   "proposed": "note: 'bare 打开 would read as the imperative (cf. relay.chrome.drawer.open 打开导航)'",
+   "reason": "Shipped drawer.open is 打开导航, not a bare 打开. The reasoning still holds and the value 当前已打开 is accepted."
+  },
+  {
+   "id": "ZH-R2-N4",
+   "severity": "NIT",
+   "key": "(code) rowAccessibilityLabel join — carried from ZH-C3",
+   "current": "parts.join(\", \") → 支付对账, 等待你批准, 在Studio Mac上, 无法连接, 当前已打开",
+   "proposed": "No catalogue change. A future keyed separator would give zh-CN '，' (cf. mobile.computers.row.a11y_connecting)",
+   "reason": "Outside the draft's scope (list-row-meta.ts:505). Screen readers pause either way. Recorded only; not the translator's to fix."
+  }
+ ],
+ "artifacts": {
+  "/Users/damian/.local-operator/sessions/d751e813fdef/scratchpad/o3c-audit/zh-CN/mobile.sidebar/o3c-zh-CN-d751e8/report.md": "0c6a8c6f82b6aa2a7766ff351bf3d8c53a8a82afb9329a338e4a837d8b80d47d",
+  "/Users/damian/.local-operator/sessions/d751e813fdef/scratchpad/o3c-audit/zh-CN/mobile.sidebar/o3c-zh-CN-d751e8/audit.log": "d6256baa6ac971212e57116250751a339da3a2d320c34b313c67ee9d9f18fe6f",
+  "/Users/damian/.local-operator/sessions/d751e813fdef/scratchpad/o3c-audit/zh-CN/mobile.sidebar/o3c-zh-CN-d751e8/check-zh-CN.mts": "6456e2df646c02575eba3bda71bfca3d598606cf9375e2788d27ed5dbf13b5e5",
+  "/Users/damian/.local-operator/sessions/d751e813fdef/scratchpad/o3c-audit/zh-CN/mobile.sidebar/o3c-zh-CN-d751e8/check-zh-CN.out": "0fb372d8f1b4e7b94d4fec2f972cc9adebaf34d57198b1dcf05d5d2f23f967e8"
+ },
+ "audit_notes_not_execution_log": "report.md is reasoning; audit.log and check-zh-CN.out are execution output. audit.log is assembled verbatim from this session's individual tool results (one composite re-capture was guardrail-refused; nothing ran).",
+ "ledger_appended": false
+}

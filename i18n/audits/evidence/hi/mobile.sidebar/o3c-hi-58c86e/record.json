@@ -1,0 +1,115 @@
+{
+ "record_kind": "i18n-audit",
+ "audit_id": "o3c-hi-58c86e",
+ "slice": "O3-c",
+ "locale": "hi",
+ "namespace": "mobile.sidebar",
+ "audit_date": "2026-11-18",
+ "key_count": 9,
+ "keys_audited": [
+  "mobile.sidebar.row_status.approval",
+  "mobile.sidebar.row_status.question",
+  "mobile.sidebar.row_status.not_reachable",
+  "mobile.sidebar.row_status.ended",
+  "mobile.sidebar.row_status.not_answering",
+  "mobile.sidebar.row_label.waiting",
+  "mobile.sidebar.row_label.working",
+  "mobile.sidebar.row_label.on_device",
+  "mobile.sidebar.row_label.open"
+ ],
+ "translator_session": "b541c2efda5b",
+ "auditor": {
+  "agent": "i18n-auditor (team lopdev)",
+  "session": "58c86e4852a5",
+  "model": "anthropic/claude-opus-5-5",
+  "actual_model_source": "harness system prompt 'Model:' line for this session; no fallback observed",
+  "independent_from_translator_session": true
+ },
+ "draft": {
+  "path": "/Users/damian/.local-operator/sessions/b541c2efda5b/scratchpad/o3c/draft-hi.json",
+  "sha256": "769b65ff02a1f0d267c2ec62ee6c85a44c74674337f3355b5961ef4aeda2bd7e"
+ },
+ "brief": {
+  "path": "/Users/damian/.local-operator/sessions/162198c78bcb/scratchpad/o3c-translation-brief.json",
+  "sha256": "e88beb09366b9ff795bf0ac916f30cef1c9a93c35fa4617575e904c7a6f5fd17"
+ },
+ "source_commit": "e7ebc3917537d83cc772148fc5b2fc2ad3f43a41",
+ "read_route": "ordinary file reads of the draft and brief; worktree catalogues read via git show HEAD (e7ebc391) and checked byte-identical to the worktree files; validation via the worktree's own src/i18n/messages.ts parseMessage/formatMessage under node_modules/.bin/tsx (read-only); read_public_copy not used",
+ "input_hashes": {
+  "en": {
+   "path": "local-operator-mobile@e7ebc391:src/i18n/catalogues/en/mobile.sidebar.json",
+   "sha256": "beaba7baeffe546ce65430d6cb18213da2fbb88d23128c071c286fb32a08ecdf"
+  },
+  "context": {
+   "path": "local-operator-mobile@e7ebc391:src/i18n/catalogues/en/mobile.sidebar.context.json",
+   "sha256": "858f7c51c595862306120be7833c4274439b436bb8bd1f547b88139f8d0f2fd3"
+  },
+  "hi_shipped": {
+   "path": "local-operator-mobile@e7ebc391:src/i18n/catalogues/hi/mobile.sidebar.json",
+   "sha256": "83ec4e3aaf71f5c49b55d59e29004fd4e10533d4e63876c7fc8c8962b5ed1abb",
+   "note": "shipped catalogue; the 9 draft keys are new (0 overlap)"
+  },
+  "hi_shipped_reference": [
+   {
+    "path": "local-operator-mobile@e7ebc391:src/i18n/catalogues/hi/relay.chrome.json",
+    "sha256": "3d39d4693a4b5a8eacf5ec17bdddab25a7d6597d2f2ca9db8bd0a6516523ce05"
+   },
+   {
+    "path": "local-operator-mobile@e7ebc391:src/i18n/catalogues/hi/mobile.remote_sessions.json",
+    "sha256": "882b9552d3711b4bf0de1325a753d446ff99807696e49efa0c43b166df8f8fd4"
+   },
+   {
+    "path": "local-operator-mobile@e7ebc391:src/i18n/catalogues/hi/mobile.settings.json",
+    "sha256": "6ef68e158084adc4ced67f05a9de28145232281e2ef87255deb9dd8034181a47"
+   }
+  ],
+  "style_guide": {
+   "path": "~/local-operator/i18n/style-guides/hi.md",
+   "sha256": "82292dc8d13fcc93dc752457719264aed3cc20bb65ecfaba0f0e5a31f4cb40d5"
+  },
+  "glossary": {
+   "path": "~/local-operator/i18n/glossary.md",
+   "sha256": "0eb34437a8c3d6f564f278ef957a603b1d9f51bb07d5ddae5ea8f37deba962f8"
+  }
+ },
+ "english_hashes_match_brief": true,
+ "redaction_marker_hits": {
+  "draft_values": 0,
+  "draft_file": 0,
+  "brief_excluding_pattern_field": 0,
+  "en_sidebar": 0,
+  "en_sidebar_context": 0,
+  "total": 0,
+  "pattern_source": "brief.redaction_scan.pattern; only that field excluded from the brief scan"
+ },
+ "verdict": "passed",
+ "current_report_verdict": {
+  "status": "passed",
+  "unresolved_blocker_major_count": 0,
+  "finding_ids": [
+   "HI-C1"
+  ]
+ },
+ "findings": [
+  {
+   "id": "HI-C1",
+   "severity": "MINOR",
+   "key": "mobile.sidebar.row_label.working",
+   "current": "काम जारी",
+   "proposed": "कार्यरत",
+   "reason": "Terminology drift: the shipped hi word for this same state ('Working', the agent's turn running) is कार्यरत (relay.chrome.session.subtitle.working_plain, and working = 'कार्यरत · {elapsed}'). A reader who hears 'काम जारी' on the row then reads कार्यरत in the opened conversation's header. कार्यरत is shorter, ungendered, and needs no agreement with बातचीत. 'काम जारी' is not wrong, only inconsistent."
+  }
+ ],
+ "artifacts": {
+  "report": {
+   "path": "report.md",
+   "sha256": "73b4a895a6f9e5cb68bdacd81f128c5627f300fa5059d449b721133e8c537fcd"
+  },
+  "audit_log": {
+   "path": "audit.log",
+   "sha256": "79a9988fdb42c9af127afba557564804c995a911c6d428f0775574df3b7d2584"
+  }
+ },
+ "audit_notes_not_execution_log": "report.md is the auditor's notes; audit.log carries the printed check output",
+ "ledger_appended": false
+}

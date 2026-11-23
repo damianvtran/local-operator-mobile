@@ -47,6 +47,43 @@ export type CatalogueKey =
 	| "mobile.account_routing.unsaved"
 	| "mobile.agent_avatar.edit_hint"
 	| "mobile.agent_avatar.label"
+	| "mobile.asks.answer_label"
+	| "mobile.asks.answer_placeholder"
+	| "mobile.asks.choose_any"
+	| "mobile.asks.deadline_ago"
+	| "mobile.asks.decline"
+	| "mobile.asks.decline_hint"
+	| "mobile.asks.dismiss"
+	| "mobile.asks.dismiss_open"
+	| "mobile.asks.dismiss_reason.chat"
+	| "mobile.asks.dismiss_reason.chat_note"
+	| "mobile.asks.dismiss_reason.moot"
+	| "mobile.asks.dismiss_reason.moot_note"
+	| "mobile.asks.dismiss_title"
+	| "mobile.asks.empty"
+	| "mobile.asks.honesty"
+	| "mobile.asks.loading"
+	| "mobile.asks.none_recorded"
+	| "mobile.asks.nothing_left"
+	| "mobile.asks.open_conversation"
+	| "mobile.asks.other_hint"
+	| "mobile.asks.other_kept"
+	| "mobile.asks.other_label"
+	| "mobile.asks.progress.pick_or_type"
+	| "mobile.asks.progress.tally"
+	| "mobile.asks.progress.type"
+	| "mobile.asks.recommended"
+	| "mobile.asks.secret_notice"
+	| "mobile.asks.secret_notice_saved"
+	| "mobile.asks.secret_placeholder"
+	| "mobile.asks.send_answer"
+	| "mobile.asks.send_answers"
+	| "mobile.asks.settled"
+	| "mobile.asks.skip"
+	| "mobile.asks.title_fallback"
+	| "mobile.asks.truncated"
+	| "mobile.asks.unskip"
+	| "mobile.asks.urgent"
 	| "mobile.chrome.clear_search"
 	| "mobile.chrome.close_conversations"
 	| "mobile.chrome.composer.dismiss_keyboard"
@@ -55,6 +92,7 @@ export type CatalogueKey =
 	| "mobile.chrome.composer.queued"
 	| "mobile.chrome.composer.row_cost"
 	| "mobile.chrome.composer.row_effort"
+	| "mobile.chrome.composer.row_identity"
 	| "mobile.chrome.composer.row_model"
 	| "mobile.chrome.composer.row_questions"
 	| "mobile.chrome.composer.row_queue"
@@ -86,9 +124,174 @@ export type CatalogueKey =
 	| "mobile.common.not_found.headline"
 	| "mobile.common.not_found.next"
 	| "mobile.common.not_found.title"
+	| "mobile.common.resize_panel"
 	| "mobile.common.save"
 	| "mobile.common.send"
+	| "mobile.common.size.large"
+	| "mobile.common.size.medium"
+	| "mobile.common.size.shorter"
+	| "mobile.common.size.taller"
 	| "mobile.common.try_again"
+	| "mobile.community.approvals.agent"
+	| "mobile.community.approvals.decline"
+	| "mobile.community.approvals.empty"
+	| "mobile.community.approvals.expires"
+	| "mobile.community.approvals.expires_days"
+	| "mobile.community.approvals.failed"
+	| "mobile.community.approvals.open_computer"
+	| "mobile.community.approvals.review"
+	| "mobile.community.approvals.review_note"
+	| "mobile.community.approvals.stays"
+	| "mobile.community.approvals.title"
+	| "mobile.community.approvals.title_unknown"
+	| "mobile.community.approvals.waiting"
+	| "mobile.community.browse.channels"
+	| "mobile.community.browse.channels_empty"
+	| "mobile.community.browse.join"
+	| "mobile.community.browse.load_more"
+	| "mobile.community.browse.mode"
+	| "mobile.community.browse.open"
+	| "mobile.community.browse.people"
+	| "mobile.community.browse.people_empty"
+	| "mobile.community.browse.private"
+	| "mobile.community.browse.search"
+	| "mobile.community.browse.title"
+	| "mobile.community.category.harassment_or_abuse"
+	| "mobile.community.category.private_information"
+	| "mobile.community.category.spam_or_promotion"
+	| "mobile.community.category.unsafe_or_illegal"
+	| "mobile.community.common.loading"
+	| "mobile.community.common.retry"
+	| "mobile.community.common.unavailable"
+	| "mobile.community.composer.attach"
+	| "mobile.community.composer.audience"
+	| "mobile.community.composer.audience_dm"
+	| "mobile.community.composer.blocked_archived"
+	| "mobile.community.composer.blocked_locked"
+	| "mobile.community.composer.blocked_read_only"
+	| "mobile.community.composer.blocked_staff_only"
+	| "mobile.community.composer.cancel"
+	| "mobile.community.composer.cancelled"
+	| "mobile.community.composer.checking"
+	| "mobile.community.composer.dismiss"
+	| "mobile.community.composer.failed"
+	| "mobile.community.composer.forbidden"
+	| "mobile.community.composer.guidelines"
+	| "mobile.community.composer.images_unavailable"
+	| "mobile.community.composer.invalid"
+	| "mobile.community.composer.label"
+	| "mobile.community.composer.label_dm"
+	| "mobile.community.composer.limited"
+	| "mobile.community.composer.limited_wait"
+	| "mobile.community.composer.refused"
+	| "mobile.community.composer.refused_detail"
+	| "mobile.community.composer.restricted"
+	| "mobile.community.composer.retry"
+	| "mobile.community.composer.review"
+	| "mobile.community.composer.send"
+	| "mobile.community.composer.unavailable"
+	| "mobile.community.conversation.agent"
+	| "mobile.community.conversation.deleted"
+	| "mobile.community.conversation.edited"
+	| "mobile.community.conversation.empty"
+	| "mobile.community.conversation.former_member"
+	| "mobile.community.conversation.join_prompt"
+	| "mobile.community.conversation.load_older"
+	| "mobile.community.conversation.older_error"
+	| "mobile.community.conversation.replies"
+	| "mobile.community.conversation.report"
+	| "mobile.community.conversation.subtitle"
+	| "mobile.community.conversation.view_profile"
+	| "mobile.community.directory.empty"
+	| "mobile.community.directory.featured"
+	| "mobile.community.directory.joined"
+	| "mobile.community.directory.read_only"
+	| "mobile.community.directory.title"
+	| "mobile.community.error.auth_unavailable"
+	| "mobile.community.error.generic"
+	| "mobile.community.error.load_failed"
+	| "mobile.community.error.not_found"
+	| "mobile.community.error.rate_limited"
+	| "mobile.community.error.sign_in"
+	| "mobile.community.error.unreachable"
+	| "mobile.community.home.browse"
+	| "mobile.community.home.channel_label"
+	| "mobile.community.home.channels"
+	| "mobile.community.home.channels_empty"
+	| "mobile.community.home.closed"
+	| "mobile.community.home.direct"
+	| "mobile.community.home.direct_empty"
+	| "mobile.community.home.direct_label"
+	| "mobile.community.home.join"
+	| "mobile.community.home.not_member"
+	| "mobile.community.home.reaccept"
+	| "mobile.community.home.reaccept_banner"
+	| "mobile.community.home.requests"
+	| "mobile.community.home.requests_count"
+	| "mobile.community.home.switch"
+	| "mobile.community.join.agree"
+	| "mobile.community.join.changed"
+	| "mobile.community.join.failed"
+	| "mobile.community.join.guidelines_heading"
+	| "mobile.community.join.hint"
+	| "mobile.community.join.moderation"
+	| "mobile.community.join.profile"
+	| "mobile.community.join.reaccept_submit"
+	| "mobile.community.join.reaccept_title"
+	| "mobile.community.join.submit"
+	| "mobile.community.join.title"
+	| "mobile.community.no_plan.body"
+	| "mobile.community.no_plan.free"
+	| "mobile.community.no_plan.join"
+	| "mobile.community.no_plan.open"
+	| "mobile.community.no_plan.title"
+	| "mobile.community.profile.block"
+	| "mobile.community.profile.blocked"
+	| "mobile.community.profile.failed"
+	| "mobile.community.profile.joined"
+	| "mobile.community.profile.message"
+	| "mobile.community.profile.message_sent"
+	| "mobile.community.profile.report"
+	| "mobile.community.profile.title"
+	| "mobile.community.report.category"
+	| "mobile.community.report.dm_consent"
+	| "mobile.community.report.failed"
+	| "mobile.community.report.note"
+	| "mobile.community.report.revision_changed"
+	| "mobile.community.report.sent"
+	| "mobile.community.report.submit"
+	| "mobile.community.report.title"
+	| "mobile.community.requests.accept"
+	| "mobile.community.requests.approvals"
+	| "mobile.community.requests.block"
+	| "mobile.community.requests.decline"
+	| "mobile.community.requests.dm"
+	| "mobile.community.requests.dm_body"
+	| "mobile.community.requests.dm_empty"
+	| "mobile.community.requests.expires"
+	| "mobile.community.requests.expires_days"
+	| "mobile.community.requests.mode"
+	| "mobile.community.requests.title"
+	| "mobile.community.role.community_admin"
+	| "mobile.community.role.moderator"
+	| "mobile.community.role.staff"
+	| "mobile.community.switcher.browse"
+	| "mobile.community.switcher.communities"
+	| "mobile.community.switcher.note"
+	| "mobile.community.switcher.organizations"
+	| "mobile.community.switcher.public"
+	| "mobile.community.switcher.row_label"
+	| "mobile.community.switcher.search"
+	| "mobile.composer_input.attach.camera"
+	| "mobile.composer_input.attach.camera_denied"
+	| "mobile.composer_input.attach.camera_error"
+	| "mobile.composer_input.attach.camera_refused"
+	| "mobile.composer_input.attach.camera_unavailable"
+	| "mobile.composer_input.attach.choose_image"
+	| "mobile.composer_input.attach.files"
+	| "mobile.composer_input.attach.library"
+	| "mobile.composer_input.attach.open_settings"
+	| "mobile.composer_input.attach.paste"
 	| "mobile.composer_input.clear_draft"
 	| "mobile.composer_input.clear_draft_hint"
 	| "mobile.composer_input.dismiss_error"
@@ -96,6 +299,7 @@ export type CatalogueKey =
 	| "mobile.composer_input.notice_dismiss"
 	| "mobile.composer_input.notice_retry"
 	| "mobile.composer_input.paste.denied"
+	| "mobile.composer_input.paste.empty_ios"
 	| "mobile.composer_input.paste.image"
 	| "mobile.composer_input.paste.image_hint"
 	| "mobile.composer_input.voice.discard"
@@ -314,6 +518,32 @@ export type CatalogueKey =
 	| "mobile.home.folders_read_failed"
 	| "mobile.home.folders_read_sign_in"
 	| "mobile.home.greeting"
+	| "mobile.home.identity.announce_picked"
+	| "mobile.home.identity.band_agents"
+	| "mobile.home.identity.band_recent"
+	| "mobile.home.identity.band_teams"
+	| "mobile.home.identity.default_agent"
+	| "mobile.home.identity.empty"
+	| "mobile.home.identity.no_matches"
+	| "mobile.home.identity.pill_label"
+	| "mobile.home.identity.read_failed"
+	| "mobile.home.identity.refused_connecting"
+	| "mobile.home.identity.refused_fallback"
+	| "mobile.home.identity.refused_registry"
+	| "mobile.home.identity.refused_unknown"
+	| "mobile.home.identity.refused_unlicensed"
+	| "mobile.home.identity.refused_unsaved"
+	| "mobile.home.identity.row_agent"
+	| "mobile.home.identity.row_agent_described"
+	| "mobile.home.identity.row_team"
+	| "mobile.home.identity.row_team_led"
+	| "mobile.home.identity.search"
+	| "mobile.home.identity.sheet_title"
+	| "mobile.home.identity.starting_with"
+	| "mobile.home.identity.team_led_by"
+	| "mobile.home.identity.team_members"
+	| "mobile.home.identity.team_subtitle"
+	| "mobile.home.identity.unsupported"
 	| "mobile.home.models_read_failed"
 	| "mobile.home.options.default_model"
 	| "mobile.home.options.fixed"
@@ -350,9 +580,7 @@ export type CatalogueKey =
 	| "mobile.home.startup_queue.not_started"
 	| "mobile.home.startup_queue.sending"
 	| "mobile.home.startup_queue.unconfirmed"
-	| "mobile.home.suggestion.last_turn"
 	| "mobile.home.suggestion.linear_mcp"
-	| "mobile.home.suggestion.phone_access"
 	| "mobile.home.suggestion.review_repo"
 	| "mobile.home.suggestion.team_of_agents"
 	| "mobile.home.suggestion.wake_summary"
@@ -361,6 +589,11 @@ export type CatalogueKey =
 	| "mobile.home.tip.search"
 	| "mobile.home.transcript.needs_answer"
 	| "mobile.home.transcript.waiting"
+	| "mobile.home.work.all_conversations"
+	| "mobile.home.work.all_conversations_new"
+	| "mobile.home.work.needs_you"
+	| "mobile.home.work.recent"
+	| "mobile.home.work.try"
 	| "mobile.library.action.add_tag"
 	| "mobile.library.action.edit"
 	| "mobile.library.action.open_chat"
@@ -413,6 +646,8 @@ export type CatalogueKey =
 	| "mobile.notifications.channel.system"
 	| "mobile.notifications.channel.tape_warble"
 	| "mobile.notifications.channel.task_complete"
+	| "mobile.notifications.channel.team_bridge"
+	| "mobile.notifications.channel.team_bridge_description"
 	| "mobile.notifications.channel.two_note_chime"
 	| "mobile.notifications.computer_registration.failed"
 	| "mobile.notifications.computer_registration.no_token"
@@ -454,6 +689,8 @@ export type CatalogueKey =
 	| "mobile.notifications.preferences.agent_note"
 	| "mobile.notifications.preferences.bridge_heading"
 	| "mobile.notifications.preferences.bridge_note"
+	| "mobile.notifications.preferences.bridge_system_off"
+	| "mobile.notifications.preferences.bridge_system_open"
 	| "mobile.notifications.preferences.completions"
 	| "mobile.notifications.preferences.computer_keeps_sending"
 	| "mobile.notifications.preferences.disabled_hint"
@@ -470,6 +707,7 @@ export type CatalogueKey =
 	| "mobile.notifications.priority_high"
 	| "mobile.notifications.section.waiting"
 	| "mobile.notifications.section.waiting_count"
+	| "mobile.notifications.team_bridge.self_name"
 	| "mobile.notifications.title"
 	| "mobile.notifications.turn_on"
 	| "mobile.oauth.failed"
@@ -655,7 +893,16 @@ export type CatalogueKey =
 	| "mobile.session.composer.not_sent_storage"
 	| "mobile.session.composer.retained_instruction"
 	| "mobile.session.composer.retry_not_sent_storage"
+	| "mobile.session.composer.settings_not_applied"
 	| "mobile.session.conversation_details"
+	| "mobile.session.diagram.close"
+	| "mobile.session.diagram.copied"
+	| "mobile.session.diagram.copy"
+	| "mobile.session.diagram.error"
+	| "mobile.session.diagram.label"
+	| "mobile.session.diagram.label_titled"
+	| "mobile.session.diagram.open_hint"
+	| "mobile.session.diagram.viewer"
 	| "mobile.session.empty.headline"
 	| "mobile.session.empty.next"
 	| "mobile.session.fallback_name"
@@ -684,6 +931,10 @@ export type CatalogueKey =
 	| "mobile.session.history.loading"
 	| "mobile.session.history.refresh_failed"
 	| "mobile.session.history.stalled"
+	| "mobile.session.inline_chart_data"
+	| "mobile.session.jump_to_latest"
+	| "mobile.session.jump_to_latest_name"
+	| "mobile.session.jump_to_latest_short"
 	| "mobile.session.not_connected.headline"
 	| "mobile.session.not_connected.next"
 	| "mobile.session.outbox.composer_discarding"
@@ -837,6 +1088,7 @@ export type CatalogueKey =
 	| "mobile.sidebar.empty_by_view.next"
 	| "mobile.sidebar.empty_by_view.reset"
 	| "mobile.sidebar.group.one_list"
+	| "mobile.sidebar.group.tag"
 	| "mobile.sidebar.group.time_section"
 	| "mobile.sidebar.group_by"
 	| "mobile.sidebar.hidden_sections"
@@ -850,16 +1102,31 @@ export type CatalogueKey =
 	| "mobile.sidebar.row.asks"
 	| "mobile.sidebar.row.asks_not_blocker"
 	| "mobile.sidebar.row.new"
+	| "mobile.sidebar.row.on_device"
 	| "mobile.sidebar.row.todos"
+	| "mobile.sidebar.row_label.join"
+	| "mobile.sidebar.row_label.on_device"
+	| "mobile.sidebar.row_label.open"
+	| "mobile.sidebar.row_label.waiting"
+	| "mobile.sidebar.row_label.working"
+	| "mobile.sidebar.row_status.approval"
+	| "mobile.sidebar.row_status.ended"
+	| "mobile.sidebar.row_status.not_answering"
+	| "mobile.sidebar.row_status.not_reachable"
+	| "mobile.sidebar.row_status.question"
 	| "mobile.sidebar.section.older"
 	| "mobile.sidebar.section.pinned"
 	| "mobile.sidebar.section.running"
 	| "mobile.sidebar.section.today"
+	| "mobile.sidebar.section.untagged"
 	| "mobile.sidebar.section.week"
 	| "mobile.sidebar.sections"
 	| "mobile.sidebar.settings_heading"
 	| "mobile.sidebar.show_ended"
 	| "mobile.sidebar.show_ended_hint"
+	| "mobile.sidebar.show_tags"
+	| "mobile.sidebar.show_tags_hint"
+	| "mobile.sidebar.tag_group.announcement"
 	| "mobile.sidebar.tags.announcement"
 	| "mobile.sidebar.tags.empty_headline"
 	| "mobile.sidebar.tags.empty_next"
@@ -904,6 +1171,12 @@ export type CatalogueKey =
 	| "mobile.signin.use_address"
 	| "mobile.signin.welcome.body"
 	| "mobile.signin.welcome.headline"
+	| "mobile.team_bridge.actions.a11y_react"
+	| "mobile.team_bridge.actions.copied"
+	| "mobile.team_bridge.actions.copy_text"
+	| "mobile.team_bridge.actions.reply_in_thread"
+	| "mobile.team_bridge.actions.select_text"
+	| "mobile.team_bridge.actions.title"
 	| "mobile.team_bridge.attachment.add"
 	| "mobile.team_bridge.attachment.attached_summary"
 	| "mobile.team_bridge.attachment.cannot_send"
@@ -947,6 +1220,23 @@ export type CatalogueKey =
 	| "mobile.team_bridge.attachment.viewer"
 	| "mobile.team_bridge.attachment.wait_uploads"
 	| "mobile.team_bridge.back"
+	| "mobile.team_bridge.card_body.deleted"
+	| "mobile.team_bridge.card_body.held"
+	| "mobile.team_bridge.card_body.held_transient"
+	| "mobile.team_bridge.card_body.loading"
+	| "mobile.team_bridge.card_body.more_messages"
+	| "mobile.team_bridge.card_body.not_admitted"
+	| "mobile.team_bridge.card_body.not_member"
+	| "mobile.team_bridge.card_body.offline"
+	| "mobile.team_bridge.card_body.other_account"
+	| "mobile.team_bridge.card_body.pending"
+	| "mobile.team_bridge.card_body.refused"
+	| "mobile.team_bridge.card_body.show_less"
+	| "mobile.team_bridge.card_body.show_more"
+	| "mobile.team_bridge.card_body.signed_out"
+	| "mobile.team_bridge.card_body.thread_reply"
+	| "mobile.team_bridge.card_body.unavailable"
+	| "mobile.team_bridge.card_body.untrusted"
 	| "mobile.team_bridge.conversation"
 	| "mobile.team_bridge.default_on.body"
 	| "mobile.team_bridge.default_on.dismiss"
@@ -1009,6 +1299,15 @@ export type CatalogueKey =
 	| "mobile.team_bridge.list.preview"
 	| "mobile.team_bridge.list.quiet"
 	| "mobile.team_bridge.list.self"
+	| "mobile.team_bridge.mentions.dismiss_notice"
+	| "mobile.team_bridge.mentions.invited"
+	| "mobile.team_bridge.mentions.no_endpoint"
+	| "mobile.team_bridge.mentions.not_member"
+	| "mobile.team_bridge.mentions.results_count"
+	| "mobile.team_bridge.mentions.row_label"
+	| "mobile.team_bridge.mentions.section_members"
+	| "mobile.team_bridge.mentions.section_org"
+	| "mobile.team_bridge.mentions.unavailable"
 	| "mobile.team_bridge.navigation.caption"
 	| "mobile.team_bridge.navigation.entry"
 	| "mobile.team_bridge.navigation.entry_loading"
@@ -1025,6 +1324,35 @@ export type CatalogueKey =
 	| "mobile.team_bridge.profile.open"
 	| "mobile.team_bridge.profile.opens_hint"
 	| "mobile.team_bridge.profile.title"
+	| "mobile.team_bridge.reactions.add"
+	| "mobile.team_bridge.reactions.added"
+	| "mobile.team_bridge.reactions.details"
+	| "mobile.team_bridge.reactions.failed"
+	| "mobile.team_bridge.reactions.hint_add"
+	| "mobile.team_bridge.reactions.hint_inspect"
+	| "mobile.team_bridge.reactions.hint_remove"
+	| "mobile.team_bridge.reactions.keyboard_hint"
+	| "mobile.team_bridge.reactions.pill"
+	| "mobile.team_bridge.reactions.pill_mine"
+	| "mobile.team_bridge.reactions.removed"
+	| "mobile.team_bridge.reactions.sample"
+	| "mobile.team_bridge.reactions.sample_none"
+	| "mobile.team_bridge.reactions.sample_notice"
+	| "mobile.team_bridge.reactions.show_less"
+	| "mobile.team_bridge.reactions.show_more"
+	| "mobile.team_bridge.reactions.summary"
+	| "mobile.team_bridge.reactions.you_reacted"
+	| "mobile.team_bridge.reply_thread.count"
+	| "mobile.team_bridge.reply_thread.empty"
+	| "mobile.team_bridge.reply_thread.error"
+	| "mobile.team_bridge.reply_thread.last_reply"
+	| "mobile.team_bridge.reply_thread.loading"
+	| "mobile.team_bridge.reply_thread.more"
+	| "mobile.team_bridge.reply_thread.open"
+	| "mobile.team_bridge.reply_thread.open_unread"
+	| "mobile.team_bridge.reply_thread.reply"
+	| "mobile.team_bridge.reply_thread.retry"
+	| "mobile.team_bridge.reply_thread.title"
 	| "mobile.team_bridge.retry"
 	| "mobile.team_bridge.thread.access_retry"
 	| "mobile.team_bridge.thread.anchor_missing"
@@ -1118,6 +1446,10 @@ export type CatalogueKey =
 	| "relay.health.quiet_detail"
 	| "relay.health.reconnecting"
 	| "relay.health.reconnecting_detail"
+	| "relay.skills.skipped"
+	| "relay.skills.too_large"
+	| "relay.skills.tray.hidden"
+	| "relay.skills.tray.label"
 	| "relay.transcript.composer.queued"
 	| "relay.transcript.fold.failed_label"
 	| "relay.transcript.fold.more"
@@ -1156,6 +1488,39 @@ export type NoParamKey =
 	| "mobile.account_routing.unsaved"
 	| "mobile.agent_avatar.edit_hint"
 	| "mobile.agent_avatar.label"
+	| "mobile.asks.answer_placeholder"
+	| "mobile.asks.choose_any"
+	| "mobile.asks.decline"
+	| "mobile.asks.decline_hint"
+	| "mobile.asks.dismiss"
+	| "mobile.asks.dismiss_open"
+	| "mobile.asks.dismiss_reason.chat"
+	| "mobile.asks.dismiss_reason.chat_note"
+	| "mobile.asks.dismiss_reason.moot"
+	| "mobile.asks.dismiss_reason.moot_note"
+	| "mobile.asks.empty"
+	| "mobile.asks.honesty"
+	| "mobile.asks.loading"
+	| "mobile.asks.none_recorded"
+	| "mobile.asks.nothing_left"
+	| "mobile.asks.open_conversation"
+	| "mobile.asks.other_hint"
+	| "mobile.asks.other_kept"
+	| "mobile.asks.other_label"
+	| "mobile.asks.progress.pick_or_type"
+	| "mobile.asks.progress.type"
+	| "mobile.asks.recommended"
+	| "mobile.asks.secret_notice"
+	| "mobile.asks.secret_notice_saved"
+	| "mobile.asks.secret_placeholder"
+	| "mobile.asks.send_answer"
+	| "mobile.asks.send_answers"
+	| "mobile.asks.settled"
+	| "mobile.asks.skip"
+	| "mobile.asks.title_fallback"
+	| "mobile.asks.truncated"
+	| "mobile.asks.unskip"
+	| "mobile.asks.urgent"
 	| "mobile.chrome.clear_search"
 	| "mobile.chrome.close_conversations"
 	| "mobile.chrome.composer.dismiss_keyboard"
@@ -1163,6 +1528,7 @@ export type NoParamKey =
 	| "mobile.chrome.composer.open_queue"
 	| "mobile.chrome.composer.row_cost"
 	| "mobile.chrome.composer.row_effort"
+	| "mobile.chrome.composer.row_identity"
 	| "mobile.chrome.composer.row_model"
 	| "mobile.chrome.composer.row_questions"
 	| "mobile.chrome.composer.row_queue"
@@ -1189,9 +1555,149 @@ export type NoParamKey =
 	| "mobile.common.not_found.headline"
 	| "mobile.common.not_found.next"
 	| "mobile.common.not_found.title"
+	| "mobile.common.resize_panel"
 	| "mobile.common.save"
 	| "mobile.common.send"
+	| "mobile.common.size.large"
+	| "mobile.common.size.medium"
+	| "mobile.common.size.shorter"
+	| "mobile.common.size.taller"
 	| "mobile.common.try_again"
+	| "mobile.community.approvals.agent"
+	| "mobile.community.approvals.decline"
+	| "mobile.community.approvals.empty"
+	| "mobile.community.approvals.failed"
+	| "mobile.community.approvals.open_computer"
+	| "mobile.community.approvals.review"
+	| "mobile.community.approvals.review_note"
+	| "mobile.community.approvals.stays"
+	| "mobile.community.approvals.title_unknown"
+	| "mobile.community.approvals.waiting"
+	| "mobile.community.browse.channels"
+	| "mobile.community.browse.channels_empty"
+	| "mobile.community.browse.join"
+	| "mobile.community.browse.load_more"
+	| "mobile.community.browse.mode"
+	| "mobile.community.browse.open"
+	| "mobile.community.browse.people"
+	| "mobile.community.browse.people_empty"
+	| "mobile.community.browse.private"
+	| "mobile.community.browse.search"
+	| "mobile.community.browse.title"
+	| "mobile.community.category.harassment_or_abuse"
+	| "mobile.community.category.private_information"
+	| "mobile.community.category.spam_or_promotion"
+	| "mobile.community.category.unsafe_or_illegal"
+	| "mobile.community.common.loading"
+	| "mobile.community.common.retry"
+	| "mobile.community.common.unavailable"
+	| "mobile.community.composer.attach"
+	| "mobile.community.composer.audience"
+	| "mobile.community.composer.blocked_archived"
+	| "mobile.community.composer.blocked_locked"
+	| "mobile.community.composer.blocked_read_only"
+	| "mobile.community.composer.blocked_staff_only"
+	| "mobile.community.composer.cancel"
+	| "mobile.community.composer.cancelled"
+	| "mobile.community.composer.checking"
+	| "mobile.community.composer.dismiss"
+	| "mobile.community.composer.failed"
+	| "mobile.community.composer.forbidden"
+	| "mobile.community.composer.guidelines"
+	| "mobile.community.composer.images_unavailable"
+	| "mobile.community.composer.invalid"
+	| "mobile.community.composer.limited"
+	| "mobile.community.composer.retry"
+	| "mobile.community.composer.review"
+	| "mobile.community.composer.send"
+	| "mobile.community.composer.unavailable"
+	| "mobile.community.conversation.agent"
+	| "mobile.community.conversation.deleted"
+	| "mobile.community.conversation.edited"
+	| "mobile.community.conversation.empty"
+	| "mobile.community.conversation.former_member"
+	| "mobile.community.conversation.load_older"
+	| "mobile.community.conversation.older_error"
+	| "mobile.community.conversation.report"
+	| "mobile.community.directory.empty"
+	| "mobile.community.directory.featured"
+	| "mobile.community.directory.joined"
+	| "mobile.community.directory.read_only"
+	| "mobile.community.directory.title"
+	| "mobile.community.error.auth_unavailable"
+	| "mobile.community.error.generic"
+	| "mobile.community.error.load_failed"
+	| "mobile.community.error.not_found"
+	| "mobile.community.error.rate_limited"
+	| "mobile.community.error.sign_in"
+	| "mobile.community.error.unreachable"
+	| "mobile.community.home.browse"
+	| "mobile.community.home.channels"
+	| "mobile.community.home.channels_empty"
+	| "mobile.community.home.closed"
+	| "mobile.community.home.direct"
+	| "mobile.community.home.direct_empty"
+	| "mobile.community.home.join"
+	| "mobile.community.home.not_member"
+	| "mobile.community.home.reaccept"
+	| "mobile.community.home.reaccept_banner"
+	| "mobile.community.home.requests"
+	| "mobile.community.home.switch"
+	| "mobile.community.join.changed"
+	| "mobile.community.join.failed"
+	| "mobile.community.join.hint"
+	| "mobile.community.join.moderation"
+	| "mobile.community.join.profile"
+	| "mobile.community.join.reaccept_submit"
+	| "mobile.community.join.reaccept_title"
+	| "mobile.community.join.submit"
+	| "mobile.community.join.title"
+	| "mobile.community.no_plan.body"
+	| "mobile.community.no_plan.free"
+	| "mobile.community.no_plan.join"
+	| "mobile.community.no_plan.open"
+	| "mobile.community.no_plan.title"
+	| "mobile.community.profile.block"
+	| "mobile.community.profile.blocked"
+	| "mobile.community.profile.failed"
+	| "mobile.community.profile.message"
+	| "mobile.community.profile.message_sent"
+	| "mobile.community.profile.report"
+	| "mobile.community.profile.title"
+	| "mobile.community.report.category"
+	| "mobile.community.report.dm_consent"
+	| "mobile.community.report.failed"
+	| "mobile.community.report.note"
+	| "mobile.community.report.revision_changed"
+	| "mobile.community.report.submit"
+	| "mobile.community.report.title"
+	| "mobile.community.requests.accept"
+	| "mobile.community.requests.approvals"
+	| "mobile.community.requests.block"
+	| "mobile.community.requests.decline"
+	| "mobile.community.requests.dm"
+	| "mobile.community.requests.dm_empty"
+	| "mobile.community.requests.mode"
+	| "mobile.community.requests.title"
+	| "mobile.community.role.community_admin"
+	| "mobile.community.role.moderator"
+	| "mobile.community.role.staff"
+	| "mobile.community.switcher.browse"
+	| "mobile.community.switcher.communities"
+	| "mobile.community.switcher.note"
+	| "mobile.community.switcher.organizations"
+	| "mobile.community.switcher.public"
+	| "mobile.community.switcher.search"
+	| "mobile.composer_input.attach.camera"
+	| "mobile.composer_input.attach.camera_denied"
+	| "mobile.composer_input.attach.camera_error"
+	| "mobile.composer_input.attach.camera_refused"
+	| "mobile.composer_input.attach.camera_unavailable"
+	| "mobile.composer_input.attach.choose_image"
+	| "mobile.composer_input.attach.files"
+	| "mobile.composer_input.attach.library"
+	| "mobile.composer_input.attach.open_settings"
+	| "mobile.composer_input.attach.paste"
 	| "mobile.composer_input.clear_draft"
 	| "mobile.composer_input.clear_draft_hint"
 	| "mobile.composer_input.dismiss_error"
@@ -1199,6 +1705,7 @@ export type NoParamKey =
 	| "mobile.composer_input.notice_dismiss"
 	| "mobile.composer_input.notice_retry"
 	| "mobile.composer_input.paste.denied"
+	| "mobile.composer_input.paste.empty_ios"
 	| "mobile.composer_input.paste.image"
 	| "mobile.composer_input.paste.image_hint"
 	| "mobile.composer_input.voice.discard"
@@ -1375,6 +1882,16 @@ export type NoParamKey =
 	| "mobile.home.folders_read_failed"
 	| "mobile.home.folders_read_sign_in"
 	| "mobile.home.greeting"
+	| "mobile.home.identity.band_agents"
+	| "mobile.home.identity.band_recent"
+	| "mobile.home.identity.band_teams"
+	| "mobile.home.identity.default_agent"
+	| "mobile.home.identity.empty"
+	| "mobile.home.identity.read_failed"
+	| "mobile.home.identity.refused_registry"
+	| "mobile.home.identity.search"
+	| "mobile.home.identity.sheet_title"
+	| "mobile.home.identity.unsupported"
 	| "mobile.home.models_read_failed"
 	| "mobile.home.options.default_model"
 	| "mobile.home.options.fixed"
@@ -1411,9 +1928,7 @@ export type NoParamKey =
 	| "mobile.home.startup_queue.not_started"
 	| "mobile.home.startup_queue.sending"
 	| "mobile.home.startup_queue.unconfirmed"
-	| "mobile.home.suggestion.last_turn"
 	| "mobile.home.suggestion.linear_mcp"
-	| "mobile.home.suggestion.phone_access"
 	| "mobile.home.suggestion.review_repo"
 	| "mobile.home.suggestion.team_of_agents"
 	| "mobile.home.suggestion.wake_summary"
@@ -1422,6 +1937,10 @@ export type NoParamKey =
 	| "mobile.home.tip.search"
 	| "mobile.home.transcript.needs_answer"
 	| "mobile.home.transcript.waiting"
+	| "mobile.home.work.all_conversations"
+	| "mobile.home.work.needs_you"
+	| "mobile.home.work.recent"
+	| "mobile.home.work.try"
 	| "mobile.library.action.add_tag"
 	| "mobile.library.action.edit"
 	| "mobile.library.action.open_chat"
@@ -1472,6 +1991,8 @@ export type NoParamKey =
 	| "mobile.notifications.channel.system"
 	| "mobile.notifications.channel.tape_warble"
 	| "mobile.notifications.channel.task_complete"
+	| "mobile.notifications.channel.team_bridge"
+	| "mobile.notifications.channel.team_bridge_description"
 	| "mobile.notifications.channel.two_note_chime"
 	| "mobile.notifications.computer_registration.failed"
 	| "mobile.notifications.computer_registration.no_token"
@@ -1511,6 +2032,8 @@ export type NoParamKey =
 	| "mobile.notifications.preferences.agent_heading"
 	| "mobile.notifications.preferences.agent_note"
 	| "mobile.notifications.preferences.bridge_heading"
+	| "mobile.notifications.preferences.bridge_system_off"
+	| "mobile.notifications.preferences.bridge_system_open"
 	| "mobile.notifications.preferences.completions"
 	| "mobile.notifications.preferences.computer_keeps_sending"
 	| "mobile.notifications.preferences.disabled_hint"
@@ -1526,6 +2049,7 @@ export type NoParamKey =
 	| "mobile.notifications.primer.title"
 	| "mobile.notifications.priority_high"
 	| "mobile.notifications.section.waiting"
+	| "mobile.notifications.team_bridge.self_name"
 	| "mobile.notifications.title"
 	| "mobile.notifications.turn_on"
 	| "mobile.oauth.failed"
@@ -1663,7 +2187,14 @@ export type NoParamKey =
 	| "mobile.session.composer.not_sent_storage"
 	| "mobile.session.composer.retained_instruction"
 	| "mobile.session.composer.retry_not_sent_storage"
+	| "mobile.session.composer.settings_not_applied"
 	| "mobile.session.conversation_details"
+	| "mobile.session.diagram.close"
+	| "mobile.session.diagram.copied"
+	| "mobile.session.diagram.copy"
+	| "mobile.session.diagram.error"
+	| "mobile.session.diagram.open_hint"
+	| "mobile.session.diagram.viewer"
 	| "mobile.session.empty.headline"
 	| "mobile.session.empty.next"
 	| "mobile.session.fallback_name"
@@ -1685,6 +2216,10 @@ export type NoParamKey =
 	| "mobile.session.history.loading"
 	| "mobile.session.history.refresh_failed"
 	| "mobile.session.history.stalled"
+	| "mobile.session.inline_chart_data"
+	| "mobile.session.jump_to_latest"
+	| "mobile.session.jump_to_latest_name"
+	| "mobile.session.jump_to_latest_short"
 	| "mobile.session.not_connected.headline"
 	| "mobile.session.not_connected.next"
 	| "mobile.session.outbox.composer_discarding"
@@ -1817,6 +2352,7 @@ export type NoParamKey =
 	| "mobile.sidebar.empty_by_view.next"
 	| "mobile.sidebar.empty_by_view.reset"
 	| "mobile.sidebar.group.one_list"
+	| "mobile.sidebar.group.tag"
 	| "mobile.sidebar.group.time_section"
 	| "mobile.sidebar.group_by"
 	| "mobile.sidebar.more_settings"
@@ -1826,15 +2362,25 @@ export type NoParamKey =
 	| "mobile.sidebar.outbox_failed"
 	| "mobile.sidebar.outbox_sending"
 	| "mobile.sidebar.row.new"
+	| "mobile.sidebar.row_label.open"
+	| "mobile.sidebar.row_label.working"
+	| "mobile.sidebar.row_status.approval"
+	| "mobile.sidebar.row_status.ended"
+	| "mobile.sidebar.row_status.not_answering"
+	| "mobile.sidebar.row_status.not_reachable"
+	| "mobile.sidebar.row_status.question"
 	| "mobile.sidebar.section.older"
 	| "mobile.sidebar.section.pinned"
 	| "mobile.sidebar.section.running"
 	| "mobile.sidebar.section.today"
+	| "mobile.sidebar.section.untagged"
 	| "mobile.sidebar.section.week"
 	| "mobile.sidebar.sections"
 	| "mobile.sidebar.settings_heading"
 	| "mobile.sidebar.show_ended"
 	| "mobile.sidebar.show_ended_hint"
+	| "mobile.sidebar.show_tags"
+	| "mobile.sidebar.show_tags_hint"
 	| "mobile.sidebar.tags.empty_headline"
 	| "mobile.sidebar.tags.empty_next"
 	| "mobile.sidebar.tags.load_failed_body"
@@ -1877,6 +2423,12 @@ export type NoParamKey =
 	| "mobile.signin.use_address"
 	| "mobile.signin.welcome.body"
 	| "mobile.signin.welcome.headline"
+	| "mobile.team_bridge.actions.a11y_react"
+	| "mobile.team_bridge.actions.copied"
+	| "mobile.team_bridge.actions.copy_text"
+	| "mobile.team_bridge.actions.reply_in_thread"
+	| "mobile.team_bridge.actions.select_text"
+	| "mobile.team_bridge.actions.title"
 	| "mobile.team_bridge.attachment.add"
 	| "mobile.team_bridge.attachment.cannot_send"
 	| "mobile.team_bridge.attachment.close"
@@ -1909,6 +2461,22 @@ export type NoParamKey =
 	| "mobile.team_bridge.attachment.viewer"
 	| "mobile.team_bridge.attachment.wait_uploads"
 	| "mobile.team_bridge.back"
+	| "mobile.team_bridge.card_body.deleted"
+	| "mobile.team_bridge.card_body.held"
+	| "mobile.team_bridge.card_body.held_transient"
+	| "mobile.team_bridge.card_body.loading"
+	| "mobile.team_bridge.card_body.not_admitted"
+	| "mobile.team_bridge.card_body.not_member"
+	| "mobile.team_bridge.card_body.offline"
+	| "mobile.team_bridge.card_body.other_account"
+	| "mobile.team_bridge.card_body.pending"
+	| "mobile.team_bridge.card_body.refused"
+	| "mobile.team_bridge.card_body.show_less"
+	| "mobile.team_bridge.card_body.show_more"
+	| "mobile.team_bridge.card_body.signed_out"
+	| "mobile.team_bridge.card_body.thread_reply"
+	| "mobile.team_bridge.card_body.unavailable"
+	| "mobile.team_bridge.card_body.untrusted"
 	| "mobile.team_bridge.conversation"
 	| "mobile.team_bridge.default_on.body"
 	| "mobile.team_bridge.default_on.dismiss"
@@ -1966,6 +2534,10 @@ export type NoParamKey =
 	| "mobile.team_bridge.list.preview"
 	| "mobile.team_bridge.list.quiet"
 	| "mobile.team_bridge.list.self"
+	| "mobile.team_bridge.mentions.dismiss_notice"
+	| "mobile.team_bridge.mentions.section_members"
+	| "mobile.team_bridge.mentions.section_org"
+	| "mobile.team_bridge.mentions.unavailable"
 	| "mobile.team_bridge.navigation.caption"
 	| "mobile.team_bridge.navigation.entry_loading"
 	| "mobile.team_bridge.navigation.entry_unavailable"
@@ -1977,6 +2549,26 @@ export type NoParamKey =
 	| "mobile.team_bridge.profile.message"
 	| "mobile.team_bridge.profile.opens_hint"
 	| "mobile.team_bridge.profile.title"
+	| "mobile.team_bridge.reactions.add"
+	| "mobile.team_bridge.reactions.added"
+	| "mobile.team_bridge.reactions.details"
+	| "mobile.team_bridge.reactions.failed"
+	| "mobile.team_bridge.reactions.hint_add"
+	| "mobile.team_bridge.reactions.hint_inspect"
+	| "mobile.team_bridge.reactions.hint_remove"
+	| "mobile.team_bridge.reactions.keyboard_hint"
+	| "mobile.team_bridge.reactions.removed"
+	| "mobile.team_bridge.reactions.sample_none"
+	| "mobile.team_bridge.reactions.sample_notice"
+	| "mobile.team_bridge.reactions.show_less"
+	| "mobile.team_bridge.reactions.you_reacted"
+	| "mobile.team_bridge.reply_thread.empty"
+	| "mobile.team_bridge.reply_thread.error"
+	| "mobile.team_bridge.reply_thread.loading"
+	| "mobile.team_bridge.reply_thread.more"
+	| "mobile.team_bridge.reply_thread.reply"
+	| "mobile.team_bridge.reply_thread.retry"
+	| "mobile.team_bridge.reply_thread.title"
 	| "mobile.team_bridge.retry"
 	| "mobile.team_bridge.thread.access_retry"
 	| "mobile.team_bridge.thread.anchor_missing"
@@ -2049,6 +2641,9 @@ export type NoParamKey =
 	| "relay.health.quiet_detail"
 	| "relay.health.reconnecting"
 	| "relay.health.reconnecting_detail"
+	| "relay.skills.too_large"
+	| "relay.skills.tray.hidden"
+	| "relay.skills.tray.label"
 	| "relay.transcript.fold.failed_label"
 	| "relay.transcript.label.ask"
 	| "relay.transcript.label.job"
@@ -2082,6 +2677,43 @@ export type MessageParams = {
 	"mobile.account_routing.unsaved": NoParams;
 	"mobile.agent_avatar.edit_hint": NoParams;
 	"mobile.agent_avatar.label": NoParams;
+	"mobile.asks.answer_label": { question: string | number };
+	"mobile.asks.answer_placeholder": NoParams;
+	"mobile.asks.choose_any": NoParams;
+	"mobile.asks.deadline_ago": { duration: string | number };
+	"mobile.asks.decline": NoParams;
+	"mobile.asks.decline_hint": NoParams;
+	"mobile.asks.dismiss": NoParams;
+	"mobile.asks.dismiss_open": NoParams;
+	"mobile.asks.dismiss_reason.chat": NoParams;
+	"mobile.asks.dismiss_reason.chat_note": NoParams;
+	"mobile.asks.dismiss_reason.moot": NoParams;
+	"mobile.asks.dismiss_reason.moot_note": NoParams;
+	"mobile.asks.dismiss_title": { count: number };
+	"mobile.asks.empty": NoParams;
+	"mobile.asks.honesty": NoParams;
+	"mobile.asks.loading": NoParams;
+	"mobile.asks.none_recorded": NoParams;
+	"mobile.asks.nothing_left": NoParams;
+	"mobile.asks.open_conversation": NoParams;
+	"mobile.asks.other_hint": NoParams;
+	"mobile.asks.other_kept": NoParams;
+	"mobile.asks.other_label": NoParams;
+	"mobile.asks.progress.pick_or_type": NoParams;
+	"mobile.asks.progress.tally": { answered: string | number; total: string | number };
+	"mobile.asks.progress.type": NoParams;
+	"mobile.asks.recommended": NoParams;
+	"mobile.asks.secret_notice": NoParams;
+	"mobile.asks.secret_notice_saved": NoParams;
+	"mobile.asks.secret_placeholder": NoParams;
+	"mobile.asks.send_answer": NoParams;
+	"mobile.asks.send_answers": NoParams;
+	"mobile.asks.settled": NoParams;
+	"mobile.asks.skip": NoParams;
+	"mobile.asks.title_fallback": NoParams;
+	"mobile.asks.truncated": NoParams;
+	"mobile.asks.unskip": NoParams;
+	"mobile.asks.urgent": NoParams;
 	"mobile.chrome.clear_search": NoParams;
 	"mobile.chrome.close_conversations": NoParams;
 	"mobile.chrome.composer.dismiss_keyboard": NoParams;
@@ -2090,6 +2722,7 @@ export type MessageParams = {
 	"mobile.chrome.composer.queued": { count: number };
 	"mobile.chrome.composer.row_cost": NoParams;
 	"mobile.chrome.composer.row_effort": NoParams;
+	"mobile.chrome.composer.row_identity": NoParams;
 	"mobile.chrome.composer.row_model": NoParams;
 	"mobile.chrome.composer.row_questions": NoParams;
 	"mobile.chrome.composer.row_queue": NoParams;
@@ -2121,9 +2754,174 @@ export type MessageParams = {
 	"mobile.common.not_found.headline": NoParams;
 	"mobile.common.not_found.next": NoParams;
 	"mobile.common.not_found.title": NoParams;
+	"mobile.common.resize_panel": NoParams;
 	"mobile.common.save": NoParams;
 	"mobile.common.send": NoParams;
+	"mobile.common.size.large": NoParams;
+	"mobile.common.size.medium": NoParams;
+	"mobile.common.size.shorter": NoParams;
+	"mobile.common.size.taller": NoParams;
 	"mobile.common.try_again": NoParams;
+	"mobile.community.approvals.agent": NoParams;
+	"mobile.community.approvals.decline": NoParams;
+	"mobile.community.approvals.empty": NoParams;
+	"mobile.community.approvals.expires": { hours: number };
+	"mobile.community.approvals.expires_days": { days: number };
+	"mobile.community.approvals.failed": NoParams;
+	"mobile.community.approvals.open_computer": NoParams;
+	"mobile.community.approvals.review": NoParams;
+	"mobile.community.approvals.review_note": NoParams;
+	"mobile.community.approvals.stays": NoParams;
+	"mobile.community.approvals.title": { channel: string | number };
+	"mobile.community.approvals.title_unknown": NoParams;
+	"mobile.community.approvals.waiting": NoParams;
+	"mobile.community.browse.channels": NoParams;
+	"mobile.community.browse.channels_empty": NoParams;
+	"mobile.community.browse.join": NoParams;
+	"mobile.community.browse.load_more": NoParams;
+	"mobile.community.browse.mode": NoParams;
+	"mobile.community.browse.open": NoParams;
+	"mobile.community.browse.people": NoParams;
+	"mobile.community.browse.people_empty": NoParams;
+	"mobile.community.browse.private": NoParams;
+	"mobile.community.browse.search": NoParams;
+	"mobile.community.browse.title": NoParams;
+	"mobile.community.category.harassment_or_abuse": NoParams;
+	"mobile.community.category.private_information": NoParams;
+	"mobile.community.category.spam_or_promotion": NoParams;
+	"mobile.community.category.unsafe_or_illegal": NoParams;
+	"mobile.community.common.loading": NoParams;
+	"mobile.community.common.retry": NoParams;
+	"mobile.community.common.unavailable": NoParams;
+	"mobile.community.composer.attach": NoParams;
+	"mobile.community.composer.audience": NoParams;
+	"mobile.community.composer.audience_dm": { name: string | number };
+	"mobile.community.composer.blocked_archived": NoParams;
+	"mobile.community.composer.blocked_locked": NoParams;
+	"mobile.community.composer.blocked_read_only": NoParams;
+	"mobile.community.composer.blocked_staff_only": NoParams;
+	"mobile.community.composer.cancel": NoParams;
+	"mobile.community.composer.cancelled": NoParams;
+	"mobile.community.composer.checking": NoParams;
+	"mobile.community.composer.dismiss": NoParams;
+	"mobile.community.composer.failed": NoParams;
+	"mobile.community.composer.forbidden": NoParams;
+	"mobile.community.composer.guidelines": NoParams;
+	"mobile.community.composer.images_unavailable": NoParams;
+	"mobile.community.composer.invalid": NoParams;
+	"mobile.community.composer.label": { name: string | number };
+	"mobile.community.composer.label_dm": { name: string | number };
+	"mobile.community.composer.limited": NoParams;
+	"mobile.community.composer.limited_wait": { seconds: number };
+	"mobile.community.composer.refused": { category: string | number };
+	"mobile.community.composer.refused_detail": { reference: string | number };
+	"mobile.community.composer.restricted": { reference: string | number };
+	"mobile.community.composer.retry": NoParams;
+	"mobile.community.composer.review": NoParams;
+	"mobile.community.composer.send": NoParams;
+	"mobile.community.composer.unavailable": NoParams;
+	"mobile.community.conversation.agent": NoParams;
+	"mobile.community.conversation.deleted": NoParams;
+	"mobile.community.conversation.edited": NoParams;
+	"mobile.community.conversation.empty": NoParams;
+	"mobile.community.conversation.former_member": NoParams;
+	"mobile.community.conversation.join_prompt": { name: string | number };
+	"mobile.community.conversation.load_older": NoParams;
+	"mobile.community.conversation.older_error": NoParams;
+	"mobile.community.conversation.replies": { count: number };
+	"mobile.community.conversation.report": NoParams;
+	"mobile.community.conversation.subtitle": { community: string | number };
+	"mobile.community.conversation.view_profile": { name: string | number };
+	"mobile.community.directory.empty": NoParams;
+	"mobile.community.directory.featured": NoParams;
+	"mobile.community.directory.joined": NoParams;
+	"mobile.community.directory.read_only": NoParams;
+	"mobile.community.directory.title": NoParams;
+	"mobile.community.error.auth_unavailable": NoParams;
+	"mobile.community.error.generic": NoParams;
+	"mobile.community.error.load_failed": NoParams;
+	"mobile.community.error.not_found": NoParams;
+	"mobile.community.error.rate_limited": NoParams;
+	"mobile.community.error.sign_in": NoParams;
+	"mobile.community.error.unreachable": NoParams;
+	"mobile.community.home.browse": NoParams;
+	"mobile.community.home.channel_label": { name: string | number; count: number };
+	"mobile.community.home.channels": NoParams;
+	"mobile.community.home.channels_empty": NoParams;
+	"mobile.community.home.closed": NoParams;
+	"mobile.community.home.direct": NoParams;
+	"mobile.community.home.direct_empty": NoParams;
+	"mobile.community.home.direct_label": { name: string | number; count: number };
+	"mobile.community.home.join": NoParams;
+	"mobile.community.home.not_member": NoParams;
+	"mobile.community.home.reaccept": NoParams;
+	"mobile.community.home.reaccept_banner": NoParams;
+	"mobile.community.home.requests": NoParams;
+	"mobile.community.home.requests_count": { count: number };
+	"mobile.community.home.switch": NoParams;
+	"mobile.community.join.agree": { version: string | number };
+	"mobile.community.join.changed": NoParams;
+	"mobile.community.join.failed": NoParams;
+	"mobile.community.join.guidelines_heading": { version: string | number };
+	"mobile.community.join.hint": NoParams;
+	"mobile.community.join.moderation": NoParams;
+	"mobile.community.join.profile": NoParams;
+	"mobile.community.join.reaccept_submit": NoParams;
+	"mobile.community.join.reaccept_title": NoParams;
+	"mobile.community.join.submit": NoParams;
+	"mobile.community.join.title": NoParams;
+	"mobile.community.no_plan.body": NoParams;
+	"mobile.community.no_plan.free": NoParams;
+	"mobile.community.no_plan.join": NoParams;
+	"mobile.community.no_plan.open": NoParams;
+	"mobile.community.no_plan.title": NoParams;
+	"mobile.community.profile.block": NoParams;
+	"mobile.community.profile.blocked": NoParams;
+	"mobile.community.profile.failed": NoParams;
+	"mobile.community.profile.joined": { month: string | number };
+	"mobile.community.profile.message": NoParams;
+	"mobile.community.profile.message_sent": NoParams;
+	"mobile.community.profile.report": NoParams;
+	"mobile.community.profile.title": NoParams;
+	"mobile.community.report.category": NoParams;
+	"mobile.community.report.dm_consent": NoParams;
+	"mobile.community.report.failed": NoParams;
+	"mobile.community.report.note": NoParams;
+	"mobile.community.report.revision_changed": NoParams;
+	"mobile.community.report.sent": { reference: string | number };
+	"mobile.community.report.submit": NoParams;
+	"mobile.community.report.title": NoParams;
+	"mobile.community.requests.accept": NoParams;
+	"mobile.community.requests.approvals": NoParams;
+	"mobile.community.requests.block": NoParams;
+	"mobile.community.requests.decline": NoParams;
+	"mobile.community.requests.dm": NoParams;
+	"mobile.community.requests.dm_body": { name: string | number };
+	"mobile.community.requests.dm_empty": NoParams;
+	"mobile.community.requests.expires": { hours: number };
+	"mobile.community.requests.expires_days": { days: number };
+	"mobile.community.requests.mode": NoParams;
+	"mobile.community.requests.title": NoParams;
+	"mobile.community.role.community_admin": NoParams;
+	"mobile.community.role.moderator": NoParams;
+	"mobile.community.role.staff": NoParams;
+	"mobile.community.switcher.browse": NoParams;
+	"mobile.community.switcher.communities": NoParams;
+	"mobile.community.switcher.note": NoParams;
+	"mobile.community.switcher.organizations": NoParams;
+	"mobile.community.switcher.public": NoParams;
+	"mobile.community.switcher.row_label": { name: string | number; count: number };
+	"mobile.community.switcher.search": NoParams;
+	"mobile.composer_input.attach.camera": NoParams;
+	"mobile.composer_input.attach.camera_denied": NoParams;
+	"mobile.composer_input.attach.camera_error": NoParams;
+	"mobile.composer_input.attach.camera_refused": NoParams;
+	"mobile.composer_input.attach.camera_unavailable": NoParams;
+	"mobile.composer_input.attach.choose_image": NoParams;
+	"mobile.composer_input.attach.files": NoParams;
+	"mobile.composer_input.attach.library": NoParams;
+	"mobile.composer_input.attach.open_settings": NoParams;
+	"mobile.composer_input.attach.paste": NoParams;
 	"mobile.composer_input.clear_draft": NoParams;
 	"mobile.composer_input.clear_draft_hint": NoParams;
 	"mobile.composer_input.dismiss_error": NoParams;
@@ -2131,6 +2929,7 @@ export type MessageParams = {
 	"mobile.composer_input.notice_dismiss": NoParams;
 	"mobile.composer_input.notice_retry": NoParams;
 	"mobile.composer_input.paste.denied": NoParams;
+	"mobile.composer_input.paste.empty_ios": NoParams;
 	"mobile.composer_input.paste.image": NoParams;
 	"mobile.composer_input.paste.image_hint": NoParams;
 	"mobile.composer_input.voice.discard": NoParams;
@@ -2349,6 +3148,32 @@ export type MessageParams = {
 	"mobile.home.folders_read_failed": NoParams;
 	"mobile.home.folders_read_sign_in": NoParams;
 	"mobile.home.greeting": NoParams;
+	"mobile.home.identity.announce_picked": { name: string | number };
+	"mobile.home.identity.band_agents": NoParams;
+	"mobile.home.identity.band_recent": NoParams;
+	"mobile.home.identity.band_teams": NoParams;
+	"mobile.home.identity.default_agent": NoParams;
+	"mobile.home.identity.empty": NoParams;
+	"mobile.home.identity.no_matches": { query: string | number };
+	"mobile.home.identity.pill_label": { target: string | number };
+	"mobile.home.identity.read_failed": NoParams;
+	"mobile.home.identity.refused_connecting": { name: string | number };
+	"mobile.home.identity.refused_fallback": { name: string | number };
+	"mobile.home.identity.refused_registry": NoParams;
+	"mobile.home.identity.refused_unknown": { name: string | number };
+	"mobile.home.identity.refused_unlicensed": { name: string | number };
+	"mobile.home.identity.refused_unsaved": { name: string | number };
+	"mobile.home.identity.row_agent": { name: string | number };
+	"mobile.home.identity.row_agent_described": { description: string | number; name: string | number };
+	"mobile.home.identity.row_team": { name: string | number };
+	"mobile.home.identity.row_team_led": { manager: string | number; name: string | number };
+	"mobile.home.identity.search": NoParams;
+	"mobile.home.identity.sheet_title": NoParams;
+	"mobile.home.identity.starting_with": { name: string | number };
+	"mobile.home.identity.team_led_by": { manager: string | number };
+	"mobile.home.identity.team_members": { count: number };
+	"mobile.home.identity.team_subtitle": { manager: string | number; count: number };
+	"mobile.home.identity.unsupported": NoParams;
 	"mobile.home.models_read_failed": NoParams;
 	"mobile.home.options.default_model": NoParams;
 	"mobile.home.options.fixed": NoParams;
@@ -2385,9 +3210,7 @@ export type MessageParams = {
 	"mobile.home.startup_queue.not_started": NoParams;
 	"mobile.home.startup_queue.sending": NoParams;
 	"mobile.home.startup_queue.unconfirmed": NoParams;
-	"mobile.home.suggestion.last_turn": NoParams;
 	"mobile.home.suggestion.linear_mcp": NoParams;
-	"mobile.home.suggestion.phone_access": NoParams;
 	"mobile.home.suggestion.review_repo": NoParams;
 	"mobile.home.suggestion.team_of_agents": NoParams;
 	"mobile.home.suggestion.wake_summary": NoParams;
@@ -2396,6 +3219,11 @@ export type MessageParams = {
 	"mobile.home.tip.search": NoParams;
 	"mobile.home.transcript.needs_answer": NoParams;
 	"mobile.home.transcript.waiting": NoParams;
+	"mobile.home.work.all_conversations": NoParams;
+	"mobile.home.work.all_conversations_new": { count: number };
+	"mobile.home.work.needs_you": NoParams;
+	"mobile.home.work.recent": NoParams;
+	"mobile.home.work.try": NoParams;
 	"mobile.library.action.add_tag": NoParams;
 	"mobile.library.action.edit": NoParams;
 	"mobile.library.action.open_chat": NoParams;
@@ -2448,6 +3276,8 @@ export type MessageParams = {
 	"mobile.notifications.channel.system": NoParams;
 	"mobile.notifications.channel.tape_warble": NoParams;
 	"mobile.notifications.channel.task_complete": NoParams;
+	"mobile.notifications.channel.team_bridge": NoParams;
+	"mobile.notifications.channel.team_bridge_description": NoParams;
 	"mobile.notifications.channel.two_note_chime": NoParams;
 	"mobile.notifications.computer_registration.failed": NoParams;
 	"mobile.notifications.computer_registration.no_token": NoParams;
@@ -2489,6 +3319,8 @@ export type MessageParams = {
 	"mobile.notifications.preferences.agent_note": NoParams;
 	"mobile.notifications.preferences.bridge_heading": NoParams;
 	"mobile.notifications.preferences.bridge_note": { all: string | number; mentions: string | number; muted: string | number };
+	"mobile.notifications.preferences.bridge_system_off": NoParams;
+	"mobile.notifications.preferences.bridge_system_open": NoParams;
 	"mobile.notifications.preferences.completions": NoParams;
 	"mobile.notifications.preferences.computer_keeps_sending": NoParams;
 	"mobile.notifications.preferences.disabled_hint": NoParams;
@@ -2505,6 +3337,7 @@ export type MessageParams = {
 	"mobile.notifications.priority_high": NoParams;
 	"mobile.notifications.section.waiting": NoParams;
 	"mobile.notifications.section.waiting_count": { count: string | number };
+	"mobile.notifications.team_bridge.self_name": NoParams;
 	"mobile.notifications.title": NoParams;
 	"mobile.notifications.turn_on": NoParams;
 	"mobile.oauth.failed": NoParams;
@@ -2690,7 +3523,16 @@ export type MessageParams = {
 	"mobile.session.composer.not_sent_storage": NoParams;
 	"mobile.session.composer.retained_instruction": NoParams;
 	"mobile.session.composer.retry_not_sent_storage": NoParams;
+	"mobile.session.composer.settings_not_applied": NoParams;
 	"mobile.session.conversation_details": NoParams;
+	"mobile.session.diagram.close": NoParams;
+	"mobile.session.diagram.copied": NoParams;
+	"mobile.session.diagram.copy": NoParams;
+	"mobile.session.diagram.error": NoParams;
+	"mobile.session.diagram.label": { type: string | number };
+	"mobile.session.diagram.label_titled": { title: string | number; type: string | number };
+	"mobile.session.diagram.open_hint": NoParams;
+	"mobile.session.diagram.viewer": NoParams;
 	"mobile.session.empty.headline": NoParams;
 	"mobile.session.empty.next": NoParams;
 	"mobile.session.fallback_name": NoParams;
@@ -2719,6 +3561,10 @@ export type MessageParams = {
 	"mobile.session.history.loading": NoParams;
 	"mobile.session.history.refresh_failed": NoParams;
 	"mobile.session.history.stalled": NoParams;
+	"mobile.session.inline_chart_data": NoParams;
+	"mobile.session.jump_to_latest": NoParams;
+	"mobile.session.jump_to_latest_name": NoParams;
+	"mobile.session.jump_to_latest_short": NoParams;
 	"mobile.session.not_connected.headline": NoParams;
 	"mobile.session.not_connected.next": NoParams;
 	"mobile.session.outbox.composer_discarding": NoParams;
@@ -2872,6 +3718,7 @@ export type MessageParams = {
 	"mobile.sidebar.empty_by_view.next": NoParams;
 	"mobile.sidebar.empty_by_view.reset": NoParams;
 	"mobile.sidebar.group.one_list": NoParams;
+	"mobile.sidebar.group.tag": NoParams;
 	"mobile.sidebar.group.time_section": NoParams;
 	"mobile.sidebar.group_by": NoParams;
 	"mobile.sidebar.hidden_sections": { count: number };
@@ -2885,16 +3732,31 @@ export type MessageParams = {
 	"mobile.sidebar.row.asks": { count: number };
 	"mobile.sidebar.row.asks_not_blocker": { asks: string | number };
 	"mobile.sidebar.row.new": NoParams;
+	"mobile.sidebar.row.on_device": { device: string | number };
 	"mobile.sidebar.row.todos": { count: number };
+	"mobile.sidebar.row_label.join": { first: string | number; second: string | number };
+	"mobile.sidebar.row_label.on_device": { device: string | number };
+	"mobile.sidebar.row_label.open": NoParams;
+	"mobile.sidebar.row_label.waiting": { kind: string };
+	"mobile.sidebar.row_label.working": NoParams;
+	"mobile.sidebar.row_status.approval": NoParams;
+	"mobile.sidebar.row_status.ended": NoParams;
+	"mobile.sidebar.row_status.not_answering": NoParams;
+	"mobile.sidebar.row_status.not_reachable": NoParams;
+	"mobile.sidebar.row_status.question": NoParams;
 	"mobile.sidebar.section.older": NoParams;
 	"mobile.sidebar.section.pinned": NoParams;
 	"mobile.sidebar.section.running": NoParams;
 	"mobile.sidebar.section.today": NoParams;
+	"mobile.sidebar.section.untagged": NoParams;
 	"mobile.sidebar.section.week": NoParams;
 	"mobile.sidebar.sections": NoParams;
 	"mobile.sidebar.settings_heading": NoParams;
 	"mobile.sidebar.show_ended": NoParams;
 	"mobile.sidebar.show_ended_hint": NoParams;
+	"mobile.sidebar.show_tags": NoParams;
+	"mobile.sidebar.show_tags_hint": NoParams;
+	"mobile.sidebar.tag_group.announcement": { name: string | number; count: number };
 	"mobile.sidebar.tags.announcement": { names: string | number };
 	"mobile.sidebar.tags.empty_headline": NoParams;
 	"mobile.sidebar.tags.empty_next": NoParams;
@@ -2939,6 +3801,12 @@ export type MessageParams = {
 	"mobile.signin.use_address": NoParams;
 	"mobile.signin.welcome.body": NoParams;
 	"mobile.signin.welcome.headline": NoParams;
+	"mobile.team_bridge.actions.a11y_react": NoParams;
+	"mobile.team_bridge.actions.copied": NoParams;
+	"mobile.team_bridge.actions.copy_text": NoParams;
+	"mobile.team_bridge.actions.reply_in_thread": NoParams;
+	"mobile.team_bridge.actions.select_text": NoParams;
+	"mobile.team_bridge.actions.title": NoParams;
 	"mobile.team_bridge.attachment.add": NoParams;
 	"mobile.team_bridge.attachment.attached_summary": { count: number };
 	"mobile.team_bridge.attachment.cannot_send": NoParams;
@@ -2982,6 +3850,23 @@ export type MessageParams = {
 	"mobile.team_bridge.attachment.viewer": NoParams;
 	"mobile.team_bridge.attachment.wait_uploads": NoParams;
 	"mobile.team_bridge.back": NoParams;
+	"mobile.team_bridge.card_body.deleted": NoParams;
+	"mobile.team_bridge.card_body.held": NoParams;
+	"mobile.team_bridge.card_body.held_transient": NoParams;
+	"mobile.team_bridge.card_body.loading": NoParams;
+	"mobile.team_bridge.card_body.more_messages": { count: number };
+	"mobile.team_bridge.card_body.not_admitted": NoParams;
+	"mobile.team_bridge.card_body.not_member": NoParams;
+	"mobile.team_bridge.card_body.offline": NoParams;
+	"mobile.team_bridge.card_body.other_account": NoParams;
+	"mobile.team_bridge.card_body.pending": NoParams;
+	"mobile.team_bridge.card_body.refused": NoParams;
+	"mobile.team_bridge.card_body.show_less": NoParams;
+	"mobile.team_bridge.card_body.show_more": NoParams;
+	"mobile.team_bridge.card_body.signed_out": NoParams;
+	"mobile.team_bridge.card_body.thread_reply": NoParams;
+	"mobile.team_bridge.card_body.unavailable": NoParams;
+	"mobile.team_bridge.card_body.untrusted": NoParams;
 	"mobile.team_bridge.conversation": NoParams;
 	"mobile.team_bridge.default_on.body": NoParams;
 	"mobile.team_bridge.default_on.dismiss": NoParams;
@@ -3044,6 +3929,15 @@ export type MessageParams = {
 	"mobile.team_bridge.list.preview": NoParams;
 	"mobile.team_bridge.list.quiet": NoParams;
 	"mobile.team_bridge.list.self": NoParams;
+	"mobile.team_bridge.mentions.dismiss_notice": NoParams;
+	"mobile.team_bridge.mentions.invited": { name: string | number };
+	"mobile.team_bridge.mentions.no_endpoint": { name: string | number };
+	"mobile.team_bridge.mentions.not_member": { name: string | number };
+	"mobile.team_bridge.mentions.results_count": { count: number };
+	"mobile.team_bridge.mentions.row_label": { name: string | number };
+	"mobile.team_bridge.mentions.section_members": NoParams;
+	"mobile.team_bridge.mentions.section_org": NoParams;
+	"mobile.team_bridge.mentions.unavailable": NoParams;
 	"mobile.team_bridge.navigation.caption": NoParams;
 	"mobile.team_bridge.navigation.entry": { count: number };
 	"mobile.team_bridge.navigation.entry_loading": NoParams;
@@ -3060,6 +3954,35 @@ export type MessageParams = {
 	"mobile.team_bridge.profile.open": { name: string | number };
 	"mobile.team_bridge.profile.opens_hint": NoParams;
 	"mobile.team_bridge.profile.title": NoParams;
+	"mobile.team_bridge.reactions.add": NoParams;
+	"mobile.team_bridge.reactions.added": NoParams;
+	"mobile.team_bridge.reactions.details": NoParams;
+	"mobile.team_bridge.reactions.failed": NoParams;
+	"mobile.team_bridge.reactions.hint_add": NoParams;
+	"mobile.team_bridge.reactions.hint_inspect": NoParams;
+	"mobile.team_bridge.reactions.hint_remove": NoParams;
+	"mobile.team_bridge.reactions.keyboard_hint": NoParams;
+	"mobile.team_bridge.reactions.pill": { emoji: string | number; count: number };
+	"mobile.team_bridge.reactions.pill_mine": { emoji: string | number; count: number };
+	"mobile.team_bridge.reactions.removed": NoParams;
+	"mobile.team_bridge.reactions.sample": { labels: string | number; count: number };
+	"mobile.team_bridge.reactions.sample_none": NoParams;
+	"mobile.team_bridge.reactions.sample_notice": NoParams;
+	"mobile.team_bridge.reactions.show_less": NoParams;
+	"mobile.team_bridge.reactions.show_more": { count: string | number };
+	"mobile.team_bridge.reactions.summary": { count: number };
+	"mobile.team_bridge.reactions.you_reacted": NoParams;
+	"mobile.team_bridge.reply_thread.count": { count: number };
+	"mobile.team_bridge.reply_thread.empty": NoParams;
+	"mobile.team_bridge.reply_thread.error": NoParams;
+	"mobile.team_bridge.reply_thread.last_reply": { time: string | number };
+	"mobile.team_bridge.reply_thread.loading": NoParams;
+	"mobile.team_bridge.reply_thread.more": NoParams;
+	"mobile.team_bridge.reply_thread.open": { count: number };
+	"mobile.team_bridge.reply_thread.open_unread": { count: number; unread: number };
+	"mobile.team_bridge.reply_thread.reply": NoParams;
+	"mobile.team_bridge.reply_thread.retry": NoParams;
+	"mobile.team_bridge.reply_thread.title": NoParams;
 	"mobile.team_bridge.retry": NoParams;
 	"mobile.team_bridge.thread.access_retry": NoParams;
 	"mobile.team_bridge.thread.anchor_missing": NoParams;
@@ -3153,6 +4076,10 @@ export type MessageParams = {
 	"relay.health.quiet_detail": NoParams;
 	"relay.health.reconnecting": NoParams;
 	"relay.health.reconnecting_detail": NoParams;
+	"relay.skills.skipped": { names: string | number; count: number };
+	"relay.skills.too_large": NoParams;
+	"relay.skills.tray.hidden": NoParams;
+	"relay.skills.tray.label": NoParams;
 	"relay.transcript.composer.queued": { count: number };
 	"relay.transcript.fold.failed_label": NoParams;
 	"relay.transcript.fold.more": { count: number };
@@ -3207,6 +4134,43 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.account_routing.unsaved": "Not saved yet.",
 	"mobile.agent_avatar.edit_hint": "Change this picture in the desktop app",
 	"mobile.agent_avatar.label": "Agent picture",
+	"mobile.asks.answer_label": "Your answer to: {question}",
+	"mobile.asks.answer_placeholder": "Your answer",
+	"mobile.asks.choose_any": "Choose any that apply",
+	"mobile.asks.deadline_ago": "Deadline passed {duration} ago",
+	"mobile.asks.decline": "Decline",
+	"mobile.asks.decline_hint": "No answer is sent. The agent decides on its own.",
+	"mobile.asks.dismiss": "Dismiss",
+	"mobile.asks.dismiss_open": "Dismiss…",
+	"mobile.asks.dismiss_reason.chat": "Answered in the conversation",
+	"mobile.asks.dismiss_reason.chat_note": "You already replied in the conversation",
+	"mobile.asks.dismiss_reason.moot": "No longer needed",
+	"mobile.asks.dismiss_reason.moot_note": "The agent stops waiting for an answer",
+	"mobile.asks.dismiss_title": "{count, plural, one {Dismiss this question} other {Dismiss these questions}}",
+	"mobile.asks.empty": "Nothing waiting. Questions from the agent will appear here.",
+	"mobile.asks.honesty": "This app shows queued questions while it is open. It cannot reach you while it is closed.",
+	"mobile.asks.loading": "Reading questions…",
+	"mobile.asks.none_recorded": "No answer was recorded for this question.",
+	"mobile.asks.nothing_left": "Nothing left to answer here. These questions were already handled on another screen or device.",
+	"mobile.asks.open_conversation": "Open conversation",
+	"mobile.asks.other_hint": "Type your answer",
+	"mobile.asks.other_kept": "Your text is kept, not sent",
+	"mobile.asks.other_label": "Other",
+	"mobile.asks.progress.pick_or_type": "Pick an option or type your own answer to send.",
+	"mobile.asks.progress.tally": "{answered} of {total} questions answered or skipped",
+	"mobile.asks.progress.type": "Type an answer or skip the question to send.",
+	"mobile.asks.recommended": "· Recommended",
+	"mobile.asks.secret_notice": "Secret: sent directly, not shown in the transcript",
+	"mobile.asks.secret_notice_saved": "Secret: sent directly, not shown in the transcript, and saved on the computer for reuse",
+	"mobile.asks.secret_placeholder": "Secret value",
+	"mobile.asks.send_answer": "Send answer",
+	"mobile.asks.send_answers": "Send answers",
+	"mobile.asks.settled": "Settled",
+	"mobile.asks.skip": "Skip (send no answer)",
+	"mobile.asks.title_fallback": "Questions",
+	"mobile.asks.truncated": "Showing the newest questions. Open a conversation to see the rest.",
+	"mobile.asks.unskip": "Answer this question",
+	"mobile.asks.urgent": "· Urgent",
 	"mobile.chrome.clear_search": "Clear search",
 	"mobile.chrome.close_conversations": "Close conversations",
 	"mobile.chrome.composer.dismiss_keyboard": "Dismiss keyboard",
@@ -3215,6 +4179,7 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.chrome.composer.queued": "{count, plural, one {# queued message} other {# queued messages}}",
 	"mobile.chrome.composer.row_cost": "Cost",
 	"mobile.chrome.composer.row_effort": "Effort",
+	"mobile.chrome.composer.row_identity": "Agent or team",
 	"mobile.chrome.composer.row_model": "Model",
 	"mobile.chrome.composer.row_questions": "Questions",
 	"mobile.chrome.composer.row_queue": "Queue",
@@ -3246,18 +4211,184 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.common.not_found.headline": "That page does not exist.",
 	"mobile.common.not_found.next": "Go back to your sessions to carry on.",
 	"mobile.common.not_found.title": "Page not found",
+	"mobile.common.resize_panel": "Resize panel",
 	"mobile.common.save": "Save",
 	"mobile.common.send": "Send",
+	"mobile.common.size.large": "Large",
+	"mobile.common.size.medium": "Medium",
+	"mobile.common.size.shorter": "Shorter",
+	"mobile.common.size.taller": "Taller",
 	"mobile.common.try_again": "Try again",
+	"mobile.community.approvals.agent": "Agent",
+	"mobile.community.approvals.decline": "Don't post",
+	"mobile.community.approvals.empty": "No agent posts are waiting for you.",
+	"mobile.community.approvals.expires": "{hours, plural, one {expires in # h} other {expires in # h}}",
+	"mobile.community.approvals.expires_days": "{days, plural, one {expires in # day} other {expires in # days}}",
+	"mobile.community.approvals.failed": "That didn't go through. Try again.",
+	"mobile.community.approvals.open_computer": "Open Local Operator on your computer to read the exact text and choose.",
+	"mobile.community.approvals.review": "Review on your computer",
+	"mobile.community.approvals.review_note": "Review on your computer keeps it waiting for up to 24 h.",
+	"mobile.community.approvals.stays": "The draft stays on your computer until you approve it.",
+	"mobile.community.approvals.title": "Your chief of staff wants to post in #{channel}",
+	"mobile.community.approvals.title_unknown": "Your chief of staff wants to post in a community channel",
+	"mobile.community.approvals.waiting": "Waiting for you on your computer.",
+	"mobile.community.browse.channels": "Channels",
+	"mobile.community.browse.channels_empty": "No channels match.",
+	"mobile.community.browse.join": "Join",
+	"mobile.community.browse.load_more": "Load more",
+	"mobile.community.browse.mode": "Show",
+	"mobile.community.browse.open": "Open",
+	"mobile.community.browse.people": "People",
+	"mobile.community.browse.people_empty": "No people match.",
+	"mobile.community.browse.private": "Private",
+	"mobile.community.browse.search": "Search",
+	"mobile.community.browse.title": "Browse",
+	"mobile.community.category.harassment_or_abuse": "Harassment or abuse",
+	"mobile.community.category.private_information": "Private information",
+	"mobile.community.category.spam_or_promotion": "Spam or undisclosed promotion",
+	"mobile.community.category.unsafe_or_illegal": "Unsafe or illegal content",
+	"mobile.community.common.loading": "Loading the community…",
+	"mobile.community.common.retry": "Try again",
+	"mobile.community.common.unavailable": "The community is unavailable",
+	"mobile.community.composer.attach": "Attach an image",
+	"mobile.community.composer.audience": "Visible to all community members",
+	"mobile.community.composer.audience_dm": "Only you and {name} can see this conversation",
+	"mobile.community.composer.blocked_archived": "This channel is archived.",
+	"mobile.community.composer.blocked_locked": "This channel is locked.",
+	"mobile.community.composer.blocked_read_only": "This community is read only.",
+	"mobile.community.composer.blocked_staff_only": "Only staff and moderators post here.",
+	"mobile.community.composer.cancel": "Cancel",
+	"mobile.community.composer.cancelled": "Cancelled. Nothing was posted.",
+	"mobile.community.composer.checking": "Checking…",
+	"mobile.community.composer.dismiss": "Dismiss",
+	"mobile.community.composer.failed": "Your message didn't send. Your text is still here.",
+	"mobile.community.composer.forbidden": "You can't post here.",
+	"mobile.community.composer.guidelines": "The Community Guidelines changed. Accept them, then try again.",
+	"mobile.community.composer.images_unavailable": "Images can't be posted in communities yet. Your text is still here.",
+	"mobile.community.composer.invalid": "This message can't be sent as it is. Shorten or edit it, then send again.",
+	"mobile.community.composer.label": "Message #{name}",
+	"mobile.community.composer.label_dm": "Message {name}",
+	"mobile.community.composer.limited": "You're sending faster than the community allows.",
+	"mobile.community.composer.limited_wait": "{seconds, plural, one {Try again in # second.} other {Try again in # seconds.}}",
+	"mobile.community.composer.refused": "Not posted: {category}",
+	"mobile.community.composer.refused_detail": "Only you can see this. Reference {reference}. Edit your message to send again.",
+	"mobile.community.composer.restricted": "Your posting is restricted. Reference {reference}.",
+	"mobile.community.composer.retry": "Try again",
+	"mobile.community.composer.review": "Review guidelines",
+	"mobile.community.composer.send": "Send",
+	"mobile.community.composer.unavailable": "Couldn't check your message, so nothing was posted. Your text is still here.",
+	"mobile.community.conversation.agent": "Agent",
+	"mobile.community.conversation.deleted": "Message deleted",
+	"mobile.community.conversation.edited": "edited",
+	"mobile.community.conversation.empty": "No messages yet.",
+	"mobile.community.conversation.former_member": "Former member",
+	"mobile.community.conversation.join_prompt": "You're reading #{name}. Join the channel to post here.",
+	"mobile.community.conversation.load_older": "Load older messages",
+	"mobile.community.conversation.older_error": "Older messages could not load.",
+	"mobile.community.conversation.replies": "{count, plural, one {# reply} other {# replies}}",
+	"mobile.community.conversation.report": "Report message",
+	"mobile.community.conversation.subtitle": "{community} · Public",
+	"mobile.community.conversation.view_profile": "View profile for {name}",
+	"mobile.community.directory.empty": "No communities are open to join right now.",
+	"mobile.community.directory.featured": "Featured",
+	"mobile.community.directory.joined": "Joined",
+	"mobile.community.directory.read_only": "Read only",
+	"mobile.community.directory.title": "Communities",
+	"mobile.community.error.auth_unavailable": "Radient couldn't check your sign-in right now. Try again in a moment.",
+	"mobile.community.error.generic": "Something went wrong. Nothing was changed.",
+	"mobile.community.error.load_failed": "Couldn't load this right now. Check your connection and try again.",
+	"mobile.community.error.not_found": "This community isn't available to this account.",
+	"mobile.community.error.rate_limited": "You're doing that faster than the community allows. Try again shortly.",
+	"mobile.community.error.sign_in": "Sign in to Radient to use the community.",
+	"mobile.community.error.unreachable": "The community could not be reached. Check this device's connection.",
+	"mobile.community.home.browse": "Browse",
+	"mobile.community.home.channel_label": "#{name}{count, plural, =0 {} one { · # unread} other { · # unread}}",
+	"mobile.community.home.channels": "Channels",
+	"mobile.community.home.channels_empty": "You haven't joined any channels yet. Browse to find one.",
+	"mobile.community.home.closed": "This community is read only and isn't accepting new members.",
+	"mobile.community.home.direct": "Direct messages",
+	"mobile.community.home.direct_empty": "No direct messages yet.",
+	"mobile.community.home.direct_label": "{name}{count, plural, =0 {} one { · # unread} other { · # unread}}",
+	"mobile.community.home.join": "Join",
+	"mobile.community.home.not_member": "Join to read and post in this community.",
+	"mobile.community.home.reaccept": "Review",
+	"mobile.community.home.reaccept_banner": "The Community Guidelines changed. Review and accept them to keep posting.",
+	"mobile.community.home.requests": "Requests",
+	"mobile.community.home.requests_count": "{count, plural, one {Requests · #} other {Requests · #}}",
+	"mobile.community.home.switch": "Switch organization or community",
+	"mobile.community.join.agree": "I agree to the Community Guidelines ({version}). My profile and posts are visible to all members.",
+	"mobile.community.join.changed": "The guidelines changed while you were reading. Review the new version, then accept again.",
+	"mobile.community.join.failed": "Joining didn't complete. Try again.",
+	"mobile.community.join.guidelines_heading": "Community Guidelines ({version})",
+	"mobile.community.join.hint": "Check the box to join.",
+	"mobile.community.join.moderation": "Every message is checked before it's posted. If something isn't posted, only you see why, with a reference you can appeal.",
+	"mobile.community.join.profile": "Members see your Radient name. Never shown: email, organizations.",
+	"mobile.community.join.reaccept_submit": "Accept and continue",
+	"mobile.community.join.reaccept_title": "Updated Community Guidelines",
+	"mobile.community.join.submit": "Join and open community",
+	"mobile.community.join.title": "Join the community",
+	"mobile.community.no_plan.body": "A free public space run by Radient. Get help, share feedback and meet other Local Operator users.",
+	"mobile.community.no_plan.free": "Free. No Team plan or payment needed.",
+	"mobile.community.no_plan.join": "Join the community",
+	"mobile.community.no_plan.open": "Open the community",
+	"mobile.community.no_plan.title": "Join the Local Operator Community",
+	"mobile.community.profile.block": "Block",
+	"mobile.community.profile.blocked": "Blocked. You won't see each other's messages or requests.",
+	"mobile.community.profile.failed": "That didn't go through. Try again.",
+	"mobile.community.profile.joined": "Joined {month}",
+	"mobile.community.profile.message": "Message",
+	"mobile.community.profile.message_sent": "Message request sent. They'll see it in their requests.",
+	"mobile.community.profile.report": "Report",
+	"mobile.community.profile.title": "Profile",
+	"mobile.community.report.category": "What's wrong?",
+	"mobile.community.report.dm_consent": "Share this message with Radient Trust & Safety. Only their case reviewers see it; community moderators never do.",
+	"mobile.community.report.failed": "The report didn't send. Try again.",
+	"mobile.community.report.note": "Anything else we should know? (optional)",
+	"mobile.community.report.revision_changed": "This message was edited after you opened it. Read it again, then confirm and report the current version.",
+	"mobile.community.report.sent": "Report sent. Reference {reference}.",
+	"mobile.community.report.submit": "Send report",
+	"mobile.community.report.title": "Report to Radient Trust & Safety",
+	"mobile.community.requests.accept": "Accept",
+	"mobile.community.requests.approvals": "Agent approvals",
+	"mobile.community.requests.block": "Block",
+	"mobile.community.requests.decline": "Decline",
+	"mobile.community.requests.dm": "Messages",
+	"mobile.community.requests.dm_body": "{name} wants to send you direct messages.",
+	"mobile.community.requests.dm_empty": "No message requests.",
+	"mobile.community.requests.expires": "{hours, plural, one {Expires in # h} other {Expires in # h}}",
+	"mobile.community.requests.expires_days": "{days, plural, one {Expires in # day} other {Expires in # days}}",
+	"mobile.community.requests.mode": "Show",
+	"mobile.community.requests.title": "Requests",
+	"mobile.community.role.community_admin": "Community admin",
+	"mobile.community.role.moderator": "Moderator",
+	"mobile.community.role.staff": "Radient Staff",
+	"mobile.community.switcher.browse": "Browse communities…",
+	"mobile.community.switcher.communities": "Communities",
+	"mobile.community.switcher.note": "Switching only changes what you see.",
+	"mobile.community.switcher.organizations": "Organizations",
+	"mobile.community.switcher.public": "Public",
+	"mobile.community.switcher.row_label": "{name} · Public{count, plural, =0 {} one { · # unread} other { · # unread}}",
+	"mobile.community.switcher.search": "Search communities",
+	"mobile.composer_input.attach.camera": "Take Photo",
+	"mobile.composer_input.attach.camera_denied": "Camera access is off. Turn it on in Settings to take a photo.",
+	"mobile.composer_input.attach.camera_error": "Couldn’t open the camera. Try again.",
+	"mobile.composer_input.attach.camera_refused": "Camera access wasn’t allowed. Tap Take Photo to ask again.",
+	"mobile.composer_input.attach.camera_unavailable": "No camera is available on this device.",
+	"mobile.composer_input.attach.choose_image": "Choose Image",
+	"mobile.composer_input.attach.files": "Image from Files",
+	"mobile.composer_input.attach.library": "Photo Library",
+	"mobile.composer_input.attach.open_settings": "Open Settings",
+	"mobile.composer_input.attach.paste": "Paste Image",
 	"mobile.composer_input.clear_draft": "Clear draft",
 	"mobile.composer_input.clear_draft_hint": "Clears only the draft text and images; keeps queued and unconfirmed messages",
 	"mobile.composer_input.dismiss_error": "Dismiss error",
 	"mobile.composer_input.dismiss_error_hint": "Hides this error without changing the draft or delivery status",
 	"mobile.composer_input.notice_dismiss": "Dismiss",
 	"mobile.composer_input.notice_retry": "Retry",
-	"mobile.composer_input.paste.denied": "Paste wasn’t allowed. Tap the paperclip, then Paste image, and choose “Allow Paste”.",
+	"mobile.composer_input.paste.denied": "Paste wasn’t allowed. Tap the paste button again and choose “Allow Paste”.",
+	"mobile.composer_input.paste.empty_ios": "No image was pasted. Copy an image, then choose “Allow Paste” if asked.",
 	"mobile.composer_input.paste.image": "Paste image",
-	"mobile.composer_input.paste.image_hint": "Attaches the image on your clipboard",
+	"mobile.composer_input.paste.image_hint": "Attaches the image you copied",
 	"mobile.composer_input.voice.discard": "Discard voice input",
 	"mobile.composer_input.voice.finish": "Finish and transcribe",
 	"mobile.composer_input.voice.mic_setup": "Voice input isn’t set up",
@@ -3474,6 +4605,32 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.home.folders_read_failed": "We couldn't read this computer's folders just now.",
 	"mobile.home.folders_read_sign_in": "This computer asked you to sign in again, so its folders couldn't be read.",
 	"mobile.home.greeting": "What can I help you with today?",
+	"mobile.home.identity.announce_picked": "This chat will start with {name}",
+	"mobile.home.identity.band_agents": "Agents",
+	"mobile.home.identity.band_recent": "Recent",
+	"mobile.home.identity.band_teams": "Teams",
+	"mobile.home.identity.default_agent": "Default agent",
+	"mobile.home.identity.empty": "No agents or teams on this computer yet. Create one in the desktop app.",
+	"mobile.home.identity.no_matches": "Nothing matches “{query}”.",
+	"mobile.home.identity.pill_label": "Start this chat with {target}. Choose an agent or team",
+	"mobile.home.identity.read_failed": "We couldn't read this computer's agents and teams just now.",
+	"mobile.home.identity.refused_connecting": "This computer is still connecting, so nothing was started yet. Tap your message to put it back, then send it again in a moment to start with {name}.",
+	"mobile.home.identity.refused_fallback": "{name} couldn't be started on this computer. Choose another, or use the default agent.",
+	"mobile.home.identity.refused_registry": "This computer couldn't read its agents and teams just now, so nothing was started. Tap your message to put it back and send it again, or pick the default agent to send it now.",
+	"mobile.home.identity.refused_unknown": "{name} isn't available on this computer any more. Pick another, or the default agent, to send your message.",
+	"mobile.home.identity.refused_unlicensed": "This computer can't start a chat with {name} right now. Choose the default agent to send.",
+	"mobile.home.identity.refused_unsaved": "This computer couldn't save {name} for the new chat, so nothing was started. Tap your message to put it back, then send it again.",
+	"mobile.home.identity.row_agent": "{name}, agent",
+	"mobile.home.identity.row_agent_described": "{name}, agent. {description}",
+	"mobile.home.identity.row_team": "{name}, team",
+	"mobile.home.identity.row_team_led": "{name}, team, led by {manager}",
+	"mobile.home.identity.search": "Search agents and teams",
+	"mobile.home.identity.sheet_title": "Start this chat with",
+	"mobile.home.identity.starting_with": "Starting with {name}…",
+	"mobile.home.identity.team_led_by": "Led by {manager}",
+	"mobile.home.identity.team_members": "{count, plural, one {# member} other {# members}}",
+	"mobile.home.identity.team_subtitle": "Led by {manager} · {count, plural, one {# member} other {# members}}",
+	"mobile.home.identity.unsupported": "This computer's Local Operator is too old to start a chat with an agent or team. Update it to choose one here.",
 	"mobile.home.models_read_failed": "We couldn't read this computer's model list just now.",
 	"mobile.home.options.default_model": "Use this computer's default model",
 	"mobile.home.options.fixed": "This conversation's starting options are fixed. Use Conversation details for its live controls.",
@@ -3510,9 +4667,7 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.home.startup_queue.not_started": "Not started",
 	"mobile.home.startup_queue.sending": "Sending queued messages…",
 	"mobile.home.startup_queue.unconfirmed": "Start not confirmed",
-	"mobile.home.suggestion.last_turn": "Show me the last turn",
 	"mobile.home.suggestion.linear_mcp": "Set up Linear MCP",
-	"mobile.home.suggestion.phone_access": "Turn on phone access",
 	"mobile.home.suggestion.review_repo": "Review this repo",
 	"mobile.home.suggestion.team_of_agents": "Create a team of agents",
 	"mobile.home.suggestion.wake_summary": "Wake me with a summary",
@@ -3521,6 +4676,11 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.home.tip.search": "search past conversations to reopen a session",
 	"mobile.home.transcript.needs_answer": "Needs your answer",
 	"mobile.home.transcript.waiting": "Waiting for the conversation…",
+	"mobile.home.work.all_conversations": "All conversations",
+	"mobile.home.work.all_conversations_new": "All conversations, {count, plural, one {# new conversation} other {# new conversations}}",
+	"mobile.home.work.needs_you": "Needs you",
+	"mobile.home.work.recent": "Recent",
+	"mobile.home.work.try": "Try",
 	"mobile.library.action.add_tag": "Add",
 	"mobile.library.action.edit": "Edit",
 	"mobile.library.action.open_chat": "Open chat",
@@ -3573,6 +4733,8 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.notifications.channel.system": "System sound",
 	"mobile.notifications.channel.tape_warble": "Tape warble",
 	"mobile.notifications.channel.task_complete": "Task complete",
+	"mobile.notifications.channel.team_bridge": "Team Bridge",
+	"mobile.notifications.channel.team_bridge_description": "Messages from your teammates and their agents.",
 	"mobile.notifications.channel.two_note_chime": "Two-note chime",
 	"mobile.notifications.computer_registration.failed": "Could not register this phone for alerts from this computer. It tries again when you reopen the app.",
 	"mobile.notifications.computer_registration.no_token": "This phone has no push address yet, so this computer cannot alert it. Reopen the app to try again.",
@@ -3614,6 +4776,8 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.notifications.preferences.agent_note": "Turn off both agent types to keep only Team Bridge notifications.",
 	"mobile.notifications.preferences.bridge_heading": "Team Bridge",
 	"mobile.notifications.preferences.bridge_note": "For each DM, group or channel, open its bell menu and choose {all}, {mentions} or {muted}.",
+	"mobile.notifications.preferences.bridge_system_off": "Team Bridge notifications are turned off in Android settings, so none will appear on this phone.",
+	"mobile.notifications.preferences.bridge_system_open": "Open Android settings",
 	"mobile.notifications.preferences.completions": "Agent finished",
 	"mobile.notifications.preferences.computer_keeps_sending": "Your computer will keep sending agent notifications until Local Operator is updated on it.",
 	"mobile.notifications.preferences.disabled_hint": "Needs a newer Local Operator on your computer.",
@@ -3630,6 +4794,7 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.notifications.priority_high": "High",
 	"mobile.notifications.section.waiting": "Waiting on you",
 	"mobile.notifications.section.waiting_count": "Waiting on you · {count}",
+	"mobile.notifications.team_bridge.self_name": "You",
 	"mobile.notifications.title": "Notifications",
 	"mobile.notifications.turn_on": "Turn on notifications",
 	"mobile.oauth.failed": "Sign-in could not finish. Try again.",
@@ -3815,7 +4980,16 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.session.composer.not_sent_storage": "Not sent. Couldn’t save this message safely for retry. Your text and images are still here. Try again.",
 	"mobile.session.composer.retained_instruction": "An earlier instruction may have been delivered. Retry that earlier instruction before sending your current draft.",
 	"mobile.session.composer.retry_not_sent_storage": "This retry attempt wasn’t sent. Couldn’t prepare the earlier instruction safely for retry. Try the earlier instruction again. Your current draft hasn’t been sent.",
+	"mobile.session.composer.settings_not_applied": "The session reopened, but your model or effort choice couldn’t be applied, so nothing was sent. Try again, or choose a different model or effort.",
 	"mobile.session.conversation_details": "Conversation details",
+	"mobile.session.diagram.close": "Close diagram",
+	"mobile.session.diagram.copied": "copied",
+	"mobile.session.diagram.copy": "Copy diagram source",
+	"mobile.session.diagram.error": "Couldn’t draw this diagram. Showing the source instead.",
+	"mobile.session.diagram.label": "{type} diagram",
+	"mobile.session.diagram.label_titled": "{type} diagram: {title}",
+	"mobile.session.diagram.open_hint": "Opens the diagram full screen",
+	"mobile.session.diagram.viewer": "Diagram viewer",
 	"mobile.session.empty.headline": "Nothing here yet.",
 	"mobile.session.empty.next": "Send the first message below.",
 	"mobile.session.fallback_name": "session",
@@ -3844,6 +5018,10 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.session.history.loading": "Loading earlier messages…",
 	"mobile.session.history.refresh_failed": "The latest messages could not be loaded.",
 	"mobile.session.history.stalled": "Earlier messages stopped loading. Try again, or reopen this conversation.",
+	"mobile.session.inline_chart_data": "Chart data",
+	"mobile.session.jump_to_latest": "↓ Jump to latest",
+	"mobile.session.jump_to_latest_name": "Jump to latest",
+	"mobile.session.jump_to_latest_short": "↓ Latest",
 	"mobile.session.not_connected.headline": "This session is not connected yet.",
 	"mobile.session.not_connected.next": "Open it from the session list once a computer is connected.",
 	"mobile.session.outbox.composer_discarding": "Discarding your earlier message. You can send this one in a moment.",
@@ -3872,7 +5050,7 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.session.region.label_todos": "tasks",
 	"mobile.session.region.label_working": "activity",
 	"mobile.session.region.more_below": "more below · scroll ↓",
-	"mobile.session.sheet_title.attach": "attach",
+	"mobile.session.sheet_title.attach": "Add Image",
 	"mobile.session.sheet_title.commands": "Commands",
 	"mobile.session.sheet_title.effort": "Effort",
 	"mobile.session.sheet_title.model": "Model",
@@ -3986,7 +5164,7 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.settings.theme.no_match": "No themes match",
 	"mobile.settings.theme.row_label": "Theme, {name}",
 	"mobile.settings.theme.search_label": "Search themes",
-	"mobile.settings.theme.search_placeholder": "Search themes",
+	"mobile.settings.theme.search_placeholder": "Name, such as Dracula",
 	"mobile.settings.theme.section_dark": "Dark ({count})",
 	"mobile.settings.theme.section_light": "Light ({count})",
 	"mobile.settings.theme.title": "Theme",
@@ -3997,6 +5175,7 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.sidebar.empty_by_view.next": "Turn sections or ended sessions back on, or reset the view.",
 	"mobile.sidebar.empty_by_view.reset": "Reset view",
 	"mobile.sidebar.group.one_list": "In one list",
+	"mobile.sidebar.group.tag": "Tag",
 	"mobile.sidebar.group.time_section": "Time section",
 	"mobile.sidebar.group_by": "Group by",
 	"mobile.sidebar.hidden_sections": "{count, plural, one {# section hidden} other {# sections hidden}}",
@@ -4010,16 +5189,31 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.sidebar.row.asks": "{count, plural, one {# ask} other {# asks}}",
 	"mobile.sidebar.row.asks_not_blocker": "{asks}, not a blocker",
 	"mobile.sidebar.row.new": "new",
+	"mobile.sidebar.row.on_device": "On {device}",
 	"mobile.sidebar.row.todos": "{count, plural, one {# todo} other {# todos}}",
+	"mobile.sidebar.row_label.join": "{first}, {second}",
+	"mobile.sidebar.row_label.on_device": "on {device}",
+	"mobile.sidebar.row_label.open": "open",
+	"mobile.sidebar.row_label.waiting": "{kind, select, approval {approval waiting} other {question waiting}}",
+	"mobile.sidebar.row_label.working": "working",
+	"mobile.sidebar.row_status.approval": "approval",
+	"mobile.sidebar.row_status.ended": "ended",
+	"mobile.sidebar.row_status.not_answering": "not answering",
+	"mobile.sidebar.row_status.not_reachable": "not reachable",
+	"mobile.sidebar.row_status.question": "question",
 	"mobile.sidebar.section.older": "Older",
 	"mobile.sidebar.section.pinned": "Pinned",
 	"mobile.sidebar.section.running": "Running",
 	"mobile.sidebar.section.today": "Today",
+	"mobile.sidebar.section.untagged": "Untagged",
 	"mobile.sidebar.section.week": "This week",
 	"mobile.sidebar.sections": "Sections",
 	"mobile.sidebar.settings_heading": "Sidebar",
 	"mobile.sidebar.show_ended": "Show ended sessions",
 	"mobile.sidebar.show_ended_hint": "Pinned and running conversations always show.",
+	"mobile.sidebar.show_tags": "Show tags",
+	"mobile.sidebar.show_tags_hint": "Tags stay in each conversation's menu.",
+	"mobile.sidebar.tag_group.announcement": "{name}, {count, plural, one {# conversation} other {# conversations}}",
 	"mobile.sidebar.tags.announcement": "Tags: {names}",
 	"mobile.sidebar.tags.empty_headline": "No categories yet.",
 	"mobile.sidebar.tags.empty_next": "Created on desktop.",
@@ -4064,6 +5258,12 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.signin.use_address": "Use an address and password",
 	"mobile.signin.welcome.body": "This app drives the sessions on your own machine and shows what it did. Your code never leaves it.",
 	"mobile.signin.welcome.headline": "Your agent runs on your computer.",
+	"mobile.team_bridge.actions.a11y_react": "React",
+	"mobile.team_bridge.actions.copied": "Copied",
+	"mobile.team_bridge.actions.copy_text": "Copy text",
+	"mobile.team_bridge.actions.reply_in_thread": "Reply in thread",
+	"mobile.team_bridge.actions.select_text": "Select text",
+	"mobile.team_bridge.actions.title": "Message actions",
 	"mobile.team_bridge.attachment.add": "Add image",
 	"mobile.team_bridge.attachment.attached_summary": "{count, plural, one {# image attached} other {# images attached}}",
 	"mobile.team_bridge.attachment.cannot_send": "Can't send",
@@ -4107,6 +5307,23 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.team_bridge.attachment.viewer": "Image viewer",
 	"mobile.team_bridge.attachment.wait_uploads": "Send is available when the images finish uploading.",
 	"mobile.team_bridge.back": "Back",
+	"mobile.team_bridge.card_body.deleted": "This message was deleted.",
+	"mobile.team_bridge.card_body.held": "Held for review.",
+	"mobile.team_bridge.card_body.held_transient": "Waiting for screening — not shown to your agent yet.",
+	"mobile.team_bridge.card_body.loading": "Loading message…",
+	"mobile.team_bridge.card_body.more_messages": "{count, plural, one {# more message in this card} other {# more messages in this card}}",
+	"mobile.team_bridge.card_body.not_admitted": "Not delivered to your agent.",
+	"mobile.team_bridge.card_body.not_member": "You are no longer in this conversation.",
+	"mobile.team_bridge.card_body.offline": "Couldn't reach Radient — retrying.",
+	"mobile.team_bridge.card_body.other_account": "Received under another Radient account.",
+	"mobile.team_bridge.card_body.pending": "Waiting to be delivered to your agent.",
+	"mobile.team_bridge.card_body.refused": "Refused by moderation.",
+	"mobile.team_bridge.card_body.show_less": "Show less",
+	"mobile.team_bridge.card_body.show_more": "Show more",
+	"mobile.team_bridge.card_body.signed_out": "Sign in to Radient to see this message.",
+	"mobile.team_bridge.card_body.thread_reply": "Thread reply",
+	"mobile.team_bridge.card_body.unavailable": "Message body unavailable.",
+	"mobile.team_bridge.card_body.untrusted": "External message · untrusted content",
 	"mobile.team_bridge.conversation": "Conversation",
 	"mobile.team_bridge.default_on.body": "Your organization’s agents can message your chief of staff. You can turn this off at any time.",
 	"mobile.team_bridge.default_on.dismiss": "Dismiss",
@@ -4169,6 +5386,15 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.team_bridge.list.preview": "Preview · Join to read",
 	"mobile.team_bridge.list.quiet": "Notifications quiet",
 	"mobile.team_bridge.list.self": "you",
+	"mobile.team_bridge.mentions.dismiss_notice": "Dismiss",
+	"mobile.team_bridge.mentions.invited": "{name} hasn’t joined this conversation yet and won’t be notified.",
+	"mobile.team_bridge.mentions.no_endpoint": "{name} can’t be notified until the people list loads.",
+	"mobile.team_bridge.mentions.not_member": "{name} isn’t in this conversation and won’t be notified.",
+	"mobile.team_bridge.mentions.results_count": "{count, plural, one {# suggestion} other {# suggestions}}",
+	"mobile.team_bridge.mentions.row_label": "Mention {name}",
+	"mobile.team_bridge.mentions.section_members": "In this conversation",
+	"mobile.team_bridge.mentions.section_org": "Others in your organization",
+	"mobile.team_bridge.mentions.unavailable": "People list unavailable. Showing members of this conversation.",
 	"mobile.team_bridge.navigation.caption": "Your organization, even with your computer asleep",
 	"mobile.team_bridge.navigation.entry": "{count, plural, =0 {Team Bridge} one {Team Bridge · # unread} other {Team Bridge · # unread}}",
 	"mobile.team_bridge.navigation.entry_loading": "Team Bridge · loading",
@@ -4185,6 +5411,35 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.team_bridge.profile.open": "View profile for {name}",
 	"mobile.team_bridge.profile.opens_hint": "Opens their profile",
 	"mobile.team_bridge.profile.title": "Profile",
+	"mobile.team_bridge.reactions.add": "Add reaction",
+	"mobile.team_bridge.reactions.added": "Reaction added",
+	"mobile.team_bridge.reactions.details": "Reaction details",
+	"mobile.team_bridge.reactions.failed": "Reaction couldn't be saved. Try again.",
+	"mobile.team_bridge.reactions.hint_add": "Double tap to react too",
+	"mobile.team_bridge.reactions.hint_inspect": "Double tap to inspect reaction details",
+	"mobile.team_bridge.reactions.hint_remove": "Double tap to remove your reaction",
+	"mobile.team_bridge.reactions.keyboard_hint": "Pick an emoji from your keyboard",
+	"mobile.team_bridge.reactions.pill": "{emoji}, {count, plural, one {# reaction} other {# reactions}}",
+	"mobile.team_bridge.reactions.pill_mine": "{emoji}, {count, plural, one {# reaction} other {# reactions}}, you reacted",
+	"mobile.team_bridge.reactions.removed": "Reaction removed",
+	"mobile.team_bridge.reactions.sample": "{count, plural, =0 {{labels}} one {{labels} and # other} other {{labels} and # others}}",
+	"mobile.team_bridge.reactions.sample_none": "No names were included in this summary.",
+	"mobile.team_bridge.reactions.sample_notice": "Names shown are a sample, not a full list.",
+	"mobile.team_bridge.reactions.show_less": "Show less",
+	"mobile.team_bridge.reactions.show_more": "Show {count} more",
+	"mobile.team_bridge.reactions.summary": "{count, plural, one {# reaction} other {# reactions}}",
+	"mobile.team_bridge.reactions.you_reacted": "You reacted",
+	"mobile.team_bridge.reply_thread.count": "{count, plural, one {# reply} other {# replies}}",
+	"mobile.team_bridge.reply_thread.empty": "No replies yet. Start the thread.",
+	"mobile.team_bridge.reply_thread.error": "This thread couldn't be loaded.",
+	"mobile.team_bridge.reply_thread.last_reply": "Last reply {time}",
+	"mobile.team_bridge.reply_thread.loading": "Loading thread…",
+	"mobile.team_bridge.reply_thread.more": "Load more replies",
+	"mobile.team_bridge.reply_thread.open": "View thread, {count, plural, one {# reply} other {# replies}}",
+	"mobile.team_bridge.reply_thread.open_unread": "View thread, {count, plural, one {# reply} other {# replies}}, {unread, plural, one {# unread} other {# unread}}",
+	"mobile.team_bridge.reply_thread.reply": "Reply in thread",
+	"mobile.team_bridge.reply_thread.retry": "Retry thread",
+	"mobile.team_bridge.reply_thread.title": "Thread",
 	"mobile.team_bridge.retry": "Retry",
 	"mobile.team_bridge.thread.access_retry": "Retry access",
 	"mobile.team_bridge.thread.anchor_missing": "That message is no longer available.",
@@ -4278,6 +5533,10 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"relay.health.quiet_detail": "This session on your computer has stopped responding — it may be busy or stuck. A send can show a failure and still arrive once it catches up. Retrying won't send it twice.",
 	"relay.health.reconnecting": "Reconnecting",
 	"relay.health.reconnecting_detail": "This phone lost its connection to your computer and keeps trying. The session may still be running there; sending may fail until the connection is back.",
+	"relay.skills.skipped": "Sent without {names} — {count, plural, one {that skill has} other {those skills have}} no content to attach.",
+	"relay.skills.too_large": "These skills are too large to send together. Remove one skill and send again.",
+	"relay.skills.tray.hidden": "hidden",
+	"relay.skills.tray.label": "Skills",
 	"relay.transcript.composer.queued": "{count, plural, one {# queued} other {# queued}}",
 	"relay.transcript.fold.failed_label": "Includes a failed action",
 	"relay.transcript.fold.more": "{count, plural, one {and # other action} other {and # other actions}}",
@@ -4317,6 +5576,43 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.account_routing.unsaved": { role: "status", note: "A selected draft differs from the backend value; changing radio alone does not persist." },
 	"mobile.agent_avatar.edit_hint": { role: "help", note: "Shown as a toast when the reader taps or long-presses the agent's picture in a conversation header, and read as that control's accessibility hint. The phone app cannot edit agent pictures; the Local Operator desktop app can. Keep \"desktop app\" generic (no product name). No final full stop." },
 	"mobile.agent_avatar.label": { role: "button", note: "Accessible name of the agent's profile picture in a conversation header (a decorative picture that is also a button explaining where to change it). A noun phrase, not an action. \"Agent\" is the product term for the AI assistant the conversation runs. No final full stop." },
+	"mobile.asks.answer_label": { role: "help", note: "Accessibility name of the free-text field. {question} is the question text, supplied by the agent and never translated." },
+	"mobile.asks.answer_placeholder": { role: "help", note: "Placeholder of the free-text answer field. No final full stop." },
+	"mobile.asks.choose_any": { role: "help", note: "Caption above the options of a multi-select question. No final full stop." },
+	"mobile.asks.deadline_ago": { role: "meta", note: "Meta line on an ask whose deadline has passed. {duration} is a compact elapsed time such as \"5 m\" or \"2 h\", supplied by the app; it must survive translation. No final full stop." },
+	"mobile.asks.decline": { role: "button", note: "Danger button beside the send button. Tells the agent no answer is coming and it should decide itself; unlike Dismiss it answers the agent. Verb, sentence case, no final full stop." },
+	"mobile.asks.decline_hint": { role: "help", note: "Accessibility hint read after the Decline button. Two short sentences with final full stops: nothing is sent as an answer, and the agent decides on its own." },
+	"mobile.asks.dismiss": { role: "button", note: "Quiet button on an ask whose deadline already passed (the agent went ahead). One press removes it at once and asks nothing. No ellipsis, no final full stop. Use a DIFFERENT phrase from the skip-question action in every language (vi: do not reuse the skip phrase). vi uses \"Đóng\" here and \"Bỏ qua\" only for skip." },
+	"mobile.asks.dismiss_open": { role: "button", note: "Quiet link under the send and decline buttons of a waiting ask. It opens a choice of two reasons rather than acting at once, which the trailing ellipsis says: keep an ellipsis character. Same verb as the plain Dismiss key. Sentence case, no final full stop." },
+	"mobile.asks.dismiss_reason.chat": { role: "button", note: "Second dismissal reason: the reader already gave the answer in the conversation itself. Sentence case, no final full stop. hi and zh-CN: use ONE word for \"conversation\" here and in its note (never chat in one and conversation in the other)." },
+	"mobile.asks.dismiss_reason.chat_note": { role: "help", note: "Second line of the \"Answered in the conversation\" reason: what happened. Sentence case, no final full stop. Same word for \"conversation\" as the label." },
+	"mobile.asks.dismiss_reason.moot": { role: "button", note: "First dismissal reason: the question no longer matters. Sentence case, no final full stop." },
+	"mobile.asks.dismiss_reason.moot_note": { role: "help", note: "Second line of the \"No longer needed\" reason: what the agent will do. Sentence case with a capital first letter, no final full stop." },
+	"mobile.asks.dismiss_title": { role: "heading", note: "Heading above the two dismissal reasons. {count} is the number of questions the ask holds (always at least 1): the singular names one question, the plural all of them. Use the plural arms your language needs (ru: one/few/many/other; es and fr: one/many/other); a language without number may use one neutral form. No final full stop. vi, zh-CN: no number agreement, one neutral form." },
+	"mobile.asks.empty": { role: "status", note: "Empty state of the asks sheet when nothing is waiting. Two short sentences with final full stops. \"The agent\" is the AI agent running on the reader's computer." },
+	"mobile.asks.honesty": { role: "status", note: "Quiet closing line of the asks sheet: the app can only show queued questions while it is open and cannot alert the reader when closed. Two sentences with final full stops." },
+	"mobile.asks.loading": { role: "status", note: "Shown while the sheet reads the queued questions. Ends with the ellipsis character; keep it." },
+	"mobile.asks.none_recorded": { role: "status", note: "Shown in a settled ask that recorded no answer. One sentence with a final full stop." },
+	"mobile.asks.nothing_left": { role: "status", note: "Shown in an ask card whose questions were all taken by another surface (terminal, desktop) so nothing is left to answer here. Two sentences with final full stops." },
+	"mobile.asks.open_conversation": { role: "button", note: "Accessible name of the icon button that opens the conversation an ask came from. Verb phrase, no final full stop." },
+	"mobile.asks.other_hint": { role: "help", note: "Quiet text beside the Other label and the field's accessibility hint: tells the reader they can type their own answer. No final full stop." },
+	"mobile.asks.other_kept": { role: "help", note: "Replaces the Other hint when the free-text row is closed but still holds what the reader typed. States that the text is kept in the app and has NOT been sent. No final full stop." },
+	"mobile.asks.other_label": { role: "button", note: "Label of the free-text answer row at the end of every option list. One word, no final full stop." },
+	"mobile.asks.progress.pick_or_type": { role: "status", note: "Quiet line above the send button while it is disabled, for ONE question that offers options: pick an offered option or type your own answer. Full sentence with a final full stop." },
+	"mobile.asks.progress.tally": { role: "status", note: "Quiet line above the send button while it is disabled, for an ask with several questions. {answered} is how many questions have been answered or skipped; {total} how many there are. Both are non-negative integers and must survive translation; {answered} never exceeds {total}. A label before the numbers avoids participle agreement. No final full stop." },
+	"mobile.asks.progress.type": { role: "status", note: "Quiet line above the send button while it is disabled, for ONE question that offers no options: type an answer, or skip the question. Full sentence with a final full stop." },
+	"mobile.asks.recommended": { role: "meta", note: "Suffix after an option label marking the agent's recommended option. Keep the leading middle dot. Capitalised after the dot (sentence-case rule); the relay web page's lowercase wording is a follow-up. No final full stop." },
+	"mobile.asks.secret_notice": { role: "help", note: "Caption on a question whose answer is a secret: it is sent straight to the agent and not written into the visible transcript. Keep the colon (or the locale's equivalent). No final full stop." },
+	"mobile.asks.secret_notice_saved": { role: "help", note: "Same caption as the plain secret notice, with the extra fact that the value is also saved on the computer for reuse. Keep it a superset of the plain wording. No final full stop, like the plain notice." },
+	"mobile.asks.secret_placeholder": { role: "help", note: "Placeholder of the masked field for a secret answer. No final full stop." },
+	"mobile.asks.send_answer": { role: "button", note: "Primary button of the open ask card, pinned in the sheet footer, when the ask has ONE question. Sends the reader's answer to the agent. Verb phrase, sentence case, capital first letter, no final full stop." },
+	"mobile.asks.send_answers": { role: "button", note: "Primary button when the ask has SEVERAL questions: one press sends every answer together. Same wording family as the singular key; a language that does not mark number may use the same words. Sentence case, no final full stop." },
+	"mobile.asks.settled": { role: "heading", note: "Heading above asks that are already settled (answered, declined or dismissed), below everything still waiting. Matches the desktop app's \"Settled\" asks heading. Mean closed/dealt with, not \"earlier\" or \"first\" in time. Sentence case, one word in English, no final full stop. RISKIEST for translators: hi/ur/vi/zh-CN/ru picked the \"settled / dealt with\" sense; the \"earlier\" sense of the old label is wrong." },
+	"mobile.asks.skip": { role: "button", note: "Link under a question that lets the reader send NO answer to it (an empty answer is accepted by the queue). The parenthesis explains the consequence. Do not reuse the Dismiss phrase. No final full stop." },
+	"mobile.asks.title_fallback": { role: "heading", note: "Title of the asks sheet when it has no count sentence to show (nothing waiting or lapsed). One word, no final full stop." },
+	"mobile.asks.truncated": { role: "status", note: "Line above the list when the relay returned only the newest questions. Two sentences with final full stops." },
+	"mobile.asks.unskip": { role: "button", note: "Link shown after the reader skipped a question: takes the skip back so the question can be answered. No final full stop." },
+	"mobile.asks.urgent": { role: "meta", note: "Suffix after an ask's state line marking it urgent. Keep the leading middle dot. Capitalised after the dot (sentence-case rule); the relay web page's lowercase wording is a follow-up. No final full stop." },
 	"mobile.chrome.clear_search": { role: "button", note: "Accessible name of the small × inside the sidebar's search field; it empties the search text. Shown only while the field has text. No final full stop." },
 	"mobile.chrome.close_conversations": { role: "button", note: "Accessible name (screen readers only, never shown) of two controls that both dismiss the conversations sidebar: the ✕ in the sidebar header and the dimmed page strip beside the open sidebar. 'Conversations' is the sidebar's list of chat sessions, not one conversation. Imperative, no final full stop." },
 	"mobile.chrome.composer.dismiss_keyboard": { role: "button", note: "Build389 shared composer context strip / exclusive home presentation. Preserve {count} plural and {host} parameters where present." },
@@ -4325,6 +5621,7 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.chrome.composer.queued": { role: "button", note: "Build389 shared composer context strip / exclusive home presentation. Preserve {count} plural and {host} parameters where present." },
 	"mobile.chrome.composer.row_cost": { role: "meta", note: "Row label in the composer's More sheet for the conversation's spend; the amount is shown at the other end of the same row. A noun, no colon." },
 	"mobile.chrome.composer.row_effort": { role: "meta", note: "Row label in the composer's More sheet; the reasoning-effort level is shown at the other end of the same row. A noun, no colon." },
+	"mobile.chrome.composer.row_identity": { role: "meta", note: "Row label in the composer's More sheet for which agent or team the new chat starts as; its value is that name or \"Default agent\". Short. New in the new-chat identity picker; the non-English text awaits the translation audit." },
 	"mobile.chrome.composer.row_model": { role: "meta", note: "Row label in the composer's More sheet; the model's name is shown at the other end of the same row. A noun, no colon." },
 	"mobile.chrome.composer.row_questions": { role: "meta", note: "Row label in the composer's More sheet for the agent's questions to the user (including ones that timed out); the count is shown at the other end of the same row and tapping the row opens the questions sheet. A plural noun, no colon." },
 	"mobile.chrome.composer.row_queue": { role: "meta", note: "Row label in the composer's More sheet for messages waiting to be sent; the count is shown at the other end of the same row. A noun, no colon." },
@@ -4356,16 +5653,182 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.common.not_found.headline": { role: "status", note: "Empty-state headline on the not-found screen. Sentence with a final full stop." },
 	"mobile.common.not_found.next": { role: "help", note: "Empty-state follow-up on the not-found screen, pointing to the session list. One sentence." },
 	"mobile.common.not_found.title": { role: "heading", note: "Header title of the screen shown for a route that does not exist. No final full stop." },
+	"mobile.common.resize_panel": { role: "button", note: "Screen-reader name of the grab bar that resizes a bottom sheet between its two sizes. It is an adjustable control, so the current size follows the name as the control's value ('Medium'/'Large') and 'Taller'/'Shorter' are its actions. Short noun phrase, no placeholders, no final full stop." },
 	"mobile.common.save": { role: "button", note: "Commits the edits made in the current sheet or form. A verb used as a label, no final full stop. LIMIT: says nothing about where it is saved or whether it is reversible; screens that must say so (for example a draft saved to one computer) use their own key." },
 	"mobile.common.send": { role: "button", note: "Sends the message the user has typed in the adjacent composer. A verb used as a label, no final full stop. LIMIT: a message to an agent, not a file transfer or a share; do not translate with a word meaning 'post publicly' or 'upload'." },
+	"mobile.common.size.large": { role: "meta", note: "The larger of a resizable sheet's two sizes, read as the control's current value and never shown as a button. One word; the pair with 'Medium' must read as two sizes of the same thing." },
+	"mobile.common.size.medium": { role: "meta", note: "The smaller of a resizable sheet's two sizes, read as the control's current value and never shown as a button. One word; the pair with 'Large' must read as two sizes of the same thing." },
+	"mobile.common.size.shorter": { role: "button", note: "The VoiceOver/TalkBack action that shrinks a resizable sheet from Large to Medium. Comparative adjective, no final full stop, no placeholders." },
+	"mobile.common.size.taller": { role: "button", note: "The VoiceOver/TalkBack action that grows a resizable sheet from Medium to Large. Comparative adjective, no final full stop, no placeholders." },
 	"mobile.common.try_again": { role: "button", note: "Re-runs the action that just failed, next to the error that reported it. An imperative used as a label, no final full stop. LIMIT: a retry of a failed read or write; never a reset and never a restart of the app or the connection." },
+	"mobile.community.approvals.agent": { role: "meta", note: "Badge on an agent approval card: the post would come from the user's agent." },
+	"mobile.community.approvals.decline": { role: "button", note: "Declines the agent post from the phone." },
+	"mobile.community.approvals.empty": { role: "status", note: "Empty approvals list." },
+	"mobile.community.approvals.expires": { role: "meta", note: "Lower-case; time left before the approval lapses." },
+	"mobile.community.approvals.expires_days": { role: "meta", note: "Lower-case; time left before an agent approval lapses when more than 48 hours remain, in whole days." },
+	"mobile.community.approvals.failed": { role: "status", note: "Answering the approval failed." },
+	"mobile.community.approvals.open_computer": { role: "help", note: "Instruction. 'Local Operator' is a product name." },
+	"mobile.community.approvals.review": { role: "button", note: "Keeps the approval waiting; does not approve." },
+	"mobile.community.approvals.review_note": { role: "help", note: "Explains the first button." },
+	"mobile.community.approvals.stays": { role: "help", note: "The phone never sees the draft text." },
+	"mobile.community.approvals.title": { role: "heading", note: "{channel} is a channel name without '#'. 'Chief of staff' is the user's own agent." },
+	"mobile.community.approvals.title_unknown": { role: "heading", note: "Used when the channel name is not known on this phone." },
+	"mobile.community.approvals.waiting": { role: "status", note: "Shown after Review on your computer." },
+	"mobile.community.browse.channels": { role: "button", note: "Segment: search channels." },
+	"mobile.community.browse.channels_empty": { role: "status", note: "Browse found no channel for the current search." },
+	"mobile.community.browse.join": { role: "button", note: "Join a public channel." },
+	"mobile.community.browse.load_more": { role: "button", note: "Loads the next page of results." },
+	"mobile.community.browse.mode": { role: "help", note: "Accessible name of the Channels/People segmented control." },
+	"mobile.community.browse.open": { role: "button", note: "Open a channel the user already joined." },
+	"mobile.community.browse.people": { role: "button", note: "Segment: search members (approved profiles only)." },
+	"mobile.community.browse.people_empty": { role: "status", note: "Browse found no member for the current search." },
+	"mobile.community.browse.private": { role: "meta", note: "Badge: invite-only channel." },
+	"mobile.community.browse.search": { role: "help", note: "Label of the Browse search field (channels or people)." },
+	"mobile.community.browse.title": { role: "heading", note: "Title of the Browse screen (channels and people)." },
+	"mobile.community.category.harassment_or_abuse": { role: "meta", note: "Refusal/report category label." },
+	"mobile.community.category.private_information": { role: "meta", note: "Refusal/report category label (someone's personal data)." },
+	"mobile.community.category.spam_or_promotion": { role: "meta", note: "Refusal/report category label." },
+	"mobile.community.category.unsafe_or_illegal": { role: "meta", note: "Refusal/report category label." },
+	"mobile.community.common.loading": { role: "status", note: "Accessible label of the loading placeholder." },
+	"mobile.community.common.retry": { role: "button", note: "Retries a failed read." },
+	"mobile.community.common.unavailable": { role: "heading", note: "Heading when the community cannot be shown (flag off, not found, or a failed read)." },
+	"mobile.community.composer.attach": { role: "button", note: "Icon button beside Send: attach an image. While communities refuse images it opens an explanation instead of a picker. Accessible name only." },
+	"mobile.community.composer.audience": { role: "help", note: "Audience line under the composer in a public channel." },
+	"mobile.community.composer.audience_dm": { role: "help", note: "Audience line in a direct message." },
+	"mobile.community.composer.blocked_archived": { role: "status", note: "No composer: archived channel." },
+	"mobile.community.composer.blocked_locked": { role: "status", note: "No composer: locked by moderators." },
+	"mobile.community.composer.blocked_read_only": { role: "status", note: "No composer: read-only community." },
+	"mobile.community.composer.blocked_staff_only": { role: "status", note: "No composer: staff-only channel such as #welcome-and-rules." },
+	"mobile.community.composer.cancel": { role: "button", note: "Best-effort cancel of the check; if it already posted, it stays posted." },
+	"mobile.community.composer.cancelled": { role: "status", note: "Cancel won before the post was committed." },
+	"mobile.community.composer.checking": { role: "status", note: "The message is being checked before it can be posted. Not 'Sending'." },
+	"mobile.community.composer.dismiss": { role: "button", note: "Hides the outcome; the text stays in the field." },
+	"mobile.community.composer.failed": { role: "status", note: "Network drop or unexpected answer. Retry is safe and cannot post twice." },
+	"mobile.community.composer.forbidden": { role: "status", note: "No seat, locked channel, or similar." },
+	"mobile.community.composer.guidelines": { role: "status", note: "The accepted guidelines version is stale; nothing was posted." },
+	"mobile.community.composer.images_unavailable": { role: "status", note: "Image posting is not available yet." },
+	"mobile.community.composer.invalid": { role: "status", note: "Shown to the sender when the server rejected the message itself (too long or malformed). There is no Retry; editing the text and sending again is the way out." },
+	"mobile.community.composer.label": { role: "help", note: "Composer field label and placeholder. {name} is the channel name without '#'." },
+	"mobile.community.composer.label_dm": { role: "help", note: "Composer placeholder in a direct message. {name} is the other person." },
+	"mobile.community.composer.limited": { role: "status", note: "A per-sender limit applied; nothing was checked or stored." },
+	"mobile.community.composer.limited_wait": { role: "status", note: "Countdown until Retry is allowed." },
+	"mobile.community.composer.refused": { role: "status", note: "Sender-only outcome. {category} is one of the category labels in this namespace." },
+	"mobile.community.composer.refused_detail": { role: "help", note: "{reference} looks like MOD-AB12-CD34; keep verbatim." },
+	"mobile.community.composer.restricted": { role: "status", note: "A sanction applies. {reference} is verbatim." },
+	"mobile.community.composer.retry": { role: "button", note: "Retries the same attempt; cannot post twice." },
+	"mobile.community.composer.review": { role: "button", note: "Opens the updated guidelines to accept." },
+	"mobile.community.composer.send": { role: "button", note: "Submits the message for checking and posting." },
+	"mobile.community.composer.unavailable": { role: "status", note: "Moderation or sign-in check unavailable; fails closed." },
+	"mobile.community.conversation.agent": { role: "meta", note: "Badge on a post written by someone's agent." },
+	"mobile.community.conversation.deleted": { role: "meta", note: "Placeholder for a deleted thread root." },
+	"mobile.community.conversation.edited": { role: "meta", note: "Lower-case marker after an edited message's time." },
+	"mobile.community.conversation.empty": { role: "status", note: "Empty channel history." },
+	"mobile.community.conversation.former_member": { role: "meta", note: "Author label for an erased account whose posts remain." },
+	"mobile.community.conversation.join_prompt": { role: "help", note: "Replaces the composer in a channel opened from Browse without joining. {name} is the channel name WITHOUT the # sign; keep the # before it." },
+	"mobile.community.conversation.load_older": { role: "button", note: "Loads the previous page of history." },
+	"mobile.community.conversation.older_error": { role: "status", note: "Failed to load an older page." },
+	"mobile.community.conversation.replies": { role: "meta", note: "Number of replies in a message's thread; {count} counts replies." },
+	"mobile.community.conversation.report": { role: "button", note: "Accessible hint/long-press action to report a message." },
+	"mobile.community.conversation.subtitle": { role: "meta", note: "Under the channel title. {community} is the community name." },
+	"mobile.community.conversation.view_profile": { role: "button", note: "Accessible name of a message author's avatar (and hint on a DM request card); opens that member's community profile. {name} is the member's display name." },
+	"mobile.community.directory.empty": { role: "status", note: "Empty state of the featured list." },
+	"mobile.community.directory.featured": { role: "heading", note: "Section: communities Radient features that the user has not joined." },
+	"mobile.community.directory.joined": { role: "heading", note: "Section: communities the user is a member of." },
+	"mobile.community.directory.read_only": { role: "meta", note: "Badge: the community can be read but not posted in." },
+	"mobile.community.directory.title": { role: "heading", note: "Screen title listing communities joined and joinable." },
+	"mobile.community.error.auth_unavailable": { role: "status", note: "The server could not verify the sign-in (temporary). Not a sign-out." },
+	"mobile.community.error.generic": { role: "status", note: "Any other failure of a read or a non-message action." },
+	"mobile.community.error.load_failed": { role: "status", note: "A screen or list could not be READ (nothing was being changed). Says what to do; must not imply that an action failed." },
+	"mobile.community.error.not_found": { role: "status", note: "Unknown, hidden, or not joined. Do not say the community does not exist." },
+	"mobile.community.error.rate_limited": { role: "status", note: "A per-person limit; not a ban." },
+	"mobile.community.error.sign_in": { role: "status", note: "The Radient sign-in is missing or expired." },
+	"mobile.community.error.unreachable": { role: "status", note: "Network failure or timeout." },
+	"mobile.community.home.browse": { role: "button", note: "Opens channel and people search." },
+	"mobile.community.home.channel_label": { role: "meta", note: "Channel row. {name} is the channel name without '#'; keep the '#'. {count} counts unread messages." },
+	"mobile.community.home.channels": { role: "heading", note: "Section of the community home: channels the user joined." },
+	"mobile.community.home.channels_empty": { role: "status", note: "Shown when the member has joined no channels yet; points them to Browse." },
+	"mobile.community.home.closed": { role: "status", note: "A read-only community cannot be joined." },
+	"mobile.community.home.direct": { role: "heading", note: "Section: one-to-one conversations with other members." },
+	"mobile.community.home.direct_empty": { role: "status", note: "Shown in the Direct messages section when there are none." },
+	"mobile.community.home.direct_label": { role: "meta", note: "Direct message row. {name} is the other person's display name." },
+	"mobile.community.home.join": { role: "button", note: "Opens the join dialog." },
+	"mobile.community.home.not_member": { role: "help", note: "Shown to a non-member on the community home." },
+	"mobile.community.home.reaccept": { role: "button", note: "Opens the updated guidelines to accept them again." },
+	"mobile.community.home.reaccept_banner": { role: "status", note: "Banner when the accepted guidelines version is no longer current." },
+	"mobile.community.home.requests": { role: "button", note: "Opens message requests and agent approvals." },
+	"mobile.community.home.requests_count": { role: "button", note: "Requests button with the number of pending items (DM requests + agent approvals)." },
+	"mobile.community.home.switch": { role: "button", note: "Icon button in a community's header: opens the switcher listing private organizations and communities. Accessible name only." },
+	"mobile.community.join.agree": { role: "confirm", note: "Checkbox label; starts unchecked. {version} is verbatim, e.g. 2026-11." },
+	"mobile.community.join.changed": { role: "status", note: "The version the user accepted was replaced during the dialog; nothing was recorded." },
+	"mobile.community.join.failed": { role: "status", note: "Join failed for another reason; nothing was recorded." },
+	"mobile.community.join.guidelines_heading": { role: "heading", note: "{version} is a version label such as 2026-11; keep it verbatim." },
+	"mobile.community.join.hint": { role: "help", note: "Shown while the join button is disabled." },
+	"mobile.community.join.moderation": { role: "help", note: "Moderation disclosure. Must not imply humans read every message." },
+	"mobile.community.join.profile": { role: "help", note: "What the community profile shows and never shows." },
+	"mobile.community.join.reaccept_submit": { role: "button", note: "Re-accept button for an updated guidelines version; disabled until checked." },
+	"mobile.community.join.reaccept_title": { role: "heading", note: "Dialog title when an existing member must accept a new guidelines version." },
+	"mobile.community.join.submit": { role: "button", note: "Disabled until the agreement is checked." },
+	"mobile.community.join.title": { role: "heading", note: "Title of the join sheet (first join, not a re-acceptance)." },
+	"mobile.community.no_plan.body": { role: "help", note: "Card body. Public means visible to all community members. 'Radient' and 'Local Operator' are product names." },
+	"mobile.community.no_plan.free": { role: "help", note: "Reassurance under the join button. Must not imply a trial or purchase." },
+	"mobile.community.no_plan.join": { role: "button", note: "Opens the join dialog (guidelines + explicit agreement). Joining is free." },
+	"mobile.community.no_plan.open": { role: "button", note: "Shown instead of Join when the user already joined." },
+	"mobile.community.no_plan.title": { role: "heading", note: "Card title on the 'no Team plan' screen. 'Local Operator Community' is a product name; keep it untranslated." },
+	"mobile.community.profile.block": { role: "button", note: "Blocks this member: neither sees the other's messages or requests." },
+	"mobile.community.profile.blocked": { role: "status", note: "Confirmation after blocking." },
+	"mobile.community.profile.failed": { role: "status", note: "A profile action failed." },
+	"mobile.community.profile.joined": { role: "meta", note: "{month} is a year-month like 2026-11; keep verbatim." },
+	"mobile.community.profile.message": { role: "button", note: "Sends a direct-message request; the person must accept first." },
+	"mobile.community.profile.message_sent": { role: "status", note: "Confirmation after a DM request." },
+	"mobile.community.profile.report": { role: "button", note: "Opens the report form for this profile." },
+	"mobile.community.profile.title": { role: "heading", note: "Title of a member's profile sheet." },
+	"mobile.community.report.category": { role: "help", note: "Accessible name of the category choice." },
+	"mobile.community.report.dm_consent": { role: "confirm", note: "Consent tick in the report sheet for a DIRECT MESSAGE; Submit stays disabled until ticked. The message goes to Radient Trust & Safety only, never to community moderators. 'Radient' is a product name." },
+	"mobile.community.report.failed": { role: "status", note: "The report could not be sent; nothing was filed." },
+	"mobile.community.report.note": { role: "help", note: "Optional note field label." },
+	"mobile.community.report.revision_changed": { role: "status", note: "The direct message was edited after the reporter opened it, so nothing was sent. They must read the current text and tick the consent again." },
+	"mobile.community.report.sent": { role: "status", note: "{reference} is a case reference; keep verbatim." },
+	"mobile.community.report.submit": { role: "button", note: "Submits the report; disabled until a category is chosen." },
+	"mobile.community.report.title": { role: "heading", note: "Report sheet title. 'Radient Trust & Safety' is a team name." },
+	"mobile.community.requests.accept": { role: "button", note: "Accept an incoming direct-message request." },
+	"mobile.community.requests.approvals": { role: "button", note: "Segment: agent posts waiting for the user's approval." },
+	"mobile.community.requests.block": { role: "button", note: "Block the requester and decline." },
+	"mobile.community.requests.decline": { role: "button", note: "Decline a DM request; the requester is not told why." },
+	"mobile.community.requests.dm": { role: "button", note: "Segment: direct message requests." },
+	"mobile.community.requests.dm_body": { role: "help", note: "Incoming DM request. {name} is the requester." },
+	"mobile.community.requests.dm_empty": { role: "status", note: "The incoming direct-message request list is empty." },
+	"mobile.community.requests.expires": { role: "meta", note: "Time left on a request, in whole hours." },
+	"mobile.community.requests.expires_days": { role: "meta", note: "Time left on a DM request when more than 48 hours remain, in whole days. Sentence case, like the hours variant." },
+	"mobile.community.requests.mode": { role: "help", note: "Accessible name of the Messages/Agent approvals segmented control." },
+	"mobile.community.requests.title": { role: "heading", note: "Requests screen title." },
+	"mobile.community.role.community_admin": { role: "meta", note: "Member badge: administers this community (not a Radient employee)." },
+	"mobile.community.role.moderator": { role: "meta", note: "Member badge: moderates this community." },
+	"mobile.community.role.staff": { role: "meta", note: "Badge. 'Radient' is a product name." },
+	"mobile.community.switcher.browse": { role: "button", note: "Opens the list of communities the user can join. Ends with an ellipsis because it opens another screen." },
+	"mobile.community.switcher.communities": { role: "heading", note: "Org switcher group heading for public communities the user joined. Separate from private organizations." },
+	"mobile.community.switcher.note": { role: "help", note: "Footnote in the org switcher: switching does not leave or join anything." },
+	"mobile.community.switcher.organizations": { role: "heading", note: "Org switcher group heading for the user's PRIVATE Team organizations. Communities are never in this group." },
+	"mobile.community.switcher.public": { role: "meta", note: "Badge on a community row: anyone in the community can read it. Not a privacy setting the user chose." },
+	"mobile.community.switcher.row_label": { role: "meta", note: "Accessible label of one community row in the switcher. {name} is the community name; {count} counts unread messages in that community only." },
+	"mobile.community.switcher.search": { role: "help", note: "Search field label in the switcher's Communities group, shown past six joined communities." },
+	"mobile.composer_input.attach.camera": { role: "button", note: "Row in the composer's add-image sheet that opens the camera to take one photo, which is attached to the message. Imperative verb phrase; no final full stop." },
+	"mobile.composer_input.attach.camera_denied": { role: "status", note: "Notice inside the add-image sheet when the reader has refused camera access for this app; the only way back is the system Settings app, which the action beside it opens. Must not blame the reader. Two short sentences with final full stops." },
+	"mobile.composer_input.attach.camera_error": { role: "status", note: "Error line under the composer when the camera could not be opened or the photo could not be read after the reader chose to take one. Full sentences with final full stops." },
+	"mobile.composer_input.attach.camera_refused": { role: "status", note: "Notice inside the add-image sheet when the reader has just declined the system camera prompt but the system will ask again on the next tap (Android after a first refusal). States that camera access was not allowed, then that tapping Take Photo (the row's own label, mobile.composer_input.attach.camera) shows the system prompt again; no Settings action. Must not blame the reader. Two short sentences with final full stops." },
+	"mobile.composer_input.attach.camera_unavailable": { role: "status", note: "Notice inside the add-image sheet when the device has no usable camera (for example a simulator). Full sentence with final full stop." },
+	"mobile.composer_input.attach.choose_image": { role: "button", note: "Row in the add-image sheet on the web build, where the browser's file chooser is the only image source. No final full stop." },
+	"mobile.composer_input.attach.files": { role: "button", note: "Row in the composer's add-image sheet that opens the system document picker (the Files app on iOS), limited to images: the label says so (the relay accepts images only, so a PDF would be greyed out). Use the platform's own name for the Files app where it has one. No final full stop." },
+	"mobile.composer_input.attach.library": { role: "button", note: "Row in the composer's add-image sheet that opens the system photo picker. Use the name the operating system gives its photo library on the platform (iOS: Photos library). No final full stop." },
+	"mobile.composer_input.attach.open_settings": { role: "button", note: "Text action beside the camera-access notice; opens this app's page in the system Settings app. Use the platform's name for Settings. No final full stop." },
+	"mobile.composer_input.attach.paste": { role: "button", note: "Row in the composer's add-image sheet that attaches the image currently on the clipboard. No final full stop." },
 	"mobile.composer_input.clear_draft": { role: "button", note: "User-action button clears only the unsent editor, not queued messages or retained instructions with uncertain delivery. No final full stop." },
 	"mobile.composer_input.clear_draft_hint": { role: "button", note: "Screen-reader hint for Clear draft. Explicitly distinguishes editor clearing from deleting queued or unconfirmed instructions." },
 	"mobile.composer_input.dismiss_error": { role: "button", note: "Presentation-only error dismissal. Does not retry, delete or acknowledge delivery. The accessible name of the dismissal, and also its VISIBLE text action when the error line sits under a retained-instruction sentence, where a bare Dismiss would read as dismissing that sentence. Keep it short; no final full stop." },
 	"mobile.composer_input.dismiss_error_hint": { role: "button", note: "Screen-reader hint for dismissing only an error message. Draft and delivery records are unchanged." },
 	"mobile.composer_input.notice_dismiss": { role: "button", note: "Short text action trailing the error line of the composer's failure notice, shown when that error is the only sentence there. Hides the error line only; it does not retry, delete or acknowledge anything. One word where the language allows; no final full stop." },
 	"mobile.composer_input.notice_retry": { role: "button", note: "Short text action inside the composer's failure notice, trailing the sentence saying an earlier instruction may not have been delivered. Sends that instruction again. One word where the language allows; no final full stop." },
-	"mobile.composer_input.paste.denied": { role: "status", note: "Error line under the composer (iOS only) after the reader pressed the Paste image chip and the system paste prompt was declined (Don't Allow). Says paste was not allowed and where to try again: the paperclip (Attach) button, then the Paste image row (use this locale's translation of mobile.composer_input.paste.image), then the system's Allow Paste button. The quoted button name MUST match the label iOS itself shows on its paste prompt in this locale, verbatim — the reader looks for that exact word on the system dialog, so a paraphrase or a fresh translation sends them looking for a button that does not exist. Full sentences with final full stop." },
+	"mobile.composer_input.paste.denied": { role: "status", note: "Error line under the composer (iOS only) after the reader pressed the Paste image chip and the system paste prompt was declined (Don't Allow). Says paste was not allowed and that pressing the same paste button again shows the system prompt again, then names the system's Allow Paste button. The quoted button name MUST match the label iOS itself shows on its paste prompt in this locale, verbatim — the reader looks for that exact word on the system dialog, so a paraphrase or a fresh translation sends them looking for a button that does not exist. Full sentences with final full stop." },
+	"mobile.composer_input.paste.empty_ios": { role: "status", note: "Error line under the composer (iOS only) after the reader chose the Paste image ROW in the add-image sheet and no image came back. On iOS an empty clipboard and a declined system paste prompt look the same to the app, so this names both: copy an image first, and choose the system's Allow Paste button if it asks. The quoted button name MUST match the label iOS itself shows on its paste prompt in this locale, verbatim. Full sentences with final full stops." },
 	"mobile.composer_input.paste.image": { role: "button", note: "Visible label of a small chip in the composer that appears when the clipboard holds an image; tapping attaches it. Keep short (two words). No final full stop." },
 	"mobile.composer_input.paste.image_hint": { role: "button", note: "Accessibility hint for the Paste image chip. No final full stop." },
 	"mobile.composer_input.voice.discard": { role: "button", note: "Accessible name of the ✕ in the recording row: throws the recording away and sends nothing. Distinct from finishing. No final full stop." },
@@ -4584,6 +6047,32 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.home.folders_read_failed": { role: "status", note: "Failure sentence for the folder read, shared verbatim with the /new screen so one failure has one voice. No placeholder; never append an error code." },
 	"mobile.home.folders_read_sign_in": { role: "status", note: "Failure sentence for the folder read when the computer answered that the credential is no longer accepted. Names the CAUSE so Retry is not offered as the fix; the sign-in surface is one tap away. No placeholder." },
 	"mobile.home.greeting": { role: "heading", note: "The home's first line, verbatim from the desktop app. A sentence, not a question the app answers itself." },
+	"mobile.home.identity.announce_picked": { role: "status", note: "Announced to screen readers after a pick closes the sheet. {name} is the chosen agent or team, or \"Default agent\". New in the new-chat identity picker; the non-English text awaits the translation audit." },
+	"mobile.home.identity.band_agents": { role: "heading", note: "Heading over the list of agents in the picker. New in the new-chat identity picker; the non-English text awaits the translation audit." },
+	"mobile.home.identity.band_recent": { role: "heading", note: "Heading over up to three agents or teams the reader picked recently on this computer. New in the new-chat identity picker; the non-English text awaits the translation audit." },
+	"mobile.home.identity.band_teams": { role: "heading", note: "Heading over the list of teams in the picker. New in the new-chat identity picker; the non-English text awaits the translation audit." },
+	"mobile.home.identity.default_agent": { role: "button", note: "The choice that starts the chat with no particular agent or team: the computer's own default agent. Also the pill's label when nothing is chosen. New in the new-chat identity picker; the non-English text awaits the translation audit." },
+	"mobile.home.identity.empty": { role: "status", note: "The computer answered and has no agents or teams a chat can start as. Points at where they are created. New in the new-chat identity picker; the non-English text awaits the translation audit." },
+	"mobile.home.identity.no_matches": { role: "status", note: "Shown when the search matches nothing. {query} is what the reader typed; keep the quotation marks around it. New in the new-chat identity picker; the non-English text awaits the translation audit." },
+	"mobile.home.identity.pill_label": { role: "help", note: "Spoken label of the home screen's pill under the greeting. {target} is the chosen agent or team name, or \"Default agent\". Two sentences: the state, then what tapping does. New in the new-chat identity picker; the non-English text awaits the translation audit." },
+	"mobile.home.identity.read_failed": { role: "status", note: "The list of agents and teams could not be read (the computer's registries were unreadable or the request failed). Shown with a Retry button. Not the same as having none. New in the new-chat identity picker; the non-English text awaits the translation audit." },
+	"mobile.home.identity.refused_connecting": { role: "status", note: "Shown instead of sending when the draft names an agent or team but this computer's live connection has not reported yet whether it accepts one (just after a reconnect or a cold start) — sending now could start a chat WITHOUT it. Not final: a resend a moment later usually goes through, so it must not tell the reader to give up the agent or team. {name} is the chosen name. 'Tap your message' is the 'not sent — tap to put back' bubble." },
+	"mobile.home.identity.refused_fallback": { role: "status", note: "The computer refused to start the chat as the chosen agent or team for another reason (for example, the team's roster is invalid). {name} is the chosen name. New in the new-chat identity picker; the non-English text awaits the translation audit." },
+	"mobile.home.identity.refused_registry": { role: "status", note: "The computer could not read its agent and team registries, so it could not start the chat as the chosen one. Nothing was started; the draft is kept. New in the new-chat identity picker; the non-English text awaits the translation audit. 'Tap your message' is the 'not sent — tap to put back' bubble; picking the default agent sends the queued message at once." },
+	"mobile.home.identity.refused_unknown": { role: "status", note: "The computer refused the start because the chosen agent or team (or one of the team's members) no longer exists there. {name} is the chosen name. The draft is kept. New in the new-chat identity picker; the non-English text awaits the translation audit. Picking another row (or the default agent) sends the queued message at once, which the second sentence says." },
+	"mobile.home.identity.refused_unlicensed": { role: "status", note: "Shown instead of sending when the draft names an agent or team but the connected computer cannot (yet, or any more) accept one — sending would start a chat WITHOUT it. {name} is the chosen name. New in the new-chat identity picker; the non-English text awaits the translation audit." },
+	"mobile.home.identity.refused_unsaved": { role: "status", note: "The computer could not save the chosen agent or team for the new chat, so it started nothing. {name} is the chosen name. The draft is kept. New in the new-chat identity picker; the non-English text awaits the translation audit. 'Tap your message' is the 'not sent — tap to put back' bubble, the only retry route." },
+	"mobile.home.identity.row_agent": { role: "help", note: "Spoken label of an agent row. {name} is the agent's name. New in the new-chat identity picker; the non-English text awaits the translation audit." },
+	"mobile.home.identity.row_agent_described": { role: "help", note: "Spoken label of an agent row that has a description. {name} is the agent's name; {description} is its one-line description, in whatever language the owner wrote it. New in the new-chat identity picker; the non-English text awaits the translation audit." },
+	"mobile.home.identity.row_team": { role: "help", note: "Spoken label of a team row. {name} is the team's name. New in the new-chat identity picker; the non-English text awaits the translation audit." },
+	"mobile.home.identity.row_team_led": { role: "help", note: "Spoken label of a team row that names its manager. {name} is the team, {manager} its manager agent. New in the new-chat identity picker; the non-English text awaits the translation audit." },
+	"mobile.home.identity.search": { role: "help", note: "Label of the search field in the picker, shown only on a long list. New in the new-chat identity picker; the non-English text awaits the translation audit." },
+	"mobile.home.identity.sheet_title": { role: "heading", note: "Title of the sheet that chooses which agent or team a NEW chat starts as. Mirrors the desktop's \"Start this chat with\" menu heading. New in the new-chat identity picker; the non-English text awaits the translation audit." },
+	"mobile.home.identity.starting_with": { role: "status", note: "Shown while the first message is starting a chat bound to an agent or team. {name} is that agent or team. New in the new-chat identity picker; the non-English text awaits the translation audit." },
+	"mobile.home.identity.team_led_by": { role: "meta", note: "Second line of a team row when the computer did not say how many members the team has. {manager} is the team manager's agent name. New in the new-chat identity picker; the non-English text awaits the translation audit." },
+	"mobile.home.identity.team_members": { role: "meta", note: "Second line of a team row when the computer did not name its manager. {count} counts the team's members. New in the new-chat identity picker; the non-English text awaits the translation audit." },
+	"mobile.home.identity.team_subtitle": { role: "meta", note: "Second line of a team row. {manager} is the team manager's agent name; {count} counts the team's members. New in the new-chat identity picker; the non-English text awaits the translation audit." },
+	"mobile.home.identity.unsupported": { role: "help", note: "The connected computer runs a Local Operator too old to start a chat as an agent or team, so the picker offers nothing. \"Local Operator\" is the product name; do not translate it. New in the new-chat identity picker; the non-English text awaits the translation audit." },
 	"mobile.home.models_read_failed": { role: "status", note: "Failure sentence for the model-catalogue read on the home, shown with a Retry action. Must stay a read failure, never a claim about which model is running — the computer's default is still in effect. No placeholder." },
 	"mobile.home.options.default_model": { role: "button", note: "Row at the top of the model picker, shown only while the computer names no default model: it clears the chosen model, so the start names no model and the computer applies its own configured default. Sentence case, no final full stop." },
 	"mobile.home.options.fixed": { role: "help", note: "Explains why the pickers are read-only once the conversation has started. \"Conversation details\" names another screen in this app: keep it matching that screen's title." },
@@ -4620,9 +6109,7 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.home.startup_queue.not_started": { role: "status", note: "Queue-row state when the conversation never started (refused or drafting). Two words at most; it sits beside the queued-messages button." },
 	"mobile.home.startup_queue.sending": { role: "status", note: "Queue-row state while a started conversation drains its queue. Present continuous; keep the ellipsis character. Never repeat the count: the composer chip owns it." },
 	"mobile.home.startup_queue.unconfirmed": { role: "status", note: "Queue-row state when the create may or may not have happened and no automatic retry is possible. Must not imply anything is waiting." },
-	"mobile.home.suggestion.last_turn": { role: "button", note: "Suggestion chip. Sentence case, no final full stop, at most 24 characters at the source locale, and it must not begin with a verb another chip in the pool already uses." },
 	"mobile.home.suggestion.linear_mcp": { role: "button", note: "Suggestion chip. 'Linear MCP' is a product name and a protocol name: do not translate either word. No final full stop, at most 24 characters at the source locale." },
-	"mobile.home.suggestion.phone_access": { role: "button", note: "Suggestion chip. 'phone access' is the feature name used across the product. No final full stop, at most 24 characters at the source locale." },
 	"mobile.home.suggestion.review_repo": { role: "button", note: "Suggestion chip. 'repo' is developer vocabulary kept as-is. No final full stop, at most 24 characters at the source locale." },
 	"mobile.home.suggestion.team_of_agents": { role: "button", note: "Suggestion chip. Only one chip in the pool may create an agent; keep the agent-making verb on this one and no other. No final full stop, at most 24 characters at the source locale." },
 	"mobile.home.suggestion.wake_summary": { role: "button", note: "Suggestion chip. 'wake' is the product's word for a scheduled prompt. No final full stop, at most 24 characters at the source locale." },
@@ -4631,6 +6118,11 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.home.tip.search": { role: "help", note: "Rotating tip fragment, lower case by design. No final full stop, at most 48 characters at the source locale." },
 	"mobile.home.transcript.needs_answer": { role: "status", note: "Short line above a just-started conversation on the home screen when the agent is waiting for the reader to answer a question. Sits beside an \"Answer in conversation\" button, so keep it brief (a few words)." },
 	"mobile.home.transcript.waiting": { role: "status", note: "Empty state of the transcript shown under the home composer right after a send, before the first message arrives. Keep the ellipsis character." },
+	"mobile.home.work.all_conversations": { role: "button", note: "Footer row on the home work list that opens the conversations drawer. A noun phrase; the drawer's own word for conversations, not a new term." },
+	"mobile.home.work.all_conversations_new": { role: "button", note: "Spoken label of the same footer row when the drawer button carries a count of new conversations. {count} is a number. Preserve ICU plural arms and placeholder; use the drawer's word for conversations." },
+	"mobile.home.work.needs_you": { role: "heading", note: "Home work-list section heading over conversations waiting on the reader for an approval or an answer. Shown upper-case in a small label; keep it to one to three words and address the reader directly." },
+	"mobile.home.work.recent": { role: "heading", note: "Home work-list section heading over the most recently active conversations. Shown upper-case in a small label; one or two words." },
+	"mobile.home.work.try": { role: "heading", note: "Home section heading over two example prompts shown only on a brand-new account. Shown upper-case in a small label; one word, an invitation." },
 	"mobile.library.action.add_tag": { role: "button", note: "Button beside the 'New tag' field that creates the typed tag and selects it for this asset. A verb used as a label, no final full stop. It adds a tag, not a file or an asset." },
 	"mobile.library.action.edit": { role: "button", note: "Header button on an asset that opens the edit-details sheet. A verb used as a label, no final full stop. Edits only the asset's name, description and tags, never the file itself." },
 	"mobile.library.action.open_chat": { role: "button", note: "Button on an asset that opens the conversation the asset is linked to. Imperative label, no final full stop. 'Chat' is a conversation with the agent." },
@@ -4683,6 +6175,8 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.notifications.channel.system": { role: "meta", note: "Name of the Android notification channel that plays the phone's own default notification sound, used when the computer's sound is set to the system sound. Shown in the system's app notification settings. Sentence case, no final full stop." },
 	"mobile.notifications.channel.tape_warble": { role: "meta", note: "Name of an Android notification channel, shown in the system's app notification settings. It is the name of one of Local Operator's built-in notification sounds; use the same translation as the desktop app's sound picker (wire.notification_sound.sound.*). Sentence case, no final full stop." },
 	"mobile.notifications.channel.task_complete": { role: "meta", note: "Name of an Android notification channel, shown in the system's app notification settings. It is the name of one of Local Operator's built-in notification sounds; use the same translation as the desktop app's sound picker (wire.notification_sound.sound.*). Sentence case, no final full stop." },
+	"mobile.notifications.channel.team_bridge": { role: "meta", note: "Name of the Team Bridge notification channel in Android's notification settings. Product name; keep it untranslated unless the product name is localised elsewhere." },
+	"mobile.notifications.channel.team_bridge_description": { role: "help", note: "Description under the Team Bridge channel in Android's notification settings. Teammates are people; agents are their AI agents." },
 	"mobile.notifications.channel.two_note_chime": { role: "meta", note: "Name of an Android notification channel, shown in the system's app notification settings. It is the name of one of Local Operator's built-in notification sounds; use the same translation as the desktop app's sound picker (wire.notification_sound.sound.*). Sentence case, no final full stop." },
 	"mobile.notifications.computer_registration.failed": { role: "status", note: "Settings › Notifications, a status line: registering this phone for the computer's push notifications failed for a temporary reason; the app retries when it is opened again." },
 	"mobile.notifications.computer_registration.no_token": { role: "status", note: "Settings › Notifications, a status line: the phone's operating system has not given the app a push address (device token), so the computer cannot send push notifications to it. 'Reopen the app' is the remedy." },
@@ -4724,6 +6218,8 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.notifications.preferences.agent_note": { role: "help", note: "Both refers to Agent finished and Agent hit an error. The global master must remain enabled to keep Team Bridge." },
 	"mobile.notifications.preferences.bridge_heading": { role: "heading", note: "Product name, subsection heading." },
 	"mobile.notifications.preferences.bridge_note": { role: "help", note: "Directions to existing per-conversation notification controls for DMs, groups and channels; use the same option names as the Team Bridge bell menu." },
+	"mobile.notifications.preferences.bridge_system_off": { role: "help", note: "Shown under the Team Bridge switch in Settings when the reader has switched off the Team Bridge channel in Android's system settings. States the consequence; the app cannot turn it back on itself." },
+	"mobile.notifications.preferences.bridge_system_open": { role: "button", note: "Button that opens Android's system settings page for the Team Bridge notification channel." },
 	"mobile.notifications.preferences.completions": { role: "button", note: "Settings › Notifications, a switch row: notify when an AI agent on the computer finishes its turn. Short, past tense." },
 	"mobile.notifications.preferences.computer_keeps_sending": { role: "help", note: "Settings › Notifications, when the reader turned notifications (or one kind) off but the connected computer runs an older Local Operator that cannot honour it: that computer keeps sending agent notifications until it is updated. Plain and honest; Local Operator is a brand." },
 	"mobile.notifications.preferences.disabled_hint": { role: "help", note: "Screen-reader hint on a dimmed notification switch, saying why it cannot be changed. Not shown on screen. Local Operator is a brand." },
@@ -4740,6 +6236,7 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.notifications.priority_high": { role: "status", note: "Badge on a notification the sender marked high priority. One word." },
 	"mobile.notifications.section.waiting": { role: "heading", note: "Pinned section heading at the top of the notifications inbox: the asks that are blocked on the reader. Short heading, ~20 characters. No placeholders." },
 	"mobile.notifications.section.waiting_count": { role: "heading", note: "The same pinned section heading with the number of items in it, e.g. 'Waiting on you · 3'. {count} is an integer shown as digits; no noun follows it, so no plural arms. Keep the middle dot separator." },
+	"mobile.notifications.team_bridge.self_name": { role: "meta", note: "The reader's own name in an Android conversation notification (the 'me' person of a message thread). One short pronoun." },
 	"mobile.notifications.title": { role: "heading", note: "Title of the notifications inbox screen." },
 	"mobile.notifications.turn_on": { role: "button", note: "The one label of every control that turns this phone's notifications on: the first-run sheet's primary button (raises the phone's permission dialog), the Settings › Notifications button, and the 'Notifications are off' row's button (opens this app's page in the system settings). Use the same words in all three places." },
 	"mobile.oauth.failed": { role: "status", note: "App sign-in failure when Android native transport or browser cannot complete. Cancellation is a separate existing state. No native error/URL/code is shown." },
@@ -4925,7 +6422,16 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.session.composer.not_sent_storage": { role: "status", note: "Composer error before any HTTP dispatch: local safe-retry preparation failed. The text and image draft has not been consumed. Do not imply uncertain delivery or assert that disk space is the cause; checking free space is one actionable remedy. Never include storage exception text or private paths." },
 	"mobile.session.composer.retained_instruction": { role: "confirm", note: "Notice above the composer when an earlier instruction is retained and may already have been delivered, so the user must retry it before sending the current draft. Two sentences." },
 	"mobile.session.composer.retry_not_sent_storage": { role: "status", note: "Only the current RETRY ATTEMPT was not dispatched because local safe-retry preparation failed. The original instruction may already have arrived: its separate retained-envelope warning and Retry earlier instruction action stay visible. Never imply the current draft was retried or disk space is the known cause. Never include raw storage errors." },
+	"mobile.session.composer.settings_not_applied": { role: "status", note: "Composer error when the session DID reopen (its header now reads Live or Idle) but the model or effort the reader picked for it was refused, so nothing was sent. It shows on two paths: after Send (the message is still in the composer and Send is enabled) and after Retry of a held earlier instruction (that instruction stays held and Send is disabled until it is resolved; the card's Retry is the working control). The remedy must therefore name no specific button: say 'try again' generically, never 'send again', and offer picking a different model or effort as the way out of a repeated refusal. Must not say the session failed to reopen, and must not point at the header's Ended control, which is no longer shown. 'Effort' is the product's word for how hard the model works; reuse the term from the effort-change error." },
 	"mobile.session.conversation_details": { role: "heading", note: "The destination screen's own title, used as the label of the control that opens it — not an action verb. It must stay identical wherever that screen is named, including the sentence in mobile.home.options.fixed, so a reader recognises the same destination. No final full stop." },
+	"mobile.session.diagram.close": { role: "button", note: "Accessible name of the close button in the full-screen diagram viewer. Imperative, sentence case, no final full stop." },
+	"mobile.session.diagram.copied": { role: "status", note: "One lower-case word shown beside the diagram kind label ('mermaid · copied') after the source was copied. Mirrors the code block's copied marker. The middle dot separator is added by the app." },
+	"mobile.session.diagram.copy": { role: "button", note: "Accessible name of the icon button in a diagram's header that copies the diagram's source text (Mermaid syntax) to the clipboard. Imperative, sentence case, no final full stop." },
+	"mobile.session.diagram.error": { role: "status", note: "Shown above a code block when a diagram could not be drawn. The reason Pele gave follows on its own line in English and is not part of this string. Two short sentences." },
+	"mobile.session.diagram.label": { role: "meta", note: "Accessible name of a drawn diagram in the transcript when it has no title. {type} is the diagram kind as an English technical token (flowchart, sequence, state, class, er, gantt, pie…): keep it as written and never translate it. No final full stop." },
+	"mobile.session.diagram.label_titled": { role: "meta", note: "Accessible name of a drawn diagram that has a title or a first label. {type} is the English technical diagram kind (flowchart, sequence…): keep it as written. {title} is text written by the assistant, inserted unchanged. No final full stop." },
+	"mobile.session.diagram.open_hint": { role: "help", note: "Accessibility hint on a drawn diagram in the transcript. Activating it opens the diagram full screen, where it can be panned (and on iPhone pinch-zoomed; the hint does not promise zoom because Android has none). Sentence case, no final full stop." },
+	"mobile.session.diagram.viewer": { role: "heading", note: "Accessible name of the full-screen diagram viewer dialog. A short noun phrase, sentence case, no final full stop." },
 	"mobile.session.empty.headline": { role: "status", note: "Empty-state headline for a session with no messages. Short, final full stop." },
 	"mobile.session.empty.next": { role: "help", note: "Empty-state follow-up pointing to the composer under the transcript. 'Below' refers to the composer's position." },
 	"mobile.session.fallback_name": { role: "meta", note: "Lower-case noun used as the header title of an untitled session and in \"Back to <name>\" when the conversation has no name. A bare noun meaning one conversation with the agent." },
@@ -4954,6 +6460,10 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.session.history.loading": { role: "status", note: "Busy state while reading one earlier transcript page." },
 	"mobile.session.history.refresh_failed": { role: "status", note: "Reading the newest transcript page failed (returning to the app, Check again, or reloading history). Shown at the newest edge with a Try again button; do not repeat that label. Must not say EARLIER messages failed." },
 	"mobile.session.history.stalled": { role: "status", note: "The server returned a cursor that did not advance; automatic reads stop. Name the button's own action (Try again) or reopening; plain wording, no engineering terms." },
+	"mobile.session.inline_chart_data": { role: "button", note: "Disclosure below a chart in an assistant reply. Opens and closes the chart's exact values as a table. The button label stays the same and the expanded state is read separately. Short noun phrase, no final full stop." },
+	"mobile.session.jump_to_latest": { role: "button", note: "The visible and accessible name of the floating chip over the transcript that takes a reader who scrolled up back to the newest message. It appears only after new output arrived while they were away. Keep the leading down arrow; imperative, sentence case, no final full stop. The arrow points at the newest content below, not at the reading direction." },
+	"mobile.session.jump_to_latest_name": { role: "button", note: "The ACCESSIBLE name of the floating \"jump to latest\" chip: the same sentence as mobile.session.jump_to_latest WITHOUT the leading down arrow, because a screen reader would read the glyph as \"down arrow\". Imperative, sentence case, no final full stop. Shown visually only by screen readers, never on the chip itself." },
+	"mobile.session.jump_to_latest_short": { role: "button", note: "The visible form of mobile.session.jump_to_latest on phones narrower than 360 pt, where the full sentence crowds the row beside it. Keep the leading down arrow; one or two words at most. The accessible name stays the full sentence, so this label may be an abbreviation." },
 	"mobile.session.not_connected.headline": { role: "status", note: "Empty-state headline on a session screen opened with no computer connected. Sentence with a final full stop." },
 	"mobile.session.not_connected.next": { role: "help", note: "Empty-state follow-up telling the user how to reach the session once a computer is connected. One sentence." },
 	"mobile.session.outbox.composer_discarding": { role: "help", note: "Shown under the disabled send button for the few seconds after the user discarded an earlier message while the app finishes the attempt that was already under way. Nothing for the user to do; sending unlocks by itself." },
@@ -4982,7 +6492,7 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.session.region.label_todos": { role: "meta", note: "Lower-case noun spliced into {labels} of below_labels: the 'tasks' (todo list) band. Reuse the shipped tasks term." },
 	"mobile.session.region.label_working": { role: "meta", note: "Lower-case noun spliced into mobile.session.region.below_labels {labels} (joined with ' · '): names the 'activity' band that is scrolled out of view. Must read inside 'X below'. Lower case, one word if possible." },
 	"mobile.session.region.more_below": { role: "meta", note: "Cue under the capped activity region when more rows are hidden below and there are no region names to list. Keep the middle dot and the down arrow; lower case." },
-	"mobile.session.sheet_title.attach": { role: "heading", note: "Title of the bottom sheet offering attachment sources (photo, file, camera) in the composer: the verb 'attach' used as a title. Lower case as currently shipped (other sheet titles are Title case; a casing change is a separate design decision). ~16 characters. No placeholders." },
+	"mobile.session.sheet_title.attach": { role: "heading", note: "Title of the bottom sheet that lists image sources in the composer (Photo Library, Take Photo, Image from Files and Paste Image on iOS and Android; Choose Image and Paste Image on web). It says what the sheet adds — an image — because the relay accepts images only, so 'Attach' promised files it cannot take. Title case like the Model and Effort sheet titles; scripts without letter case need no change. ~16 characters. No placeholders." },
 	"mobile.session.sheet_title.commands": { role: "heading", note: "Title of the bottom sheet listing slash commands the reader can run in a conversation. One noun in Title case in English, like its sibling sheet titles (Model, Effort, Search); use your language's natural capitalisation for a title. ~16 characters. No placeholders." },
 	"mobile.session.sheet_title.effort": { role: "heading", note: "Title of the sheet that lists the reasoning-effort levels to choose from. Title case in English." },
 	"mobile.session.sheet_title.model": { role: "heading", note: "Title of the sheet that lists the models to choose from. Title case in English." },
@@ -5096,7 +6606,7 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.settings.theme.no_match": { role: "status", note: "Shown in a section when the search matches no theme in it. No final full stop." },
 	"mobile.settings.theme.row_label": { role: "button", note: "Screen-reader name of the Settings row that opens the Theme screen; {name} is the theme painting the app now (a proper noun, never translated). No final full stop." },
 	"mobile.settings.theme.search_label": { role: "help", note: "Accessible name of the search field that filters the theme list by name. No final full stop." },
-	"mobile.settings.theme.search_placeholder": { role: "help", note: "Placeholder inside the same search field. Usually identical to the field's accessible name. No final full stop." },
+	"mobile.settings.theme.search_placeholder": { role: "help", note: "Placeholder hint inside the theme search field, shown under its visible label `Search themes` (mobile.settings.theme.search_label) until the reader types. Says WHAT to type: part of a theme's name. It must not repeat or paraphrase the label. `Dracula` is the name of a theme the app ships: keep it exactly, in Latin script, never translated or transliterated. Sentence fragment, no final full stop." },
 	"mobile.settings.theme.section_dark": { role: "heading", note: "Section heading over the grid of dark themes. {count} is how many dark themes the section currently lists (after search). Rendered in uppercase in some scripts. No final full stop." },
 	"mobile.settings.theme.section_light": { role: "heading", note: "Section heading over the grid of light themes. {count} is how many light themes the section currently lists (after search). No final full stop." },
 	"mobile.settings.theme.title": { role: "heading", note: "Title of the Theme screen and the label of the Settings row that opens it. \"Theme\" means a colour scheme for the whole app. No final full stop." },
@@ -5107,6 +6617,7 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.sidebar.empty_by_view.next": { role: "help", note: "Second line of that empty state: names the ways back. 'Sections' are Pinned/Running/Today/This week/Older; 'ended sessions' is the Show ended sessions switch." },
 	"mobile.sidebar.empty_by_view.reset": { role: "button", note: "Action of that empty state: restores the default drawer view (every section shown, ended sessions shown, default order and grouping)." },
 	"mobile.sidebar.group.one_list": { role: "button", note: "Grouping option: one list with no section headings. Desktop: ui.chat.sidebar_view.one_list." },
+	"mobile.sidebar.group.tag": { role: "button", note: "Grouping option: one group per tag, pinned conversations first and untagged last. Only offered on a relay with the tag registry. Desktop: ui.chat.sidebar_view.tag." },
 	"mobile.sidebar.group.time_section": { role: "button", note: "Grouping option: headed sections Pinned, Running, Today, This week, Older. Desktop: ui.chat.sidebar_view.time_section." },
 	"mobile.sidebar.group_by": { role: "heading", note: "Label of the choice of how the drawer groups conversations. Desktop: ui.chat.sidebar_view.group_by." },
 	"mobile.sidebar.hidden_sections": { role: "status", note: "Quiet line at the top of the drawer's list when the reader has switched sections off in Settings → Sidebar; {count} is a number. Preserve ICU plural arms and #. Desktop: ui.chat.sidebar_view.hidden." },
@@ -5120,16 +6631,31 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.sidebar.row.asks": { role: "meta", note: "Count chip on a conversation row: open asks (questions/approvals queued for the operator). Monospace meta strip, never truncated: keep each arm under ~10 characters. ICU plural with `#` for the number; keep the `one` and `other` arms and add the locale's own CLDR arms (few/many) where it has them." },
 	"mobile.sidebar.row.asks_not_blocker": { role: "meta", note: "Screen-reader name of the asks chip. {asks} is the already-formatted count (mobile.sidebar.row.asks, e.g. \"2 asks\"); \"not a blocker\" says the agent keeps working, it is NOT waiting. Keep the placeholder." },
 	"mobile.sidebar.row.new": { role: "status", note: "Accent marker on a conversation row with unread activity. One lowercase word, keep under ~8 characters (sits in a crowded meta strip). No placeholders." },
+	"mobile.sidebar.row.on_device": { role: "meta", note: "Second line of a conversation row for a conversation running on ANOTHER of the reader's devices (paired over the mesh), in place of the folder/model line local rows show: it names the device the conversation lives on, e.g. \"On Studio Mac\". Plain, neutral statement of location in the muted row style, sentence case, no final full stop. Width: one line on narrow phone rows (as little as ~200 dp of text at default size), ellipsized at the tail, so keep the words around the name as short as your language allows; the name is what must stay visible. {device} is the device's NAME as the reader chose it (any script, often Latin even in RTL locales): never translate, transliterate, abbreviate or reorder anything inside it; you may move the placeholder within the sentence to suit your grammar (e.g. postposition languages put it first). Urdu (RTL): a Latin device name inside RTL text is bidirectional, so write no bidi control characters; the app lays out direction. Plain text, no ICU arms." },
 	"mobile.sidebar.row.todos": { role: "meta", note: "Count chip on a conversation row: open todo items in the conversation's task list. Monospace meta strip that yields at large text; keep each arm under ~10 characters. ICU plural with `#` for the number; keep the `one` and `other` arms and add the locale's own CLDR arms (few/many) where it has them." },
+	"mobile.sidebar.row_label.join": { role: "meta", note: "Separator between two fragments of a conversation row's screen-reader name (never shown on screen; a screen reader speaks it as a pause). {first} is the title or the already-joined fragments so far, {second} is the next fragment, e.g. \"Payments, approval waiting, on Studio, open\" is built by joining one fragment at a time. A bare list separator: use your locale's enumeration comma and spacing (e.g. full-width or ideographic comma, Arabic-script comma), never a word for \"and\", no final full stop. Keep both placeholders, {first} before {second}." },
+	"mobile.sidebar.row_label.on_device": { role: "meta", note: "Fragment of a conversation row's screen-reader name for a conversation on another device: {device} is that device's name as the reader set it (e.g. \"on Studio Mac\"). Fragments are joined by mobile.sidebar.row_label.join (a comma in English). Keep the placeholder; never translate the name." },
+	"mobile.sidebar.row_label.open": { role: "status", note: "Fragment of a conversation row's screen-reader name, read last when this conversation is the one currently open on screen. Fragments are joined by mobile.sidebar.row_label.join (a comma in English). Lowercase, no placeholders." },
+	"mobile.sidebar.row_label.waiting": { role: "status", note: "Fragment of a conversation row's screen-reader name, read after the title when the agent is waiting on the reader: an approval or an answer to a question. Fragments are joined by mobile.sidebar.row_label.join (a comma in English) (\"Payments, approval waiting, open\"). Keep the select and both arms; translate each arm as a whole phrase, never by composing the status word." },
+	"mobile.sidebar.row_label.working": { role: "status", note: "Fragment of a conversation row's screen-reader name, read after the title while the agent's turn is running. Fragments are joined by mobile.sidebar.row_label.join (a comma in English). Lowercase, no placeholders." },
+	"mobile.sidebar.row_status.approval": { role: "status", note: "The one status word on a conversation row whose agent is waiting for the reader to approve an action. Painted in the danger colour in a crowded meta strip; one lowercase word, keep under ~10 characters. No placeholders." },
+	"mobile.sidebar.row_status.ended": { role: "status", note: "Muted status word on a row whose conversation has ended (a receipt, not an error). Also read in the row's screen-reader name. One lowercase word, keep under ~10 characters. No placeholders." },
+	"mobile.sidebar.row_status.not_answering": { role: "status", note: "Muted status word on a row whose conversation's runtime is up but has stopped answering (a receipt, not an error). Also read in the row's screen-reader name. Lowercase, keep under ~14 characters. No placeholders." },
+	"mobile.sidebar.row_status.not_reachable": { role: "status", note: "Muted status word on a row for a conversation on ANOTHER device that the mesh can no longer reach, so the row is stale as a whole. Also read in the row's screen-reader name after the device. Lowercase, keep under ~14 characters; not an error. No placeholders." },
+	"mobile.sidebar.row_status.question": { role: "status", note: "The one status word on a conversation row whose agent asked the reader a question and is waiting for the answer. Painted in the danger colour in a crowded meta strip; one lowercase word, keep under ~10 characters. No placeholders." },
 	"mobile.sidebar.section.older": { role: "heading", note: "Drawer section heading for everything older than this week. Desktop: ui.chat.sidebar_view.section.older." },
 	"mobile.sidebar.section.pinned": { role: "heading", note: "Drawer section heading for conversations the reader pinned; also the switch label that shows or hides it. Desktop: ui.chat.sidebar_view.section.pinned." },
 	"mobile.sidebar.section.running": { role: "heading", note: "Drawer section heading for conversations with a turn in flight or waiting on the reader. Desktop: ui.chat.sidebar_view.section.running." },
 	"mobile.sidebar.section.today": { role: "heading", note: "Drawer section heading for conversations from this local calendar day. Desktop: ui.chat.sidebar_view.section.today." },
+	"mobile.sidebar.section.untagged": { role: "heading", note: "Drawer section heading under the Tag grouping for conversations whose primary tag is unset. Not a switch label; the tag grouping has no per-section switches." },
 	"mobile.sidebar.section.week": { role: "heading", note: "Drawer section heading for conversations from the last six calendar days, not today. Desktop: ui.chat.sidebar_view.section.week." },
 	"mobile.sidebar.sections": { role: "heading", note: "Label of the list of switches that show or hide each drawer section. Desktop: ui.chat.sidebar_view.sections." },
 	"mobile.sidebar.settings_heading": { role: "heading", note: "Heading of the Settings section holding every drawer (sidebar) view option." },
 	"mobile.sidebar.show_ended": { role: "button", note: "Switch label: whether conversations whose session has ended stay in the drawer. Phone-only setting; on by default." },
 	"mobile.sidebar.show_ended_hint": { role: "help", note: "One sentence under the 'Show ended sessions' switch: turning it off never hides a pinned or running conversation." },
+	"mobile.sidebar.show_tags": { role: "button", note: "Switch label: whether each conversation row paints its tag line in the drawer. On by default; a relay without the tag routes never shows the switch." },
+	"mobile.sidebar.show_tags_hint": { role: "help", note: "One sentence under the 'Show tags' switch: turning the line off does not remove anything, because the tags sheet in each conversation's long-press menu still assigns them." },
+	"mobile.sidebar.tag_group.announcement": { role: "meta", note: "Screen-reader name of a tag group's heading. {name} is the operator's own tag name (or the word Untagged) and must not be translated here; the ICU plural says how many conversations the group holds and keeps the `#` placeholder." },
 	"mobile.sidebar.tags.announcement": { role: "meta", note: "Screen-reader name of a conversation row's tag line. {names} is the operator's own category names joined with \", \" (user data, never translated). Keep the placeholder; the \"Tags\" word should match relay.chrome.row.tags." },
 	"mobile.sidebar.tags.empty_headline": { role: "heading", note: "Empty-state headline in the Tags sheet when no tag categories exist. Short sentence, keep under ~28 characters; shown at 200% text in a ~300 pt sheet. No placeholders." },
 	"mobile.sidebar.tags.empty_next": { role: "help", note: "Empty-state second line in the Tags sheet: categories are created in the desktop app, not on the phone. Very short (the 200% frame cut a longer line); keep under ~24 characters. No placeholders." },
@@ -5174,6 +6700,12 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.signin.use_address": { role: "button", note: "Button that opens the manual connect screen where the reader types a relay address and password. Used on the sign-in screen and in the 'sign-in unavailable' panel; same wording at both." },
 	"mobile.signin.welcome.body": { role: "help", note: "Supporting paragraph on the welcome screen under the headline: the app controls sessions on the reader's own machine and shows the results; code never leaves the machine ('it' = the machine). Keep the privacy promise exact." },
 	"mobile.signin.welcome.headline": { role: "heading", note: "Headline of the first-run welcome screen (screen-reader header). One sentence with a full stop; 'agent' is the product's own word for the assistant." },
+	"mobile.team_bridge.actions.a11y_react": { role: "button", note: "Screen-reader action on a Team Bridge message (VoiceOver rotor, TalkBack actions menu) that opens the message-actions sheet with its quick-reaction row. Also the hint on each quick-reaction emoji in that sheet. Imperative verb, like Slack's \"React\"." },
+	"mobile.team_bridge.actions.copied": { role: "status", note: "Brief confirmation shown after Copy text put the message on the clipboard. Past participle, no object." },
+	"mobile.team_bridge.actions.copy_text": { role: "button", note: "Row in the message-actions sheet that copies the whole message, as plain text without formatting, to the clipboard. Also a screen-reader action on the message." },
+	"mobile.team_bridge.actions.reply_in_thread": { role: "button", note: "Row in the message-actions sheet that opens this message's reply thread (starting one if it has no replies yet) with the reply box focused. Same wording as mobile.team_bridge.reply_thread.reply; keep them identical." },
+	"mobile.team_bridge.actions.select_text": { role: "button", note: "Row in the message-actions sheet that lets the reader select part of the message with drag handles, then copy or share it. Slack's label for the same action. Also a screen-reader action on the message." },
+	"mobile.team_bridge.actions.title": { role: "heading", note: "Accessible name and title of the sheet that rises when a Team Bridge message is long-pressed (Slack-style message menu). Names the menu, not an action." },
 	"mobile.team_bridge.attachment.add": { role: "button", note: "Team Bridge image attachments: add. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. " },
 	"mobile.team_bridge.attachment.attached_summary": { role: "status", note: "Team Bridge image attachments: attached_summary. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. " },
 	"mobile.team_bridge.attachment.cannot_send": { role: "status", note: "Team Bridge image attachments: cannot_send. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. Remove only the failing chip; retry is not available for final refusals." },
@@ -5217,6 +6749,23 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.team_bridge.attachment.viewer": { role: "status", note: "Team Bridge image attachments: viewer. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. " },
 	"mobile.team_bridge.attachment.wait_uploads": { role: "status", note: "Team Bridge image attachments: wait_uploads. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. " },
 	"mobile.team_bridge.back": { role: "button", note: "Team Bridge mobile UI: back. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
+	"mobile.team_bridge.card_body.deleted": { role: "status", note: "Inbound Team Bridge card in a conversation transcript: a message another person or agent sent to the user's agent. The sender or an admin deleted the message." },
+	"mobile.team_bridge.card_body.held": { role: "status", note: "Inbound Team Bridge card in a conversation transcript: a message another person or agent sent to the user's agent. Content screening held the message for review; it was not shown to the agent and may still be released or refused later. Never mention a reason or category; only the outcome." },
+	"mobile.team_bridge.card_body.held_transient": { role: "status", note: "Inbound Team Bridge card in a conversation transcript: a message another person or agent sent to the user's agent. A delay, not a decision: screening has not run yet. Do not say 'moderation' or imply anyone decided anything." },
+	"mobile.team_bridge.card_body.loading": { role: "status", note: "Inbound Team Bridge card in a conversation transcript: a message another person or agent sent to the user's agent. Shown while the message body is being fetched." },
+	"mobile.team_bridge.card_body.more_messages": { role: "meta", note: "Inbound Team Bridge card in a conversation transcript: a message another person or agent sent to the user's agent. One card can group several messages; only the first ones are listed. {count} is how many more are not shown. Preserve the ICU plural." },
+	"mobile.team_bridge.card_body.not_admitted": { role: "status", note: "Inbound Team Bridge card in a conversation transcript: a message another person or agent sent to the user's agent. The message was never handed to the agent. No moderation decision is implied; do not imply one." },
+	"mobile.team_bridge.card_body.not_member": { role: "status", note: "Inbound Team Bridge card in a conversation transcript: a message another person or agent sent to the user's agent. The body cannot be loaded because the user left the conversation." },
+	"mobile.team_bridge.card_body.offline": { role: "status", note: "Inbound Team Bridge card in a conversation transcript: a message another person or agent sent to the user's agent. Radient could not be reached while loading the body. The card retries by itself while it is on screen, so the sentence states that a retry is under way; it asks nothing of the reader. 'Radient' is a product name; do not translate it." },
+	"mobile.team_bridge.card_body.other_account": { role: "status", note: "Inbound Team Bridge card in a conversation transcript: a message another person or agent sent to the user's agent. The message arrived while a different account was signed in, so its body is not shown now. 'Radient' is a product name; do not translate it." },
+	"mobile.team_bridge.card_body.pending": { role: "status", note: "Inbound Team Bridge card in a conversation transcript: a message another person or agent sent to the user's agent. The message passed screening but the agent has not been handed it yet. Not an error." },
+	"mobile.team_bridge.card_body.refused": { role: "status", note: "Inbound Team Bridge card in a conversation transcript: a message another person or agent sent to the user's agent. Radient's moderation rejected the message for the agent. Never mention a reason or category; only the outcome. " },
+	"mobile.team_bridge.card_body.show_less": { role: "button", note: "Inbound Team Bridge card in a conversation transcript: a message another person or agent sent to the user's agent. Toggle that collapses a long message back to its first lines." },
+	"mobile.team_bridge.card_body.show_more": { role: "button", note: "Inbound Team Bridge card in a conversation transcript: a message another person or agent sent to the user's agent. Toggle under a long message that is cut off after a few lines; opens the full message." },
+	"mobile.team_bridge.card_body.signed_out": { role: "status", note: "Inbound Team Bridge card in a conversation transcript: a message another person or agent sent to the user's agent. The body is shown only while signed in. 'Radient' is a product name; do not translate it." },
+	"mobile.team_bridge.card_body.thread_reply": { role: "meta", note: "Inbound card context beside its receipt time and existing sender/conversation caption. This message replies within a conversation thread, not a new top-level message. Short label, no trailing period. Non-English translations are drafts pending independent copy audit." },
+	"mobile.team_bridge.card_body.unavailable": { role: "status", note: "Inbound Team Bridge card in a conversation transcript: a message another person or agent sent to the user's agent. Generic fallback when the body cannot be shown and no more specific sentence applies." },
+	"mobile.team_bridge.card_body.untrusted": { role: "meta", note: "Inbound Team Bridge card in a conversation transcript: a message another person or agent sent to the user's agent. Framing line directly above the message body. The body below is text someone else wrote and is NOT vetted: it must read as a caution, not an endorsement. Keep 'untrusted' strong. Same wording as the desktop and terminal apps." },
 	"mobile.team_bridge.conversation": { role: "heading", note: "Team Bridge mobile UI: conversation. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
 	"mobile.team_bridge.default_on.body": { role: "help", note: "One sentence under the heading. “Chief of staff” is the product term for the person's own agent. Do not imply the person did anything to enable it." },
 	"mobile.team_bridge.default_on.dismiss": { role: "button", note: "Button. Closes the banner for good on this device, leaving Team Bridge on. Not “OK”, which would read as acceptance." },
@@ -5279,6 +6828,15 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.team_bridge.list.preview": { role: "help", note: "Team Bridge mobile UI: list / preview. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
 	"mobile.team_bridge.list.quiet": { role: "status", note: "Team Bridge mobile UI: list / quiet. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
 	"mobile.team_bridge.list.self": { role: "help", note: "Team Bridge mobile UI: list / self. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
+	"mobile.team_bridge.mentions.dismiss_notice": { role: "button", note: "Team Bridge @-mention notice: dismiss button. Short verb." },
+	"mobile.team_bridge.mentions.invited": { role: "status", note: "Team Bridge @-mention notice after picking someone invited but not yet joined: no notification is sent. {name} is user data." },
+	"mobile.team_bridge.mentions.no_endpoint": { role: "status", note: "Team Bridge @-mention notice after picking an agent whose address is not known yet because the people list has not loaded: no notification is sent. {name} is user data." },
+	"mobile.team_bridge.mentions.not_member": { role: "status", note: "Team Bridge @-mention notice after picking someone who is not in the conversation: their name stays in the message but no notification is sent. {name} is user data. Do not imply an invite is sent." },
+	"mobile.team_bridge.mentions.results_count": { role: "status", note: "Team Bridge @-mention suggestions: spoken to screen readers when the suggestion list changes. Counts people and agents offered. Preserve the ICU plural." },
+	"mobile.team_bridge.mentions.row_label": { role: "button", note: "Team Bridge @-mention suggestions: accessibility label for one suggestion row. {name} is a person or agent display name (user data, never translated)." },
+	"mobile.team_bridge.mentions.section_members": { role: "heading", note: "Team Bridge @-mention suggestions: heading over people and agents who are members of the open conversation. Short; shown above the keyboard." },
+	"mobile.team_bridge.mentions.section_org": { role: "heading", note: "Team Bridge @-mention suggestions: heading over people and agents in the organization who are not in this conversation." },
+	"mobile.team_bridge.mentions.unavailable": { role: "status", note: "Team Bridge @-mention suggestions: shown when the organization directory has not loaded, so only conversation members can be suggested. No error code; calm tone." },
 	"mobile.team_bridge.navigation.caption": { role: "help", note: "Team Bridge mobile UI: navigation / caption. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
 	"mobile.team_bridge.navigation.entry": { role: "help", note: "Team Bridge mobile UI: navigation / entry. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state. Parameters are caller-supplied names/counts or protocol selects; do not translate their identifiers. Preserve ICU plural/select syntax and all variants; names are not translated." },
 	"mobile.team_bridge.navigation.entry_loading": { role: "button", note: "Team Bridge mobile UI: accessible name of the workspace drawer's Team Bridge mode button while the account's unread count has not been read yet. Says 'loading', never zero: the count is unknown, not empty. Keep the product name 'Team Bridge' untranslated." },
@@ -5295,6 +6853,35 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.team_bridge.profile.open": { role: "button", note: "Accessibility label for the person or software-agent mark that opens its profile. {name} is the caller-provided display name; preserve the exact placeholder and keep the whole name without translation or ellipsis. This opens a profile, not a conversation." },
 	"mobile.team_bridge.profile.opens_hint": { role: "help", note: "Accessibility hint on a person or software-agent mark: activating it opens their profile. No parameters; do not imply a message is sent or a conversation is created." },
 	"mobile.team_bridge.profile.title": { role: "heading", note: "Profile sheet title for either a person or software agent, not their user-provided job title. No parameters; profile names, titles, descriptions and timezones remain untranslated user data." },
+	"mobile.team_bridge.reactions.add": { role: "button", note: "Accessible name of the \"+\" control that adds an emoji reaction to a message: the last cell of the quick-reaction row (opens the system emoji keyboard) and the small \"+\" after a message's reaction pills." },
+	"mobile.team_bridge.reactions.added": { role: "status", note: "Polite screen-reader announcement after the reader's reaction was saved." },
+	"mobile.team_bridge.reactions.details": { role: "heading", note: "Read-only reaction summary sheet heading; never implies verified identities." },
+	"mobile.team_bridge.reactions.failed": { role: "status", note: "Shown in small red text under a message, and announced, when adding or removing a reaction failed; the previous reactions are restored. Tapping again retries." },
+	"mobile.team_bridge.reactions.hint_add": { role: "help", note: "Screen-reader hint on a reaction pill the reader has not reacted with: double-tapping adds the same emoji as their own reaction." },
+	"mobile.team_bridge.reactions.hint_inspect": { role: "help", note: "Read-only reaction pill: tap inspects the summary, never mutates it." },
+	"mobile.team_bridge.reactions.hint_remove": { role: "help", note: "Screen-reader hint on a reaction pill the reader has reacted with: double-tapping removes their reaction." },
+	"mobile.team_bridge.reactions.keyboard_hint": { role: "help", note: "One line shown above the system keyboard after tapping \"+\" to add a reaction: the reader picks any emoji from their phone's emoji keyboard. Letters typed are ignored." },
+	"mobile.team_bridge.reactions.pill": { role: "button", note: "Screen-reader name of one reaction pill under a message, when the reader has NOT reacted with it. {emoji} is the emoji itself; VoiceOver/TalkBack speak its system name (e.g. \"thumbs up\"). {count} is how many people reacted with it. Keep the order natural for your language." },
+	"mobile.team_bridge.reactions.pill_mine": { role: "button", note: "Screen-reader name of one reaction pill when the reader HAS reacted with it (the pill is highlighted). Same as mobile.team_bridge.reactions.pill plus \"you reacted\". Example: \"thumbs up, 3 reactions, you reacted\"." },
+	"mobile.team_bridge.reactions.removed": { role: "status", note: "Polite screen-reader announcement after the reader's reaction was removed." },
+	"mobile.team_bridge.reactions.sample": { role: "meta", note: "Sample labels in original hub order, joined by locale list formatting. count is total minus sample length; ownership is independent. Zero must omit others suffix." },
+	"mobile.team_bridge.reactions.sample_none": { role: "meta", note: "The summary includes a total count but no sample labels. Do not imply missing actors or a full roster endpoint." },
+	"mobile.team_bridge.reactions.sample_notice": { role: "meta", note: "Explicitly explains that sample labels are not a full reactor roster." },
+	"mobile.team_bridge.reactions.show_less": { role: "button", note: "Collapse to three measured lines of pills." },
+	"mobile.team_bridge.reactions.show_more": { role: "button", note: "Expand collapsed reaction types; count counts hidden emoji pills, not people." },
+	"mobile.team_bridge.reactions.summary": { role: "status", note: "Spoken once before a message's reaction pills: the total number of reactions across all emoji on that message." },
+	"mobile.team_bridge.reactions.you_reacted": { role: "meta", note: "Independent reacted_by_me boolean. Never replace or reorder sample labels with this string." },
+	"mobile.team_bridge.reply_thread.count": { role: "meta", note: "Reply-thread affordance on a Team Bridge message: how many replies the thread under this message has. Served by the hub, never counted on the phone. Preserve {count}." },
+	"mobile.team_bridge.reply_thread.empty": { role: "status", note: "A reply thread whose root message has no replies left to show; the second sentence invites the reader to write the first reply (desktop wording)." },
+	"mobile.team_bridge.reply_thread.error": { role: "status", note: "Shown when a reply thread could not be read from Radient; a retry button follows." },
+	"mobile.team_bridge.reply_thread.last_reply": { role: "meta", note: "Served last_reply_at formatted as an absolute local date/time; never infer from visible replies." },
+	"mobile.team_bridge.reply_thread.loading": { role: "status", note: "Shown while a reply thread loads." },
+	"mobile.team_bridge.reply_thread.more": { role: "button", note: "Button at the end of a very long reply thread (more than one load of replies) that loads the next replies. No parameters; matches the desktop's 'Load more replies'." },
+	"mobile.team_bridge.reply_thread.open": { role: "button", note: "Accessible name of the control that opens a message's reply thread (Slack-style threads); matches the desktop's 'View thread, …'. Preserve {count}. 'Thread' means replies under one message, not the whole conversation." },
+	"mobile.team_bridge.reply_thread.open_unread": { role: "button", note: "Same control when some replies are unread by this reader. Preserve {count} and {unread}." },
+	"mobile.team_bridge.reply_thread.reply": { role: "button", note: "Composer label and placeholder for replying inside a thread; matches the desktop's 'Reply in thread'. A verb phrase: write a reply in this thread, not in the conversation." },
+	"mobile.team_bridge.reply_thread.retry": { role: "button", note: "Retries loading a reply thread." },
+	"mobile.team_bridge.reply_thread.title": { role: "heading", note: "Screen title for one message's reply thread (the message and its replies). Not the whole conversation." },
 	"mobile.team_bridge.retry": { role: "button", note: "Team Bridge mobile UI: retry. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
 	"mobile.team_bridge.thread.access_retry": { role: "button", note: "Team Bridge mobile UI: thread / access retry. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
 	"mobile.team_bridge.thread.anchor_missing": { role: "status", note: "Team Bridge mobile UI: thread / anchor missing. Shown once, briefly, when a notification or link pointed at one message that was deleted or can no longer be seen; the thread is shown at its newest messages instead. Not shown when the message simply could not be loaded." },
@@ -5388,6 +6975,10 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"relay.health.quiet_detail": { role: "help", note: "Sheet body for the YELLOW 'Not answering' state when the session is reachable but has gone quiet (heartbeat_stale). True behaviour to keep: a send can report a failure yet still be delivered once the session catches up; retrying under the same command id is safe. Do not promise queueing or delivery." },
 	"relay.health.reconnecting": { role: "status", note: "Title of the sheet and accessible name of the YELLOW status dot when the PHONE's own connection is down (the computer may be fine). One short state word, no ellipsis. Translator budget: 16 cells (the core's own maxCells for this key at 24d328a19a); the native context schema has no maxCells field, so the number is recorded here." },
 	"relay.health.reconnecting_detail": { role: "help", note: "Sheet body for the reconnecting state. It is the PHONE's connection that is down; the session itself may still be running, and the phone keeps trying on its own. 'Sending may fail' is deliberate — never promise that messages wait or are queued." },
+	"relay.skills.skipped": { role: "status", note: "Mirrored verbatim from the core relay catalogue (local_operator/i18n/catalogues/en/relay.skills.json at bfa3df2ac). Notice after a message was sent: the listed skills had no content to attach, so the message went without them. {names} is a comma-separated list of $-prefixed skill names (technical tokens, never translated); {count} is how many. The message WAS sent." },
+	"relay.skills.too_large": { role: "status", note: "Mirrored verbatim from the core relay catalogue (local_operator/i18n/catalogues/en/relay.skills.json at bfa3df2ac). Error under the message field: the skills named in the draft are too large to send together, so nothing was sent and the draft is kept. States the remedy: remove one skill and send again." },
+	"relay.skills.tray.hidden": { role: "meta", note: "Mirrored verbatim from the core relay catalogue (local_operator/i18n/catalogues/en/relay.skills.json at bfa3df2ac). Small tag on a skill row whose author marked it as not offered automatically (frontmatter 'hide'); the skill is still listed because the user typed its name. One lowercase word, no punctuation." },
+	"relay.skills.tray.label": { role: "heading", note: "Mirrored verbatim from the core relay catalogue (local_operator/i18n/catalogues/en/relay.skills.json at bfa3df2ac). Accessible name of the list of skills docked above the message field while the user types a $name. The noun 'skills' as the product names them; no punctuation." },
 	"relay.transcript.composer.queued": { role: "status", note: "Mirrored from the core relay catalogue (local_operator/i18n/catalogues/en/relay.transcript.context.json; core role: composer queued prompt count). Restores the pre-redesign queued-prompt count; {count} is the number of prompts waiting, not tool calls." },
 	"relay.transcript.fold.failed_label": { role: "status", note: "Mirrored from the core relay catalogue (local_operator/i18n/catalogues/en/relay.transcript.context.json; core role: collapsed group accessible failure state). Screen-reader text accompanying the failure glyph; it does not claim a count." },
 	"relay.transcript.fold.more": { role: "meta", note: "Mirrored from the core relay catalogue (local_operator/i18n/catalogues/en/relay.transcript.context.json; core role: tool-fold overflow unit). Follows at most five count units and counts actions hidden by that display cap, not additional tool types." },
@@ -5441,6 +7032,43 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.account_routing.unsaved": "Aún sin guardar.",
 		"mobile.agent_avatar.edit_hint": "Cambia esta imagen en la aplicación de escritorio",
 		"mobile.agent_avatar.label": "Imagen del agente",
+		"mobile.asks.answer_label": "Tu respuesta a: {question}",
+		"mobile.asks.answer_placeholder": "Tu respuesta",
+		"mobile.asks.choose_any": "Elige las que correspondan",
+		"mobile.asks.deadline_ago": "Plazo vencido hace {duration}",
+		"mobile.asks.decline": "Rechazar",
+		"mobile.asks.decline_hint": "No se envía ninguna respuesta. El agente decide por su cuenta.",
+		"mobile.asks.dismiss": "Descartar",
+		"mobile.asks.dismiss_open": "Descartar…",
+		"mobile.asks.dismiss_reason.chat": "Respondida en la conversación",
+		"mobile.asks.dismiss_reason.chat_note": "Ya respondiste en la conversación",
+		"mobile.asks.dismiss_reason.moot": "Ya no hace falta",
+		"mobile.asks.dismiss_reason.moot_note": "El agente deja de esperar una respuesta",
+		"mobile.asks.dismiss_title": "{count, plural, one {Descartar esta pregunta} many {Descartar estas preguntas} other {Descartar estas preguntas}}",
+		"mobile.asks.empty": "Nada en espera. Las preguntas del agente aparecerán aquí.",
+		"mobile.asks.honesty": "Esta aplicación muestra las preguntas en espera mientras está abierta. No puede avisarte cuando está cerrada.",
+		"mobile.asks.loading": "Leyendo preguntas…",
+		"mobile.asks.none_recorded": "No se registró ninguna respuesta para esta pregunta.",
+		"mobile.asks.nothing_left": "No queda nada que responder aquí. Estas preguntas ya se atendieron en otra pantalla o dispositivo.",
+		"mobile.asks.open_conversation": "Abrir conversación",
+		"mobile.asks.other_hint": "Escribe tu respuesta",
+		"mobile.asks.other_kept": "Tu texto se conserva, no se envía",
+		"mobile.asks.other_label": "Otro",
+		"mobile.asks.progress.pick_or_type": "Elige una opción o escribe tu propia respuesta para enviar.",
+		"mobile.asks.progress.tally": "{answered} de {total} preguntas respondidas u omitidas",
+		"mobile.asks.progress.type": "Escribe una respuesta u omite la pregunta para enviar.",
+		"mobile.asks.recommended": "· Recomendado",
+		"mobile.asks.secret_notice": "Secreto: se envía directamente y no aparece en la transcripción",
+		"mobile.asks.secret_notice_saved": "Secreto: se envía directamente, no aparece en la transcripción y se guarda en el ordenador para reutilizarlo",
+		"mobile.asks.secret_placeholder": "Valor secreto",
+		"mobile.asks.send_answer": "Enviar respuesta",
+		"mobile.asks.send_answers": "Enviar respuestas",
+		"mobile.asks.settled": "Atendidas",
+		"mobile.asks.skip": "Omitir (no enviar respuesta)",
+		"mobile.asks.title_fallback": "Preguntas",
+		"mobile.asks.truncated": "Se muestran las preguntas más recientes. Abre una conversación para ver el resto.",
+		"mobile.asks.unskip": "Responder esta pregunta",
+		"mobile.asks.urgent": "· Urgente",
 		"mobile.chrome.clear_search": "Borrar búsqueda",
 		"mobile.chrome.close_conversations": "Cerrar conversaciones",
 		"mobile.chrome.composer.dismiss_keyboard": "Ocultar teclado",
@@ -5449,6 +7077,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.chrome.composer.queued": "{count, plural, one {# mensaje en cola} other {# mensajes en cola}}",
 		"mobile.chrome.composer.row_cost": "Costo",
 		"mobile.chrome.composer.row_effort": "Esfuerzo",
+		"mobile.chrome.composer.row_identity": "Agente o equipo",
 		"mobile.chrome.composer.row_model": "Modelo",
 		"mobile.chrome.composer.row_questions": "Preguntas",
 		"mobile.chrome.composer.row_queue": "Cola",
@@ -5480,18 +7109,184 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.common.not_found.headline": "Esa página no existe.",
 		"mobile.common.not_found.next": "Vuelve a tus sesiones para continuar.",
 		"mobile.common.not_found.title": "Página no encontrada",
+		"mobile.common.resize_panel": "Cambiar el tamaño del panel",
 		"mobile.common.save": "Guardar",
 		"mobile.common.send": "Enviar",
+		"mobile.common.size.large": "Grande",
+		"mobile.common.size.medium": "Mediano",
+		"mobile.common.size.shorter": "Más bajo",
+		"mobile.common.size.taller": "Más alto",
 		"mobile.common.try_again": "Reintentar",
+		"mobile.community.approvals.agent": "Agente",
+		"mobile.community.approvals.decline": "No publicar",
+		"mobile.community.approvals.empty": "No hay publicaciones de agentes esperando tu aprobación.",
+		"mobile.community.approvals.expires": "{hours, plural, one {vence en # h} other {vence en # h}}",
+		"mobile.community.approvals.expires_days": "{days, plural, one {vence en # día} other {vence en # días}}",
+		"mobile.community.approvals.failed": "No se completó. Inténtalo de nuevo.",
+		"mobile.community.approvals.open_computer": "Abre Local Operator en tu ordenador para leer el texto exacto y decidir.",
+		"mobile.community.approvals.review": "Revisar en tu ordenador",
+		"mobile.community.approvals.review_note": "Revisar en tu ordenador la mantiene en espera hasta 24 h.",
+		"mobile.community.approvals.stays": "El borrador se queda en tu ordenador hasta que lo apruebes.",
+		"mobile.community.approvals.title": "Tu jefe de gabinete quiere publicar en #{channel}",
+		"mobile.community.approvals.title_unknown": "Tu jefe de gabinete quiere publicar en un canal de la comunidad",
+		"mobile.community.approvals.waiting": "Esperando tu decisión en tu ordenador.",
+		"mobile.community.browse.channels": "Canales",
+		"mobile.community.browse.channels_empty": "Ningún canal coincide.",
+		"mobile.community.browse.join": "Unirse",
+		"mobile.community.browse.load_more": "Cargar más",
+		"mobile.community.browse.mode": "Mostrar",
+		"mobile.community.browse.open": "Abrir",
+		"mobile.community.browse.people": "Personas",
+		"mobile.community.browse.people_empty": "Ninguna persona coincide.",
+		"mobile.community.browse.private": "Privado",
+		"mobile.community.browse.search": "Buscar",
+		"mobile.community.browse.title": "Explorar",
+		"mobile.community.category.harassment_or_abuse": "Acoso o abuso",
+		"mobile.community.category.private_information": "Información privada",
+		"mobile.community.category.spam_or_promotion": "Spam o promoción no declarada",
+		"mobile.community.category.unsafe_or_illegal": "Contenido peligroso o ilegal",
+		"mobile.community.common.loading": "Cargando la comunidad…",
+		"mobile.community.common.retry": "Reintentar",
+		"mobile.community.common.unavailable": "La comunidad no está disponible",
+		"mobile.community.composer.attach": "Adjuntar una imagen",
+		"mobile.community.composer.audience": "Visible para todos los miembros de la comunidad",
+		"mobile.community.composer.audience_dm": "Solo tú y {name} pueden ver esta conversación",
+		"mobile.community.composer.blocked_archived": "Este canal está archivado.",
+		"mobile.community.composer.blocked_locked": "Este canal está bloqueado.",
+		"mobile.community.composer.blocked_read_only": "Esta comunidad es de solo lectura.",
+		"mobile.community.composer.blocked_staff_only": "Aquí solo publican el personal y los moderadores.",
+		"mobile.community.composer.cancel": "Cancelar",
+		"mobile.community.composer.cancelled": "Cancelado. No se publicó nada.",
+		"mobile.community.composer.checking": "Comprobando…",
+		"mobile.community.composer.dismiss": "Descartar",
+		"mobile.community.composer.failed": "Tu mensaje no se envió. Tu texto sigue aquí.",
+		"mobile.community.composer.forbidden": "No puedes publicar aquí.",
+		"mobile.community.composer.guidelines": "Las normas de la comunidad cambiaron. Acéptalas y vuelve a intentarlo.",
+		"mobile.community.composer.images_unavailable": "Todavía no se pueden publicar imágenes en las comunidades. Tu texto sigue aquí.",
+		"mobile.community.composer.invalid": "Este mensaje no se puede enviar así. Acórtalo o edítalo y vuelve a enviarlo.",
+		"mobile.community.composer.label": "Mensaje en #{name}",
+		"mobile.community.composer.label_dm": "Mensaje para {name}",
+		"mobile.community.composer.limited": "Estás enviando más rápido de lo que permite la comunidad.",
+		"mobile.community.composer.limited_wait": "{seconds, plural, one {Vuelve a intentarlo en # segundo.} other {Vuelve a intentarlo en # segundos.}}",
+		"mobile.community.composer.refused": "No publicado: {category}",
+		"mobile.community.composer.refused_detail": "Solo tú ves esto. Referencia {reference}. Edita tu mensaje para enviarlo de nuevo.",
+		"mobile.community.composer.restricted": "Tus publicaciones están restringidas. Referencia {reference}.",
+		"mobile.community.composer.retry": "Reintentar",
+		"mobile.community.composer.review": "Ver las normas",
+		"mobile.community.composer.send": "Enviar",
+		"mobile.community.composer.unavailable": "No se pudo comprobar tu mensaje, así que no se publicó nada. Tu texto sigue aquí.",
+		"mobile.community.conversation.agent": "Agente",
+		"mobile.community.conversation.deleted": "Mensaje eliminado",
+		"mobile.community.conversation.edited": "editado",
+		"mobile.community.conversation.empty": "Todavía no hay mensajes.",
+		"mobile.community.conversation.former_member": "Antiguo miembro",
+		"mobile.community.conversation.join_prompt": "Estás leyendo #{name}. Únete al canal para publicar aquí.",
+		"mobile.community.conversation.load_older": "Cargar mensajes anteriores",
+		"mobile.community.conversation.older_error": "No se pudieron cargar los mensajes anteriores.",
+		"mobile.community.conversation.replies": "{count, plural, one {# respuesta} other {# respuestas}}",
+		"mobile.community.conversation.report": "Denunciar mensaje",
+		"mobile.community.conversation.subtitle": "{community} · Pública",
+		"mobile.community.conversation.view_profile": "Ver el perfil de {name}",
+		"mobile.community.directory.empty": "Ahora mismo no hay comunidades abiertas para unirse.",
+		"mobile.community.directory.featured": "Destacadas",
+		"mobile.community.directory.joined": "Te uniste",
+		"mobile.community.directory.read_only": "Solo lectura",
+		"mobile.community.directory.title": "Comunidades",
+		"mobile.community.error.auth_unavailable": "Radient no pudo comprobar tu sesión ahora mismo. Inténtalo de nuevo en un momento.",
+		"mobile.community.error.generic": "Algo salió mal. No se cambió nada.",
+		"mobile.community.error.load_failed": "No se pudo cargar en este momento. Comprueba tu conexión e inténtalo de nuevo.",
+		"mobile.community.error.not_found": "Esta comunidad no está disponible para esta cuenta.",
+		"mobile.community.error.rate_limited": "Lo estás haciendo más rápido de lo que permite la comunidad. Inténtalo de nuevo en breve.",
+		"mobile.community.error.sign_in": "Inicia sesión en Radient para usar la comunidad.",
+		"mobile.community.error.unreachable": "No se pudo conectar con la comunidad. Comprueba la conexión de este dispositivo.",
+		"mobile.community.home.browse": "Explorar",
+		"mobile.community.home.channel_label": "#{name}{count, plural, =0 {} one { · # sin leer} other { · # sin leer}}",
+		"mobile.community.home.channels": "Canales",
+		"mobile.community.home.channels_empty": "Todavía no te has unido a ningún canal. Explora para encontrar uno.",
+		"mobile.community.home.closed": "Esta comunidad es de solo lectura y no acepta miembros nuevos.",
+		"mobile.community.home.direct": "Mensajes directos",
+		"mobile.community.home.direct_empty": "Todavía no hay mensajes directos.",
+		"mobile.community.home.direct_label": "{name}{count, plural, =0 {} one { · # sin leer} other { · # sin leer}}",
+		"mobile.community.home.join": "Unirse",
+		"mobile.community.home.not_member": "Únete para leer y publicar en esta comunidad.",
+		"mobile.community.home.reaccept": "Revisar",
+		"mobile.community.home.reaccept_banner": "Las normas de la comunidad cambiaron. Revísalas y acéptalas para seguir publicando.",
+		"mobile.community.home.requests": "Solicitudes",
+		"mobile.community.home.requests_count": "{count, plural, one {Solicitudes · #} other {Solicitudes · #}}",
+		"mobile.community.home.switch": "Cambiar de organización o comunidad",
+		"mobile.community.join.agree": "Acepto las normas de la comunidad ({version}). Mi perfil y mis publicaciones son visibles para todos los miembros.",
+		"mobile.community.join.changed": "Las normas cambiaron mientras leías. Revisa la nueva versión y vuelve a aceptarla.",
+		"mobile.community.join.failed": "No se completó la unión. Inténtalo de nuevo.",
+		"mobile.community.join.guidelines_heading": "Normas de la comunidad ({version})",
+		"mobile.community.join.hint": "Marca la casilla para unirte.",
+		"mobile.community.join.moderation": "Cada mensaje se revisa antes de publicarse. Si algo no se publica, solo tú ves el motivo, con una referencia que puedes apelar.",
+		"mobile.community.join.profile": "Los miembros ven tu nombre de Radient. Nunca se muestran: correo electrónico, organizaciones.",
+		"mobile.community.join.reaccept_submit": "Aceptar y continuar",
+		"mobile.community.join.reaccept_title": "Normas de la comunidad actualizadas",
+		"mobile.community.join.submit": "Unirse y abrir la comunidad",
+		"mobile.community.join.title": "Unirse a la comunidad",
+		"mobile.community.no_plan.body": "Un espacio público y gratuito gestionado por Radient. Consigue ayuda, comparte comentarios y conoce a otros usuarios de Local Operator.",
+		"mobile.community.no_plan.free": "Gratis. Sin plan Team ni pago.",
+		"mobile.community.no_plan.join": "Unirse a la comunidad",
+		"mobile.community.no_plan.open": "Abrir la comunidad",
+		"mobile.community.no_plan.title": "Únete a la Local Operator Community",
+		"mobile.community.profile.block": "Bloquear",
+		"mobile.community.profile.blocked": "Bloqueado. No veréis los mensajes ni las solicitudes del otro.",
+		"mobile.community.profile.failed": "No se completó. Inténtalo de nuevo.",
+		"mobile.community.profile.joined": "Se unió en {month}",
+		"mobile.community.profile.message": "Mensaje",
+		"mobile.community.profile.message_sent": "Solicitud de mensaje enviada. La verá en sus solicitudes.",
+		"mobile.community.profile.report": "Denunciar",
+		"mobile.community.profile.title": "Perfil",
+		"mobile.community.report.category": "¿Qué ocurre?",
+		"mobile.community.report.dm_consent": "Compartir este mensaje con Trust & Safety de Radient. Solo lo ven sus revisores de casos; los moderadores de la comunidad nunca.",
+		"mobile.community.report.failed": "La denuncia no se envió. Inténtalo de nuevo.",
+		"mobile.community.report.note": "¿Algo más que debamos saber? (opcional)",
+		"mobile.community.report.revision_changed": "Este mensaje se editó después de que lo abrieras. Vuelve a leerlo y luego confirma y denuncia la versión actual.",
+		"mobile.community.report.sent": "Denuncia enviada. Referencia {reference}.",
+		"mobile.community.report.submit": "Enviar denuncia",
+		"mobile.community.report.title": "Denunciar a Radient Trust & Safety",
+		"mobile.community.requests.accept": "Aceptar",
+		"mobile.community.requests.approvals": "Aprobaciones de agentes",
+		"mobile.community.requests.block": "Bloquear",
+		"mobile.community.requests.decline": "Rechazar",
+		"mobile.community.requests.dm": "Mensajes",
+		"mobile.community.requests.dm_body": "{name} quiere enviarte mensajes directos.",
+		"mobile.community.requests.dm_empty": "No hay solicitudes de mensaje.",
+		"mobile.community.requests.expires": "{hours, plural, one {Vence en # h} other {Vence en # h}}",
+		"mobile.community.requests.expires_days": "{days, plural, one {Vence en # día} other {Vence en # días}}",
+		"mobile.community.requests.mode": "Mostrar",
+		"mobile.community.requests.title": "Solicitudes",
+		"mobile.community.role.community_admin": "Administrador de la comunidad",
+		"mobile.community.role.moderator": "Moderador",
+		"mobile.community.role.staff": "Personal de Radient",
+		"mobile.community.switcher.browse": "Explorar comunidades…",
+		"mobile.community.switcher.communities": "Comunidades",
+		"mobile.community.switcher.note": "Cambiar solo cambia lo que ves.",
+		"mobile.community.switcher.organizations": "Organizaciones",
+		"mobile.community.switcher.public": "Pública",
+		"mobile.community.switcher.row_label": "{name} · Pública{count, plural, =0 {} one { · # sin leer} other { · # sin leer}}",
+		"mobile.community.switcher.search": "Buscar comunidades",
+		"mobile.composer_input.attach.camera": "Hacer foto",
+		"mobile.composer_input.attach.camera_denied": "El acceso a la cámara está desactivado. Actívalo en Ajustes para hacer una foto.",
+		"mobile.composer_input.attach.camera_error": "No se pudo abrir la cámara. Inténtalo de nuevo.",
+		"mobile.composer_input.attach.camera_refused": "No se permitió el acceso a la cámara. Toca Hacer foto para que se vuelva a pedir.",
+		"mobile.composer_input.attach.camera_unavailable": "No hay ninguna cámara disponible en este dispositivo.",
+		"mobile.composer_input.attach.choose_image": "Elegir imagen",
+		"mobile.composer_input.attach.files": "Imagen de Archivos",
+		"mobile.composer_input.attach.library": "Fototeca",
+		"mobile.composer_input.attach.open_settings": "Abrir Ajustes",
+		"mobile.composer_input.attach.paste": "Pegar imagen",
 		"mobile.composer_input.clear_draft": "Borrar borrador",
 		"mobile.composer_input.clear_draft_hint": "Borra solo el texto y las imágenes del borrador; conserva los mensajes en cola y sin confirmar",
 		"mobile.composer_input.dismiss_error": "Ocultar error",
 		"mobile.composer_input.dismiss_error_hint": "Oculta este error sin cambiar el borrador ni el estado de entrega",
 		"mobile.composer_input.notice_dismiss": "Ocultar",
 		"mobile.composer_input.notice_retry": "Reintentar",
-		"mobile.composer_input.paste.denied": "No se permitió pegar. Toca el clip, luego Pegar imagen, y elige «Permitir pegar».",
+		"mobile.composer_input.paste.denied": "No se permitió pegar. Toca el botón de pegar otra vez y elige «Permitir pegar».",
+		"mobile.composer_input.paste.empty_ios": "No se pegó ninguna imagen. Copia una imagen y elige «Permitir pegar» si se te pide.",
 		"mobile.composer_input.paste.image": "Pegar imagen",
-		"mobile.composer_input.paste.image_hint": "Adjunta la imagen del portapapeles",
+		"mobile.composer_input.paste.image_hint": "Adjunta la imagen que copiaste",
 		"mobile.composer_input.voice.discard": "Descartar la entrada de voz",
 		"mobile.composer_input.voice.finish": "Terminar y transcribir",
 		"mobile.composer_input.voice.mic_setup": "La entrada de voz no está configurada",
@@ -5708,6 +7503,32 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.folders_read_failed": "Ahora mismo no hemos podido leer las carpetas de esta máquina.",
 		"mobile.home.folders_read_sign_in": "Esta máquina ha pedido que vuelvas a iniciar sesión, así que no hemos podido leer sus carpetas.",
 		"mobile.home.greeting": "¿En qué te puedo ayudar hoy?",
+		"mobile.home.identity.announce_picked": "Este chat empezará con {name}",
+		"mobile.home.identity.band_agents": "Agentes",
+		"mobile.home.identity.band_recent": "Recientes",
+		"mobile.home.identity.band_teams": "Equipos",
+		"mobile.home.identity.default_agent": "Agente predeterminado",
+		"mobile.home.identity.empty": "Todavía no hay agentes ni equipos en este ordenador. Crea uno en la aplicación de escritorio.",
+		"mobile.home.identity.no_matches": "Nada coincide con «{query}».",
+		"mobile.home.identity.pill_label": "Iniciar este chat con {target}. Elige un agente o un equipo",
+		"mobile.home.identity.read_failed": "No hemos podido leer los agentes y equipos de este ordenador ahora mismo.",
+		"mobile.home.identity.refused_connecting": "Este ordenador aún se está conectando, así que todavía no se ha iniciado nada. Toca tu mensaje para recuperarlo y vuelve a enviarlo en un momento para iniciar con {name}.",
+		"mobile.home.identity.refused_fallback": "No se ha podido iniciar {name} en este ordenador. Elige otro o usa el agente predeterminado.",
+		"mobile.home.identity.refused_registry": "Este ordenador no ha podido leer sus agentes y equipos ahora mismo, así que no se ha iniciado nada. Toca tu mensaje para recuperarlo y volver a enviarlo, o elige el agente predeterminado para enviarlo ya.",
+		"mobile.home.identity.refused_unknown": "{name} ya no está disponible en este ordenador. Elige otro, o el agente predeterminado, para enviar tu mensaje.",
+		"mobile.home.identity.refused_unlicensed": "Este ordenador no puede iniciar un chat con {name} ahora mismo. Elige el agente predeterminado para enviar.",
+		"mobile.home.identity.refused_unsaved": "Este ordenador no ha podido guardar {name} para el nuevo chat, así que no se ha iniciado nada. Toca tu mensaje para recuperarlo y vuelve a enviarlo.",
+		"mobile.home.identity.row_agent": "{name}, agente",
+		"mobile.home.identity.row_agent_described": "{name}, agente. {description}",
+		"mobile.home.identity.row_team": "{name}, equipo",
+		"mobile.home.identity.row_team_led": "{name}, equipo, dirigido por {manager}",
+		"mobile.home.identity.search": "Buscar agentes y equipos",
+		"mobile.home.identity.sheet_title": "Iniciar este chat con",
+		"mobile.home.identity.starting_with": "Iniciando con {name}…",
+		"mobile.home.identity.team_led_by": "Dirigido por {manager}",
+		"mobile.home.identity.team_members": "{count, plural, one {# miembro} other {# miembros}}",
+		"mobile.home.identity.team_subtitle": "Dirigido por {manager} · {count, plural, one {# miembro} other {# miembros}}",
+		"mobile.home.identity.unsupported": "El Local Operator de este ordenador es demasiado antiguo para iniciar un chat con un agente o un equipo. Actualízalo para elegir uno aquí.",
 		"mobile.home.models_read_failed": "Ahora mismo no hemos podido leer la lista de modelos de esta máquina.",
 		"mobile.home.options.default_model": "Usar el modelo predeterminado de esta máquina",
 		"mobile.home.options.fixed": "Las opciones iniciales de esta conversación son fijas. Usa Detalles de la conversación para los controles en vivo.",
@@ -5744,9 +7565,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.startup_queue.not_started": "Sin iniciar",
 		"mobile.home.startup_queue.sending": "Enviando los mensajes en cola…",
 		"mobile.home.startup_queue.unconfirmed": "Inicio sin confirmar",
-		"mobile.home.suggestion.last_turn": "Muéstrame el último turno",
 		"mobile.home.suggestion.linear_mcp": "Configura Linear MCP",
-		"mobile.home.suggestion.phone_access": "Activa el acceso telefónico",
 		"mobile.home.suggestion.review_repo": "Revisa este repo",
 		"mobile.home.suggestion.team_of_agents": "Crea un equipo de agentes",
 		"mobile.home.suggestion.wake_summary": "Despiértame con un resumen",
@@ -5755,6 +7574,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.tip.search": "busca una conversación pasada y reábrela",
 		"mobile.home.transcript.needs_answer": "Necesita tu respuesta",
 		"mobile.home.transcript.waiting": "Esperando la conversación…",
+		"mobile.home.work.all_conversations": "Todas las conversaciones",
+		"mobile.home.work.all_conversations_new": "Todas las conversaciones, {count, plural, one {# conversación nueva} other {# conversaciones nuevas}}",
+		"mobile.home.work.needs_you": "Te necesitan",
+		"mobile.home.work.recent": "Recientes",
+		"mobile.home.work.try": "Prueba",
 		"mobile.library.action.add_tag": "Añadir",
 		"mobile.library.action.edit": "Editar",
 		"mobile.library.action.open_chat": "Abrir conversación",
@@ -5807,6 +7631,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.notifications.channel.system": "Sonido del sistema",
 		"mobile.notifications.channel.tape_warble": "Cinta ondulante",
 		"mobile.notifications.channel.task_complete": "Tarea completada",
+		"mobile.notifications.channel.team_bridge": "Team Bridge",
+		"mobile.notifications.channel.team_bridge_description": "Mensajes de tus compañeros de equipo y sus agentes.",
 		"mobile.notifications.channel.two_note_chime": "Campanilla de dos notas",
 		"mobile.notifications.computer_registration.failed": "No se pudo registrar este teléfono para recibir alertas de esta máquina. Se volverá a intentar cuando vuelvas a abrir la app.",
 		"mobile.notifications.computer_registration.no_token": "Este teléfono aún no tiene una dirección push, así que esta máquina no puede enviarle alertas. Vuelve a abrir la app para intentarlo de nuevo.",
@@ -5848,6 +7674,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.notifications.preferences.agent_note": "Desactiva ambos tipos del agente para recibir solo notificaciones de Team Bridge.",
 		"mobile.notifications.preferences.bridge_heading": "Team Bridge",
 		"mobile.notifications.preferences.bridge_note": "Para cada mensaje directo, grupo o canal, abre el menú de la campana y elige {all}, {mentions} o {muted}.",
+		"mobile.notifications.preferences.bridge_system_off": "Las notificaciones de Team Bridge están desactivadas en los ajustes de Android, así que no aparecerá ninguna en este teléfono.",
+		"mobile.notifications.preferences.bridge_system_open": "Abrir ajustes de Android",
 		"mobile.notifications.preferences.completions": "El agente terminó",
 		"mobile.notifications.preferences.computer_keeps_sending": "Tu máquina seguirá enviando notificaciones de agentes hasta que se actualice Local Operator en ella.",
 		"mobile.notifications.preferences.disabled_hint": "Requiere un Local Operator más reciente en tu máquina.",
@@ -5864,6 +7692,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.notifications.priority_high": "Alta",
 		"mobile.notifications.section.waiting": "Te esperan",
 		"mobile.notifications.section.waiting_count": "Te esperan · {count}",
+		"mobile.notifications.team_bridge.self_name": "Tú",
 		"mobile.notifications.title": "Notificaciones",
 		"mobile.notifications.turn_on": "Activar notificaciones",
 		"mobile.oauth.failed": "No se pudo completar el inicio de sesión. Inténtalo de nuevo.",
@@ -6049,7 +7878,16 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.composer.not_sent_storage": "No enviado. No se pudo guardar este mensaje de forma segura para reintentarlo. El texto y las imágenes siguen aquí. Vuelve a intentarlo.",
 		"mobile.session.composer.retained_instruction": "Puede que ya se haya entregado una instrucción anterior. Reintenta enviarla antes de enviar tu borrador actual.",
 		"mobile.session.composer.retry_not_sent_storage": "Este intento de reenvío no se envió. No se pudo preparar de forma segura la instrucción anterior para volver a intentarlo. Vuelve a intentar enviar la instrucción anterior. Tu borrador actual no se ha enviado.",
+		"mobile.session.composer.settings_not_applied": "La sesión se reabrió, pero no se pudo aplicar el modelo o el esfuerzo que elegiste, así que no se envió nada. Vuelve a intentarlo o elige otro modelo u otro esfuerzo.",
 		"mobile.session.conversation_details": "Detalles de la conversación",
+		"mobile.session.diagram.close": "Cerrar el diagrama",
+		"mobile.session.diagram.copied": "copiado",
+		"mobile.session.diagram.copy": "Copiar el código fuente del diagrama",
+		"mobile.session.diagram.error": "No se pudo dibujar este diagrama. Se muestra el código fuente.",
+		"mobile.session.diagram.label": "Diagrama {type}",
+		"mobile.session.diagram.label_titled": "Diagrama {type}: {title}",
+		"mobile.session.diagram.open_hint": "Abre el diagrama a pantalla completa",
+		"mobile.session.diagram.viewer": "Visor de diagramas",
 		"mobile.session.empty.headline": "Aún no hay nada aquí.",
 		"mobile.session.empty.next": "Envía el primer mensaje aquí abajo.",
 		"mobile.session.fallback_name": "sesión",
@@ -6078,6 +7916,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.history.loading": "Cargando mensajes anteriores…",
 		"mobile.session.history.refresh_failed": "No se pudieron cargar los mensajes más recientes.",
 		"mobile.session.history.stalled": "Los mensajes anteriores dejaron de cargarse. Reintenta o abre de nuevo esta conversación.",
+		"mobile.session.inline_chart_data": "Datos del gráfico",
+		"mobile.session.jump_to_latest": "↓ Ir a lo más reciente",
+		"mobile.session.jump_to_latest_name": "Ir a lo más reciente",
+		"mobile.session.jump_to_latest_short": "↓ Lo último",
 		"mobile.session.not_connected.headline": "Esta sesión aún no está conectada.",
 		"mobile.session.not_connected.next": "Ábrela desde la lista de sesiones cuando haya una máquina conectada.",
 		"mobile.session.outbox.composer_discarding": "Descartando tu mensaje anterior. Podrás enviar este en un momento.",
@@ -6106,7 +7948,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.region.label_todos": "tareas",
 		"mobile.session.region.label_working": "actividad",
 		"mobile.session.region.more_below": "más abajo · desplazar ↓",
-		"mobile.session.sheet_title.attach": "adjuntar",
+		"mobile.session.sheet_title.attach": "Añadir imagen",
 		"mobile.session.sheet_title.commands": "Comandos",
 		"mobile.session.sheet_title.effort": "Esfuerzo",
 		"mobile.session.sheet_title.model": "Modelo",
@@ -6220,7 +8062,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.settings.theme.no_match": "Ningún tema coincide",
 		"mobile.settings.theme.row_label": "Tema, {name}",
 		"mobile.settings.theme.search_label": "Buscar temas",
-		"mobile.settings.theme.search_placeholder": "Buscar temas",
+		"mobile.settings.theme.search_placeholder": "Nombre, por ejemplo, Dracula",
 		"mobile.settings.theme.section_dark": "Oscuros ({count})",
 		"mobile.settings.theme.section_light": "Claros ({count})",
 		"mobile.settings.theme.title": "Tema",
@@ -6231,6 +8073,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.sidebar.empty_by_view.next": "Vuelve a activar secciones o sesiones finalizadas, o restablece la vista.",
 		"mobile.sidebar.empty_by_view.reset": "Restablecer vista",
 		"mobile.sidebar.group.one_list": "En una lista",
+		"mobile.sidebar.group.tag": "Etiqueta",
 		"mobile.sidebar.group.time_section": "Sección temporal",
 		"mobile.sidebar.group_by": "Agrupar por",
 		"mobile.sidebar.hidden_sections": "{count, plural, one {# sección oculta} many {# de secciones ocultas} other {# secciones ocultas}}",
@@ -6244,16 +8087,31 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.sidebar.row.asks": "{count, plural, one {# pregunta} many {# de preguntas} other {# preguntas}}",
 		"mobile.sidebar.row.asks_not_blocker": "{asks}, sin bloqueo",
 		"mobile.sidebar.row.new": "nueva",
+		"mobile.sidebar.row.on_device": "En {device}",
 		"mobile.sidebar.row.todos": "{count, plural, one {# tarea} many {# de tareas} other {# tareas}}",
+		"mobile.sidebar.row_label.join": "{first}, {second}",
+		"mobile.sidebar.row_label.on_device": "en {device}",
+		"mobile.sidebar.row_label.open": "abierta",
+		"mobile.sidebar.row_label.waiting": "{kind, select, approval {aprobación pendiente} other {pregunta pendiente}}",
+		"mobile.sidebar.row_label.working": "trabajando",
+		"mobile.sidebar.row_status.approval": "aprobación",
+		"mobile.sidebar.row_status.ended": "finalizada",
+		"mobile.sidebar.row_status.not_answering": "no responde",
+		"mobile.sidebar.row_status.not_reachable": "sin conexión",
+		"mobile.sidebar.row_status.question": "pregunta",
 		"mobile.sidebar.section.older": "Anteriores",
 		"mobile.sidebar.section.pinned": "Fijadas",
 		"mobile.sidebar.section.running": "En curso",
 		"mobile.sidebar.section.today": "Hoy",
+		"mobile.sidebar.section.untagged": "Sin etiqueta",
 		"mobile.sidebar.section.week": "Esta semana",
 		"mobile.sidebar.sections": "Secciones",
 		"mobile.sidebar.settings_heading": "Barra lateral",
 		"mobile.sidebar.show_ended": "Mostrar sesiones finalizadas",
 		"mobile.sidebar.show_ended_hint": "Las conversaciones fijadas y en curso siempre se muestran.",
+		"mobile.sidebar.show_tags": "Mostrar etiquetas",
+		"mobile.sidebar.show_tags_hint": "Las etiquetas siguen en el menú de cada conversación.",
+		"mobile.sidebar.tag_group.announcement": "{name}, {count, plural, one {# conversación} many {# de conversaciones} other {# conversaciones}}",
 		"mobile.sidebar.tags.announcement": "Etiquetas: {names}",
 		"mobile.sidebar.tags.empty_headline": "Aún no hay categorías.",
 		"mobile.sidebar.tags.empty_next": "Créalas en tu máquina.",
@@ -6298,6 +8156,12 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.signin.use_address": "Usar una dirección y contraseña",
 		"mobile.signin.welcome.body": "Esta app dirige las sesiones de tu propia máquina y muestra lo que hizo. Tu código nunca sale de ella.",
 		"mobile.signin.welcome.headline": "Tu agente se ejecuta en tu máquina.",
+		"mobile.team_bridge.actions.a11y_react": "Reaccionar",
+		"mobile.team_bridge.actions.copied": "Copiado",
+		"mobile.team_bridge.actions.copy_text": "Copiar texto",
+		"mobile.team_bridge.actions.reply_in_thread": "Responder en el hilo",
+		"mobile.team_bridge.actions.select_text": "Seleccionar texto",
+		"mobile.team_bridge.actions.title": "Acciones del mensaje",
 		"mobile.team_bridge.attachment.add": "Añadir imagen",
 		"mobile.team_bridge.attachment.attached_summary": "{count, plural, one {# imagen adjunta} other {# imágenes adjuntas}}",
 		"mobile.team_bridge.attachment.cannot_send": "No se puede enviar",
@@ -6341,6 +8205,23 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.team_bridge.attachment.viewer": "Visor de imágenes",
 		"mobile.team_bridge.attachment.wait_uploads": "Podrás enviar cuando las imágenes terminen de subirse.",
 		"mobile.team_bridge.back": "Atrás",
+		"mobile.team_bridge.card_body.deleted": "Este mensaje se eliminó.",
+		"mobile.team_bridge.card_body.held": "Retenido para revisión.",
+		"mobile.team_bridge.card_body.held_transient": "Pendiente de filtrado — aún no se muestra a tu agente.",
+		"mobile.team_bridge.card_body.loading": "Cargando mensaje…",
+		"mobile.team_bridge.card_body.more_messages": "{count, plural, one {# mensaje más en esta tarjeta} many {# de mensajes más en esta tarjeta} other {# mensajes más en esta tarjeta}}",
+		"mobile.team_bridge.card_body.not_admitted": "No entregado a tu agente.",
+		"mobile.team_bridge.card_body.not_member": "Ya no formas parte de esta conversación.",
+		"mobile.team_bridge.card_body.offline": "No se pudo conectar con Radient — reintentando.",
+		"mobile.team_bridge.card_body.other_account": "Recibido en otra cuenta de Radient.",
+		"mobile.team_bridge.card_body.pending": "Pendiente de entregar a tu agente.",
+		"mobile.team_bridge.card_body.refused": "Rechazado por la moderación.",
+		"mobile.team_bridge.card_body.show_less": "Mostrar menos",
+		"mobile.team_bridge.card_body.show_more": "Mostrar más",
+		"mobile.team_bridge.card_body.signed_out": "Inicia sesión en Radient para ver este mensaje.",
+		"mobile.team_bridge.card_body.thread_reply": "Respuesta en el hilo",
+		"mobile.team_bridge.card_body.unavailable": "Contenido del mensaje no disponible.",
+		"mobile.team_bridge.card_body.untrusted": "Mensaje externo · contenido no fiable",
 		"mobile.team_bridge.conversation": "Conversación",
 		"mobile.team_bridge.default_on.body": "Los agentes de tu organización pueden enviar mensajes a tu jefe de gabinete. Puedes desactivar esta opción en cualquier momento.",
 		"mobile.team_bridge.default_on.dismiss": "Cerrar",
@@ -6403,6 +8284,15 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.team_bridge.list.preview": "Vista previa · Únete para leer",
 		"mobile.team_bridge.list.quiet": "Notificaciones silenciadas",
 		"mobile.team_bridge.list.self": "tú",
+		"mobile.team_bridge.mentions.dismiss_notice": "Descartar",
+		"mobile.team_bridge.mentions.invited": "{name} aún no se ha unido a esta conversación y no recibirá una notificación.",
+		"mobile.team_bridge.mentions.no_endpoint": "No se puede notificar a {name} hasta que se cargue la lista de personas.",
+		"mobile.team_bridge.mentions.not_member": "{name} no está en esta conversación y no recibirá una notificación.",
+		"mobile.team_bridge.mentions.results_count": "{count, plural, one {# sugerencia} other {# sugerencias}}",
+		"mobile.team_bridge.mentions.row_label": "Mencionar a {name}",
+		"mobile.team_bridge.mentions.section_members": "En esta conversación",
+		"mobile.team_bridge.mentions.section_org": "Otros en tu organización",
+		"mobile.team_bridge.mentions.unavailable": "La lista de personas no está disponible. Se muestran los miembros de esta conversación.",
 		"mobile.team_bridge.navigation.caption": "Tu organización, incluso con tu máquina en reposo",
 		"mobile.team_bridge.navigation.entry": "{count, plural, =0 {Team Bridge} one {Team Bridge · # sin leer} other {Team Bridge · # sin leer}}",
 		"mobile.team_bridge.navigation.entry_loading": "Team Bridge · cargando",
@@ -6419,6 +8309,35 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.team_bridge.profile.open": "Ver el perfil de {name}",
 		"mobile.team_bridge.profile.opens_hint": "Abre su perfil",
 		"mobile.team_bridge.profile.title": "Perfil",
+		"mobile.team_bridge.reactions.add": "Añadir reacción",
+		"mobile.team_bridge.reactions.added": "Reacción añadida",
+		"mobile.team_bridge.reactions.details": "Detalles de la reacción",
+		"mobile.team_bridge.reactions.failed": "No se pudo guardar la reacción. Inténtalo de nuevo.",
+		"mobile.team_bridge.reactions.hint_add": "Toca dos veces para reaccionar también",
+		"mobile.team_bridge.reactions.hint_inspect": "Toca dos veces para ver los detalles de la reacción",
+		"mobile.team_bridge.reactions.hint_remove": "Toca dos veces para quitar tu reacción",
+		"mobile.team_bridge.reactions.keyboard_hint": "Elige un emoji en tu teclado",
+		"mobile.team_bridge.reactions.pill": "{emoji}, {count, plural, one {# reacción} other {# reacciones}}",
+		"mobile.team_bridge.reactions.pill_mine": "{emoji}, {count, plural, one {# reacción} other {# reacciones}}, reaccionaste",
+		"mobile.team_bridge.reactions.removed": "Reacción quitada",
+		"mobile.team_bridge.reactions.sample": "{count, plural, =0 {{labels}} one {{labels} y # más} other {{labels} y # más}}",
+		"mobile.team_bridge.reactions.sample_none": "Este resumen no incluye nombres.",
+		"mobile.team_bridge.reactions.sample_notice": "Los nombres mostrados son una muestra, no una lista completa.",
+		"mobile.team_bridge.reactions.show_less": "Mostrar menos",
+		"mobile.team_bridge.reactions.show_more": "Mostrar {count} más",
+		"mobile.team_bridge.reactions.summary": "{count, plural, one {# reacción} other {# reacciones}}",
+		"mobile.team_bridge.reactions.you_reacted": "Has reaccionado",
+		"mobile.team_bridge.reply_thread.count": "{count, plural, one {# respuesta} other {# respuestas}}",
+		"mobile.team_bridge.reply_thread.empty": "Aún no hay respuestas. Inicia el hilo.",
+		"mobile.team_bridge.reply_thread.error": "No se pudo cargar este hilo.",
+		"mobile.team_bridge.reply_thread.last_reply": "Última respuesta: {time}",
+		"mobile.team_bridge.reply_thread.loading": "Cargando hilo…",
+		"mobile.team_bridge.reply_thread.more": "Cargar más respuestas",
+		"mobile.team_bridge.reply_thread.open": "Ver hilo, {count, plural, one {# respuesta} other {# respuestas}}",
+		"mobile.team_bridge.reply_thread.open_unread": "Ver hilo, {count, plural, one {# respuesta} other {# respuestas}}, {unread, plural, one {# sin leer} other {# sin leer}}",
+		"mobile.team_bridge.reply_thread.reply": "Responder en el hilo",
+		"mobile.team_bridge.reply_thread.retry": "Reintentar hilo",
+		"mobile.team_bridge.reply_thread.title": "Hilo",
 		"mobile.team_bridge.retry": "Reintentar",
 		"mobile.team_bridge.thread.access_retry": "Reintentar acceso",
 		"mobile.team_bridge.thread.anchor_missing": "Ese mensaje ya no está disponible.",
@@ -6512,6 +8431,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"relay.health.quiet_detail": "Esta sesión dejó de responder en tu máquina — puede que esté ocupada o atascada. Un mensaje puede aparecer como fallido y aun así llegar cuando la sesión se ponga al día. Reintentar no lo enviará dos veces.",
 		"relay.health.reconnecting": "Reconectando",
 		"relay.health.reconnecting_detail": "Este teléfono perdió la conexión con tu máquina y sigue intentando reconectarse. Puede que la sesión siga ejecutándose allí; un envío puede fallar hasta que vuelva la conexión.",
+		"relay.skills.skipped": "Enviado sin {names} — {count, plural, one {esa habilidad no tiene contenido que adjuntar} many {esas habilidades no tienen contenido que adjuntar} other {esas habilidades no tienen contenido que adjuntar}}.",
+		"relay.skills.too_large": "Estas habilidades son demasiado grandes para enviarlas juntas. Quita una habilidad y envía de nuevo.",
+		"relay.skills.tray.hidden": "oculta",
+		"relay.skills.tray.label": "Habilidades",
 		"relay.transcript.composer.queued": "{count, plural, one {# en cola} many {# en cola} other {# en cola}}",
 		"relay.transcript.fold.failed_label": "Incluye una acción fallida",
 		"relay.transcript.fold.more": "{count, plural, one {y # acción más} many {y # de acciones más} other {y # acciones más}}",
@@ -6549,6 +8472,43 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.account_routing.unsaved": "Pas encore enregistré.",
 		"mobile.agent_avatar.edit_hint": "Modifiez cette photo dans l’application de bureau",
 		"mobile.agent_avatar.label": "Photo de l’agent",
+		"mobile.asks.answer_label": "Votre réponse à : {question}",
+		"mobile.asks.answer_placeholder": "Votre réponse",
+		"mobile.asks.choose_any": "Choisissez tout ce qui s’applique",
+		"mobile.asks.deadline_ago": "Échéance dépassée depuis {duration}",
+		"mobile.asks.decline": "Refuser",
+		"mobile.asks.decline_hint": "Aucune réponse n’est envoyée. L’agent décide seul.",
+		"mobile.asks.dismiss": "Ignorer",
+		"mobile.asks.dismiss_open": "Ignorer…",
+		"mobile.asks.dismiss_reason.chat": "Répondu dans la conversation",
+		"mobile.asks.dismiss_reason.chat_note": "Vous avez déjà répondu dans la conversation",
+		"mobile.asks.dismiss_reason.moot": "Plus nécessaire",
+		"mobile.asks.dismiss_reason.moot_note": "L’agent cesse d’attendre une réponse",
+		"mobile.asks.dismiss_title": "{count, plural, one {Ignorer cette question} many {Ignorer ces questions} other {Ignorer ces questions}}",
+		"mobile.asks.empty": "Rien en attente. Les questions de l’agent apparaîtront ici.",
+		"mobile.asks.honesty": "Cette application affiche les questions en attente tant qu’elle est ouverte. Elle ne peut pas vous joindre lorsqu’elle est fermée.",
+		"mobile.asks.loading": "Lecture des questions…",
+		"mobile.asks.none_recorded": "Aucune réponse n’a été enregistrée pour cette question.",
+		"mobile.asks.nothing_left": "Plus rien à répondre ici. Ces questions ont déjà été traitées sur un autre écran ou appareil.",
+		"mobile.asks.open_conversation": "Ouvrir la conversation",
+		"mobile.asks.other_hint": "Saisissez votre réponse",
+		"mobile.asks.other_kept": "Votre texte est conservé, non envoyé",
+		"mobile.asks.other_label": "Autre",
+		"mobile.asks.progress.pick_or_type": "Choisissez une option ou saisissez votre propre réponse pour envoyer.",
+		"mobile.asks.progress.tally": "{answered} sur {total} questions répondues ou passées",
+		"mobile.asks.progress.type": "Saisissez une réponse ou passez la question pour envoyer.",
+		"mobile.asks.recommended": "· Recommandé",
+		"mobile.asks.secret_notice": "Secret : envoyé directement, non affiché dans la transcription",
+		"mobile.asks.secret_notice_saved": "Secret : envoyé directement, non affiché dans la transcription, et enregistré sur l’ordinateur pour être réutilisé",
+		"mobile.asks.secret_placeholder": "Valeur secrète",
+		"mobile.asks.send_answer": "Envoyer la réponse",
+		"mobile.asks.send_answers": "Envoyer les réponses",
+		"mobile.asks.settled": "Traitées",
+		"mobile.asks.skip": "Passer (sans réponse)",
+		"mobile.asks.title_fallback": "Questions",
+		"mobile.asks.truncated": "Affichage des questions les plus récentes. Ouvrez une conversation pour voir le reste.",
+		"mobile.asks.unskip": "Répondre à cette question",
+		"mobile.asks.urgent": "· Urgent",
 		"mobile.chrome.clear_search": "Effacer la recherche",
 		"mobile.chrome.close_conversations": "Fermer les conversations",
 		"mobile.chrome.composer.dismiss_keyboard": "Masquer le clavier",
@@ -6557,6 +8517,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.chrome.composer.queued": "{count, plural, one {# message en attente} other {# messages en attente}}",
 		"mobile.chrome.composer.row_cost": "Coût",
 		"mobile.chrome.composer.row_effort": "Effort",
+		"mobile.chrome.composer.row_identity": "Agent ou équipe",
 		"mobile.chrome.composer.row_model": "Modèle",
 		"mobile.chrome.composer.row_questions": "Questions",
 		"mobile.chrome.composer.row_queue": "File d’attente",
@@ -6588,18 +8549,184 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.common.not_found.headline": "Cette page n’existe pas.",
 		"mobile.common.not_found.next": "Revenez à vos sessions pour continuer.",
 		"mobile.common.not_found.title": "Page introuvable",
+		"mobile.common.resize_panel": "Redimensionner le panneau",
 		"mobile.common.save": "Enregistrer",
 		"mobile.common.send": "Envoyer",
+		"mobile.common.size.large": "Grand",
+		"mobile.common.size.medium": "Moyen",
+		"mobile.common.size.shorter": "Plus bas",
+		"mobile.common.size.taller": "Plus haut",
 		"mobile.common.try_again": "Réessayer",
+		"mobile.community.approvals.agent": "Agent",
+		"mobile.community.approvals.decline": "Ne pas publier",
+		"mobile.community.approvals.empty": "Aucune publication d’agent n’attend votre accord.",
+		"mobile.community.approvals.expires": "{hours, plural, one {expire dans # h} other {expire dans # h}}",
+		"mobile.community.approvals.expires_days": "{days, plural, one {expire dans # jour} other {expire dans # jours}}",
+		"mobile.community.approvals.failed": "Cela n’a pas abouti. Réessayez.",
+		"mobile.community.approvals.open_computer": "Ouvrez Local Operator sur votre ordinateur pour lire le texte exact et choisir.",
+		"mobile.community.approvals.review": "Vérifier sur votre ordinateur",
+		"mobile.community.approvals.review_note": "Vérifier sur votre ordinateur la laisse en attente jusqu’à 24 h.",
+		"mobile.community.approvals.stays": "Le brouillon reste sur votre ordinateur jusqu’à votre accord.",
+		"mobile.community.approvals.title": "Votre chef de cabinet veut publier dans #{channel}",
+		"mobile.community.approvals.title_unknown": "Votre chef de cabinet veut publier dans un canal de la communauté",
+		"mobile.community.approvals.waiting": "En attente de votre choix sur votre ordinateur.",
+		"mobile.community.browse.channels": "Canaux",
+		"mobile.community.browse.channels_empty": "Aucun canal ne correspond.",
+		"mobile.community.browse.join": "Rejoindre",
+		"mobile.community.browse.load_more": "Afficher plus",
+		"mobile.community.browse.mode": "Afficher",
+		"mobile.community.browse.open": "Ouvrir",
+		"mobile.community.browse.people": "Personnes",
+		"mobile.community.browse.people_empty": "Aucune personne ne correspond.",
+		"mobile.community.browse.private": "Privé",
+		"mobile.community.browse.search": "Rechercher",
+		"mobile.community.browse.title": "Parcourir",
+		"mobile.community.category.harassment_or_abuse": "Harcèlement ou abus",
+		"mobile.community.category.private_information": "Informations privées",
+		"mobile.community.category.spam_or_promotion": "Spam ou promotion non déclarée",
+		"mobile.community.category.unsafe_or_illegal": "Contenu dangereux ou illégal",
+		"mobile.community.common.loading": "Chargement de la communauté…",
+		"mobile.community.common.retry": "Réessayer",
+		"mobile.community.common.unavailable": "La communauté est indisponible",
+		"mobile.community.composer.attach": "Joindre une image",
+		"mobile.community.composer.audience": "Visible par tous les membres de la communauté",
+		"mobile.community.composer.audience_dm": "Seuls vous et {name} voyez cette conversation",
+		"mobile.community.composer.blocked_archived": "Ce canal est archivé.",
+		"mobile.community.composer.blocked_locked": "Ce canal est verrouillé.",
+		"mobile.community.composer.blocked_read_only": "Cette communauté est en lecture seule.",
+		"mobile.community.composer.blocked_staff_only": "Seuls l’équipe et les modérateurs publient ici.",
+		"mobile.community.composer.cancel": "Annuler",
+		"mobile.community.composer.cancelled": "Annulé. Rien n’a été publié.",
+		"mobile.community.composer.checking": "Vérification…",
+		"mobile.community.composer.dismiss": "Fermer",
+		"mobile.community.composer.failed": "Votre message n’a pas été envoyé. Votre texte est toujours là.",
+		"mobile.community.composer.forbidden": "Vous ne pouvez pas publier ici.",
+		"mobile.community.composer.guidelines": "Les règles de la communauté ont changé. Acceptez-les, puis réessayez.",
+		"mobile.community.composer.images_unavailable": "Les images ne peuvent pas encore être publiées dans les communautés. Votre texte est toujours là.",
+		"mobile.community.composer.invalid": "Ce message ne peut pas être envoyé tel quel. Raccourcissez-le ou modifiez-le, puis renvoyez-le.",
+		"mobile.community.composer.label": "Message dans #{name}",
+		"mobile.community.composer.label_dm": "Message à {name}",
+		"mobile.community.composer.limited": "Vous envoyez plus vite que la communauté ne le permet.",
+		"mobile.community.composer.limited_wait": "{seconds, plural, one {Réessayez dans # seconde.} other {Réessayez dans # secondes.}}",
+		"mobile.community.composer.refused": "Non publié : {category}",
+		"mobile.community.composer.refused_detail": "Vous seul voyez ceci. Référence {reference}. Modifiez votre message pour le renvoyer.",
+		"mobile.community.composer.restricted": "Vos publications sont restreintes. Référence {reference}.",
+		"mobile.community.composer.retry": "Réessayer",
+		"mobile.community.composer.review": "Voir les règles",
+		"mobile.community.composer.send": "Envoyer",
+		"mobile.community.composer.unavailable": "Impossible de vérifier votre message, rien n’a donc été publié. Votre texte est toujours là.",
+		"mobile.community.conversation.agent": "Agent",
+		"mobile.community.conversation.deleted": "Message supprimé",
+		"mobile.community.conversation.edited": "modifié",
+		"mobile.community.conversation.empty": "Aucun message pour l’instant.",
+		"mobile.community.conversation.former_member": "Ancien membre",
+		"mobile.community.conversation.join_prompt": "Vous lisez #{name}. Rejoignez le canal pour publier ici.",
+		"mobile.community.conversation.load_older": "Charger les messages plus anciens",
+		"mobile.community.conversation.older_error": "Les messages plus anciens n’ont pas pu être chargés.",
+		"mobile.community.conversation.replies": "{count, plural, one {# réponse} other {# réponses}}",
+		"mobile.community.conversation.report": "Signaler le message",
+		"mobile.community.conversation.subtitle": "{community} · Publique",
+		"mobile.community.conversation.view_profile": "Voir le profil de {name}",
+		"mobile.community.directory.empty": "Aucune communauté n’est ouverte pour l’instant.",
+		"mobile.community.directory.featured": "À la une",
+		"mobile.community.directory.joined": "Rejointes",
+		"mobile.community.directory.read_only": "Lecture seule",
+		"mobile.community.directory.title": "Communautés",
+		"mobile.community.error.auth_unavailable": "Radient n’a pas pu vérifier votre connexion pour le moment. Réessayez dans un instant.",
+		"mobile.community.error.generic": "Un problème est survenu. Rien n’a été modifié.",
+		"mobile.community.error.load_failed": "Impossible de charger pour le moment. Vérifiez votre connexion et réessayez.",
+		"mobile.community.error.not_found": "Cette communauté n’est pas disponible pour ce compte.",
+		"mobile.community.error.rate_limited": "Vous allez plus vite que la communauté ne le permet. Réessayez bientôt.",
+		"mobile.community.error.sign_in": "Connectez-vous à Radient pour utiliser la communauté.",
+		"mobile.community.error.unreachable": "La communauté est injoignable. Vérifiez la connexion de cet appareil.",
+		"mobile.community.home.browse": "Parcourir",
+		"mobile.community.home.channel_label": "#{name}{count, plural, =0 {} one { · # non lu} other { · # non lus}}",
+		"mobile.community.home.channels": "Canaux",
+		"mobile.community.home.channels_empty": "Vous n’avez encore rejoint aucun canal. Parcourez pour en trouver un.",
+		"mobile.community.home.closed": "Cette communauté est en lecture seule et n’accepte pas de nouveaux membres.",
+		"mobile.community.home.direct": "Messages directs",
+		"mobile.community.home.direct_empty": "Aucun message direct pour l’instant.",
+		"mobile.community.home.direct_label": "{name}{count, plural, =0 {} one { · # non lu} other { · # non lus}}",
+		"mobile.community.home.join": "Rejoindre",
+		"mobile.community.home.not_member": "Rejoignez la communauté pour lire et publier.",
+		"mobile.community.home.reaccept": "Consulter",
+		"mobile.community.home.reaccept_banner": "Les règles de la communauté ont changé. Consultez-les et acceptez-les pour continuer à publier.",
+		"mobile.community.home.requests": "Demandes",
+		"mobile.community.home.requests_count": "{count, plural, one {Demandes · #} other {Demandes · #}}",
+		"mobile.community.home.switch": "Changer d’organisation ou de communauté",
+		"mobile.community.join.agree": "J’accepte les règles de la communauté ({version}). Mon profil et mes publications sont visibles par tous les membres.",
+		"mobile.community.join.changed": "Les règles ont changé pendant votre lecture. Consultez la nouvelle version, puis acceptez de nouveau.",
+		"mobile.community.join.failed": "L’adhésion n’a pas abouti. Réessayez.",
+		"mobile.community.join.guidelines_heading": "Règles de la communauté ({version})",
+		"mobile.community.join.hint": "Cochez la case pour rejoindre.",
+		"mobile.community.join.moderation": "Chaque message est vérifié avant publication. Si quelque chose n’est pas publié, vous seul en voyez la raison, avec une référence pour faire appel.",
+		"mobile.community.join.profile": "Les membres voient votre nom Radient. Jamais affichés : e-mail, organisations.",
+		"mobile.community.join.reaccept_submit": "Accepter et continuer",
+		"mobile.community.join.reaccept_title": "Règles de la communauté mises à jour",
+		"mobile.community.join.submit": "Rejoindre et ouvrir la communauté",
+		"mobile.community.join.title": "Rejoindre la communauté",
+		"mobile.community.no_plan.body": "Un espace public gratuit géré par Radient. Obtenez de l’aide, partagez vos retours et rencontrez d’autres utilisateurs de Local Operator.",
+		"mobile.community.no_plan.free": "Gratuit. Aucun forfait Team ni paiement requis.",
+		"mobile.community.no_plan.join": "Rejoindre la communauté",
+		"mobile.community.no_plan.open": "Ouvrir la communauté",
+		"mobile.community.no_plan.title": "Rejoindre la Local Operator Community",
+		"mobile.community.profile.block": "Bloquer",
+		"mobile.community.profile.blocked": "Bloqué. Vous ne verrez plus vos messages ni vos demandes respectifs.",
+		"mobile.community.profile.failed": "Cela n’a pas abouti. Réessayez.",
+		"mobile.community.profile.joined": "Membre depuis {month}",
+		"mobile.community.profile.message": "Message",
+		"mobile.community.profile.message_sent": "Demande de message envoyée. La personne la verra dans ses demandes.",
+		"mobile.community.profile.report": "Signaler",
+		"mobile.community.profile.title": "Profil",
+		"mobile.community.report.category": "Quel est le problème ?",
+		"mobile.community.report.dm_consent": "Partager ce message avec l’équipe Trust & Safety de Radient. Seuls ses examinateurs de dossiers le voient, jamais les modérateurs de la communauté.",
+		"mobile.community.report.failed": "Le signalement n’a pas été envoyé. Réessayez.",
+		"mobile.community.report.note": "Autre chose à nous dire ? (facultatif)",
+		"mobile.community.report.revision_changed": "Ce message a été modifié après son ouverture. Relisez-le, puis confirmez et signalez la version actuelle.",
+		"mobile.community.report.sent": "Signalement envoyé. Référence {reference}.",
+		"mobile.community.report.submit": "Envoyer le signalement",
+		"mobile.community.report.title": "Signaler à Radient Trust & Safety",
+		"mobile.community.requests.accept": "Accepter",
+		"mobile.community.requests.approvals": "Accords d’agent",
+		"mobile.community.requests.block": "Bloquer",
+		"mobile.community.requests.decline": "Refuser",
+		"mobile.community.requests.dm": "Messages",
+		"mobile.community.requests.dm_body": "{name} veut vous envoyer des messages directs.",
+		"mobile.community.requests.dm_empty": "Aucune demande de message.",
+		"mobile.community.requests.expires": "{hours, plural, one {Expire dans # h} other {Expire dans # h}}",
+		"mobile.community.requests.expires_days": "{days, plural, one {Expire dans # jour} other {Expire dans # jours}}",
+		"mobile.community.requests.mode": "Afficher",
+		"mobile.community.requests.title": "Demandes",
+		"mobile.community.role.community_admin": "Admin de la communauté",
+		"mobile.community.role.moderator": "Modérateur",
+		"mobile.community.role.staff": "Équipe Radient",
+		"mobile.community.switcher.browse": "Parcourir les communautés…",
+		"mobile.community.switcher.communities": "Communautés",
+		"mobile.community.switcher.note": "Changer ne modifie que ce que vous voyez.",
+		"mobile.community.switcher.organizations": "Organisations",
+		"mobile.community.switcher.public": "Publique",
+		"mobile.community.switcher.row_label": "{name} · Publique{count, plural, =0 {} one { · # non lu} other { · # non lus}}",
+		"mobile.community.switcher.search": "Rechercher des communautés",
+		"mobile.composer_input.attach.camera": "Prendre une photo",
+		"mobile.composer_input.attach.camera_denied": "L’accès à l’appareil photo est désactivé. Activez-le dans Réglages pour prendre une photo.",
+		"mobile.composer_input.attach.camera_error": "Impossible d’ouvrir l’appareil photo. Réessayez.",
+		"mobile.composer_input.attach.camera_refused": "L’accès à l’appareil photo n’a pas été autorisé. Touchez Prendre une photo pour qu’il soit redemandé.",
+		"mobile.composer_input.attach.camera_unavailable": "Aucun appareil photo n’est disponible sur cet appareil.",
+		"mobile.composer_input.attach.choose_image": "Choisir une image",
+		"mobile.composer_input.attach.files": "Image depuis Fichiers",
+		"mobile.composer_input.attach.library": "Photothèque",
+		"mobile.composer_input.attach.open_settings": "Ouvrir Réglages",
+		"mobile.composer_input.attach.paste": "Coller l’image",
 		"mobile.composer_input.clear_draft": "Effacer le brouillon",
 		"mobile.composer_input.clear_draft_hint": "Efface uniquement le texte et les images du brouillon ; conserve les messages en attente et non confirmés",
 		"mobile.composer_input.dismiss_error": "Masquer l’erreur",
 		"mobile.composer_input.dismiss_error_hint": "Masque cette erreur sans modifier le brouillon ni l’état de livraison",
 		"mobile.composer_input.notice_dismiss": "Masquer",
 		"mobile.composer_input.notice_retry": "Réessayer",
-		"mobile.composer_input.paste.denied": "Le collage n’a pas été autorisé. Touchez le trombone, puis Coller l’image, et choisissez « Autoriser le collage ».",
+		"mobile.composer_input.paste.denied": "Le collage n’a pas été autorisé. Touchez de nouveau le bouton Coller et choisissez « Autoriser le collage ».",
+		"mobile.composer_input.paste.empty_ios": "Aucune image n’a été collée. Copiez une image, puis choisissez « Autoriser le collage » si on vous le demande.",
 		"mobile.composer_input.paste.image": "Coller l’image",
-		"mobile.composer_input.paste.image_hint": "Joint l’image du presse-papiers",
+		"mobile.composer_input.paste.image_hint": "Joint l’image que vous avez copiée",
 		"mobile.composer_input.voice.discard": "Supprimer la saisie vocale",
 		"mobile.composer_input.voice.finish": "Terminer et transcrire",
 		"mobile.composer_input.voice.mic_setup": "La saisie vocale n’est pas configurée",
@@ -6816,6 +8943,32 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.folders_read_failed": "Impossible de lire les dossiers de cet ordinateur pour le moment.",
 		"mobile.home.folders_read_sign_in": "Cet ordinateur vous a demandé de vous reconnecter ; impossible donc de lire ses dossiers.",
 		"mobile.home.greeting": "Comment puis-je vous aider aujourd’hui ?",
+		"mobile.home.identity.announce_picked": "Cette conversation démarrera avec {name}",
+		"mobile.home.identity.band_agents": "Agents",
+		"mobile.home.identity.band_recent": "Récents",
+		"mobile.home.identity.band_teams": "Équipes",
+		"mobile.home.identity.default_agent": "Agent par défaut",
+		"mobile.home.identity.empty": "Aucun agent ni aucune équipe sur cet ordinateur pour l’instant. Créez-en un dans l’application de bureau.",
+		"mobile.home.identity.no_matches": "Aucun résultat pour « {query} ».",
+		"mobile.home.identity.pill_label": "Démarrer cette conversation avec {target}. Choisir un agent ou une équipe",
+		"mobile.home.identity.read_failed": "Impossible de lire les agents et les équipes de cet ordinateur pour le moment.",
+		"mobile.home.identity.refused_connecting": "Cet ordinateur est encore en cours de connexion ; rien n’a encore été démarré. Touchez votre message pour le récupérer, puis renvoyez-le dans un instant pour démarrer avec {name}.",
+		"mobile.home.identity.refused_fallback": "Impossible de démarrer {name} sur cet ordinateur. Choisissez-en un autre ou utilisez l’agent par défaut.",
+		"mobile.home.identity.refused_registry": "Cet ordinateur n’a pas pu lire ses agents et équipes pour le moment ; rien n’a été démarré. Touchez votre message pour le récupérer et l’envoyer à nouveau, ou choisissez l’agent par défaut pour l’envoyer maintenant.",
+		"mobile.home.identity.refused_unknown": "{name} n’est plus disponible sur cet ordinateur. Choisissez-en un autre, ou l’agent par défaut, pour envoyer votre message.",
+		"mobile.home.identity.refused_unlicensed": "Cet ordinateur ne peut pas démarrer de conversation avec {name} pour le moment. Choisissez l’agent par défaut pour envoyer.",
+		"mobile.home.identity.refused_unsaved": "Cet ordinateur n’a pas pu enregistrer {name} pour la nouvelle conversation ; rien n’a été démarré. Touchez votre message pour le récupérer, puis envoyez-le à nouveau.",
+		"mobile.home.identity.row_agent": "{name}, agent",
+		"mobile.home.identity.row_agent_described": "{name}, agent. {description}",
+		"mobile.home.identity.row_team": "{name}, équipe",
+		"mobile.home.identity.row_team_led": "{name}, équipe, dirigée par {manager}",
+		"mobile.home.identity.search": "Rechercher des agents et des équipes",
+		"mobile.home.identity.sheet_title": "Démarrer cette conversation avec",
+		"mobile.home.identity.starting_with": "Démarrage avec {name}…",
+		"mobile.home.identity.team_led_by": "Dirigée par {manager}",
+		"mobile.home.identity.team_members": "{count, plural, one {# membre} other {# membres}}",
+		"mobile.home.identity.team_subtitle": "Dirigée par {manager} · {count, plural, one {# membre} other {# membres}}",
+		"mobile.home.identity.unsupported": "Le Local Operator de cet ordinateur est trop ancien pour démarrer une conversation avec un agent ou une équipe. Mettez-le à jour pour en choisir un ici.",
 		"mobile.home.models_read_failed": "Impossible de lire la liste des modèles de cet ordinateur pour le moment.",
 		"mobile.home.options.default_model": "Utiliser le modèle par défaut de cet ordinateur",
 		"mobile.home.options.fixed": "Les options initiales de cette conversation sont figées. Utilisez Détails de la conversation pour accéder aux commandes de la conversation en cours.",
@@ -6852,9 +9005,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.startup_queue.not_started": "Non démarrée",
 		"mobile.home.startup_queue.sending": "Envoi des messages en attente…",
 		"mobile.home.startup_queue.unconfirmed": "Démarrage non confirmé",
-		"mobile.home.suggestion.last_turn": "Montrez le dernier tour",
 		"mobile.home.suggestion.linear_mcp": "Configurez Linear MCP",
-		"mobile.home.suggestion.phone_access": "Activez l’accès téléphone",
 		"mobile.home.suggestion.review_repo": "Examinez ce repo",
 		"mobile.home.suggestion.team_of_agents": "Créez une équipe d’agents",
 		"mobile.home.suggestion.wake_summary": "Réveillez-moi et résumez",
@@ -6863,6 +9014,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.tip.search": "retrouvez une session passée pour la rouvrir",
 		"mobile.home.transcript.needs_answer": "Attend votre réponse",
 		"mobile.home.transcript.waiting": "En attente de la conversation…",
+		"mobile.home.work.all_conversations": "Toutes les conversations",
+		"mobile.home.work.all_conversations_new": "Toutes les conversations, {count, plural, one {# nouvelle conversation} other {# nouvelles conversations}}",
+		"mobile.home.work.needs_you": "Besoin de vous",
+		"mobile.home.work.recent": "Récentes",
+		"mobile.home.work.try": "Essayer",
 		"mobile.library.action.add_tag": "Ajouter",
 		"mobile.library.action.edit": "Modifier",
 		"mobile.library.action.open_chat": "Ouvrir la conversation",
@@ -6915,6 +9071,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.notifications.channel.system": "Son du système",
 		"mobile.notifications.channel.tape_warble": "Bande ondulante",
 		"mobile.notifications.channel.task_complete": "Tâche terminée",
+		"mobile.notifications.channel.team_bridge": "Team Bridge",
+		"mobile.notifications.channel.team_bridge_description": "Messages de vos coéquipiers et de leurs agents.",
 		"mobile.notifications.channel.two_note_chime": "Carillon à deux notes",
 		"mobile.notifications.computer_registration.failed": "Impossible d’enregistrer ce téléphone pour les alertes de cet ordinateur. Une nouvelle tentative aura lieu à la réouverture de l’app.",
 		"mobile.notifications.computer_registration.no_token": "Ce téléphone n’a pas encore d’adresse push, cet ordinateur ne peut donc pas lui envoyer d’alertes. Rouvrez l’app pour réessayer.",
@@ -6956,6 +9114,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.notifications.preferences.agent_note": "Désactivez les deux types de notifications des agents pour ne garder que celles de Team Bridge.",
 		"mobile.notifications.preferences.bridge_heading": "Team Bridge",
 		"mobile.notifications.preferences.bridge_note": "Pour chaque message privé, groupe ou canal, ouvrez le menu de la cloche et choisissez {all}, {mentions} ou {muted}.",
+		"mobile.notifications.preferences.bridge_system_off": "Les notifications Team Bridge sont désactivées dans les paramètres Android : aucune n’apparaîtra sur ce téléphone.",
+		"mobile.notifications.preferences.bridge_system_open": "Ouvrir les paramètres Android",
 		"mobile.notifications.preferences.completions": "L'agent a terminé",
 		"mobile.notifications.preferences.computer_keeps_sending": "Votre ordinateur continuera d'envoyer les notifications des agents jusqu'à la mise à jour de Local Operator sur celui-ci.",
 		"mobile.notifications.preferences.disabled_hint": "Nécessite une version plus récente de Local Operator sur votre ordinateur.",
@@ -6972,6 +9132,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.notifications.priority_high": "Élevée",
 		"mobile.notifications.section.waiting": "À traiter",
 		"mobile.notifications.section.waiting_count": "À traiter · {count}",
+		"mobile.notifications.team_bridge.self_name": "Vous",
 		"mobile.notifications.title": "Notifications",
 		"mobile.notifications.turn_on": "Activer les notifications",
 		"mobile.oauth.failed": "La connexion n’a pas pu aboutir. Réessayez.",
@@ -7157,7 +9318,16 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.composer.not_sent_storage": "Non envoyé. Impossible d’enregistrer ce message de façon sûre pour réessayer. Votre texte et vos images sont toujours là. Réessayez.",
 		"mobile.session.composer.retained_instruction": "Une instruction précédente a peut-être été transmise. Réessayez d’envoyer cette instruction avant de transmettre votre brouillon actuel.",
 		"mobile.session.composer.retry_not_sent_storage": "Cette tentative de renvoi n’a pas été envoyée. Impossible de préparer en toute sécurité le renvoi de l’instruction précédente. Réessayez d’envoyer l’instruction précédente. Votre brouillon actuel n’a pas été envoyé.",
+		"mobile.session.composer.settings_not_applied": "La session a été rouverte, mais le modèle ou le niveau d’effort choisi n’a pas pu être appliqué : rien n’a donc été envoyé. Réessayez, ou choisissez un autre modèle ou niveau d’effort.",
 		"mobile.session.conversation_details": "Détails de la conversation",
+		"mobile.session.diagram.close": "Fermer le diagramme",
+		"mobile.session.diagram.copied": "copié",
+		"mobile.session.diagram.copy": "Copier la source du diagramme",
+		"mobile.session.diagram.error": "Impossible de dessiner ce diagramme. La source est affichée à la place.",
+		"mobile.session.diagram.label": "Diagramme {type}",
+		"mobile.session.diagram.label_titled": "Diagramme {type} : {title}",
+		"mobile.session.diagram.open_hint": "Ouvre le diagramme en plein écran",
+		"mobile.session.diagram.viewer": "Visionneuse de diagramme",
 		"mobile.session.empty.headline": "Rien ici pour le moment.",
 		"mobile.session.empty.next": "Envoyez le premier message ci-dessous.",
 		"mobile.session.fallback_name": "session",
@@ -7186,6 +9356,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.history.loading": "Chargement des messages précédents…",
 		"mobile.session.history.refresh_failed": "Les derniers messages n’ont pas pu être chargés.",
 		"mobile.session.history.stalled": "Le chargement des messages précédents s’est arrêté. Réessayez ou rouvrez cette conversation.",
+		"mobile.session.inline_chart_data": "Données du graphique",
+		"mobile.session.jump_to_latest": "↓ Aller au plus récent",
+		"mobile.session.jump_to_latest_name": "Aller au plus récent",
+		"mobile.session.jump_to_latest_short": "↓ Plus récent",
 		"mobile.session.not_connected.headline": "Cette session n’est pas encore connectée.",
 		"mobile.session.not_connected.next": "Ouvrez-la depuis la liste des sessions une fois qu’un ordinateur est connecté.",
 		"mobile.session.outbox.composer_discarding": "Abandon de votre message précédent. Vous pourrez envoyer celui-ci dans un instant.",
@@ -7214,7 +9388,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.region.label_todos": "tâches",
 		"mobile.session.region.label_working": "activité",
 		"mobile.session.region.more_below": "la suite plus bas · défiler ↓",
-		"mobile.session.sheet_title.attach": "joindre",
+		"mobile.session.sheet_title.attach": "Ajouter une image",
 		"mobile.session.sheet_title.commands": "Commandes",
 		"mobile.session.sheet_title.effort": "Effort",
 		"mobile.session.sheet_title.model": "Modèle",
@@ -7328,7 +9502,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.settings.theme.no_match": "Aucun thème ne correspond",
 		"mobile.settings.theme.row_label": "Thème, {name}",
 		"mobile.settings.theme.search_label": "Rechercher des thèmes",
-		"mobile.settings.theme.search_placeholder": "Rechercher des thèmes",
+		"mobile.settings.theme.search_placeholder": "Nom, par exemple Dracula",
 		"mobile.settings.theme.section_dark": "Sombres ({count})",
 		"mobile.settings.theme.section_light": "Clairs ({count})",
 		"mobile.settings.theme.title": "Thème",
@@ -7339,6 +9513,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.sidebar.empty_by_view.next": "Réactivez des sections ou les sessions terminées, ou réinitialisez l’affichage.",
 		"mobile.sidebar.empty_by_view.reset": "Réinitialiser l’affichage",
 		"mobile.sidebar.group.one_list": "Une seule liste",
+		"mobile.sidebar.group.tag": "Tags",
 		"mobile.sidebar.group.time_section": "Section temporelle",
 		"mobile.sidebar.group_by": "Grouper par",
 		"mobile.sidebar.hidden_sections": "{count, plural, one {# section masquée} many {# de sections masquées} other {# sections masquées}}",
@@ -7352,16 +9527,31 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.sidebar.row.asks": "{count, plural, one {# question} many {# de questions} other {# questions}}",
 		"mobile.sidebar.row.asks_not_blocker": "{asks}, sans blocage",
 		"mobile.sidebar.row.new": "nouvelle",
+		"mobile.sidebar.row.on_device": "Sur {device}",
 		"mobile.sidebar.row.todos": "{count, plural, one {# tâche} many {# de tâches} other {# tâches}}",
+		"mobile.sidebar.row_label.join": "{first}, {second}",
+		"mobile.sidebar.row_label.on_device": "sur {device}",
+		"mobile.sidebar.row_label.open": "ouverte",
+		"mobile.sidebar.row_label.waiting": "{kind, select, approval {approbation en attente} other {question en attente}}",
+		"mobile.sidebar.row_label.working": "en cours",
+		"mobile.sidebar.row_status.approval": "approbation",
+		"mobile.sidebar.row_status.ended": "terminée",
+		"mobile.sidebar.row_status.not_answering": "ne répond pas",
+		"mobile.sidebar.row_status.not_reachable": "injoignable",
+		"mobile.sidebar.row_status.question": "question",
 		"mobile.sidebar.section.older": "Plus anciennes",
 		"mobile.sidebar.section.pinned": "Épinglées",
 		"mobile.sidebar.section.running": "En cours",
 		"mobile.sidebar.section.today": "Aujourd’hui",
+		"mobile.sidebar.section.untagged": "Sans tag",
 		"mobile.sidebar.section.week": "Cette semaine",
 		"mobile.sidebar.sections": "Sections",
 		"mobile.sidebar.settings_heading": "Barre latérale",
 		"mobile.sidebar.show_ended": "Afficher les sessions terminées",
 		"mobile.sidebar.show_ended_hint": "Les conversations épinglées et en cours restent toujours visibles.",
+		"mobile.sidebar.show_tags": "Afficher les tags",
+		"mobile.sidebar.show_tags_hint": "Les tags restent dans le menu de chaque conversation.",
+		"mobile.sidebar.tag_group.announcement": "{name}, {count, plural, one {# conversation} many {# de conversations} other {# conversations}}",
 		"mobile.sidebar.tags.announcement": "Tags : {names}",
 		"mobile.sidebar.tags.empty_headline": "Pas encore de catégorie.",
 		"mobile.sidebar.tags.empty_next": "À créer sur ordinateur.",
@@ -7406,6 +9596,12 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.signin.use_address": "Utiliser une adresse et un mot de passe",
 		"mobile.signin.welcome.body": "Cette app pilote les sessions sur votre propre machine et en montre le résultat. Votre code ne la quitte jamais.",
 		"mobile.signin.welcome.headline": "Votre agent s’exécute sur votre ordinateur.",
+		"mobile.team_bridge.actions.a11y_react": "Réagir",
+		"mobile.team_bridge.actions.copied": "Copié",
+		"mobile.team_bridge.actions.copy_text": "Copier le texte",
+		"mobile.team_bridge.actions.reply_in_thread": "Répondre dans le fil",
+		"mobile.team_bridge.actions.select_text": "Sélectionner le texte",
+		"mobile.team_bridge.actions.title": "Actions sur le message",
 		"mobile.team_bridge.attachment.add": "Ajouter une image",
 		"mobile.team_bridge.attachment.attached_summary": "{count, plural, one {# image jointe} other {# images jointes}}",
 		"mobile.team_bridge.attachment.cannot_send": "Envoi impossible",
@@ -7449,6 +9645,23 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.team_bridge.attachment.viewer": "Visionneuse d’images",
 		"mobile.team_bridge.attachment.wait_uploads": "L’envoi sera disponible lorsque les images seront téléversées.",
 		"mobile.team_bridge.back": "Retour",
+		"mobile.team_bridge.card_body.deleted": "Ce message a été supprimé.",
+		"mobile.team_bridge.card_body.held": "Retenu pour examen.",
+		"mobile.team_bridge.card_body.held_transient": "En attente de filtrage — pas encore transmis à votre agent.",
+		"mobile.team_bridge.card_body.loading": "Chargement du message…",
+		"mobile.team_bridge.card_body.more_messages": "{count, plural, one {# message supplémentaire dans cette carte} many {# de messages supplémentaires dans cette carte} other {# messages supplémentaires dans cette carte}}",
+		"mobile.team_bridge.card_body.not_admitted": "Non transmis à votre agent.",
+		"mobile.team_bridge.card_body.not_member": "Vous ne faites plus partie de cette conversation.",
+		"mobile.team_bridge.card_body.offline": "Impossible de joindre Radient — nouvelle tentative en cours.",
+		"mobile.team_bridge.card_body.other_account": "Reçu sur un autre compte Radient.",
+		"mobile.team_bridge.card_body.pending": "En attente de transmission à votre agent.",
+		"mobile.team_bridge.card_body.refused": "Refusé par la modération.",
+		"mobile.team_bridge.card_body.show_less": "Afficher moins",
+		"mobile.team_bridge.card_body.show_more": "Afficher plus",
+		"mobile.team_bridge.card_body.signed_out": "Connectez-vous à Radient pour voir ce message.",
+		"mobile.team_bridge.card_body.thread_reply": "Réponse dans le fil",
+		"mobile.team_bridge.card_body.unavailable": "Contenu du message indisponible.",
+		"mobile.team_bridge.card_body.untrusted": "Message externe · contenu non fiable",
 		"mobile.team_bridge.conversation": "Conversation",
 		"mobile.team_bridge.default_on.body": "Les agents de votre organisation peuvent envoyer des messages à votre chef de cabinet. Vous pouvez désactiver cette option à tout moment.",
 		"mobile.team_bridge.default_on.dismiss": "Fermer",
@@ -7511,6 +9724,15 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.team_bridge.list.preview": "Aperçu · Rejoignez le canal pour lire",
 		"mobile.team_bridge.list.quiet": "Notifications silencieuses",
 		"mobile.team_bridge.list.self": "vous",
+		"mobile.team_bridge.mentions.dismiss_notice": "Ignorer",
+		"mobile.team_bridge.mentions.invited": "{name} n’a pas encore rejoint cette conversation et ne sera pas notifié.",
+		"mobile.team_bridge.mentions.no_endpoint": "{name} ne pourra être notifié qu’une fois la liste des personnes chargée.",
+		"mobile.team_bridge.mentions.not_member": "{name} ne fait pas partie de cette conversation et ne sera pas notifié.",
+		"mobile.team_bridge.mentions.results_count": "{count, plural, one {# proposition} other {# propositions}}",
+		"mobile.team_bridge.mentions.row_label": "Mentionner {name}",
+		"mobile.team_bridge.mentions.section_members": "Dans cette conversation",
+		"mobile.team_bridge.mentions.section_org": "Autres membres de votre organisation",
+		"mobile.team_bridge.mentions.unavailable": "Liste des personnes indisponible. Affichage des membres de cette conversation.",
 		"mobile.team_bridge.navigation.caption": "Votre organisation, même lorsque votre ordinateur est en veille",
 		"mobile.team_bridge.navigation.entry": "{count, plural, =0 {Team Bridge} one {Team Bridge · # non lu} other {Team Bridge · # non lus}}",
 		"mobile.team_bridge.navigation.entry_loading": "Team Bridge · chargement",
@@ -7527,6 +9749,35 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.team_bridge.profile.open": "Voir le profil de {name}",
 		"mobile.team_bridge.profile.opens_hint": "Ouvre son profil",
 		"mobile.team_bridge.profile.title": "Profil",
+		"mobile.team_bridge.reactions.add": "Ajouter une réaction",
+		"mobile.team_bridge.reactions.added": "Réaction ajoutée",
+		"mobile.team_bridge.reactions.details": "Détails de la réaction",
+		"mobile.team_bridge.reactions.failed": "La réaction n'a pas pu être enregistrée. Réessayez.",
+		"mobile.team_bridge.reactions.hint_add": "Touchez deux fois pour réagir aussi",
+		"mobile.team_bridge.reactions.hint_inspect": "Touchez deux fois pour consulter les détails de la réaction",
+		"mobile.team_bridge.reactions.hint_remove": "Touchez deux fois pour retirer votre réaction",
+		"mobile.team_bridge.reactions.keyboard_hint": "Choisissez un emoji sur votre clavier",
+		"mobile.team_bridge.reactions.pill": "{emoji}, {count, plural, one {# réaction} other {# réactions}}",
+		"mobile.team_bridge.reactions.pill_mine": "{emoji}, {count, plural, one {# réaction} other {# réactions}}, vous avez réagi",
+		"mobile.team_bridge.reactions.removed": "Réaction retirée",
+		"mobile.team_bridge.reactions.sample": "{count, plural, =0 {{labels}} one {{labels} et # autre} other {{labels} et # autres}}",
+		"mobile.team_bridge.reactions.sample_none": "Aucun nom ne figure dans ce résumé.",
+		"mobile.team_bridge.reactions.sample_notice": "Les noms affichés sont un échantillon, pas une liste complète.",
+		"mobile.team_bridge.reactions.show_less": "Afficher moins",
+		"mobile.team_bridge.reactions.show_more": "Afficher {count} de plus",
+		"mobile.team_bridge.reactions.summary": "{count, plural, one {# réaction} other {# réactions}}",
+		"mobile.team_bridge.reactions.you_reacted": "Vous avez réagi",
+		"mobile.team_bridge.reply_thread.count": "{count, plural, one {# réponse} other {# réponses}}",
+		"mobile.team_bridge.reply_thread.empty": "Aucune réponse pour l’instant. Lancez le fil.",
+		"mobile.team_bridge.reply_thread.error": "Impossible de charger ce fil.",
+		"mobile.team_bridge.reply_thread.last_reply": "Dernière réponse : {time}",
+		"mobile.team_bridge.reply_thread.loading": "Chargement du fil…",
+		"mobile.team_bridge.reply_thread.more": "Charger plus de réponses",
+		"mobile.team_bridge.reply_thread.open": "Ouvrir le fil, {count, plural, one {# réponse} other {# réponses}}",
+		"mobile.team_bridge.reply_thread.open_unread": "Ouvrir le fil, {count, plural, one {# réponse} other {# réponses}}, {unread, plural, one {# non lue} other {# non lues}}",
+		"mobile.team_bridge.reply_thread.reply": "Répondre dans le fil",
+		"mobile.team_bridge.reply_thread.retry": "Réessayer le fil",
+		"mobile.team_bridge.reply_thread.title": "Fil",
 		"mobile.team_bridge.retry": "Réessayer",
 		"mobile.team_bridge.thread.access_retry": "Réessayer l’accès",
 		"mobile.team_bridge.thread.anchor_missing": "Ce message n’est plus disponible.",
@@ -7620,6 +9871,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"relay.health.quiet_detail": "Sur votre ordinateur, cette session ne répond plus — elle est peut-être occupée ou bloquée. Un message peut être signalé en échec et arriver malgré tout quand elle aura rattrapé son retard. Réessayer ne l’enverra pas en double.",
 		"relay.health.reconnecting": "Reconnexion",
 		"relay.health.reconnecting_detail": "Ce téléphone a perdu la connexion avec votre ordinateur et continue d’essayer de se reconnecter. La session s’y exécute peut-être encore ; un envoi peut échouer tant que la connexion n’est pas rétablie.",
+		"relay.skills.skipped": "Envoyé sans {names} — {count, plural, one {cette compétence n’a pas de contenu à joindre} many {ces compétences n’ont pas de contenu à joindre} other {ces compétences n’ont pas de contenu à joindre}}.",
+		"relay.skills.too_large": "Ces compétences sont trop volumineuses pour être envoyées ensemble. Retirez-en une et renvoyez le message.",
+		"relay.skills.tray.hidden": "masquée",
+		"relay.skills.tray.label": "Compétences",
 		"relay.transcript.composer.queued": "{count, plural, one {# en attente} many {# en attente} other {# en attente}}",
 		"relay.transcript.fold.failed_label": "Contient une action en échec",
 		"relay.transcript.fold.more": "{count, plural, one {et # autre action} many {et # d’autres actions} other {et # autres actions}}",
@@ -7657,6 +9912,43 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.account_routing.unsaved": "अभी सहेजा नहीं गया।",
 		"mobile.agent_avatar.edit_hint": "यह तस्वीर डेस्कटॉप ऐप में बदलें",
 		"mobile.agent_avatar.label": "एजेंट की तस्वीर",
+		"mobile.asks.answer_label": "इस सवाल पर आपका उत्तर: {question}",
+		"mobile.asks.answer_placeholder": "आपका उत्तर",
+		"mobile.asks.choose_any": "जो लागू हों, उन्हें चुनें",
+		"mobile.asks.deadline_ago": "समय-सीमा {duration} पहले बीत गई",
+		"mobile.asks.decline": "अस्वीकार करें",
+		"mobile.asks.decline_hint": "कोई उत्तर नहीं भेजा जाता। एजेंट खुद तय करता है।",
+		"mobile.asks.dismiss": "हटाएँ",
+		"mobile.asks.dismiss_open": "हटाएँ…",
+		"mobile.asks.dismiss_reason.chat": "बातचीत में जवाब दिया गया",
+		"mobile.asks.dismiss_reason.chat_note": "आप पहले ही बातचीत में जवाब दे चुके हैं",
+		"mobile.asks.dismiss_reason.moot": "अब ज़रूरत नहीं",
+		"mobile.asks.dismiss_reason.moot_note": "एजेंट जवाब का इंतज़ार करना बंद कर देता है",
+		"mobile.asks.dismiss_title": "{count, plural, one {इस सवाल को हटाएँ} other {इन सवालों को हटाएँ}}",
+		"mobile.asks.empty": "कुछ भी प्रतीक्षा में नहीं है। एजेंट के सवाल यहाँ दिखाई देंगे।",
+		"mobile.asks.honesty": "यह ऐप खुले रहने पर कतार में लगे सवाल दिखाता है। बंद होने पर यह आप तक नहीं पहुँच सकता।",
+		"mobile.asks.loading": "सवाल पढ़े जा रहे हैं…",
+		"mobile.asks.none_recorded": "इस सवाल का कोई उत्तर दर्ज नहीं हुआ।",
+		"mobile.asks.nothing_left": "यहाँ उत्तर देने के लिए कुछ नहीं बचा। किसी और जगह ने ये सवाल पहले ही ले लिए हैं।",
+		"mobile.asks.open_conversation": "बातचीत खोलें",
+		"mobile.asks.other_hint": "अपना उत्तर लिखें",
+		"mobile.asks.other_kept": "आपका टेक्स्ट सहेजा गया है, भेजा नहीं गया",
+		"mobile.asks.other_label": "अन्य",
+		"mobile.asks.progress.pick_or_type": "भेजने के लिए कोई विकल्प चुनें या अपना जवाब लिखें।",
+		"mobile.asks.progress.tally": "{total} में से {answered} सवालों के जवाब दिए गए या छोड़े गए",
+		"mobile.asks.progress.type": "भेजने के लिए जवाब लिखें या सवाल छोड़ दें।",
+		"mobile.asks.recommended": "· अनुशंसित",
+		"mobile.asks.secret_notice": "गुप्त: सीधे भेजा गया, ट्रांसक्रिप्ट में नहीं दिखाया गया",
+		"mobile.asks.secret_notice_saved": "गुप्त: सीधे भेजा गया, ट्रांसक्रिप्ट में नहीं दिखाया गया, और दोबारा उपयोग के लिए कंप्यूटर पर सहेजा गया",
+		"mobile.asks.secret_placeholder": "गुप्त मान",
+		"mobile.asks.send_answer": "उत्तर भेजें",
+		"mobile.asks.send_answers": "उत्तर भेजें",
+		"mobile.asks.settled": "निपटाए गए",
+		"mobile.asks.skip": "छोड़ें (उत्तर न भेजें)",
+		"mobile.asks.title_fallback": "सवाल",
+		"mobile.asks.truncated": "सबसे नए सवाल दिखाए जा रहे हैं। बाकी देखने के लिए कोई बातचीत खोलें।",
+		"mobile.asks.unskip": "इस सवाल का उत्तर दें",
+		"mobile.asks.urgent": "· अत्यावश्यक",
 		"mobile.chrome.clear_search": "खोज साफ़ करें",
 		"mobile.chrome.close_conversations": "बातचीत बंद करें",
 		"mobile.chrome.composer.dismiss_keyboard": "कीबोर्ड छिपाएँ",
@@ -7665,6 +9957,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.chrome.composer.queued": "{count, plural, one {# संदेश कतार में} other {# संदेश कतार में}}",
 		"mobile.chrome.composer.row_cost": "लागत",
 		"mobile.chrome.composer.row_effort": "प्रयास",
+		"mobile.chrome.composer.row_identity": "एजेंट या टीम",
 		"mobile.chrome.composer.row_model": "मॉडल",
 		"mobile.chrome.composer.row_questions": "प्रश्न",
 		"mobile.chrome.composer.row_queue": "कतार",
@@ -7696,18 +9989,184 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.common.not_found.headline": "वह पेज मौजूद नहीं है।",
 		"mobile.common.not_found.next": "आगे बढ़ने के लिए अपने सत्रों पर लौटें।",
 		"mobile.common.not_found.title": "पेज नहीं मिला",
+		"mobile.common.resize_panel": "पैनल का आकार बदलें",
 		"mobile.common.save": "सहेजें",
 		"mobile.common.send": "भेजें",
+		"mobile.common.size.large": "बड़ा",
+		"mobile.common.size.medium": "मध्यम",
+		"mobile.common.size.shorter": "कम ऊँचा",
+		"mobile.common.size.taller": "ज़्यादा ऊँचा",
 		"mobile.common.try_again": "फिर से कोशिश करें",
+		"mobile.community.approvals.agent": "एजेंट",
+		"mobile.community.approvals.decline": "पोस्ट न करें",
+		"mobile.community.approvals.empty": "आपकी मंज़ूरी के लिए कोई एजेंट पोस्ट इंतज़ार नहीं कर रही।",
+		"mobile.community.approvals.expires": "{hours, plural, one {# घंटे में समाप्त} other {# घंटे में समाप्त}}",
+		"mobile.community.approvals.expires_days": "{days, plural, one {# दिन में समाप्त} other {# दिनों में समाप्त}}",
+		"mobile.community.approvals.failed": "यह पूरा नहीं हुआ। फिर से कोशिश करें।",
+		"mobile.community.approvals.open_computer": "सटीक टेक्स्ट पढ़ने और चुनने के लिए अपने कंप्यूटर पर Local Operator खोलें।",
+		"mobile.community.approvals.review": "अपने कंप्यूटर पर देखें",
+		"mobile.community.approvals.review_note": "अपने कंप्यूटर पर देखें चुनने से यह 24 घंटे तक इंतज़ार में रहती है।",
+		"mobile.community.approvals.stays": "जब तक आप मंज़ूरी नहीं देते, ड्राफ़्ट आपके कंप्यूटर पर ही रहता है।",
+		"mobile.community.approvals.title": "आपका चीफ़ ऑफ़ स्टाफ़ #{channel} में पोस्ट करना चाहता है",
+		"mobile.community.approvals.title_unknown": "आपका चीफ़ ऑफ़ स्टाफ़ एक कम्युनिटी चैनल में पोस्ट करना चाहता है",
+		"mobile.community.approvals.waiting": "आपके कंप्यूटर पर आपका इंतज़ार है।",
+		"mobile.community.browse.channels": "चैनल",
+		"mobile.community.browse.channels_empty": "कोई चैनल मेल नहीं खाता।",
+		"mobile.community.browse.join": "जुड़ें",
+		"mobile.community.browse.load_more": "और लोड करें",
+		"mobile.community.browse.mode": "दिखाएँ",
+		"mobile.community.browse.open": "खोलें",
+		"mobile.community.browse.people": "लोग",
+		"mobile.community.browse.people_empty": "कोई व्यक्ति मेल नहीं खाता।",
+		"mobile.community.browse.private": "निजी",
+		"mobile.community.browse.search": "खोजें",
+		"mobile.community.browse.title": "ब्राउज़ करें",
+		"mobile.community.category.harassment_or_abuse": "उत्पीड़न या दुर्व्यवहार",
+		"mobile.community.category.private_information": "निजी जानकारी",
+		"mobile.community.category.spam_or_promotion": "स्पैम या बिना बताया प्रचार",
+		"mobile.community.category.unsafe_or_illegal": "असुरक्षित या गैरकानूनी सामग्री",
+		"mobile.community.common.loading": "कम्युनिटी लोड हो रही है…",
+		"mobile.community.common.retry": "फिर से कोशिश करें",
+		"mobile.community.common.unavailable": "कम्युनिटी उपलब्ध नहीं है",
+		"mobile.community.composer.attach": "छवि जोड़ें",
+		"mobile.community.composer.audience": "कम्युनिटी के सभी सदस्यों को दिखता है",
+		"mobile.community.composer.audience_dm": "यह बातचीत सिर्फ़ आप और {name} देख सकते हैं",
+		"mobile.community.composer.blocked_archived": "यह चैनल संग्रहित है।",
+		"mobile.community.composer.blocked_locked": "यह चैनल लॉक है।",
+		"mobile.community.composer.blocked_read_only": "यह कम्युनिटी सिर्फ़ पढ़ने के लिए है।",
+		"mobile.community.composer.blocked_staff_only": "यहाँ सिर्फ़ स्टाफ़ और मॉडरेटर पोस्ट करते हैं।",
+		"mobile.community.composer.cancel": "रद्द करें",
+		"mobile.community.composer.cancelled": "रद्द किया गया। कुछ भी पोस्ट नहीं हुआ।",
+		"mobile.community.composer.checking": "जाँच हो रही है…",
+		"mobile.community.composer.dismiss": "हटाएँ",
+		"mobile.community.composer.failed": "आपका संदेश नहीं भेजा गया। आपका टेक्स्ट अभी भी यहाँ है।",
+		"mobile.community.composer.forbidden": "आप यहाँ पोस्ट नहीं कर सकते।",
+		"mobile.community.composer.guidelines": "कम्युनिटी दिशानिर्देश बदल गए हैं। उन्हें स्वीकार करें, फिर दोबारा कोशिश करें।",
+		"mobile.community.composer.images_unavailable": "कम्युनिटी में अभी इमेज पोस्ट नहीं की जा सकतीं। आपका टेक्स्ट अभी भी यहाँ है।",
+		"mobile.community.composer.invalid": "यह संदेश इस रूप में नहीं भेजा जा सकता। इसे छोटा करें या बदलें, फिर दोबारा भेजें।",
+		"mobile.community.composer.label": "#{name} में संदेश",
+		"mobile.community.composer.label_dm": "{name} को संदेश",
+		"mobile.community.composer.limited": "आप कम्युनिटी की अनुमति से ज़्यादा तेज़ी से भेज रहे हैं।",
+		"mobile.community.composer.limited_wait": "{seconds, plural, one {# सेकंड बाद फिर कोशिश करें।} other {# सेकंड बाद फिर कोशिश करें।}}",
+		"mobile.community.composer.refused": "पोस्ट नहीं हुआ: {category}",
+		"mobile.community.composer.refused_detail": "यह सिर्फ़ आपको दिखता है। संदर्भ {reference}। दोबारा भेजने के लिए अपना संदेश बदलें।",
+		"mobile.community.composer.restricted": "आपके पोस्ट करने पर रोक है। संदर्भ {reference}।",
+		"mobile.community.composer.retry": "फिर से कोशिश करें",
+		"mobile.community.composer.review": "दिशानिर्देश देखें",
+		"mobile.community.composer.send": "भेजें",
+		"mobile.community.composer.unavailable": "आपके संदेश की जाँच नहीं हो सकी, इसलिए कुछ भी पोस्ट नहीं हुआ। आपका टेक्स्ट अभी भी यहाँ है।",
+		"mobile.community.conversation.agent": "एजेंट",
+		"mobile.community.conversation.deleted": "संदेश हटा दिया गया",
+		"mobile.community.conversation.edited": "बदला गया",
+		"mobile.community.conversation.empty": "अभी कोई संदेश नहीं है।",
+		"mobile.community.conversation.former_member": "पूर्व सदस्य",
+		"mobile.community.conversation.join_prompt": "आप #{name} पढ़ रहे हैं। यहाँ पोस्ट करने के लिए चैनल से जुड़ें।",
+		"mobile.community.conversation.load_older": "पुराने संदेश लोड करें",
+		"mobile.community.conversation.older_error": "पुराने संदेश लोड नहीं हो सके।",
+		"mobile.community.conversation.replies": "{count, plural, one {# जवाब} other {# जवाब}}",
+		"mobile.community.conversation.report": "संदेश की रिपोर्ट करें",
+		"mobile.community.conversation.subtitle": "{community} · सार्वजनिक",
+		"mobile.community.conversation.view_profile": "{name} की प्रोफ़ाइल देखें",
+		"mobile.community.directory.empty": "अभी जुड़ने के लिए कोई कम्युनिटी खुली नहीं है।",
+		"mobile.community.directory.featured": "चुनिंदा",
+		"mobile.community.directory.joined": "जुड़ चुके",
+		"mobile.community.directory.read_only": "सिर्फ़ पढ़ने के लिए",
+		"mobile.community.directory.title": "कम्युनिटी",
+		"mobile.community.error.auth_unavailable": "Radient अभी आपका साइन-इन जाँच नहीं सका। थोड़ी देर में फिर कोशिश करें।",
+		"mobile.community.error.generic": "कुछ गड़बड़ हो गई। कुछ भी नहीं बदला गया।",
+		"mobile.community.error.load_failed": "अभी इसे लोड नहीं किया जा सका। अपना कनेक्शन जाँचें और फिर से कोशिश करें।",
+		"mobile.community.error.not_found": "यह कम्युनिटी इस खाते के लिए उपलब्ध नहीं है।",
+		"mobile.community.error.rate_limited": "आप कम्युनिटी की अनुमति से ज़्यादा तेज़ी से ऐसा कर रहे हैं। थोड़ी देर में फिर कोशिश करें।",
+		"mobile.community.error.sign_in": "कम्युनिटी इस्तेमाल करने के लिए Radient में साइन इन करें।",
+		"mobile.community.error.unreachable": "कम्युनिटी से कनेक्ट नहीं हो सका। इस डिवाइस का कनेक्शन जाँचें।",
+		"mobile.community.home.browse": "ब्राउज़ करें",
+		"mobile.community.home.channel_label": "#{name}{count, plural, =0 {} one { · # अपठित} other { · # अपठित}}",
+		"mobile.community.home.channels": "चैनल",
+		"mobile.community.home.channels_empty": "आप अभी किसी चैनल से नहीं जुड़े हैं। कोई चैनल ढूँढने के लिए ब्राउज़ करें।",
+		"mobile.community.home.closed": "यह कम्युनिटी सिर्फ़ पढ़ने के लिए है और नए सदस्य नहीं ले रही।",
+		"mobile.community.home.direct": "सीधे संदेश",
+		"mobile.community.home.direct_empty": "अभी कोई सीधा संदेश नहीं है।",
+		"mobile.community.home.direct_label": "{name}{count, plural, =0 {} one { · # अपठित} other { · # अपठित}}",
+		"mobile.community.home.join": "जुड़ें",
+		"mobile.community.home.not_member": "इस कम्युनिटी में पढ़ने और पोस्ट करने के लिए जुड़ें।",
+		"mobile.community.home.reaccept": "देखें",
+		"mobile.community.home.reaccept_banner": "कम्युनिटी दिशानिर्देश बदल गए हैं। पोस्ट करते रहने के लिए उन्हें देखें और स्वीकार करें।",
+		"mobile.community.home.requests": "अनुरोध",
+		"mobile.community.home.requests_count": "{count, plural, one {अनुरोध · #} other {अनुरोध · #}}",
+		"mobile.community.home.switch": "संगठन या समुदाय बदलें",
+		"mobile.community.join.agree": "मैं कम्युनिटी दिशानिर्देशों ({version}) से सहमत हूँ। मेरी प्रोफ़ाइल और पोस्ट सभी सदस्यों को दिखती हैं।",
+		"mobile.community.join.changed": "आपके पढ़ते समय दिशानिर्देश बदल गए। नया संस्करण देखें, फिर दोबारा स्वीकार करें।",
+		"mobile.community.join.failed": "जुड़ना पूरा नहीं हुआ। फिर से कोशिश करें।",
+		"mobile.community.join.guidelines_heading": "कम्युनिटी दिशानिर्देश ({version})",
+		"mobile.community.join.hint": "जुड़ने के लिए बॉक्स पर निशान लगाएँ।",
+		"mobile.community.join.moderation": "हर संदेश पोस्ट होने से पहले जाँचा जाता है। अगर कुछ पोस्ट नहीं होता, तो वजह सिर्फ़ आपको दिखती है, साथ में एक संदर्भ जिस पर आप अपील कर सकते हैं।",
+		"mobile.community.join.profile": "सदस्यों को आपका Radient नाम दिखता है। कभी नहीं दिखाया जाता: ईमेल, संगठन।",
+		"mobile.community.join.reaccept_submit": "स्वीकार करें और जारी रखें",
+		"mobile.community.join.reaccept_title": "अपडेट किए गए कम्युनिटी दिशानिर्देश",
+		"mobile.community.join.submit": "जुड़ें और कम्युनिटी खोलें",
+		"mobile.community.join.title": "कम्युनिटी से जुड़ें",
+		"mobile.community.no_plan.body": "Radient द्वारा चलाई जाने वाली एक मुफ़्त सार्वजनिक जगह। मदद पाएँ, फ़ीडबैक दें और Local Operator के दूसरे यूज़र्स से मिलें।",
+		"mobile.community.no_plan.free": "मुफ़्त। किसी Team प्लान या भुगतान की ज़रूरत नहीं।",
+		"mobile.community.no_plan.join": "कम्युनिटी से जुड़ें",
+		"mobile.community.no_plan.open": "कम्युनिटी खोलें",
+		"mobile.community.no_plan.title": "Local Operator Community से जुड़ें",
+		"mobile.community.profile.block": "ब्लॉक करें",
+		"mobile.community.profile.blocked": "ब्लॉक किया गया। आप एक-दूसरे के संदेश या अनुरोध नहीं देखेंगे।",
+		"mobile.community.profile.failed": "यह पूरा नहीं हुआ। फिर से कोशिश करें।",
+		"mobile.community.profile.joined": "{month} में जुड़े",
+		"mobile.community.profile.message": "संदेश भेजें",
+		"mobile.community.profile.message_sent": "संदेश अनुरोध भेज दिया गया। उन्हें यह अपने अनुरोधों में दिखेगा।",
+		"mobile.community.profile.report": "रिपोर्ट करें",
+		"mobile.community.profile.title": "प्रोफ़ाइल",
+		"mobile.community.report.category": "क्या गलत है?",
+		"mobile.community.report.dm_consent": "यह संदेश Radient Trust & Safety के साथ साझा करें। इसे केवल उनके केस समीक्षक देखते हैं; समुदाय मॉडरेटर कभी नहीं।",
+		"mobile.community.report.failed": "रिपोर्ट नहीं भेजी जा सकी। फिर से कोशिश करें।",
+		"mobile.community.report.note": "कुछ और जो हमें जानना चाहिए? (वैकल्पिक)",
+		"mobile.community.report.revision_changed": "आपके खोलने के बाद यह संदेश बदला गया। इसे फिर से पढ़ें, फिर पुष्टि करके मौजूदा संस्करण की रिपोर्ट करें।",
+		"mobile.community.report.sent": "रिपोर्ट भेज दी गई। संदर्भ {reference}।",
+		"mobile.community.report.submit": "रिपोर्ट भेजें",
+		"mobile.community.report.title": "Radient Trust & Safety को रिपोर्ट करें",
+		"mobile.community.requests.accept": "स्वीकार करें",
+		"mobile.community.requests.approvals": "एजेंट मंज़ूरियाँ",
+		"mobile.community.requests.block": "ब्लॉक करें",
+		"mobile.community.requests.decline": "अस्वीकार करें",
+		"mobile.community.requests.dm": "संदेश",
+		"mobile.community.requests.dm_body": "{name} आपको सीधे संदेश भेजना चाहते हैं।",
+		"mobile.community.requests.dm_empty": "कोई संदेश अनुरोध नहीं है।",
+		"mobile.community.requests.expires": "{hours, plural, one {# घंटे में समाप्त} other {# घंटे में समाप्त}}",
+		"mobile.community.requests.expires_days": "{days, plural, one {# दिन में समाप्त} other {# दिनों में समाप्त}}",
+		"mobile.community.requests.mode": "दिखाएँ",
+		"mobile.community.requests.title": "अनुरोध",
+		"mobile.community.role.community_admin": "कम्युनिटी एडमिन",
+		"mobile.community.role.moderator": "मॉडरेटर",
+		"mobile.community.role.staff": "Radient स्टाफ़",
+		"mobile.community.switcher.browse": "कम्युनिटी ब्राउज़ करें…",
+		"mobile.community.switcher.communities": "कम्युनिटी",
+		"mobile.community.switcher.note": "बदलने से सिर्फ़ वही बदलता है जो आप देखते हैं।",
+		"mobile.community.switcher.organizations": "संगठन",
+		"mobile.community.switcher.public": "सार्वजनिक",
+		"mobile.community.switcher.row_label": "{name} · सार्वजनिक{count, plural, =0 {} one { · # अपठित} other { · # अपठित}}",
+		"mobile.community.switcher.search": "कम्युनिटी खोजें",
+		"mobile.composer_input.attach.camera": "फ़ोटो लें",
+		"mobile.composer_input.attach.camera_denied": "कैमरा एक्सेस बंद है। फ़ोटो लेने के लिए इसे सेटिंग्स में चालू करें।",
+		"mobile.composer_input.attach.camera_error": "कैमरा नहीं खुल सका। फिर से कोशिश करें।",
+		"mobile.composer_input.attach.camera_refused": "कैमरा एक्सेस की अनुमति नहीं मिली। फिर से पूछे जाने के लिए फ़ोटो लें पर टैप करें।",
+		"mobile.composer_input.attach.camera_unavailable": "इस डिवाइस पर कोई कैमरा उपलब्ध नहीं है।",
+		"mobile.composer_input.attach.choose_image": "चित्र चुनें",
+		"mobile.composer_input.attach.files": "फ़ाइलों से छवि",
+		"mobile.composer_input.attach.library": "फ़ोटो लाइब्रेरी",
+		"mobile.composer_input.attach.open_settings": "सेटिंग्स खोलें",
+		"mobile.composer_input.attach.paste": "चित्र पेस्ट करें",
 		"mobile.composer_input.clear_draft": "ड्राफ़्ट मिटाएँ",
 		"mobile.composer_input.clear_draft_hint": "केवल ड्राफ़्ट का टेक्स्ट और चित्र मिटाता है; कतार में और अपुष्ट संदेश रखता है",
 		"mobile.composer_input.dismiss_error": "त्रुटि छिपाएँ",
 		"mobile.composer_input.dismiss_error_hint": "ड्राफ़्ट या डिलीवरी की स्थिति बदले बिना यह त्रुटि छिपाता है",
 		"mobile.composer_input.notice_dismiss": "छिपाएँ",
 		"mobile.composer_input.notice_retry": "फिर से प्रयास करें",
-		"mobile.composer_input.paste.denied": "पेस्ट करने की अनुमति नहीं मिली। पेपरक्लिप पर टैप करें, फिर छवि चिपकाएँ, और अनुमति दें चुनें।",
+		"mobile.composer_input.paste.denied": "पेस्ट करने की अनुमति नहीं मिली। पेस्ट बटन पर फिर से टैप करें और अनुमति दें चुनें।",
+		"mobile.composer_input.paste.empty_ios": "कोई छवि पेस्ट नहीं हुई। एक छवि कॉपी करें, और पूछे जाने पर अनुमति दें चुनें।",
 		"mobile.composer_input.paste.image": "छवि चिपकाएँ",
-		"mobile.composer_input.paste.image_hint": "क्लिपबोर्ड की छवि संलग्न करता है",
+		"mobile.composer_input.paste.image_hint": "आपकी कॉपी की गई छवि संलग्न करता है",
 		"mobile.composer_input.voice.discard": "वॉइस इनपुट हटाएँ",
 		"mobile.composer_input.voice.finish": "पूरा करें और लिखें",
 		"mobile.composer_input.voice.mic_setup": "वॉइस इनपुट सेट नहीं है",
@@ -7924,6 +10383,32 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.folders_read_failed": "हम अभी इस कंप्यूटर के फ़ोल्डर नहीं पढ़ सके।",
 		"mobile.home.folders_read_sign_in": "इस कंप्यूटर ने दोबारा साइन इन करने को कहा है, इसलिए इसके फ़ोल्डर नहीं पढ़े जा सके।",
 		"mobile.home.greeting": "आज मैं आपकी किस बात में मदद करूँ?",
+		"mobile.home.identity.announce_picked": "यह चैट {name} के साथ शुरू होगी",
+		"mobile.home.identity.band_agents": "एजेंट",
+		"mobile.home.identity.band_recent": "हाल के",
+		"mobile.home.identity.band_teams": "टीमें",
+		"mobile.home.identity.default_agent": "डिफ़ॉल्ट एजेंट",
+		"mobile.home.identity.empty": "इस कंप्यूटर पर अभी कोई एजेंट या टीम नहीं है। डेस्कटॉप ऐप में एक बनाएँ।",
+		"mobile.home.identity.no_matches": "“{query}” से कुछ मेल नहीं खाता।",
+		"mobile.home.identity.pill_label": "यह चैट {target} के साथ शुरू करें। कोई एजेंट या टीम चुनें",
+		"mobile.home.identity.read_failed": "हम अभी इस कंप्यूटर के एजेंट और टीमें नहीं पढ़ सके।",
+		"mobile.home.identity.refused_connecting": "यह कंप्यूटर अभी कनेक्ट हो रहा है, इसलिए अभी कुछ शुरू नहीं हुआ। अपने संदेश पर टैप करके उसे वापस लाएँ, फिर {name} के साथ शुरू करने के लिए थोड़ी देर में दोबारा भेजें।",
+		"mobile.home.identity.refused_fallback": "{name} इस कंप्यूटर पर शुरू नहीं हो सका। कोई दूसरा चुनें, या डिफ़ॉल्ट एजेंट का उपयोग करें।",
+		"mobile.home.identity.refused_registry": "यह कंप्यूटर अभी अपने एजेंट और टीमें नहीं पढ़ सका, इसलिए कुछ शुरू नहीं हुआ। अपने संदेश पर टैप करके उसे वापस लाएँ और दोबारा भेजें, या अभी भेजने के लिए डिफ़ॉल्ट एजेंट चुनें।",
+		"mobile.home.identity.refused_unknown": "{name} अब इस कंप्यूटर पर उपलब्ध नहीं है। अपना संदेश भेजने के लिए कोई दूसरा, या डिफ़ॉल्ट एजेंट चुनें।",
+		"mobile.home.identity.refused_unlicensed": "यह कंप्यूटर अभी {name} के साथ चैट शुरू नहीं कर सकता। भेजने के लिए डिफ़ॉल्ट एजेंट चुनें।",
+		"mobile.home.identity.refused_unsaved": "यह कंप्यूटर नई चैट के लिए {name} सहेज नहीं सका, इसलिए कुछ शुरू नहीं हुआ। अपने संदेश पर टैप करके उसे वापस लाएँ, फिर दोबारा भेजें।",
+		"mobile.home.identity.row_agent": "{name}, एजेंट",
+		"mobile.home.identity.row_agent_described": "{name}, एजेंट। {description}",
+		"mobile.home.identity.row_team": "{name}, टीम",
+		"mobile.home.identity.row_team_led": "{name}, टीम, {manager} के नेतृत्व में",
+		"mobile.home.identity.search": "एजेंट और टीमें खोजें",
+		"mobile.home.identity.sheet_title": "यह चैट इसके साथ शुरू करें",
+		"mobile.home.identity.starting_with": "{name} के साथ शुरू हो रहा है…",
+		"mobile.home.identity.team_led_by": "{manager} के नेतृत्व में",
+		"mobile.home.identity.team_members": "{count, plural, one {# सदस्य} other {# सदस्य}}",
+		"mobile.home.identity.team_subtitle": "{manager} के नेतृत्व में · {count, plural, one {# सदस्य} other {# सदस्य}}",
+		"mobile.home.identity.unsupported": "इस कंप्यूटर का Local Operator किसी एजेंट या टीम के साथ चैट शुरू करने के लिए बहुत पुराना है। यहाँ चुनने के लिए इसे अपडेट करें।",
 		"mobile.home.models_read_failed": "हम अभी इस कंप्यूटर की मॉडल सूची नहीं पढ़ सके।",
 		"mobile.home.options.default_model": "इस कंप्यूटर का डिफ़ॉल्ट मॉडल इस्तेमाल करें",
 		"mobile.home.options.fixed": "इस बातचीत के शुरुआती विकल्प तय हैं। इसके लाइव नियंत्रणों के लिए “बातचीत का विवरण” देखें।",
@@ -7960,9 +10445,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.startup_queue.not_started": "शुरू नहीं हुआ",
 		"mobile.home.startup_queue.sending": "कतार के संदेश भेजे जा रहे हैं…",
 		"mobile.home.startup_queue.unconfirmed": "शुरू होना पक्का नहीं",
-		"mobile.home.suggestion.last_turn": "पिछला टर्न दिखाएँ",
 		"mobile.home.suggestion.linear_mcp": "Linear MCP सेट करें",
-		"mobile.home.suggestion.phone_access": "फ़ोन एक्सेस चालू करें",
 		"mobile.home.suggestion.review_repo": "यह repo रिव्यू करें",
 		"mobile.home.suggestion.team_of_agents": "एजेंटों की टीम बनाएँ",
 		"mobile.home.suggestion.wake_summary": "सारांश के साथ मुझे जगाएँ",
@@ -7971,6 +10454,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.tip.search": "पुरानी बातचीत खोजकर सत्र फिर खोलें",
 		"mobile.home.transcript.needs_answer": "आपके जवाब की ज़रूरत है",
 		"mobile.home.transcript.waiting": "बातचीत का इंतज़ार…",
+		"mobile.home.work.all_conversations": "सभी बातचीत",
+		"mobile.home.work.all_conversations_new": "सभी बातचीत, {count, plural, one {# नई बातचीत} other {# नई बातचीत}}",
+		"mobile.home.work.needs_you": "आपका इंतज़ार",
+		"mobile.home.work.recent": "हाल के",
+		"mobile.home.work.try": "आज़माएँ",
 		"mobile.library.action.add_tag": "जोड़ें",
 		"mobile.library.action.edit": "संपादित करें",
 		"mobile.library.action.open_chat": "बातचीत खोलें",
@@ -8023,6 +10511,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.notifications.channel.system": "सिस्टम ध्वनि",
 		"mobile.notifications.channel.tape_warble": "लहराती टेप",
 		"mobile.notifications.channel.task_complete": "काम पूरा",
+		"mobile.notifications.channel.team_bridge": "Team Bridge",
+		"mobile.notifications.channel.team_bridge_description": "आपके साथियों और उनके एजेंटों के संदेश।",
 		"mobile.notifications.channel.two_note_chime": "दो सुरों वाली घंटी",
 		"mobile.notifications.computer_registration.failed": "इस कंप्यूटर से अलर्ट के लिए यह फ़ोन रजिस्टर नहीं हो सका। ऐप दोबारा खोलने पर फिर से कोशिश की जाएगी।",
 		"mobile.notifications.computer_registration.no_token": "इस फ़ोन का अभी कोई पुश पता नहीं है, इसलिए यह कंप्यूटर इसे अलर्ट नहीं भेज सकता। फिर से कोशिश करने के लिए ऐप दोबारा खोलें।",
@@ -8064,6 +10554,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.notifications.preferences.agent_note": "केवल Team Bridge की सूचनाएँ पाने के लिए एजेंट की दोनों तरह की सूचनाएँ बंद करें।",
 		"mobile.notifications.preferences.bridge_heading": "Team Bridge",
 		"mobile.notifications.preferences.bridge_note": "हर सीधे संदेश, समूह या चैनल में घंटी का मेन्यू खोलें और {all}, {mentions} या {muted} चुनें।",
+		"mobile.notifications.preferences.bridge_system_off": "Android सेटिंग्स में Team Bridge सूचनाएँ बंद हैं, इसलिए इस फ़ोन पर कोई सूचना नहीं दिखेगी।",
+		"mobile.notifications.preferences.bridge_system_open": "Android सेटिंग्स खोलें",
 		"mobile.notifications.preferences.completions": "एजेंट ने काम पूरा किया",
 		"mobile.notifications.preferences.computer_keeps_sending": "जब तक आपके कंप्यूटर पर Local Operator अपडेट नहीं होता, वह एजेंट की सूचनाएँ भेजता रहेगा।",
 		"mobile.notifications.preferences.disabled_hint": "आपके कंप्यूटर पर Local Operator का नया संस्करण चाहिए।",
@@ -8080,6 +10572,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.notifications.priority_high": "उच्च",
 		"mobile.notifications.section.waiting": "आपका इंतज़ार",
 		"mobile.notifications.section.waiting_count": "आपका इंतज़ार · {count}",
+		"mobile.notifications.team_bridge.self_name": "आप",
 		"mobile.notifications.title": "सूचनाएँ",
 		"mobile.notifications.turn_on": "सूचनाएँ चालू करें",
 		"mobile.oauth.failed": "साइन-इन पूरा नहीं हो सका। फिर से कोशिश करें।",
@@ -8265,7 +10758,16 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.composer.not_sent_storage": "नहीं भेजा गया। दोबारा भेजने के लिए यह संदेश सुरक्षित रूप से सहेजा नहीं जा सका। आपका टेक्स्ट और चित्र यहीं हैं। दोबारा कोशिश करें।",
 		"mobile.session.composer.retained_instruction": "हो सकता है कि पहले भेजा गया कोई निर्देश पहुँच चुका हो। अपना मौजूदा ड्राफ़्ट भेजने से पहले उस निर्देश को दोबारा भेजने की कोशिश करें।",
 		"mobile.session.composer.retry_not_sent_storage": "दोबारा भेजने का यह प्रयास नहीं भेजा गया। पिछले निर्देश को सुरक्षित रूप से दोबारा भेजने की तैयारी नहीं हो सकी। पिछले निर्देश को दोबारा भेजने की कोशिश करें। आपका मौजूदा ड्राफ़्ट नहीं भेजा गया है।",
+		"mobile.session.composer.settings_not_applied": "सत्र दोबारा खुल गया, लेकिन आपका चुना हुआ मॉडल या प्रयास लागू नहीं हो सका, इसलिए कुछ भी नहीं भेजा गया। फिर से कोशिश करें, या कोई दूसरा मॉडल या प्रयास चुनें।",
 		"mobile.session.conversation_details": "बातचीत का विवरण",
+		"mobile.session.diagram.close": "आरेख बंद करें",
+		"mobile.session.diagram.copied": "कॉपी किया गया",
+		"mobile.session.diagram.copy": "आरेख का स्रोत कॉपी करें",
+		"mobile.session.diagram.error": "यह आरेख नहीं बनाया जा सका। इसके बजाय स्रोत दिखाया जा रहा है।",
+		"mobile.session.diagram.label": "{type} आरेख",
+		"mobile.session.diagram.label_titled": "{type} आरेख: {title}",
+		"mobile.session.diagram.open_hint": "आरेख को पूर्ण स्क्रीन पर खोलता है",
+		"mobile.session.diagram.viewer": "आरेख व्यूअर",
 		"mobile.session.empty.headline": "यहाँ अभी कुछ नहीं है।",
 		"mobile.session.empty.next": "नीचे पहला संदेश भेजें।",
 		"mobile.session.fallback_name": "सत्र",
@@ -8294,6 +10796,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.history.loading": "पहले के संदेश लोड हो रहे हैं…",
 		"mobile.session.history.refresh_failed": "सबसे नए संदेश लोड नहीं हो सके।",
 		"mobile.session.history.stalled": "पहले के संदेश लोड होना रुक गया। फिर से कोशिश करें, या यह बातचीत दोबारा खोलें।",
+		"mobile.session.inline_chart_data": "चार्ट का डेटा",
+		"mobile.session.jump_to_latest": "↓ नवीनतम पर जाएँ",
+		"mobile.session.jump_to_latest_name": "नवीनतम पर जाएँ",
+		"mobile.session.jump_to_latest_short": "↓ नवीनतम",
 		"mobile.session.not_connected.headline": "यह सत्र अभी कनेक्ट नहीं है।",
 		"mobile.session.not_connected.next": "कंप्यूटर कनेक्ट होने पर इसे सत्रों की सूची से खोलें।",
 		"mobile.session.outbox.composer_discarding": "आपका पिछला संदेश छोड़ा जा रहा है। आप यह संदेश कुछ ही पल में भेज सकेंगे।",
@@ -8322,7 +10828,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.region.label_todos": "कार्य",
 		"mobile.session.region.label_working": "गतिविधि",
 		"mobile.session.region.more_below": "नीचे और भी है · स्क्रॉल करें ↓",
-		"mobile.session.sheet_title.attach": "संलग्न करें",
+		"mobile.session.sheet_title.attach": "छवि जोड़ें",
 		"mobile.session.sheet_title.commands": "कमांड",
 		"mobile.session.sheet_title.effort": "प्रयास",
 		"mobile.session.sheet_title.model": "मॉडल",
@@ -8436,7 +10942,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.settings.theme.no_match": "कोई थीम मेल नहीं खाती",
 		"mobile.settings.theme.row_label": "थीम, {name}",
 		"mobile.settings.theme.search_label": "थीम खोजें",
-		"mobile.settings.theme.search_placeholder": "थीम खोजें",
+		"mobile.settings.theme.search_placeholder": "नाम, जैसे Dracula",
 		"mobile.settings.theme.section_dark": "गहरी ({count})",
 		"mobile.settings.theme.section_light": "हल्की ({count})",
 		"mobile.settings.theme.title": "थीम",
@@ -8447,6 +10953,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.sidebar.empty_by_view.next": "खंड या समाप्त सत्र फिर से चालू करें, या दृश्य रीसेट करें।",
 		"mobile.sidebar.empty_by_view.reset": "दृश्य रीसेट करें",
 		"mobile.sidebar.group.one_list": "एक सूची में",
+		"mobile.sidebar.group.tag": "टैग",
 		"mobile.sidebar.group.time_section": "समय के खंड",
 		"mobile.sidebar.group_by": "समूह बनाएँ",
 		"mobile.sidebar.hidden_sections": "{count, plural, one {# खंड छिपा है} other {# खंड छिपे हैं}}",
@@ -8460,16 +10967,31 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.sidebar.row.asks": "{count, plural, one {# सवाल} other {# सवाल}}",
 		"mobile.sidebar.row.asks_not_blocker": "{asks}, एजेंट रुका नहीं है",
 		"mobile.sidebar.row.new": "नई",
+		"mobile.sidebar.row.on_device": "{device} पर",
 		"mobile.sidebar.row.todos": "{count, plural, one {# कार्य} other {# कार्य}}",
+		"mobile.sidebar.row_label.join": "{first}, {second}",
+		"mobile.sidebar.row_label.on_device": "{device} पर",
+		"mobile.sidebar.row_label.open": "खुली",
+		"mobile.sidebar.row_label.waiting": "{kind, select, approval {स्वीकृति का इंतज़ार} other {सवाल के जवाब का इंतज़ार}}",
+		"mobile.sidebar.row_label.working": "कार्यरत",
+		"mobile.sidebar.row_status.approval": "स्वीकृति",
+		"mobile.sidebar.row_status.ended": "समाप्त",
+		"mobile.sidebar.row_status.not_answering": "उत्तर नहीं दे रही",
+		"mobile.sidebar.row_status.not_reachable": "पहुँच से बाहर",
+		"mobile.sidebar.row_status.question": "सवाल",
 		"mobile.sidebar.section.older": "पुराने",
 		"mobile.sidebar.section.pinned": "पिन किए हुए",
 		"mobile.sidebar.section.running": "चल रहे",
 		"mobile.sidebar.section.today": "आज",
+		"mobile.sidebar.section.untagged": "बिना टैग",
 		"mobile.sidebar.section.week": "इस हफ़्ते",
 		"mobile.sidebar.sections": "खंड",
 		"mobile.sidebar.settings_heading": "साइडबार",
 		"mobile.sidebar.show_ended": "समाप्त सत्र दिखाएँ",
 		"mobile.sidebar.show_ended_hint": "पिन की हुई और चल रही बातचीत हमेशा दिखती हैं।",
+		"mobile.sidebar.show_tags": "टैग दिखाएँ",
+		"mobile.sidebar.show_tags_hint": "टैग हर बातचीत के मेन्यू में रहते हैं।",
+		"mobile.sidebar.tag_group.announcement": "{name}, {count, plural, one {# बातचीत} other {# बातचीत}}",
 		"mobile.sidebar.tags.announcement": "टैग: {names}",
 		"mobile.sidebar.tags.empty_headline": "अभी कोई श्रेणी नहीं।",
 		"mobile.sidebar.tags.empty_next": "डेस्कटॉप ऐप में बनती हैं।",
@@ -8514,6 +11036,12 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.signin.use_address": "पता और पासवर्ड से कनेक्ट करें",
 		"mobile.signin.welcome.body": "यह ऐप आपकी अपनी मशीन पर सत्र चलाता है और दिखाता है कि क्या हुआ। आपका कोड उस मशीन से कभी बाहर नहीं जाता।",
 		"mobile.signin.welcome.headline": "आपका एजेंट आपके कंप्यूटर पर चलता है।",
+		"mobile.team_bridge.actions.a11y_react": "प्रतिक्रिया दें",
+		"mobile.team_bridge.actions.copied": "कॉपी हो गया",
+		"mobile.team_bridge.actions.copy_text": "टेक्स्ट कॉपी करें",
+		"mobile.team_bridge.actions.reply_in_thread": "थ्रेड में जवाब दें",
+		"mobile.team_bridge.actions.select_text": "टेक्स्ट चुनें",
+		"mobile.team_bridge.actions.title": "संदेश की कार्रवाइयाँ",
 		"mobile.team_bridge.attachment.add": "चित्र जोड़ें",
 		"mobile.team_bridge.attachment.attached_summary": "{count, plural, one {# चित्र जोड़ा गया} other {# चित्र जोड़े गए}}",
 		"mobile.team_bridge.attachment.cannot_send": "भेज नहीं सकते",
@@ -8557,6 +11085,23 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.team_bridge.attachment.viewer": "चित्र दर्शक",
 		"mobile.team_bridge.attachment.wait_uploads": "चित्र अपलोड हो जाने पर भेज सकते हैं।",
 		"mobile.team_bridge.back": "वापस",
+		"mobile.team_bridge.card_body.deleted": "यह संदेश हटा दिया गया।",
+		"mobile.team_bridge.card_body.held": "समीक्षा के लिए रोका गया है।",
+		"mobile.team_bridge.card_body.held_transient": "स्क्रीनिंग का इंतज़ार है — अभी आपके एजेंट को नहीं दिखाया गया।",
+		"mobile.team_bridge.card_body.loading": "संदेश लोड हो रहा है…",
+		"mobile.team_bridge.card_body.more_messages": "{count, plural, one {इस कार्ड में # और संदेश} other {इस कार्ड में # और संदेश}}",
+		"mobile.team_bridge.card_body.not_admitted": "आपके एजेंट तक नहीं पहुँचाया गया।",
+		"mobile.team_bridge.card_body.not_member": "अब आप इस बातचीत में शामिल नहीं हैं।",
+		"mobile.team_bridge.card_body.offline": "Radient से संपर्क नहीं हुआ — फिर से कोशिश की जा रही है।",
+		"mobile.team_bridge.card_body.other_account": "किसी दूसरे Radient खाते में प्राप्त हुआ।",
+		"mobile.team_bridge.card_body.pending": "आपके एजेंट तक पहुँचाए जाने का इंतज़ार है।",
+		"mobile.team_bridge.card_body.refused": "मॉडरेशन ने अस्वीकार किया।",
+		"mobile.team_bridge.card_body.show_less": "कम दिखाएँ",
+		"mobile.team_bridge.card_body.show_more": "और दिखाएँ",
+		"mobile.team_bridge.card_body.signed_out": "यह संदेश देखने के लिए Radient में साइन इन करें।",
+		"mobile.team_bridge.card_body.thread_reply": "थ्रेड में जवाब",
+		"mobile.team_bridge.card_body.unavailable": "संदेश का पाठ उपलब्ध नहीं है।",
+		"mobile.team_bridge.card_body.untrusted": "बाहरी संदेश · अविश्वसनीय सामग्री",
 		"mobile.team_bridge.conversation": "बातचीत",
 		"mobile.team_bridge.default_on.body": "आपके संगठन के एजेंट आपके चीफ़ ऑफ़ स्टाफ़ को संदेश भेज सकते हैं। आप इसे कभी भी बंद कर सकते हैं।",
 		"mobile.team_bridge.default_on.dismiss": "हटाएँ",
@@ -8619,6 +11164,15 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.team_bridge.list.preview": "पूर्वावलोकन · पढ़ने के लिए जुड़ें",
 		"mobile.team_bridge.list.quiet": "सूचनाएँ शांत हैं",
 		"mobile.team_bridge.list.self": "आप",
+		"mobile.team_bridge.mentions.dismiss_notice": "खारिज करें",
+		"mobile.team_bridge.mentions.invited": "{name} अभी इस बातचीत में शामिल नहीं हुए हैं और उन्हें सूचना नहीं मिलेगी।",
+		"mobile.team_bridge.mentions.no_endpoint": "लोगों की सूची लोड होने तक {name} को सूचना नहीं भेजी जा सकती।",
+		"mobile.team_bridge.mentions.not_member": "{name} इस बातचीत में नहीं हैं और उन्हें सूचना नहीं मिलेगी।",
+		"mobile.team_bridge.mentions.results_count": "{count, plural, one {# सुझाव} other {# सुझाव}}",
+		"mobile.team_bridge.mentions.row_label": "{name} का उल्लेख करें",
+		"mobile.team_bridge.mentions.section_members": "इस बातचीत में",
+		"mobile.team_bridge.mentions.section_org": "आपके संगठन के अन्य लोग",
+		"mobile.team_bridge.mentions.unavailable": "लोगों की सूची उपलब्ध नहीं है। इस बातचीत के सदस्य दिखाए जा रहे हैं।",
 		"mobile.team_bridge.navigation.caption": "कंप्यूटर स्लीप में हो, तब भी आपका संगठन आपके साथ",
 		"mobile.team_bridge.navigation.entry": "{count, plural, =0 {Team Bridge} one {Team Bridge · # अपठित} other {Team Bridge · # अपठित}}",
 		"mobile.team_bridge.navigation.entry_loading": "Team Bridge · लोड हो रहा है",
@@ -8635,6 +11189,35 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.team_bridge.profile.open": "{name} की प्रोफ़ाइल देखें",
 		"mobile.team_bridge.profile.opens_hint": "उनकी प्रोफ़ाइल खोलता है",
 		"mobile.team_bridge.profile.title": "प्रोफ़ाइल",
+		"mobile.team_bridge.reactions.add": "प्रतिक्रिया जोड़ें",
+		"mobile.team_bridge.reactions.added": "प्रतिक्रिया जोड़ी गई",
+		"mobile.team_bridge.reactions.details": "प्रतिक्रिया का विवरण",
+		"mobile.team_bridge.reactions.failed": "प्रतिक्रिया सहेजी नहीं जा सकी। फिर से कोशिश करें।",
+		"mobile.team_bridge.reactions.hint_add": "आप भी प्रतिक्रिया देने के लिए दो बार टैप करें",
+		"mobile.team_bridge.reactions.hint_inspect": "प्रतिक्रिया का विवरण देखने के लिए दो बार टैप करें",
+		"mobile.team_bridge.reactions.hint_remove": "अपनी प्रतिक्रिया हटाने के लिए दो बार टैप करें",
+		"mobile.team_bridge.reactions.keyboard_hint": "अपने कीबोर्ड से कोई इमोजी चुनें",
+		"mobile.team_bridge.reactions.pill": "{emoji}, {count, plural, one {# प्रतिक्रिया} other {# प्रतिक्रियाएँ}}",
+		"mobile.team_bridge.reactions.pill_mine": "{emoji}, {count, plural, one {# प्रतिक्रिया} other {# प्रतिक्रियाएँ}}, आपने प्रतिक्रिया दी",
+		"mobile.team_bridge.reactions.removed": "प्रतिक्रिया हटाई गई",
+		"mobile.team_bridge.reactions.sample": "{count, plural, =0 {{labels}} other {{labels} और # अन्य}}",
+		"mobile.team_bridge.reactions.sample_none": "इस सारांश में कोई नाम नहीं दिया गया है।",
+		"mobile.team_bridge.reactions.sample_notice": "दिखाए गए नाम केवल एक नमूना हैं, पूरी सूची नहीं।",
+		"mobile.team_bridge.reactions.show_less": "कम दिखाएँ",
+		"mobile.team_bridge.reactions.show_more": "{count} और दिखाएँ",
+		"mobile.team_bridge.reactions.summary": "{count, plural, one {# प्रतिक्रिया} other {# प्रतिक्रियाएँ}}",
+		"mobile.team_bridge.reactions.you_reacted": "आपने प्रतिक्रिया दी",
+		"mobile.team_bridge.reply_thread.count": "{count, plural, one {# जवाब} other {# जवाब}}",
+		"mobile.team_bridge.reply_thread.empty": "अभी तक कोई जवाब नहीं। थ्रेड शुरू करें।",
+		"mobile.team_bridge.reply_thread.error": "यह थ्रेड लोड नहीं हो सका।",
+		"mobile.team_bridge.reply_thread.last_reply": "आखिरी जवाब: {time}",
+		"mobile.team_bridge.reply_thread.loading": "थ्रेड लोड हो रहा है…",
+		"mobile.team_bridge.reply_thread.more": "और जवाब लोड करें",
+		"mobile.team_bridge.reply_thread.open": "थ्रेड देखें, {count, plural, one {# जवाब} other {# जवाब}}",
+		"mobile.team_bridge.reply_thread.open_unread": "थ्रेड देखें, {count, plural, one {# जवाब} other {# जवाब}}, {unread, plural, one {# अपठित} other {# अपठित}}",
+		"mobile.team_bridge.reply_thread.reply": "थ्रेड में जवाब दें",
+		"mobile.team_bridge.reply_thread.retry": "थ्रेड फिर से लोड करें",
+		"mobile.team_bridge.reply_thread.title": "थ्रेड",
 		"mobile.team_bridge.retry": "फिर कोशिश करें",
 		"mobile.team_bridge.thread.access_retry": "पहुँच की फिर कोशिश करें",
 		"mobile.team_bridge.thread.anchor_missing": "वह संदेश अब उपलब्ध नहीं है।",
@@ -8728,6 +11311,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"relay.health.quiet_detail": "आपके कंप्यूटर पर इस सत्र ने उत्तर देना बंद कर दिया है — शायद यह व्यस्त हो या अटक गया हो। भेजा गया संदेश विफल दिख सकता है, फिर भी सत्र के दोबारा उत्तर देने पर पहुँच सकता है। फिर से कोशिश करने पर भी यह दो बार नहीं पहुँचेगा।",
 		"relay.health.reconnecting": "फिर से कनेक्ट हो रहा",
 		"relay.health.reconnecting_detail": "इस फ़ोन का आपके कंप्यूटर से कनेक्शन टूट गया है और यह लगातार फिर से कनेक्ट होने की कोशिश कर रहा है। हो सकता है सत्र वहाँ अब भी चल रहा हो; कनेक्शन वापस आने तक संदेश भेजना विफल हो सकता है।",
+		"relay.skills.skipped": "{names} के बिना भेजा गया — {count, plural, one {उस कौशल में ऐसी कोई सामग्री नहीं है जिसे संलग्न किया जा सके} other {उन कौशलों में ऐसी कोई सामग्री नहीं है जिसे संलग्न किया जा सके}}।",
+		"relay.skills.too_large": "ये कौशल एक साथ भेजने के लिए बहुत बड़े हैं। एक कौशल हटाएँ और फिर से भेजें।",
+		"relay.skills.tray.hidden": "छिपा",
+		"relay.skills.tray.label": "कौशल",
 		"relay.transcript.composer.queued": "{count, plural, one {# कतार में} other {# कतार में}}",
 		"relay.transcript.fold.failed_label": "इसमें एक विफल क्रिया शामिल है",
 		"relay.transcript.fold.more": "{count, plural, one {और # अन्य क्रिया} other {और # अन्य क्रियाएँ}}",
@@ -8765,6 +11352,43 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.account_routing.unsaved": "Ещё не сохранено.",
 		"mobile.agent_avatar.edit_hint": "Изменить это изображение можно в приложении для компьютера",
 		"mobile.agent_avatar.label": "Изображение агента",
+		"mobile.asks.answer_label": "Ваш ответ на вопрос: {question}",
+		"mobile.asks.answer_placeholder": "Ваш ответ",
+		"mobile.asks.choose_any": "Выберите все подходящие",
+		"mobile.asks.deadline_ago": "Срок истёк {duration} назад",
+		"mobile.asks.decline": "Отклонить",
+		"mobile.asks.decline_hint": "Ответ не отправляется. Агент решает сам.",
+		"mobile.asks.dismiss": "Убрать",
+		"mobile.asks.dismiss_open": "Убрать…",
+		"mobile.asks.dismiss_reason.chat": "Ответ дан в беседе",
+		"mobile.asks.dismiss_reason.chat_note": "Вы уже ответили в беседе",
+		"mobile.asks.dismiss_reason.moot": "Больше не нужно",
+		"mobile.asks.dismiss_reason.moot_note": "Агент перестаёт ждать ответа",
+		"mobile.asks.dismiss_title": "{count, plural, one {Убрать этот вопрос} few {Убрать эти вопросы} many {Убрать эти вопросы} other {Убрать эти вопросы}}",
+		"mobile.asks.empty": "Ничего не ждёт. Вопросы агента появятся здесь.",
+		"mobile.asks.honesty": "Это приложение показывает вопросы в очереди, пока оно открыто. Когда оно закрыто, оно не может вас уведомить.",
+		"mobile.asks.loading": "Чтение вопросов…",
+		"mobile.asks.none_recorded": "Для этого вопроса ответ не записан.",
+		"mobile.asks.nothing_left": "Здесь больше нечего отвечать. Эти вопросы уже обработаны на другом экране или устройстве.",
+		"mobile.asks.open_conversation": "Открыть беседу",
+		"mobile.asks.other_hint": "Введите ваш ответ",
+		"mobile.asks.other_kept": "Ваш текст сохранён, но не отправлен",
+		"mobile.asks.other_label": "Другое",
+		"mobile.asks.progress.pick_or_type": "Выберите вариант или напишите свой ответ, чтобы отправить.",
+		"mobile.asks.progress.tally": "Отвечено или пропущено вопросов: {answered} из {total}",
+		"mobile.asks.progress.type": "Введите ответ или пропустите вопрос, чтобы отправить.",
+		"mobile.asks.recommended": "· Рекомендовано",
+		"mobile.asks.secret_notice": "Секрет: отправлен напрямую, в транскрипте не отображается",
+		"mobile.asks.secret_notice_saved": "Секрет: отправлен напрямую, в транскрипте не отображается и сохранён на компьютере для повторного использования",
+		"mobile.asks.secret_placeholder": "Секретное значение",
+		"mobile.asks.send_answer": "Отправить ответ",
+		"mobile.asks.send_answers": "Отправить ответы",
+		"mobile.asks.settled": "Закрытые",
+		"mobile.asks.skip": "Пропустить (без ответа)",
+		"mobile.asks.title_fallback": "Вопросы",
+		"mobile.asks.truncated": "Показаны самые новые вопросы. Откройте беседу, чтобы увидеть остальные.",
+		"mobile.asks.unskip": "Ответить на этот вопрос",
+		"mobile.asks.urgent": "· Срочно",
 		"mobile.chrome.clear_search": "Очистить поиск",
 		"mobile.chrome.close_conversations": "Закрыть список бесед",
 		"mobile.chrome.composer.dismiss_keyboard": "Скрыть клавиатуру",
@@ -8773,6 +11397,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.chrome.composer.queued": "{count, plural, one {# сообщение в очереди} few {# сообщения в очереди} many {# сообщений в очереди} other {# сообщения в очереди}}",
 		"mobile.chrome.composer.row_cost": "Стоимость",
 		"mobile.chrome.composer.row_effort": "Усилие",
+		"mobile.chrome.composer.row_identity": "Агент или команда",
 		"mobile.chrome.composer.row_model": "Модель",
 		"mobile.chrome.composer.row_questions": "Вопросы",
 		"mobile.chrome.composer.row_queue": "Очередь",
@@ -8804,18 +11429,184 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.common.not_found.headline": "Этой страницы не существует.",
 		"mobile.common.not_found.next": "Вернитесь к сессиям, чтобы продолжить.",
 		"mobile.common.not_found.title": "Страница не найдена",
+		"mobile.common.resize_panel": "Изменить размер панели",
 		"mobile.common.save": "Сохранить",
 		"mobile.common.send": "Отправить",
+		"mobile.common.size.large": "Большой",
+		"mobile.common.size.medium": "Средний",
+		"mobile.common.size.shorter": "Ниже",
+		"mobile.common.size.taller": "Выше",
 		"mobile.common.try_again": "Повторить",
+		"mobile.community.approvals.agent": "Агент",
+		"mobile.community.approvals.decline": "Не публиковать",
+		"mobile.community.approvals.empty": "Нет публикаций агентов, ожидающих вашего решения.",
+		"mobile.community.approvals.expires": "{hours, plural, one {истекает через # ч} few {истекает через # ч} many {истекает через # ч} other {истекает через # ч}}",
+		"mobile.community.approvals.expires_days": "{days, plural, one {истекает через # день} few {истекает через # дня} many {истекает через # дней} other {истекает через # дня}}",
+		"mobile.community.approvals.failed": "Не получилось. Попробуйте ещё раз.",
+		"mobile.community.approvals.open_computer": "Откройте Local Operator на компьютере, чтобы прочитать точный текст и решить.",
+		"mobile.community.approvals.review": "Проверить на компьютере",
+		"mobile.community.approvals.review_note": "«Проверить на компьютере» оставляет запрос в ожидании до 24 ч.",
+		"mobile.community.approvals.stays": "Черновик остаётся на компьютере, пока вы его не одобрите.",
+		"mobile.community.approvals.title": "Ваш руководитель аппарата хочет опубликовать в #{channel}",
+		"mobile.community.approvals.title_unknown": "Ваш руководитель аппарата хочет опубликовать в канале сообщества",
+		"mobile.community.approvals.waiting": "Ожидает вашего решения на компьютере.",
+		"mobile.community.browse.channels": "Каналы",
+		"mobile.community.browse.channels_empty": "Подходящих каналов нет.",
+		"mobile.community.browse.join": "Вступить",
+		"mobile.community.browse.load_more": "Загрузить ещё",
+		"mobile.community.browse.mode": "Показать",
+		"mobile.community.browse.open": "Открыть",
+		"mobile.community.browse.people": "Люди",
+		"mobile.community.browse.people_empty": "Подходящих людей нет.",
+		"mobile.community.browse.private": "Закрытый",
+		"mobile.community.browse.search": "Поиск",
+		"mobile.community.browse.title": "Обзор",
+		"mobile.community.category.harassment_or_abuse": "Травля или оскорбления",
+		"mobile.community.category.private_information": "Личная информация",
+		"mobile.community.category.spam_or_promotion": "Спам или скрытая реклама",
+		"mobile.community.category.unsafe_or_illegal": "Опасный или незаконный контент",
+		"mobile.community.common.loading": "Загрузка сообщества…",
+		"mobile.community.common.retry": "Повторить",
+		"mobile.community.common.unavailable": "Сообщество недоступно",
+		"mobile.community.composer.attach": "Прикрепить изображение",
+		"mobile.community.composer.audience": "Видно всем участникам сообщества",
+		"mobile.community.composer.audience_dm": "Этот разговор видите только вы и {name}",
+		"mobile.community.composer.blocked_archived": "Этот канал в архиве.",
+		"mobile.community.composer.blocked_locked": "Этот канал заблокирован.",
+		"mobile.community.composer.blocked_read_only": "Это сообщество доступно только для чтения.",
+		"mobile.community.composer.blocked_staff_only": "Здесь публикуют только сотрудники и модераторы.",
+		"mobile.community.composer.cancel": "Отмена",
+		"mobile.community.composer.cancelled": "Отменено. Ничего не опубликовано.",
+		"mobile.community.composer.checking": "Проверка…",
+		"mobile.community.composer.dismiss": "Скрыть",
+		"mobile.community.composer.failed": "Сообщение не отправлено. Ваш текст сохранён.",
+		"mobile.community.composer.forbidden": "Здесь нельзя публиковать.",
+		"mobile.community.composer.guidelines": "Правила сообщества изменились. Примите их и попробуйте снова.",
+		"mobile.community.composer.images_unavailable": "Изображения в сообществах пока публиковать нельзя. Ваш текст сохранён.",
+		"mobile.community.composer.invalid": "Это сообщение нельзя отправить в таком виде. Сократите или измените его и отправьте снова.",
+		"mobile.community.composer.label": "Сообщение в #{name}",
+		"mobile.community.composer.label_dm": "Сообщение для {name}",
+		"mobile.community.composer.limited": "Вы отправляете быстрее, чем позволяет сообщество.",
+		"mobile.community.composer.limited_wait": "{seconds, plural, one {Повторите через # секунду.} few {Повторите через # секунды.} many {Повторите через # секунд.} other {Повторите через # секунды.}}",
+		"mobile.community.composer.refused": "Не опубликовано: {category}",
+		"mobile.community.composer.refused_detail": "Это видите только вы. Номер {reference}. Измените сообщение, чтобы отправить снова.",
+		"mobile.community.composer.restricted": "Ваши публикации ограничены. Номер {reference}.",
+		"mobile.community.composer.retry": "Повторить",
+		"mobile.community.composer.review": "Посмотреть правила",
+		"mobile.community.composer.send": "Отправить",
+		"mobile.community.composer.unavailable": "Не удалось проверить сообщение, поэтому ничего не опубликовано. Ваш текст сохранён.",
+		"mobile.community.conversation.agent": "Агент",
+		"mobile.community.conversation.deleted": "Сообщение удалено",
+		"mobile.community.conversation.edited": "изменено",
+		"mobile.community.conversation.empty": "Сообщений пока нет.",
+		"mobile.community.conversation.former_member": "Бывший участник",
+		"mobile.community.conversation.join_prompt": "Вы читаете #{name}. Присоединитесь к каналу, чтобы писать здесь.",
+		"mobile.community.conversation.load_older": "Загрузить более ранние сообщения",
+		"mobile.community.conversation.older_error": "Не удалось загрузить более ранние сообщения.",
+		"mobile.community.conversation.replies": "{count, plural, one {# ответ} few {# ответа} many {# ответов} other {# ответа}}",
+		"mobile.community.conversation.report": "Пожаловаться на сообщение",
+		"mobile.community.conversation.subtitle": "{community} · Открытое",
+		"mobile.community.conversation.view_profile": "Открыть профиль: {name}",
+		"mobile.community.directory.empty": "Сейчас нет сообществ, открытых для вступления.",
+		"mobile.community.directory.featured": "Рекомендуемые",
+		"mobile.community.directory.joined": "Вы участник",
+		"mobile.community.directory.read_only": "Только чтение",
+		"mobile.community.directory.title": "Сообщества",
+		"mobile.community.error.auth_unavailable": "Radient сейчас не может проверить ваш вход. Попробуйте чуть позже.",
+		"mobile.community.error.generic": "Что-то пошло не так. Ничего не изменено.",
+		"mobile.community.error.load_failed": "Сейчас не удалось загрузить. Проверьте подключение и повторите попытку.",
+		"mobile.community.error.not_found": "Это сообщество недоступно для этой учётной записи.",
+		"mobile.community.error.rate_limited": "Вы делаете это быстрее, чем позволяет сообщество. Попробуйте чуть позже.",
+		"mobile.community.error.sign_in": "Войдите в Radient, чтобы пользоваться сообществом.",
+		"mobile.community.error.unreachable": "Не удалось связаться с сообществом. Проверьте подключение устройства.",
+		"mobile.community.home.browse": "Обзор",
+		"mobile.community.home.channel_label": "#{name}{count, plural, =0 {} one { · # непрочитанное} few { · # непрочитанных} many { · # непрочитанных} other { · # непрочитанных}}",
+		"mobile.community.home.channels": "Каналы",
+		"mobile.community.home.channels_empty": "Вы ещё не вступили ни в один канал. Найдите его в обзоре.",
+		"mobile.community.home.closed": "Это сообщество доступно только для чтения и не принимает новых участников.",
+		"mobile.community.home.direct": "Личные сообщения",
+		"mobile.community.home.direct_empty": "Личных сообщений пока нет.",
+		"mobile.community.home.direct_label": "{name}{count, plural, =0 {} one { · # непрочитанное} few { · # непрочитанных} many { · # непрочитанных} other { · # непрочитанных}}",
+		"mobile.community.home.join": "Вступить",
+		"mobile.community.home.not_member": "Вступите, чтобы читать и публиковать в этом сообществе.",
+		"mobile.community.home.reaccept": "Посмотреть",
+		"mobile.community.home.reaccept_banner": "Правила сообщества изменились. Просмотрите и примите их, чтобы и дальше публиковать.",
+		"mobile.community.home.requests": "Запросы",
+		"mobile.community.home.requests_count": "{count, plural, one {Запросы · #} few {Запросы · #} many {Запросы · #} other {Запросы · #}}",
+		"mobile.community.home.switch": "Сменить организацию или сообщество",
+		"mobile.community.join.agree": "Я принимаю правила сообщества ({version}). Мой профиль и публикации видны всем участникам.",
+		"mobile.community.join.changed": "Правила изменились, пока вы читали. Просмотрите новую версию и примите её снова.",
+		"mobile.community.join.failed": "Вступить не удалось. Попробуйте ещё раз.",
+		"mobile.community.join.guidelines_heading": "Правила сообщества ({version})",
+		"mobile.community.join.hint": "Отметьте флажок, чтобы вступить.",
+		"mobile.community.join.moderation": "Каждое сообщение проверяется перед публикацией. Если что-то не опубликовано, причину видите только вы — с номером для обжалования.",
+		"mobile.community.join.profile": "Участники видят ваше имя в Radient. Никогда не показываются: электронная почта, организации.",
+		"mobile.community.join.reaccept_submit": "Принять и продолжить",
+		"mobile.community.join.reaccept_title": "Обновлённые правила сообщества",
+		"mobile.community.join.submit": "Вступить и открыть сообщество",
+		"mobile.community.join.title": "Вступить в сообщество",
+		"mobile.community.no_plan.body": "Бесплатное открытое пространство от Radient. Получайте помощь, делитесь отзывами и знакомьтесь с другими пользователями Local Operator.",
+		"mobile.community.no_plan.free": "Бесплатно. Тариф Team и оплата не нужны.",
+		"mobile.community.no_plan.join": "Вступить в сообщество",
+		"mobile.community.no_plan.open": "Открыть сообщество",
+		"mobile.community.no_plan.title": "Вступите в Local Operator Community",
+		"mobile.community.profile.block": "Заблокировать",
+		"mobile.community.profile.blocked": "Заблокировано. Вы не будете видеть сообщения и запросы друг друга.",
+		"mobile.community.profile.failed": "Не получилось. Попробуйте ещё раз.",
+		"mobile.community.profile.joined": "Участник с {month}",
+		"mobile.community.profile.message": "Написать",
+		"mobile.community.profile.message_sent": "Запрос на переписку отправлен. Он появится в запросах получателя.",
+		"mobile.community.profile.report": "Пожаловаться",
+		"mobile.community.profile.title": "Профиль",
+		"mobile.community.report.category": "Что не так?",
+		"mobile.community.report.dm_consent": "Передать это сообщение команде Trust & Safety Radient. Его видят только их специалисты по разбору обращений, модераторы сообщества — никогда.",
+		"mobile.community.report.failed": "Жалоба не отправлена. Попробуйте ещё раз.",
+		"mobile.community.report.note": "Что-то ещё, что нам стоит знать? (необязательно)",
+		"mobile.community.report.revision_changed": "Это сообщение изменили после того, как вы его открыли. Прочитайте его снова, затем подтвердите и отправьте жалобу на текущую версию.",
+		"mobile.community.report.sent": "Жалоба отправлена. Номер {reference}.",
+		"mobile.community.report.submit": "Отправить жалобу",
+		"mobile.community.report.title": "Жалоба в Radient Trust & Safety",
+		"mobile.community.requests.accept": "Принять",
+		"mobile.community.requests.approvals": "Одобрения агентов",
+		"mobile.community.requests.block": "Заблокировать",
+		"mobile.community.requests.decline": "Отклонить",
+		"mobile.community.requests.dm": "Сообщения",
+		"mobile.community.requests.dm_body": "{name} хочет отправлять вам личные сообщения.",
+		"mobile.community.requests.dm_empty": "Запросов на переписку нет.",
+		"mobile.community.requests.expires": "{hours, plural, one {Истекает через # ч} few {Истекает через # ч} many {Истекает через # ч} other {Истекает через # ч}}",
+		"mobile.community.requests.expires_days": "{days, plural, one {Истекает через # день} few {Истекает через # дня} many {Истекает через # дней} other {Истекает через # дня}}",
+		"mobile.community.requests.mode": "Показать",
+		"mobile.community.requests.title": "Запросы",
+		"mobile.community.role.community_admin": "Администратор сообщества",
+		"mobile.community.role.moderator": "Модератор",
+		"mobile.community.role.staff": "Сотрудник Radient",
+		"mobile.community.switcher.browse": "Обзор сообществ…",
+		"mobile.community.switcher.communities": "Сообщества",
+		"mobile.community.switcher.note": "Переключение меняет только то, что вы видите.",
+		"mobile.community.switcher.organizations": "Организации",
+		"mobile.community.switcher.public": "Открытое",
+		"mobile.community.switcher.row_label": "{name} · Открытое{count, plural, =0 {} one { · # непрочитанное} few { · # непрочитанных} many { · # непрочитанных} other { · # непрочитанных}}",
+		"mobile.community.switcher.search": "Поиск сообществ",
+		"mobile.composer_input.attach.camera": "Сделать фото",
+		"mobile.composer_input.attach.camera_denied": "Доступ к камере выключен. Включите его в Настройках, чтобы сделать фото.",
+		"mobile.composer_input.attach.camera_error": "Не удалось открыть камеру. Попробуйте ещё раз.",
+		"mobile.composer_input.attach.camera_refused": "Доступ к камере не разрешён. Нажмите «Сделать фото», чтобы запрос появился снова.",
+		"mobile.composer_input.attach.camera_unavailable": "На этом устройстве нет доступной камеры.",
+		"mobile.composer_input.attach.choose_image": "Выбрать изображение",
+		"mobile.composer_input.attach.files": "Изображение из Файлов",
+		"mobile.composer_input.attach.library": "Фотогалерея",
+		"mobile.composer_input.attach.open_settings": "Открыть Настройки",
+		"mobile.composer_input.attach.paste": "Вставить изображение",
 		"mobile.composer_input.clear_draft": "Очистить черновик",
 		"mobile.composer_input.clear_draft_hint": "Удаляет только текст и изображения черновика; сохраняет сообщения в очереди и без подтверждения",
 		"mobile.composer_input.dismiss_error": "Скрыть ошибку",
 		"mobile.composer_input.dismiss_error_hint": "Скрывает ошибку, не изменяя черновик или статус доставки",
 		"mobile.composer_input.notice_dismiss": "Скрыть",
 		"mobile.composer_input.notice_retry": "Повторить",
-		"mobile.composer_input.paste.denied": "Вставка не разрешена. Нажмите на скрепку, затем «Вставить изображение» и выберите «Разрешить вставку».",
+		"mobile.composer_input.paste.denied": "Вставка не разрешена. Нажмите кнопку вставки ещё раз и выберите «Разрешить вставку».",
+		"mobile.composer_input.paste.empty_ios": "Изображение не вставлено. Скопируйте изображение и при запросе выберите «Разрешить вставку».",
 		"mobile.composer_input.paste.image": "Вставить изображение",
-		"mobile.composer_input.paste.image_hint": "Прикрепляет изображение из буфера обмена",
+		"mobile.composer_input.paste.image_hint": "Прикрепляет скопированное вами изображение",
 		"mobile.composer_input.voice.discard": "Отменить голосовой ввод",
 		"mobile.composer_input.voice.finish": "Завершить и расшифровать",
 		"mobile.composer_input.voice.mic_setup": "Голосовой ввод не настроен",
@@ -9032,6 +11823,32 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.folders_read_failed": "Не удалось прочитать папки этого компьютера.",
 		"mobile.home.folders_read_sign_in": "Этот компьютер попросил войти снова, поэтому его папки прочитать не удалось.",
 		"mobile.home.greeting": "Чем помочь сегодня?",
+		"mobile.home.identity.announce_picked": "Этот чат начнётся с {name}",
+		"mobile.home.identity.band_agents": "Агенты",
+		"mobile.home.identity.band_recent": "Недавние",
+		"mobile.home.identity.band_teams": "Команды",
+		"mobile.home.identity.default_agent": "Агент по умолчанию",
+		"mobile.home.identity.empty": "На этом компьютере пока нет агентов и команд. Создайте их в настольном приложении.",
+		"mobile.home.identity.no_matches": "Ничего не найдено по запросу «{query}».",
+		"mobile.home.identity.pill_label": "Начать этот чат с {target}. Выберите агента или команду",
+		"mobile.home.identity.read_failed": "Сейчас не удалось прочитать агентов и команды этого компьютера.",
+		"mobile.home.identity.refused_connecting": "Компьютер ещё подключается, поэтому пока ничего не запущено. Нажмите на сообщение, чтобы вернуть его, и через мгновение отправьте снова, чтобы начать с {name}.",
+		"mobile.home.identity.refused_fallback": "Не удалось запустить {name} на этом компьютере. Выберите другой вариант или агента по умолчанию.",
+		"mobile.home.identity.refused_registry": "Компьютер сейчас не смог прочитать своих агентов и команды, поэтому ничего не запущено. Нажмите на сообщение, чтобы вернуть его, и отправьте снова, или выберите агента по умолчанию, чтобы отправить сейчас.",
+		"mobile.home.identity.refused_unknown": "{name} больше недоступен на этом компьютере. Чтобы отправить сообщение, выберите другой вариант или агента по умолчанию.",
+		"mobile.home.identity.refused_unlicensed": "Этот компьютер сейчас не может начать чат с {name}. Чтобы отправить, выберите агента по умолчанию.",
+		"mobile.home.identity.refused_unsaved": "Компьютеру не удалось сохранить {name} для нового чата, поэтому ничего не запущено. Нажмите на сообщение, чтобы вернуть его, и отправьте снова.",
+		"mobile.home.identity.row_agent": "{name}, агент",
+		"mobile.home.identity.row_agent_described": "{name}, агент. {description}",
+		"mobile.home.identity.row_team": "{name}, команда",
+		"mobile.home.identity.row_team_led": "{name}, команда, руководитель {manager}",
+		"mobile.home.identity.search": "Поиск агентов и команд",
+		"mobile.home.identity.sheet_title": "Начать этот чат с",
+		"mobile.home.identity.starting_with": "Запуск с {name}…",
+		"mobile.home.identity.team_led_by": "Руководитель: {manager}",
+		"mobile.home.identity.team_members": "{count, plural, one {# участник} few {# участника} many {# участников} other {# участника}}",
+		"mobile.home.identity.team_subtitle": "Руководитель: {manager} · {count, plural, one {# участник} few {# участника} many {# участников} other {# участника}}",
+		"mobile.home.identity.unsupported": "Local Operator на этом компьютере слишком старый, чтобы начать чат с агентом или командой. Обновите его, чтобы выбирать здесь.",
 		"mobile.home.models_read_failed": "Не удалось прочитать список моделей этого компьютера.",
 		"mobile.home.options.default_model": "Использовать модель по умолчанию на этом компьютере",
 		"mobile.home.options.fixed": "Стартовые параметры этой беседы зафиксированы. Текущие настройки — в разделе «Детали беседы».",
@@ -9068,9 +11885,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.startup_queue.not_started": "Не запущено",
 		"mobile.home.startup_queue.sending": "Отправка сообщений из очереди…",
 		"mobile.home.startup_queue.unconfirmed": "Запуск не подтверждён",
-		"mobile.home.suggestion.last_turn": "Покажите последний ход",
 		"mobile.home.suggestion.linear_mcp": "Настройте Linear MCP",
-		"mobile.home.suggestion.phone_access": "Включите доступ с телефона",
 		"mobile.home.suggestion.review_repo": "Проверьте репозиторий",
 		"mobile.home.suggestion.team_of_agents": "Создайте команду агентов",
 		"mobile.home.suggestion.wake_summary": "Разбудите меня со сводкой",
@@ -9079,6 +11894,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.tip.search": "поищите сессию в прошлых беседах",
 		"mobile.home.transcript.needs_answer": "Нужен ваш ответ",
 		"mobile.home.transcript.waiting": "Ожидание беседы…",
+		"mobile.home.work.all_conversations": "Все беседы",
+		"mobile.home.work.all_conversations_new": "Все беседы, {count, plural, one {# новая беседа} few {# новые беседы} many {# новых бесед} other {# новой беседы}}",
+		"mobile.home.work.needs_you": "Ждут вас",
+		"mobile.home.work.recent": "Недавние",
+		"mobile.home.work.try": "Попробуйте",
 		"mobile.library.action.add_tag": "Добавить",
 		"mobile.library.action.edit": "Изменить",
 		"mobile.library.action.open_chat": "Открыть беседу",
@@ -9131,6 +11951,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.notifications.channel.system": "Системный звук",
 		"mobile.notifications.channel.tape_warble": "Плывущая плёнка",
 		"mobile.notifications.channel.task_complete": "Задача выполнена",
+		"mobile.notifications.channel.team_bridge": "Team Bridge",
+		"mobile.notifications.channel.team_bridge_description": "Сообщения от ваших коллег и их агентов.",
 		"mobile.notifications.channel.two_note_chime": "Двухнотный звон",
 		"mobile.notifications.computer_registration.failed": "Не удалось зарегистрировать этот телефон для оповещений с этого компьютера. Попытка повторится, когда вы снова откроете приложение.",
 		"mobile.notifications.computer_registration.no_token": "У этого телефона пока нет push-адреса, поэтому компьютер не может отправлять ему оповещения. Откройте приложение снова, чтобы повторить попытку.",
@@ -9172,6 +11994,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.notifications.preferences.agent_note": "Отключите оба типа уведомлений агентов, чтобы получать только уведомления Team Bridge.",
 		"mobile.notifications.preferences.bridge_heading": "Team Bridge",
 		"mobile.notifications.preferences.bridge_note": "В каждом личном чате, группе или канале откройте меню колокольчика и выберите «{all}», «{mentions}» или «{muted}».",
+		"mobile.notifications.preferences.bridge_system_off": "Уведомления Team Bridge отключены в настройках Android, поэтому на этом телефоне они не появятся.",
+		"mobile.notifications.preferences.bridge_system_open": "Открыть настройки Android",
 		"mobile.notifications.preferences.completions": "Агент закончил",
 		"mobile.notifications.preferences.computer_keeps_sending": "Компьютер будет присылать уведомления агентов, пока на нём не обновят Local Operator.",
 		"mobile.notifications.preferences.disabled_hint": "Нужна более новая версия Local Operator на компьютере.",
@@ -9188,6 +12012,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.notifications.priority_high": "Важно",
 		"mobile.notifications.section.waiting": "Ждут вас",
 		"mobile.notifications.section.waiting_count": "Ждут вас · {count}",
+		"mobile.notifications.team_bridge.self_name": "Вы",
 		"mobile.notifications.title": "Уведомления",
 		"mobile.notifications.turn_on": "Включить уведомления",
 		"mobile.oauth.failed": "Не удалось завершить вход. Попробуйте ещё раз.",
@@ -9373,7 +12198,16 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.composer.not_sent_storage": "Не отправлено. Не удалось надёжно сохранить сообщение для повторной отправки. Текст и изображения остались здесь. Попробуйте ещё раз.",
 		"mobile.session.composer.retained_instruction": "Предыдущее указание, возможно, уже доставлено. Отправьте это указание ещё раз, прежде чем отправлять текущий черновик.",
 		"mobile.session.composer.retry_not_sent_storage": "Эта попытка повторной отправки не была отправлена. Не удалось безопасно подготовить предыдущее указание к повторной отправке. Повторите отправку предыдущего указания. Текущий черновик не отправлен.",
+		"mobile.session.composer.settings_not_applied": "Сессия снова открыта, но выбранную модель или усилие применить не удалось, поэтому ничего не отправлено. Повторите попытку или выберите другую модель или усилие.",
 		"mobile.session.conversation_details": "Детали беседы",
+		"mobile.session.diagram.close": "Закрыть диаграмму",
+		"mobile.session.diagram.copied": "скопировано",
+		"mobile.session.diagram.copy": "Скопировать исходный код диаграммы",
+		"mobile.session.diagram.error": "Не удалось нарисовать диаграмму. Вместо неё показан исходный код.",
+		"mobile.session.diagram.label": "Диаграмма {type}",
+		"mobile.session.diagram.label_titled": "Диаграмма {type}: {title}",
+		"mobile.session.diagram.open_hint": "Открывает диаграмму на весь экран",
+		"mobile.session.diagram.viewer": "Просмотр диаграммы",
 		"mobile.session.empty.headline": "Здесь пока ничего нет.",
 		"mobile.session.empty.next": "Отправьте первое сообщение ниже.",
 		"mobile.session.fallback_name": "сессия",
@@ -9402,6 +12236,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.history.loading": "Загрузка предыдущих сообщений…",
 		"mobile.session.history.refresh_failed": "Не удалось загрузить последние сообщения.",
 		"mobile.session.history.stalled": "Загрузка предыдущих сообщений остановилась. Повторите или откройте беседу заново.",
+		"mobile.session.inline_chart_data": "Данные диаграммы",
+		"mobile.session.jump_to_latest": "↓ К последнему сообщению",
+		"mobile.session.jump_to_latest_name": "К последнему сообщению",
+		"mobile.session.jump_to_latest_short": "↓ Последнее",
 		"mobile.session.not_connected.headline": "Эта сессия пока не подключена.",
 		"mobile.session.not_connected.next": "После подключения компьютера откройте её в списке сессий.",
 		"mobile.session.outbox.composer_discarding": "Предыдущее сообщение отбрасывается. Это можно будет отправить через мгновение.",
@@ -9430,7 +12268,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.region.label_todos": "задачи",
 		"mobile.session.region.label_working": "активность",
 		"mobile.session.region.more_below": "ещё ниже · прокрутить ↓",
-		"mobile.session.sheet_title.attach": "прикрепить",
+		"mobile.session.sheet_title.attach": "Добавить изображение",
 		"mobile.session.sheet_title.commands": "Команды",
 		"mobile.session.sheet_title.effort": "Усилие",
 		"mobile.session.sheet_title.model": "Модель",
@@ -9544,7 +12382,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.settings.theme.no_match": "Подходящих тем нет",
 		"mobile.settings.theme.row_label": "Тема, {name}",
 		"mobile.settings.theme.search_label": "Поиск тем",
-		"mobile.settings.theme.search_placeholder": "Поиск тем",
+		"mobile.settings.theme.search_placeholder": "Название, например Dracula",
 		"mobile.settings.theme.section_dark": "Тёмные ({count})",
 		"mobile.settings.theme.section_light": "Светлые ({count})",
 		"mobile.settings.theme.title": "Тема",
@@ -9555,6 +12393,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.sidebar.empty_by_view.next": "Снова включите разделы или завершённые сеансы либо сбросьте вид.",
 		"mobile.sidebar.empty_by_view.reset": "Сбросить вид",
 		"mobile.sidebar.group.one_list": "Одним списком",
+		"mobile.sidebar.group.tag": "Тег",
 		"mobile.sidebar.group.time_section": "По времени",
 		"mobile.sidebar.group_by": "Группировать по",
 		"mobile.sidebar.hidden_sections": "{count, plural, one {скрыт # раздел} few {скрыто # раздела} many {скрыто # разделов} other {скрыто # раздела}}",
@@ -9568,16 +12407,31 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.sidebar.row.asks": "{count, plural, one {# вопрос} few {# вопроса} many {# вопросов} other {# вопроса}}",
 		"mobile.sidebar.row.asks_not_blocker": "{asks}, агент продолжает работу",
 		"mobile.sidebar.row.new": "новая",
+		"mobile.sidebar.row.on_device": "На {device}",
 		"mobile.sidebar.row.todos": "{count, plural, one {# задача} few {# задачи} many {# задач} other {# задачи}}",
+		"mobile.sidebar.row_label.join": "{first}, {second}",
+		"mobile.sidebar.row_label.on_device": "на {device}",
+		"mobile.sidebar.row_label.open": "открыта",
+		"mobile.sidebar.row_label.waiting": "{kind, select, approval {ждёт одобрения} other {ждёт ответа на вопрос}}",
+		"mobile.sidebar.row_label.working": "работает",
+		"mobile.sidebar.row_status.approval": "одобрение",
+		"mobile.sidebar.row_status.ended": "завершена",
+		"mobile.sidebar.row_status.not_answering": "не отвечает",
+		"mobile.sidebar.row_status.not_reachable": "недоступна",
+		"mobile.sidebar.row_status.question": "вопрос",
 		"mobile.sidebar.section.older": "Раньше",
 		"mobile.sidebar.section.pinned": "Закреплённые",
 		"mobile.sidebar.section.running": "В работе",
 		"mobile.sidebar.section.today": "Сегодня",
+		"mobile.sidebar.section.untagged": "Без тега",
 		"mobile.sidebar.section.week": "На этой неделе",
 		"mobile.sidebar.sections": "Разделы",
 		"mobile.sidebar.settings_heading": "Боковая панель",
 		"mobile.sidebar.show_ended": "Показывать завершённые сеансы",
 		"mobile.sidebar.show_ended_hint": "Закреплённые и выполняющиеся беседы показываются всегда.",
+		"mobile.sidebar.show_tags": "Показывать теги",
+		"mobile.sidebar.show_tags_hint": "Теги остаются в меню каждой беседы.",
+		"mobile.sidebar.tag_group.announcement": "{name}, {count, plural, one {# беседа} few {# беседы} many {# бесед} other {# беседы}}",
 		"mobile.sidebar.tags.announcement": "Теги: {names}",
 		"mobile.sidebar.tags.empty_headline": "Категорий пока нет.",
 		"mobile.sidebar.tags.empty_next": "Создаются на компьютере.",
@@ -9622,6 +12476,12 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.signin.use_address": "Войти по адресу и паролю",
 		"mobile.signin.welcome.body": "Это приложение управляет сессиями на вашей машине и показывает, что было сделано. Ваш код её не покидает.",
 		"mobile.signin.welcome.headline": "Ваш агент работает на вашем компьютере.",
+		"mobile.team_bridge.actions.a11y_react": "Отреагировать",
+		"mobile.team_bridge.actions.copied": "Скопировано",
+		"mobile.team_bridge.actions.copy_text": "Копировать текст",
+		"mobile.team_bridge.actions.reply_in_thread": "Ответить в ветке",
+		"mobile.team_bridge.actions.select_text": "Выделить текст",
+		"mobile.team_bridge.actions.title": "Действия с сообщением",
 		"mobile.team_bridge.attachment.add": "Добавить изображение",
 		"mobile.team_bridge.attachment.attached_summary": "{count, plural, one {Прикреплено # изображение} few {Прикреплено # изображения} many {Прикреплено # изображений} other {Прикреплено # изображения}}",
 		"mobile.team_bridge.attachment.cannot_send": "Нельзя отправить",
@@ -9665,6 +12525,23 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.team_bridge.attachment.viewer": "Просмотр изображений",
 		"mobile.team_bridge.attachment.wait_uploads": "Отправка станет доступна после загрузки изображений.",
 		"mobile.team_bridge.back": "Назад",
+		"mobile.team_bridge.card_body.deleted": "Это сообщение удалено.",
+		"mobile.team_bridge.card_body.held": "Задержано для проверки.",
+		"mobile.team_bridge.card_body.held_transient": "Ожидает фильтрации — пока не показано вашему агенту.",
+		"mobile.team_bridge.card_body.loading": "Загрузка сообщения…",
+		"mobile.team_bridge.card_body.more_messages": "{count, plural, one {Ещё # сообщение в этой карточке} few {Ещё # сообщения в этой карточке} many {Ещё # сообщений в этой карточке} other {Ещё # сообщения в этой карточке}}",
+		"mobile.team_bridge.card_body.not_admitted": "Не доставлено вашему агенту.",
+		"mobile.team_bridge.card_body.not_member": "Вы больше не участвуете в этом разговоре.",
+		"mobile.team_bridge.card_body.offline": "Нет связи с Radient — повторяем попытку.",
+		"mobile.team_bridge.card_body.other_account": "Получено в другой учётной записи Radient.",
+		"mobile.team_bridge.card_body.pending": "Ожидает доставки вашему агенту.",
+		"mobile.team_bridge.card_body.refused": "Отклонено модерацией.",
+		"mobile.team_bridge.card_body.show_less": "Показать меньше",
+		"mobile.team_bridge.card_body.show_more": "Показать больше",
+		"mobile.team_bridge.card_body.signed_out": "Войдите в Radient, чтобы увидеть это сообщение.",
+		"mobile.team_bridge.card_body.thread_reply": "Ответ в ветке",
+		"mobile.team_bridge.card_body.unavailable": "Текст сообщения недоступен.",
+		"mobile.team_bridge.card_body.untrusted": "Внешнее сообщение · недоверенное содержимое",
 		"mobile.team_bridge.conversation": "Переписка",
 		"mobile.team_bridge.default_on.body": "Агенты вашей организации могут писать вашему руководителю аппарата. Вы можете отключить это в любой момент.",
 		"mobile.team_bridge.default_on.dismiss": "Закрыть",
@@ -9727,6 +12604,15 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.team_bridge.list.preview": "Предпросмотр · Вступите, чтобы читать",
 		"mobile.team_bridge.list.quiet": "Уведомления без звука",
 		"mobile.team_bridge.list.self": "вы",
+		"mobile.team_bridge.mentions.dismiss_notice": "Скрыть",
+		"mobile.team_bridge.mentions.invited": "{name} ещё не присоединился к этому разговору и не получит уведомление.",
+		"mobile.team_bridge.mentions.no_endpoint": "{name} нельзя уведомить, пока не загрузится список людей.",
+		"mobile.team_bridge.mentions.not_member": "{name} не участвует в этом разговоре и не получит уведомление.",
+		"mobile.team_bridge.mentions.results_count": "{count, plural, one {# вариант} few {# варианта} many {# вариантов} other {# варианта}}",
+		"mobile.team_bridge.mentions.row_label": "Упомянуть: {name}",
+		"mobile.team_bridge.mentions.section_members": "В этом разговоре",
+		"mobile.team_bridge.mentions.section_org": "Другие в вашей организации",
+		"mobile.team_bridge.mentions.unavailable": "Список людей недоступен. Показаны участники этого разговора.",
 		"mobile.team_bridge.navigation.caption": "Ваша организация рядом, даже когда компьютер спит",
 		"mobile.team_bridge.navigation.entry": "{count, plural, =0 {Team Bridge} one {Team Bridge · # непрочитанное} few {Team Bridge · # непрочитанных} many {Team Bridge · # непрочитанных} other {Team Bridge · # непрочитанных}}",
 		"mobile.team_bridge.navigation.entry_loading": "Team Bridge · загрузка",
@@ -9743,6 +12629,35 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.team_bridge.profile.open": "Посмотреть профиль: {name}",
 		"mobile.team_bridge.profile.opens_hint": "Открывает профиль",
 		"mobile.team_bridge.profile.title": "Профиль",
+		"mobile.team_bridge.reactions.add": "Добавить реакцию",
+		"mobile.team_bridge.reactions.added": "Реакция добавлена",
+		"mobile.team_bridge.reactions.details": "Сведения о реакции",
+		"mobile.team_bridge.reactions.failed": "Не удалось сохранить реакцию. Попробуйте ещё раз.",
+		"mobile.team_bridge.reactions.hint_add": "Коснитесь дважды, чтобы тоже отреагировать",
+		"mobile.team_bridge.reactions.hint_inspect": "Нажмите дважды, чтобы посмотреть сведения о реакции",
+		"mobile.team_bridge.reactions.hint_remove": "Коснитесь дважды, чтобы убрать свою реакцию",
+		"mobile.team_bridge.reactions.keyboard_hint": "Выберите эмодзи на клавиатуре",
+		"mobile.team_bridge.reactions.pill": "{emoji}, {count, plural, one {# реакция} few {# реакции} many {# реакций} other {# реакции}}",
+		"mobile.team_bridge.reactions.pill_mine": "{emoji}, {count, plural, one {# реакция} few {# реакции} many {# реакций} other {# реакции}}, вы отреагировали",
+		"mobile.team_bridge.reactions.removed": "Реакция удалена",
+		"mobile.team_bridge.reactions.sample": "{count, plural, =0 {{labels}} one {{labels} и ещё # участник} few {{labels} и ещё # участника} many {{labels} и ещё # участников} other {{labels} и ещё # участника}}",
+		"mobile.team_bridge.reactions.sample_none": "В этой сводке нет имён.",
+		"mobile.team_bridge.reactions.sample_notice": "Показаны лишь некоторые имена, а не полный список.",
+		"mobile.team_bridge.reactions.show_less": "Свернуть",
+		"mobile.team_bridge.reactions.show_more": "Показать ещё {count}",
+		"mobile.team_bridge.reactions.summary": "{count, plural, one {# реакция} few {# реакции} many {# реакций} other {# реакции}}",
+		"mobile.team_bridge.reactions.you_reacted": "Вы отреагировали",
+		"mobile.team_bridge.reply_thread.count": "{count, plural, one {# ответ} few {# ответа} many {# ответов} other {# ответа}}",
+		"mobile.team_bridge.reply_thread.empty": "Ответов пока нет. Начните ветку.",
+		"mobile.team_bridge.reply_thread.error": "Не удалось загрузить эту ветку.",
+		"mobile.team_bridge.reply_thread.last_reply": "Последний ответ: {time}",
+		"mobile.team_bridge.reply_thread.loading": "Загрузка ветки…",
+		"mobile.team_bridge.reply_thread.more": "Загрузить ещё ответы",
+		"mobile.team_bridge.reply_thread.open": "Открыть ветку, {count, plural, one {# ответ} few {# ответа} many {# ответов} other {# ответа}}",
+		"mobile.team_bridge.reply_thread.open_unread": "Открыть ветку, {count, plural, one {# ответ} few {# ответа} many {# ответов} other {# ответа}}, {unread, plural, one {# непрочитанный} few {# непрочитанных} many {# непрочитанных} other {# непрочитанных}}",
+		"mobile.team_bridge.reply_thread.reply": "Ответить в ветке",
+		"mobile.team_bridge.reply_thread.retry": "Повторить загрузку ветки",
+		"mobile.team_bridge.reply_thread.title": "Ветка",
 		"mobile.team_bridge.retry": "Повторить",
 		"mobile.team_bridge.thread.access_retry": "Повторить проверку доступа",
 		"mobile.team_bridge.thread.anchor_missing": "Это сообщение больше недоступно.",
@@ -9836,6 +12751,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"relay.health.quiet_detail": "Эта сессия на компьютере перестала отвечать — возможно, она занята или зависла. Даже если отправка покажет ошибку, сообщение может дойти, когда сессия наверстает упущенное. Повторная попытка не отправит его дважды.",
 		"relay.health.reconnecting": "Переподключение",
 		"relay.health.reconnecting_detail": "Этот телефон потерял подключение к компьютеру и продолжает попытки переподключиться. Сессия там, возможно, всё ещё работает; пока подключение не восстановится, отправка может не пройти.",
+		"relay.skills.skipped": "Отправлено без {names} — {count, plural, one {у этого навыка нет содержимого для вложения} few {у этих навыков нет содержимого для вложения} many {у этих навыков нет содержимого для вложения} other {у этих навыков нет содержимого для вложения}}.",
+		"relay.skills.too_large": "Эти навыки слишком велики, чтобы отправить их вместе. Удалите один навык и отправьте снова.",
+		"relay.skills.tray.hidden": "скрыт",
+		"relay.skills.tray.label": "Навыки",
 		"relay.transcript.composer.queued": "{count, plural, one {# в очереди} few {# в очереди} many {# в очереди} other {# в очереди}}",
 		"relay.transcript.fold.failed_label": "Содержит неудачное действие",
 		"relay.transcript.fold.more": "{count, plural, one {и ещё # действие} few {и ещё # действия} many {и ещё # действий} other {и ещё # действия}}",
@@ -9873,6 +12792,43 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.account_routing.unsaved": "ابھی محفوظ نہیں کیا گیا۔",
 		"mobile.agent_avatar.edit_hint": "یہ تصویر ڈیسک ٹاپ ایپ میں بدلیں",
 		"mobile.agent_avatar.label": "ایجنٹ کی تصویر",
+		"mobile.asks.answer_label": "اس سوال پر آپ کا جواب: {question}",
+		"mobile.asks.answer_placeholder": "آپ کا جواب",
+		"mobile.asks.choose_any": "جو بھی لاگو ہوں، منتخب کریں",
+		"mobile.asks.deadline_ago": "مقررہ وقت کو گزرے {duration} ہو گئے",
+		"mobile.asks.decline": "انکار کریں",
+		"mobile.asks.decline_hint": "کوئی جواب نہیں بھیجتا۔ ایجنٹ خود فیصلہ کرتا ہے۔",
+		"mobile.asks.dismiss": "خارج کریں",
+		"mobile.asks.dismiss_open": "خارج کریں…",
+		"mobile.asks.dismiss_reason.chat": "گفتگو میں جواب دیا گیا",
+		"mobile.asks.dismiss_reason.chat_note": "آپ گفتگو میں پہلے ہی جواب دے چکے ہیں",
+		"mobile.asks.dismiss_reason.moot": "اب ضرورت نہیں",
+		"mobile.asks.dismiss_reason.moot_note": "ایجنٹ جواب کا انتظار بند کر دیتا ہے",
+		"mobile.asks.dismiss_title": "{count, plural, one {یہ سوال خارج کریں} other {یہ سوالات خارج کریں}}",
+		"mobile.asks.empty": "کچھ انتظار میں نہیں۔ ایجنٹ کے سوالات یہاں دکھائی دیں گے۔",
+		"mobile.asks.honesty": "یہ ایپ کھلی ہونے پر قطار میں موجود سوالات دکھاتی ہے۔ بند ہونے پر یہ آپ تک نہیں پہنچ سکتی۔",
+		"mobile.asks.loading": "سوالات پڑھے جا رہے ہیں…",
+		"mobile.asks.none_recorded": "اس سوال کا کوئی جواب درج نہیں ہوا۔",
+		"mobile.asks.nothing_left": "یہاں جواب دینے کو کچھ نہیں بچا۔ کسی اور جگہ نے یہ سوالات پہلے ہی لے لیے ہیں۔",
+		"mobile.asks.open_conversation": "گفتگو کھولیں",
+		"mobile.asks.other_hint": "اپنا جواب لکھیں",
+		"mobile.asks.other_kept": "آپ کا متن محفوظ ہے، بھیجا نہیں گیا",
+		"mobile.asks.other_label": "دیگر",
+		"mobile.asks.progress.pick_or_type": "بھیجنے کے لیے کوئی آپشن چنیں یا اپنا جواب لکھیں۔",
+		"mobile.asks.progress.tally": "{total} میں سے {answered} سوالات کے جواب دیے گئے یا چھوڑے گئے",
+		"mobile.asks.progress.type": "بھیجنے کے لیے جواب لکھیں یا سوال چھوڑ دیں۔",
+		"mobile.asks.recommended": "· تجویز کردہ",
+		"mobile.asks.secret_notice": "خفیہ: براہ راست بھیجا گیا، ٹرانسکرپٹ میں نہیں دکھایا گیا",
+		"mobile.asks.secret_notice_saved": "خفیہ: براہ راست بھیجا گیا، ٹرانسکرپٹ میں نہیں دکھایا گیا، اور دوبارہ استعمال کے لیے کمپیوٹر پر محفوظ کر دیا گیا",
+		"mobile.asks.secret_placeholder": "خفیہ قدر",
+		"mobile.asks.send_answer": "جواب بھیجیں",
+		"mobile.asks.send_answers": "جوابات بھیجیں",
+		"mobile.asks.settled": "نمٹائے گئے",
+		"mobile.asks.skip": "چھوڑ دیں (جواب نہ بھیجیں)",
+		"mobile.asks.title_fallback": "سوالات",
+		"mobile.asks.truncated": "تازہ ترین سوالات دکھائے جا رہے ہیں۔ باقی دیکھنے کے لیے کوئی گفتگو کھولیں۔",
+		"mobile.asks.unskip": "اس سوال کا جواب دیں",
+		"mobile.asks.urgent": "· فوری",
 		"mobile.chrome.clear_search": "تلاش صاف کریں",
 		"mobile.chrome.close_conversations": "گفتگوئیں بند کریں",
 		"mobile.chrome.composer.dismiss_keyboard": "کی بورڈ بند کریں",
@@ -9881,6 +12837,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.chrome.composer.queued": "{count, plural, one {# پیغام قطار میں} other {# پیغامات قطار میں}}",
 		"mobile.chrome.composer.row_cost": "لاگت",
 		"mobile.chrome.composer.row_effort": "شدت",
+		"mobile.chrome.composer.row_identity": "ایجنٹ یا ٹیم",
 		"mobile.chrome.composer.row_model": "ماڈل",
 		"mobile.chrome.composer.row_questions": "سوالات",
 		"mobile.chrome.composer.row_queue": "قطار",
@@ -9912,18 +12869,184 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.common.not_found.headline": "یہ صفحہ موجود نہیں ہے۔",
 		"mobile.common.not_found.next": "جاری رکھنے کے لیے اپنے سیشنز میں واپس جائیں۔",
 		"mobile.common.not_found.title": "صفحہ نہیں ملا",
+		"mobile.common.resize_panel": "پینل کا سائز تبدیل کریں",
 		"mobile.common.save": "محفوظ کریں",
 		"mobile.common.send": "بھیجیں",
+		"mobile.common.size.large": "بڑا",
+		"mobile.common.size.medium": "درمیانہ",
+		"mobile.common.size.shorter": "کم اونچا",
+		"mobile.common.size.taller": "مزید اونچا",
 		"mobile.common.try_again": "دوبارہ کوشش کریں",
+		"mobile.community.approvals.agent": "ایجنٹ",
+		"mobile.community.approvals.decline": "پوسٹ نہ کریں",
+		"mobile.community.approvals.empty": "کوئی ایجنٹ پوسٹ آپ کی منظوری کا انتظار نہیں کر رہی۔",
+		"mobile.community.approvals.expires": "{hours, plural, one {# گھنٹے میں ختم} other {# گھنٹے میں ختم}}",
+		"mobile.community.approvals.expires_days": "{days, plural, one {# دن میں ختم} other {# دنوں میں ختم}}",
+		"mobile.community.approvals.failed": "یہ مکمل نہیں ہوا۔ دوبارہ کوشش کریں۔",
+		"mobile.community.approvals.open_computer": "درست متن پڑھنے اور فیصلہ کرنے کے لیے اپنے کمپیوٹر پر Local Operator کھولیں۔",
+		"mobile.community.approvals.review": "اپنے کمپیوٹر پر دیکھیں",
+		"mobile.community.approvals.review_note": "اپنے کمپیوٹر پر دیکھیں منتخب کرنے سے یہ 24 گھنٹے تک انتظار میں رہتی ہے۔",
+		"mobile.community.approvals.stays": "جب تک آپ منظوری نہ دیں، مسودہ آپ کے کمپیوٹر پر ہی رہتا ہے۔",
+		"mobile.community.approvals.title": "آپ کا چیف آف اسٹاف #{channel} میں پوسٹ کرنا چاہتا ہے",
+		"mobile.community.approvals.title_unknown": "آپ کا چیف آف اسٹاف ایک کمیونٹی چینل میں پوسٹ کرنا چاہتا ہے",
+		"mobile.community.approvals.waiting": "آپ کے کمپیوٹر پر آپ کا انتظار ہے۔",
+		"mobile.community.browse.channels": "چینلز",
+		"mobile.community.browse.channels_empty": "کوئی چینل مطابقت نہیں رکھتا۔",
+		"mobile.community.browse.join": "جوائن کریں",
+		"mobile.community.browse.load_more": "مزید لوڈ کریں",
+		"mobile.community.browse.mode": "دکھائیں",
+		"mobile.community.browse.open": "کھولیں",
+		"mobile.community.browse.people": "لوگ",
+		"mobile.community.browse.people_empty": "کوئی شخص مطابقت نہیں رکھتا۔",
+		"mobile.community.browse.private": "نجی",
+		"mobile.community.browse.search": "تلاش کریں",
+		"mobile.community.browse.title": "براؤز کریں",
+		"mobile.community.category.harassment_or_abuse": "ہراسانی یا بدسلوکی",
+		"mobile.community.category.private_information": "نجی معلومات",
+		"mobile.community.category.spam_or_promotion": "اسپیم یا غیر ظاہر کردہ تشہیر",
+		"mobile.community.category.unsafe_or_illegal": "غیر محفوظ یا غیر قانونی مواد",
+		"mobile.community.common.loading": "کمیونٹی لوڈ ہو رہی ہے…",
+		"mobile.community.common.retry": "دوبارہ کوشش کریں",
+		"mobile.community.common.unavailable": "کمیونٹی دستیاب نہیں ہے",
+		"mobile.community.composer.attach": "تصویر منسلک کریں",
+		"mobile.community.composer.audience": "کمیونٹی کے تمام ممبرز کو نظر آتا ہے",
+		"mobile.community.composer.audience_dm": "یہ گفتگو صرف آپ اور {name} دیکھ سکتے ہیں",
+		"mobile.community.composer.blocked_archived": "یہ چینل آرکائیو ہو چکا ہے۔",
+		"mobile.community.composer.blocked_locked": "یہ چینل لاک ہے۔",
+		"mobile.community.composer.blocked_read_only": "یہ کمیونٹی صرف پڑھنے کے لیے ہے۔",
+		"mobile.community.composer.blocked_staff_only": "یہاں صرف اسٹاف اور ماڈریٹرز پوسٹ کرتے ہیں۔",
+		"mobile.community.composer.cancel": "منسوخ کریں",
+		"mobile.community.composer.cancelled": "منسوخ کر دیا گیا۔ کچھ بھی پوسٹ نہیں ہوا۔",
+		"mobile.community.composer.checking": "جانچ ہو رہی ہے…",
+		"mobile.community.composer.dismiss": "ہٹائیں",
+		"mobile.community.composer.failed": "آپ کا پیغام نہیں بھیجا گیا۔ آپ کا متن ابھی یہیں ہے۔",
+		"mobile.community.composer.forbidden": "آپ یہاں پوسٹ نہیں کر سکتے۔",
+		"mobile.community.composer.guidelines": "کمیونٹی کے رہنما اصول بدل گئے ہیں۔ انہیں قبول کریں، پھر دوبارہ کوشش کریں۔",
+		"mobile.community.composer.images_unavailable": "کمیونٹیز میں ابھی تصاویر پوسٹ نہیں کی جا سکتیں۔ آپ کا متن ابھی یہیں ہے۔",
+		"mobile.community.composer.invalid": "یہ پیغام اس حالت میں نہیں بھیجا جا سکتا۔ اسے مختصر کریں یا ترمیم کریں، پھر دوبارہ بھیجیں۔",
+		"mobile.community.composer.label": "#{name} میں پیغام",
+		"mobile.community.composer.label_dm": "{name} کو پیغام",
+		"mobile.community.composer.limited": "آپ کمیونٹی کی اجازت سے زیادہ تیزی سے بھیج رہے ہیں۔",
+		"mobile.community.composer.limited_wait": "{seconds, plural, one {# سیکنڈ بعد دوبارہ کوشش کریں۔} other {# سیکنڈ بعد دوبارہ کوشش کریں۔}}",
+		"mobile.community.composer.refused": "پوسٹ نہیں ہوا: {category}",
+		"mobile.community.composer.refused_detail": "یہ صرف آپ کو نظر آتا ہے۔ حوالہ {reference}۔ دوبارہ بھیجنے کے لیے اپنا پیغام تبدیل کریں۔",
+		"mobile.community.composer.restricted": "آپ کے پوسٹ کرنے پر پابندی ہے۔ حوالہ {reference}۔",
+		"mobile.community.composer.retry": "دوبارہ کوشش کریں",
+		"mobile.community.composer.review": "رہنما اصول دیکھیں",
+		"mobile.community.composer.send": "بھیجیں",
+		"mobile.community.composer.unavailable": "آپ کے پیغام کی جانچ نہیں ہو سکی، اس لیے کچھ بھی پوسٹ نہیں ہوا۔ آپ کا متن ابھی یہیں ہے۔",
+		"mobile.community.conversation.agent": "ایجنٹ",
+		"mobile.community.conversation.deleted": "پیغام حذف کر دیا گیا",
+		"mobile.community.conversation.edited": "ترمیم شدہ",
+		"mobile.community.conversation.empty": "ابھی کوئی پیغام نہیں۔",
+		"mobile.community.conversation.former_member": "سابق ممبر",
+		"mobile.community.conversation.join_prompt": "آپ #{name} پڑھ رہے ہیں۔ یہاں پوسٹ کرنے کے لیے چینل میں شامل ہوں۔",
+		"mobile.community.conversation.load_older": "پرانے پیغامات لوڈ کریں",
+		"mobile.community.conversation.older_error": "پرانے پیغامات لوڈ نہیں ہو سکے۔",
+		"mobile.community.conversation.replies": "{count, plural, one {# جواب} other {# جوابات}}",
+		"mobile.community.conversation.report": "پیغام رپورٹ کریں",
+		"mobile.community.conversation.subtitle": "{community} · عوامی",
+		"mobile.community.conversation.view_profile": "{name} کی پروفائل دیکھیں",
+		"mobile.community.directory.empty": "ابھی جوائن کرنے کے لیے کوئی کمیونٹی کھلی نہیں ہے۔",
+		"mobile.community.directory.featured": "نمایاں",
+		"mobile.community.directory.joined": "جوائن کردہ",
+		"mobile.community.directory.read_only": "صرف پڑھنے کے لیے",
+		"mobile.community.directory.title": "کمیونٹیز",
+		"mobile.community.error.auth_unavailable": "Radient ابھی آپ کا سائن اِن چیک نہیں کر سکا۔ تھوڑی دیر میں دوبارہ کوشش کریں۔",
+		"mobile.community.error.generic": "کچھ غلط ہو گیا۔ کچھ بھی تبدیل نہیں ہوا۔",
+		"mobile.community.error.load_failed": "ابھی یہ لوڈ نہیں ہو سکا۔ اپنا کنکشن چیک کریں اور دوبارہ کوشش کریں۔",
+		"mobile.community.error.not_found": "یہ کمیونٹی اس اکاؤنٹ کے لیے دستیاب نہیں ہے۔",
+		"mobile.community.error.rate_limited": "آپ کمیونٹی کی اجازت سے زیادہ تیزی سے ایسا کر رہے ہیں۔ تھوڑی دیر میں دوبارہ کوشش کریں۔",
+		"mobile.community.error.sign_in": "کمیونٹی استعمال کرنے کے لیے Radient میں سائن اِن کریں۔",
+		"mobile.community.error.unreachable": "کمیونٹی سے رابطہ نہیں ہو سکا۔ اس ڈیوائس کا کنکشن چیک کریں۔",
+		"mobile.community.home.browse": "براؤز کریں",
+		"mobile.community.home.channel_label": "#{name}{count, plural, =0 {} one { · # نا پڑھا گیا پیغام} other { · # نا پڑھے گئے پیغامات}}",
+		"mobile.community.home.channels": "چینلز",
+		"mobile.community.home.channels_empty": "آپ نے ابھی کوئی چینل جوائن نہیں کیا۔ کوئی تلاش کرنے کے لیے براؤز کریں۔",
+		"mobile.community.home.closed": "یہ کمیونٹی صرف پڑھنے کے لیے ہے اور نئے ممبرز قبول نہیں کر رہی۔",
+		"mobile.community.home.direct": "براہ راست پیغامات",
+		"mobile.community.home.direct_empty": "ابھی کوئی براہ راست پیغام نہیں۔",
+		"mobile.community.home.direct_label": "{name}{count, plural, =0 {} one { · # نا پڑھا گیا پیغام} other { · # نا پڑھے گئے پیغامات}}",
+		"mobile.community.home.join": "جوائن کریں",
+		"mobile.community.home.not_member": "اس کمیونٹی میں پڑھنے اور پوسٹ کرنے کے لیے جوائن کریں۔",
+		"mobile.community.home.reaccept": "جائزہ لیں",
+		"mobile.community.home.reaccept_banner": "کمیونٹی کے رہنما اصول بدل گئے ہیں۔ پوسٹ کرتے رہنے کے لیے ان کا جائزہ لیں اور قبول کریں۔",
+		"mobile.community.home.requests": "درخواستیں",
+		"mobile.community.home.requests_count": "{count, plural, one {درخواستیں · #} other {درخواستیں · #}}",
+		"mobile.community.home.switch": "تنظیم یا کمیونٹی تبدیل کریں",
+		"mobile.community.join.agree": "میں کمیونٹی کے رہنما اصولوں ({version}) سے متفق ہوں۔ میری پروفائل اور پوسٹس تمام ممبرز کو نظر آتی ہیں۔",
+		"mobile.community.join.changed": "آپ کے پڑھتے وقت رہنما اصول بدل گئے۔ نیا ورژن دیکھیں، پھر دوبارہ قبول کریں۔",
+		"mobile.community.join.failed": "جوائن مکمل نہیں ہوا۔ دوبارہ کوشش کریں۔",
+		"mobile.community.join.guidelines_heading": "کمیونٹی کے رہنما اصول ({version})",
+		"mobile.community.join.hint": "جوائن کرنے کے لیے خانے پر نشان لگائیں۔",
+		"mobile.community.join.moderation": "ہر پیغام پوسٹ ہونے سے پہلے چیک کیا جاتا ہے۔ اگر کچھ پوسٹ نہ ہو تو وجہ صرف آپ دیکھتے ہیں، ایک حوالے کے ساتھ جس پر آپ اپیل کر سکتے ہیں۔",
+		"mobile.community.join.profile": "ممبرز آپ کا Radient نام دیکھتے ہیں۔ کبھی نہیں دکھایا جاتا: ای میل، تنظیمیں۔",
+		"mobile.community.join.reaccept_submit": "قبول کریں اور جاری رکھیں",
+		"mobile.community.join.reaccept_title": "کمیونٹی کے اپ ڈیٹ شدہ رہنما اصول",
+		"mobile.community.join.submit": "جوائن کریں اور کمیونٹی کھولیں",
+		"mobile.community.join.title": "کمیونٹی جوائن کریں",
+		"mobile.community.no_plan.body": "Radient کی چلائی جانے والی ایک مفت عوامی جگہ۔ مدد لیں، رائے دیں اور Local Operator کے دوسرے صارفین سے ملیں۔",
+		"mobile.community.no_plan.free": "مفت۔ کسی Team پلان یا ادائیگی کی ضرورت نہیں۔",
+		"mobile.community.no_plan.join": "کمیونٹی جوائن کریں",
+		"mobile.community.no_plan.open": "کمیونٹی کھولیں",
+		"mobile.community.no_plan.title": "Local Operator Community جوائن کریں",
+		"mobile.community.profile.block": "بلاک کریں",
+		"mobile.community.profile.blocked": "بلاک کر دیا گیا۔ آپ ایک دوسرے کے پیغامات یا درخواستیں نہیں دیکھیں گے۔",
+		"mobile.community.profile.failed": "یہ مکمل نہیں ہوا۔ دوبارہ کوشش کریں۔",
+		"mobile.community.profile.joined": "{month} میں شامل ہوئے",
+		"mobile.community.profile.message": "پیغام",
+		"mobile.community.profile.message_sent": "پیغام کی درخواست بھیج دی گئی۔ وہ اسے اپنی درخواستوں میں دیکھیں گے۔",
+		"mobile.community.profile.report": "رپورٹ کریں",
+		"mobile.community.profile.title": "پروفائل",
+		"mobile.community.report.category": "کیا مسئلہ ہے؟",
+		"mobile.community.report.dm_consent": "یہ پیغام Radient Trust & Safety کے ساتھ شیئر کریں۔ اسے صرف ان کے کیس ریویورز دیکھتے ہیں؛ کمیونٹی موڈریٹرز کبھی نہیں۔",
+		"mobile.community.report.failed": "رپورٹ نہیں بھیجی جا سکی۔ دوبارہ کوشش کریں۔",
+		"mobile.community.report.note": "کچھ اور جو ہمیں معلوم ہونا چاہیے؟ (اختیاری)",
+		"mobile.community.report.revision_changed": "آپ کے کھولنے کے بعد اس پیغام میں ترمیم ہوئی۔ اسے دوبارہ پڑھیں، پھر تصدیق کر کے موجودہ ورژن کی رپورٹ کریں۔",
+		"mobile.community.report.sent": "رپورٹ بھیج دی گئی۔ حوالہ {reference}۔",
+		"mobile.community.report.submit": "رپورٹ بھیجیں",
+		"mobile.community.report.title": "Radient Trust & Safety کو رپورٹ کریں",
+		"mobile.community.requests.accept": "قبول کریں",
+		"mobile.community.requests.approvals": "ایجنٹ کی منظوریاں",
+		"mobile.community.requests.block": "بلاک کریں",
+		"mobile.community.requests.decline": "مسترد کریں",
+		"mobile.community.requests.dm": "پیغامات",
+		"mobile.community.requests.dm_body": "{name} آپ کو براہ راست پیغامات بھیجنا چاہتے ہیں۔",
+		"mobile.community.requests.dm_empty": "پیغام کی کوئی درخواست نہیں۔",
+		"mobile.community.requests.expires": "{hours, plural, one {# گھنٹے میں ختم} other {# گھنٹے میں ختم}}",
+		"mobile.community.requests.expires_days": "{days, plural, one {# دن میں ختم} other {# دنوں میں ختم}}",
+		"mobile.community.requests.mode": "دکھائیں",
+		"mobile.community.requests.title": "درخواستیں",
+		"mobile.community.role.community_admin": "کمیونٹی ایڈمن",
+		"mobile.community.role.moderator": "ماڈریٹر",
+		"mobile.community.role.staff": "Radient اسٹاف",
+		"mobile.community.switcher.browse": "کمیونٹیز براؤز کریں…",
+		"mobile.community.switcher.communities": "کمیونٹیز",
+		"mobile.community.switcher.note": "سوئچ کرنے سے صرف وہ بدلتا ہے جو آپ دیکھتے ہیں۔",
+		"mobile.community.switcher.organizations": "تنظیمیں",
+		"mobile.community.switcher.public": "عوامی",
+		"mobile.community.switcher.row_label": "{name} · عوامی{count, plural, =0 {} one { · # نا پڑھا گیا پیغام} other { · # نا پڑھے گئے پیغامات}}",
+		"mobile.community.switcher.search": "کمیونٹیز تلاش کریں",
+		"mobile.composer_input.attach.camera": "تصویر کھینچیں",
+		"mobile.composer_input.attach.camera_denied": "کیمرے کی رسائی بند ہے۔ تصویر کھینچنے کے لیے اسے ترتیبات میں آن کریں۔",
+		"mobile.composer_input.attach.camera_error": "کیمرا نہیں کھل سکا۔ دوبارہ کوشش کریں۔",
+		"mobile.composer_input.attach.camera_refused": "کیمرے تک رسائی کی اجازت نہیں ملی۔ دوبارہ پوچھے جانے کے لیے تصویر کھینچیں پر ٹیپ کریں۔",
+		"mobile.composer_input.attach.camera_unavailable": "اس ڈیوائس پر کوئی کیمرا دستیاب نہیں ہے۔",
+		"mobile.composer_input.attach.choose_image": "تصویر منتخب کریں",
+		"mobile.composer_input.attach.files": "فائلوں سے تصویر",
+		"mobile.composer_input.attach.library": "فوٹو لائبریری",
+		"mobile.composer_input.attach.open_settings": "ترتیبات کھولیں",
+		"mobile.composer_input.attach.paste": "تصویر پیسٹ کریں",
 		"mobile.composer_input.clear_draft": "مسودہ صاف کریں",
 		"mobile.composer_input.clear_draft_hint": "صرف مسودے کا متن اور تصاویر مٹاتا ہے؛ قطار میں موجود اور غیر مصدقہ پیغامات برقرار رکھتا ہے",
 		"mobile.composer_input.dismiss_error": "خرابی چھپائیں",
 		"mobile.composer_input.dismiss_error_hint": "مسودہ یا ترسیل کی حیثیت بدلے بغیر یہ خرابی چھپاتا ہے",
 		"mobile.composer_input.notice_dismiss": "چھپائیں",
 		"mobile.composer_input.notice_retry": "دوبارہ کوشش کریں",
-		"mobile.composer_input.paste.denied": "پیسٹ کرنے کی اجازت نہیں ملی۔ پیپر کلپ پر ٹیپ کریں، پھر تصویر پیسٹ کریں، اور اجازت دیں منتخب کریں۔",
+		"mobile.composer_input.paste.denied": "پیسٹ کرنے کی اجازت نہیں ملی۔ پیسٹ بٹن پر دوبارہ ٹیپ کریں اور اجازت دیں منتخب کریں۔",
+		"mobile.composer_input.paste.empty_ios": "کوئی تصویر پیسٹ نہیں ہوئی۔ ایک تصویر کاپی کریں، اور پوچھنے پر اجازت دیں منتخب کریں۔",
 		"mobile.composer_input.paste.image": "تصویر پیسٹ کریں",
-		"mobile.composer_input.paste.image_hint": "کلپ بورڈ کی تصویر منسلک کرتا ہے",
+		"mobile.composer_input.paste.image_hint": "آپ کی کاپی کی ہوئی تصویر منسلک کرتا ہے",
 		"mobile.composer_input.voice.discard": "آواز کا ان پٹ مسترد کریں",
 		"mobile.composer_input.voice.finish": "ختم کریں اور تحریر کریں",
 		"mobile.composer_input.voice.mic_setup": "آواز سے ان پٹ سیٹ اپ نہیں ہے",
@@ -10140,6 +13263,32 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.folders_read_failed": "ہم ابھی اس کمپیوٹر کے فولڈرز نہیں پڑھ سکے۔",
 		"mobile.home.folders_read_sign_in": "اس کمپیوٹر نے دوبارہ سائن اِن کرنے کو کہا ہے، اسی لیے اس کے فولڈرز نہیں پڑھے جا سکے۔",
 		"mobile.home.greeting": "آج میں آپ کی کیا مدد کروں؟",
+		"mobile.home.identity.announce_picked": "یہ چیٹ {name} کے ساتھ شروع ہوگی",
+		"mobile.home.identity.band_agents": "ایجنٹس",
+		"mobile.home.identity.band_recent": "حالیہ",
+		"mobile.home.identity.band_teams": "ٹیمیں",
+		"mobile.home.identity.default_agent": "ڈیفالٹ ایجنٹ",
+		"mobile.home.identity.empty": "اس کمپیوٹر پر ابھی کوئی ایجنٹ یا ٹیم نہیں ہے۔ ڈیسک ٹاپ ایپ میں ایک بنائیں۔",
+		"mobile.home.identity.no_matches": "“{query}” سے کچھ میل نہیں کھاتا۔",
+		"mobile.home.identity.pill_label": "یہ چیٹ {target} کے ساتھ شروع کریں۔ کوئی ایجنٹ یا ٹیم منتخب کریں",
+		"mobile.home.identity.read_failed": "ہم ابھی اس کمپیوٹر کے ایجنٹس اور ٹیمیں نہیں پڑھ سکے۔",
+		"mobile.home.identity.refused_connecting": "یہ کمپیوٹر ابھی کنیکٹ ہو رہا ہے، اس لیے ابھی کچھ شروع نہیں ہوا۔ اپنے پیغام پر ٹیپ کر کے اسے واپس لائیں، پھر {name} کے ساتھ شروع کرنے کے لیے تھوڑی دیر میں دوبارہ بھیجیں۔",
+		"mobile.home.identity.refused_fallback": "{name} اس کمپیوٹر پر شروع نہیں ہو سکا۔ کوئی اور منتخب کریں، یا ڈیفالٹ ایجنٹ استعمال کریں۔",
+		"mobile.home.identity.refused_registry": "یہ کمپیوٹر ابھی اپنے ایجنٹس اور ٹیمیں نہیں پڑھ سکا، اس لیے کچھ شروع نہیں ہوا۔ اپنے پیغام پر ٹیپ کر کے اسے واپس لائیں اور دوبارہ بھیجیں، یا ابھی بھیجنے کے لیے ڈیفالٹ ایجنٹ منتخب کریں۔",
+		"mobile.home.identity.refused_unknown": "{name} اب اس کمپیوٹر پر دستیاب نہیں ہے۔ اپنا پیغام بھیجنے کے لیے کوئی اور، یا ڈیفالٹ ایجنٹ منتخب کریں۔",
+		"mobile.home.identity.refused_unlicensed": "یہ کمپیوٹر ابھی {name} کے ساتھ چیٹ شروع نہیں کر سکتا۔ بھیجنے کے لیے ڈیفالٹ ایجنٹ منتخب کریں۔",
+		"mobile.home.identity.refused_unsaved": "یہ کمپیوٹر نئی چیٹ کے لیے {name} محفوظ نہیں کر سکا، اس لیے کچھ شروع نہیں ہوا۔ اپنے پیغام پر ٹیپ کر کے اسے واپس لائیں، پھر دوبارہ بھیجیں۔",
+		"mobile.home.identity.row_agent": "{name}، ایجنٹ",
+		"mobile.home.identity.row_agent_described": "{name}، ایجنٹ۔ {description}",
+		"mobile.home.identity.row_team": "{name}، ٹیم",
+		"mobile.home.identity.row_team_led": "{name}، ٹیم، {manager} کی قیادت میں",
+		"mobile.home.identity.search": "ایجنٹس اور ٹیمیں تلاش کریں",
+		"mobile.home.identity.sheet_title": "یہ چیٹ اس کے ساتھ شروع کریں",
+		"mobile.home.identity.starting_with": "{name} کے ساتھ شروع ہو رہا ہے…",
+		"mobile.home.identity.team_led_by": "{manager} کی قیادت میں",
+		"mobile.home.identity.team_members": "{count, plural, one {# رکن} other {# اراکین}}",
+		"mobile.home.identity.team_subtitle": "{manager} کی قیادت میں · {count, plural, one {# رکن} other {# اراکین}}",
+		"mobile.home.identity.unsupported": "اس کمپیوٹر کا Local Operator کسی ایجنٹ یا ٹیم کے ساتھ چیٹ شروع کرنے کے لیے بہت پرانا ہے۔ یہاں انتخاب کے لیے اسے اپ ڈیٹ کریں۔",
 		"mobile.home.models_read_failed": "ہم ابھی اس کمپیوٹر کی ماڈل فہرست نہیں پڑھ سکے۔",
 		"mobile.home.options.default_model": "اس کمپیوٹر کا ڈیفالٹ ماڈل استعمال کریں",
 		"mobile.home.options.fixed": "اس گفتگو کے ابتدائی اختیارات طے ہو چکے ہیں۔ اس کے لائیو کنٹرولز کے لیے “گفتگو کی تفصیلات” دیکھیں۔",
@@ -10176,9 +13325,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.startup_queue.not_started": "شروع نہیں ہوا",
 		"mobile.home.startup_queue.sending": "قطار کے پیغامات بھیجے جا رہے ہیں…",
 		"mobile.home.startup_queue.unconfirmed": "شروع ہونے کی تصدیق نہیں",
-		"mobile.home.suggestion.last_turn": "آخری ٹرن دکھائیں",
 		"mobile.home.suggestion.linear_mcp": "Linear MCP سیٹ اپ کریں",
-		"mobile.home.suggestion.phone_access": "فون رسائی آن کریں",
 		"mobile.home.suggestion.review_repo": "اس repo کا جائزہ لیں",
 		"mobile.home.suggestion.team_of_agents": "ایجنٹس کی ٹیم بنائیں",
 		"mobile.home.suggestion.wake_summary": "مجھے خلاصہ دے کر جگائیں",
@@ -10187,6 +13334,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.tip.search": "گزشتہ گفتگو تلاش کر کے سیشن دوبارہ کھولیں",
 		"mobile.home.transcript.needs_answer": "آپ کے جواب کی ضرورت ہے",
 		"mobile.home.transcript.waiting": "گفتگو کا انتظار…",
+		"mobile.home.work.all_conversations": "تمام گفتگوئیں",
+		"mobile.home.work.all_conversations_new": "تمام گفتگوئیں، {count, plural, one {# نئی گفتگو} other {# نئی گفتگوئیں}}",
+		"mobile.home.work.needs_you": "آپ کے منتظر",
+		"mobile.home.work.recent": "حالیہ",
+		"mobile.home.work.try": "آزمائیں",
 		"mobile.library.action.add_tag": "شامل کریں",
 		"mobile.library.action.edit": "ترمیم کریں",
 		"mobile.library.action.open_chat": "گفتگو کھولیں",
@@ -10239,6 +13391,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.notifications.channel.system": "سسٹم کی آواز",
 		"mobile.notifications.channel.tape_warble": "لرزتی ٹیپ",
 		"mobile.notifications.channel.task_complete": "کام مکمل",
+		"mobile.notifications.channel.team_bridge": "Team Bridge",
+		"mobile.notifications.channel.team_bridge_description": "آپ کے ساتھیوں اور ان کے ایجنٹس کے پیغامات۔",
 		"mobile.notifications.channel.two_note_chime": "دو سُری گھنٹی",
 		"mobile.notifications.computer_registration.failed": "اس کمپیوٹر سے الرٹس کے لیے یہ فون رجسٹر نہیں ہو سکا۔ ایپ دوبارہ کھولنے پر پھر کوشش کی جائے گی۔",
 		"mobile.notifications.computer_registration.no_token": "اس فون کا ابھی کوئی پُش پتہ نہیں ہے، اس لیے یہ کمپیوٹر اسے الرٹ نہیں بھیج سکتا۔ دوبارہ کوشش کے لیے ایپ پھر سے کھولیں۔",
@@ -10280,6 +13434,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.notifications.preferences.agent_note": "صرف Team Bridge کی اطلاعات حاصل کرنے کے لیے ایجنٹ کی دونوں قسم کی اطلاعات بند کریں۔",
 		"mobile.notifications.preferences.bridge_heading": "Team Bridge",
 		"mobile.notifications.preferences.bridge_note": "ہر نجی پیغام، گروپ یا چینل میں گھنٹی کا مینو کھولیں اور {all}، {mentions} یا {muted} منتخب کریں۔",
+		"mobile.notifications.preferences.bridge_system_off": "Android کی ترتیبات میں Team Bridge کی اطلاعات بند ہیں، اس لیے اس فون پر کوئی اطلاع نظر نہیں آئے گی۔",
+		"mobile.notifications.preferences.bridge_system_open": "Android کی ترتیبات کھولیں",
 		"mobile.notifications.preferences.completions": "ایجنٹ نے کام مکمل کیا",
 		"mobile.notifications.preferences.computer_keeps_sending": "جب تک آپ کے کمپیوٹر پر Local Operator اپ ڈیٹ نہیں ہوتا، وہ ایجنٹ کی اطلاعات بھیجتا رہے گا۔",
 		"mobile.notifications.preferences.disabled_hint": "آپ کے کمپیوٹر پر Local Operator کا نیا ورژن درکار ہے۔",
@@ -10296,6 +13452,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.notifications.priority_high": "اعلیٰ",
 		"mobile.notifications.section.waiting": "آپ کا انتظار",
 		"mobile.notifications.section.waiting_count": "آپ کا انتظار · {count}",
+		"mobile.notifications.team_bridge.self_name": "آپ",
 		"mobile.notifications.title": "اطلاعات",
 		"mobile.notifications.turn_on": "اطلاعات آن کریں",
 		"mobile.oauth.failed": "سائن اِن مکمل نہیں ہو سکا۔ دوبارہ کوشش کریں۔",
@@ -10481,7 +13638,16 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.composer.not_sent_storage": "نہیں بھیجا گیا۔ دوبارہ کوشش کے لیے یہ پیغام محفوظ طریقے سے محفوظ نہیں ہو سکا۔ آپ کا متن اور تصاویر یہیں ہیں۔ دوبارہ کوشش کریں۔",
 		"mobile.session.composer.retained_instruction": "ممکن ہے پچھلی ہدایت پہنچ چکی ہو۔ موجودہ مسودہ بھیجنے سے پہلے پچھلی ہدایت دوبارہ بھیجنے کی کوشش کریں۔",
 		"mobile.session.composer.retry_not_sent_storage": "دوبارہ بھیجنے کی یہ کوشش نہیں بھیجی گئی۔ پچھلی ہدایت کو محفوظ طریقے سے دوبارہ بھیجنے کی تیاری نہیں ہو سکی۔ پچھلی ہدایت دوبارہ بھیجنے کی کوشش کریں۔ آپ کا موجودہ مسودہ نہیں بھیجا گیا۔",
+		"mobile.session.composer.settings_not_applied": "سیشن دوبارہ کھل گیا، لیکن آپ کا منتخب کردہ ماڈل یا استدلال کی شدت لاگو نہیں ہو سکی، اس لیے کچھ بھی نہیں بھیجا گیا۔ دوبارہ کوشش کریں، یا کوئی دوسرا ماڈل یا استدلال کی شدت منتخب کریں۔",
 		"mobile.session.conversation_details": "گفتگو کی تفصیلات",
+		"mobile.session.diagram.close": "ڈایاگرام بند کریں",
+		"mobile.session.diagram.copied": "کاپی ہو گیا",
+		"mobile.session.diagram.copy": "ڈایاگرام کا ماخذ کاپی کریں",
+		"mobile.session.diagram.error": "یہ ڈایاگرام نہیں بنایا جا سکا۔ اس کی جگہ ماخذ دکھایا گیا ہے۔",
+		"mobile.session.diagram.label": "{type} ڈایاگرام",
+		"mobile.session.diagram.label_titled": "{type} ڈایاگرام: {title}",
+		"mobile.session.diagram.open_hint": "ڈایاگرام کو پوری اسکرین پر کھولتا ہے",
+		"mobile.session.diagram.viewer": "ڈایاگرام ویوور",
 		"mobile.session.empty.headline": "یہاں ابھی کچھ نہیں۔",
 		"mobile.session.empty.next": "نیچے پہلا پیغام بھیجیں۔",
 		"mobile.session.fallback_name": "سیشن",
@@ -10510,6 +13676,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.history.loading": "پہلے کے پیغامات لوڈ ہو رہے ہیں…",
 		"mobile.session.history.refresh_failed": "تازہ ترین پیغامات لوڈ نہیں ہو سکے۔",
 		"mobile.session.history.stalled": "تاریخچے کے پہلے کے پیغامات لوڈ ہونا رک گئے۔ دوبارہ کوشش کریں، یا یہ گفتگو دوبارہ کھولیں۔",
+		"mobile.session.inline_chart_data": "چارٹ کا ڈیٹا",
+		"mobile.session.jump_to_latest": "↓ تازہ ترین پر جائیں",
+		"mobile.session.jump_to_latest_name": "تازہ ترین پر جائیں",
+		"mobile.session.jump_to_latest_short": "↓ تازہ ترین",
 		"mobile.session.not_connected.headline": "یہ سیشن ابھی منسلک نہیں ہے۔",
 		"mobile.session.not_connected.next": "کمپیوٹر منسلک ہونے کے بعد اسے سیشن کی فہرست سے کھولیں۔",
 		"mobile.session.outbox.composer_discarding": "آپ کا پچھلا پیغام چھوڑا جا رہا ہے۔ آپ یہ پیغام کچھ ہی لمحے میں بھیج سکیں گے۔",
@@ -10538,7 +13708,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.region.label_todos": "کام",
 		"mobile.session.region.label_working": "سرگرمی",
 		"mobile.session.region.more_below": "مزید نیچے · اسکرول کریں ↓",
-		"mobile.session.sheet_title.attach": "منسلک کریں",
+		"mobile.session.sheet_title.attach": "تصویر شامل کریں",
 		"mobile.session.sheet_title.commands": "کمانڈز",
 		"mobile.session.sheet_title.effort": "شدت",
 		"mobile.session.sheet_title.model": "ماڈل",
@@ -10652,7 +13822,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.settings.theme.no_match": "کوئی تھیم مماثل نہیں",
 		"mobile.settings.theme.row_label": "تھیم، {name}",
 		"mobile.settings.theme.search_label": "تھیمز تلاش کریں",
-		"mobile.settings.theme.search_placeholder": "تھیمز تلاش کریں",
+		"mobile.settings.theme.search_placeholder": "نام، مثلاً Dracula",
 		"mobile.settings.theme.section_dark": "گہرے ({count})",
 		"mobile.settings.theme.section_light": "روشن ({count})",
 		"mobile.settings.theme.title": "تھیم",
@@ -10663,6 +13833,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.sidebar.empty_by_view.next": "حصے یا ختم شدہ سیشن دوبارہ آن کریں، یا منظر ری سیٹ کریں۔",
 		"mobile.sidebar.empty_by_view.reset": "منظر ری سیٹ کریں",
 		"mobile.sidebar.group.one_list": "ایک فہرست میں",
+		"mobile.sidebar.group.tag": "ٹیگ",
 		"mobile.sidebar.group.time_section": "وقت کا حصہ",
 		"mobile.sidebar.group_by": "گروہ بندی",
 		"mobile.sidebar.hidden_sections": "{count, plural, one {# حصہ پوشیدہ ہے} other {# حصے پوشیدہ ہیں}}",
@@ -10676,16 +13847,31 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.sidebar.row.asks": "{count, plural, one {# سوال} other {# سوالات}}",
 		"mobile.sidebar.row.asks_not_blocker": "{asks}، رکاوٹ نہیں — ایجنٹ کام جاری رکھے ہوئے ہے",
 		"mobile.sidebar.row.new": "نئی",
+		"mobile.sidebar.row.on_device": "ڈیوائس {device} پر",
 		"mobile.sidebar.row.todos": "{count, plural, one {# کام} other {# کام}}",
+		"mobile.sidebar.row_label.join": "{first}، {second}",
+		"mobile.sidebar.row_label.on_device": "ڈیوائس {device} پر",
+		"mobile.sidebar.row_label.open": "کھلی ہوئی",
+		"mobile.sidebar.row_label.waiting": "{kind, select, approval {منظوری زیر التوا} other {سوال زیر التوا}}",
+		"mobile.sidebar.row_label.working": "کام جاری",
+		"mobile.sidebar.row_status.approval": "منظوری",
+		"mobile.sidebar.row_status.ended": "ختم شدہ",
+		"mobile.sidebar.row_status.not_answering": "جواب نہیں دے رہی",
+		"mobile.sidebar.row_status.not_reachable": "پہنچ سے باہر",
+		"mobile.sidebar.row_status.question": "سوال",
 		"mobile.sidebar.section.older": "پرانے",
 		"mobile.sidebar.section.pinned": "پن شدہ",
 		"mobile.sidebar.section.running": "جاری",
 		"mobile.sidebar.section.today": "آج",
+		"mobile.sidebar.section.untagged": "بغیر ٹیگ",
 		"mobile.sidebar.section.week": "اس ہفتے",
 		"mobile.sidebar.sections": "حصے",
 		"mobile.sidebar.settings_heading": "سائیڈبار",
 		"mobile.sidebar.show_ended": "ختم شدہ سیشن دکھائیں",
 		"mobile.sidebar.show_ended_hint": "پن شدہ اور جاری گفتگو ہمیشہ دکھائی دیتی ہیں۔",
+		"mobile.sidebar.show_tags": "ٹیگ دکھائیں",
+		"mobile.sidebar.show_tags_hint": "ٹیگ ہر گفتگو کے مینیو میں رہتے ہیں۔",
+		"mobile.sidebar.tag_group.announcement": "{name}, {count, plural, one {# گفتگو} other {# گفتگوئیں}}",
 		"mobile.sidebar.tags.announcement": "ٹیگز: {names}",
 		"mobile.sidebar.tags.empty_headline": "ابھی کوئی زمرہ نہیں۔",
 		"mobile.sidebar.tags.empty_next": "ڈیسک ٹاپ پر بنتے ہیں۔",
@@ -10730,6 +13916,12 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.signin.use_address": "پتہ اور پاس ورڈ استعمال کریں",
 		"mobile.signin.welcome.body": "یہ ایپ آپ کی اپنی مشین پر سیشن چلاتی ہے اور دکھاتی ہے کہ کیا ہوا۔ آپ کا کوڈ کبھی اس مشین سے باہر نہیں جاتا۔",
 		"mobile.signin.welcome.headline": "آپ کا ایجنٹ آپ کے کمپیوٹر پر چلتا ہے۔",
+		"mobile.team_bridge.actions.a11y_react": "ردعمل دیں",
+		"mobile.team_bridge.actions.copied": "کاپی ہو گیا",
+		"mobile.team_bridge.actions.copy_text": "متن کاپی کریں",
+		"mobile.team_bridge.actions.reply_in_thread": "تھریڈ میں جواب دیں",
+		"mobile.team_bridge.actions.select_text": "متن منتخب کریں",
+		"mobile.team_bridge.actions.title": "پیغام کی کارروائیاں",
 		"mobile.team_bridge.attachment.add": "تصویر شامل کریں",
 		"mobile.team_bridge.attachment.attached_summary": "{count, plural, one {# تصویر شامل کی گئی} other {# تصاویر شامل کی گئیں}}",
 		"mobile.team_bridge.attachment.cannot_send": "بھیج نہیں سکتے",
@@ -10773,6 +13965,23 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.team_bridge.attachment.viewer": "تصویر دیکھنے کا صفحہ",
 		"mobile.team_bridge.attachment.wait_uploads": "تصاویر اپ لوڈ ہو جانے پر بھیج سکتے ہیں۔",
 		"mobile.team_bridge.back": "واپس",
+		"mobile.team_bridge.card_body.deleted": "یہ پیغام حذف کر دیا گیا۔",
+		"mobile.team_bridge.card_body.held": "جائزے کے لیے روکا گیا ہے۔",
+		"mobile.team_bridge.card_body.held_transient": "اسکریننگ کا انتظار ہے — ابھی آپ کے ایجنٹ کو نہیں دکھایا گیا۔",
+		"mobile.team_bridge.card_body.loading": "پیغام لوڈ ہو رہا ہے…",
+		"mobile.team_bridge.card_body.more_messages": "{count, plural, one {اس کارڈ میں # مزید پیغام} other {اس کارڈ میں # مزید پیغامات}}",
+		"mobile.team_bridge.card_body.not_admitted": "آپ کے ایجنٹ تک نہیں پہنچایا گیا۔",
+		"mobile.team_bridge.card_body.not_member": "اب آپ اس گفتگو میں شامل نہیں ہیں۔",
+		"mobile.team_bridge.card_body.offline": "Radient سے رابطہ نہیں ہوا — دوبارہ کوشش کی جا رہی ہے۔",
+		"mobile.team_bridge.card_body.other_account": "کسی دوسرے Radient اکاؤنٹ پر موصول ہوا۔",
+		"mobile.team_bridge.card_body.pending": "آپ کے ایجنٹ تک پہنچائے جانے کا منتظر۔",
+		"mobile.team_bridge.card_body.refused": "ماڈریشن نے مسترد کر دیا۔",
+		"mobile.team_bridge.card_body.show_less": "کم دکھائیں",
+		"mobile.team_bridge.card_body.show_more": "مزید دکھائیں",
+		"mobile.team_bridge.card_body.signed_out": "یہ پیغام دیکھنے کے لیے Radient میں سائن اِن کریں۔",
+		"mobile.team_bridge.card_body.thread_reply": "تھریڈ میں جواب",
+		"mobile.team_bridge.card_body.unavailable": "پیغام کا متن دستیاب نہیں۔",
+		"mobile.team_bridge.card_body.untrusted": "بیرونی پیغام · ناقابلِ اعتماد مواد",
 		"mobile.team_bridge.conversation": "گفتگو",
 		"mobile.team_bridge.default_on.body": "آپ کی تنظیم کے ایجنٹ آپ کے چیف آف اسٹاف کو پیغامات بھیج سکتے ہیں۔ آپ اسے کسی بھی وقت بند کر سکتے ہیں۔",
 		"mobile.team_bridge.default_on.dismiss": "ہٹائیں",
@@ -10835,6 +14044,15 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.team_bridge.list.preview": "پیش نظارہ · پڑھنے کے لیے شامل ہوں",
 		"mobile.team_bridge.list.quiet": "اطلاعات خاموش ہیں",
 		"mobile.team_bridge.list.self": "آپ",
+		"mobile.team_bridge.mentions.dismiss_notice": "ختم کریں",
+		"mobile.team_bridge.mentions.invited": "{name} ابھی اس گفتگو میں شامل نہیں ہوئے اور انہیں اطلاع نہیں ملے گی۔",
+		"mobile.team_bridge.mentions.no_endpoint": "لوگوں کی فہرست لوڈ ہونے تک {name} کو اطلاع نہیں دی جا سکتی۔",
+		"mobile.team_bridge.mentions.not_member": "{name} اس گفتگو میں شامل نہیں ہیں اور انہیں اطلاع نہیں ملے گی۔",
+		"mobile.team_bridge.mentions.results_count": "{count, plural, one {# تجویز} other {# تجاویز}}",
+		"mobile.team_bridge.mentions.row_label": "{name} کا ذکر کریں",
+		"mobile.team_bridge.mentions.section_members": "اس گفتگو میں",
+		"mobile.team_bridge.mentions.section_org": "آپ کی تنظیم کے دیگر افراد",
+		"mobile.team_bridge.mentions.unavailable": "لوگوں کی فہرست دستیاب نہیں۔ اس گفتگو کے اراکین دکھائے جا رہے ہیں۔",
 		"mobile.team_bridge.navigation.caption": "کمپیوٹر سلیپ میں ہو، تب بھی آپ کی تنظیم آپ کے ساتھ",
 		"mobile.team_bridge.navigation.entry": "{count, plural, =0 {Team Bridge} one {Team Bridge · # نا پڑھا گیا پیغام} other {Team Bridge · # نا پڑھے گئے پیغامات}}",
 		"mobile.team_bridge.navigation.entry_loading": "Team Bridge · لوڈ ہو رہا ہے",
@@ -10851,6 +14069,35 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.team_bridge.profile.open": "{name} کی پروفائل دیکھیں",
 		"mobile.team_bridge.profile.opens_hint": "ان کی پروفائل کھولتا ہے",
 		"mobile.team_bridge.profile.title": "پروفائل",
+		"mobile.team_bridge.reactions.add": "ردعمل شامل کریں",
+		"mobile.team_bridge.reactions.added": "ردعمل شامل ہو گیا",
+		"mobile.team_bridge.reactions.details": "ردِعمل کی تفصیل",
+		"mobile.team_bridge.reactions.failed": "ردعمل محفوظ نہیں ہو سکا۔ دوبارہ کوشش کریں۔",
+		"mobile.team_bridge.reactions.hint_add": "آپ بھی ردعمل دینے کے لیے دو بار تھپتھپائیں",
+		"mobile.team_bridge.reactions.hint_inspect": "ردِعمل کی تفصیل دیکھنے کے لیے دو بار ٹیپ کریں",
+		"mobile.team_bridge.reactions.hint_remove": "اپنا ردعمل ہٹانے کے لیے دو بار تھپتھپائیں",
+		"mobile.team_bridge.reactions.keyboard_hint": "اپنے کی بورڈ سے کوئی ایموجی منتخب کریں",
+		"mobile.team_bridge.reactions.pill": "{emoji}، {count, plural, one {# ردعمل} other {# ردعمل}}",
+		"mobile.team_bridge.reactions.pill_mine": "{emoji}، {count, plural, one {# ردعمل} other {# ردعمل}}، آپ نے ردعمل دیا",
+		"mobile.team_bridge.reactions.removed": "ردعمل ہٹا دیا گیا",
+		"mobile.team_bridge.reactions.sample": "{count, plural, =0 {{labels}} other {{labels} اور # دیگر}}",
+		"mobile.team_bridge.reactions.sample_none": "اس خلاصے میں کوئی نام شامل نہیں ہے۔",
+		"mobile.team_bridge.reactions.sample_notice": "دکھائے گئے نام صرف ایک نمونہ ہیں، مکمل فہرست نہیں۔",
+		"mobile.team_bridge.reactions.show_less": "کم دکھائیں",
+		"mobile.team_bridge.reactions.show_more": "مزید {count} دکھائیں",
+		"mobile.team_bridge.reactions.summary": "{count, plural, one {# ردعمل} other {# ردعمل}}",
+		"mobile.team_bridge.reactions.you_reacted": "آپ نے ردِعمل دیا",
+		"mobile.team_bridge.reply_thread.count": "{count, plural, one {# جواب} other {# جوابات}}",
+		"mobile.team_bridge.reply_thread.empty": "ابھی تک کوئی جواب نہیں۔ تھریڈ شروع کریں۔",
+		"mobile.team_bridge.reply_thread.error": "یہ تھریڈ لوڈ نہیں ہو سکا۔",
+		"mobile.team_bridge.reply_thread.last_reply": "آخری جواب: {time}",
+		"mobile.team_bridge.reply_thread.loading": "تھریڈ لوڈ ہو رہا ہے…",
+		"mobile.team_bridge.reply_thread.more": "مزید جوابات لوڈ کریں",
+		"mobile.team_bridge.reply_thread.open": "تھریڈ دیکھیں، {count, plural, one {# جواب} other {# جوابات}}",
+		"mobile.team_bridge.reply_thread.open_unread": "تھریڈ دیکھیں، {count, plural, one {# جواب} other {# جوابات}}، {unread, plural, one {# نا پڑھا گیا} other {# نا پڑھے گئے}}",
+		"mobile.team_bridge.reply_thread.reply": "تھریڈ میں جواب دیں",
+		"mobile.team_bridge.reply_thread.retry": "تھریڈ دوبارہ لوڈ کریں",
+		"mobile.team_bridge.reply_thread.title": "تھریڈ",
 		"mobile.team_bridge.retry": "دوبارہ کوشش کریں",
 		"mobile.team_bridge.thread.access_retry": "رسائی کی دوبارہ کوشش کریں",
 		"mobile.team_bridge.thread.anchor_missing": "وہ پیغام اب دستیاب نہیں ہے۔",
@@ -10944,6 +14191,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"relay.health.quiet_detail": "آپ کے کمپیوٹر پر اس سیشن نے جواب دینا بند کر دیا ہے — شاید یہ مصروف ہو یا اٹک گیا ہو۔ بھیجا گیا پیغام ناکام دکھائی دے سکتا ہے، مگر سیشن کے پھر سے جواب دینے پر پہنچ بھی سکتا ہے۔ دوبارہ کوشش کرنے پر بھی یہ دو بار نہیں پہنچے گا۔",
 		"relay.health.reconnecting": "پھر منسلک ہو رہا",
 		"relay.health.reconnecting_detail": "اس فون کا آپ کے کمپیوٹر سے کنکشن ٹوٹ گیا ہے اور یہ مسلسل دوبارہ کوشش کر رہا ہے۔ ہو سکتا ہے سیشن وہاں اب بھی چل رہا ہو؛ کنکشن بحال ہونے تک پیغام بھیجنا ناکام ہو سکتا ہے۔",
+		"relay.skills.skipped": "{names} کے بغیر بھیجا گیا — {count, plural, one {اس مہارت میں ایسا کوئی مواد نہیں ہے جسے منسلک کیا جا سکے} other {ان مہارتوں میں ایسا کوئی مواد نہیں ہے جسے منسلک کیا جا سکے}}۔",
+		"relay.skills.too_large": "یہ مہارتیں ایک ساتھ بھیجنے کے لیے بہت بڑی ہیں۔ ایک مہارت ہٹا کر دوبارہ بھیجیں۔",
+		"relay.skills.tray.hidden": "پوشیدہ",
+		"relay.skills.tray.label": "مہارتیں",
 		"relay.transcript.composer.queued": "{count, plural, one {# قطار میں} other {# قطار میں}}",
 		"relay.transcript.fold.failed_label": "اس میں ناکام عمل شامل ہے",
 		"relay.transcript.fold.more": "{count, plural, one {اور # دوسرا عمل} other {اور # دیگر اعمال}}",
@@ -10981,6 +14232,43 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.account_routing.unsaved": "Chưa lưu.",
 		"mobile.agent_avatar.edit_hint": "Hãy đổi ảnh này trong ứng dụng máy tính",
 		"mobile.agent_avatar.label": "Ảnh của tác nhân",
+		"mobile.asks.answer_label": "Câu trả lời của bạn cho: {question}",
+		"mobile.asks.answer_placeholder": "Câu trả lời của bạn",
+		"mobile.asks.choose_any": "Chọn tất cả mục phù hợp",
+		"mobile.asks.deadline_ago": "Đã quá hạn cách đây {duration}",
+		"mobile.asks.decline": "Từ chối",
+		"mobile.asks.decline_hint": "Không gửi câu trả lời nào. Tác nhân tự quyết định.",
+		"mobile.asks.dismiss": "Đóng",
+		"mobile.asks.dismiss_open": "Đóng…",
+		"mobile.asks.dismiss_reason.chat": "Đã trả lời trong cuộc trò chuyện",
+		"mobile.asks.dismiss_reason.chat_note": "Bạn đã trả lời trong cuộc trò chuyện",
+		"mobile.asks.dismiss_reason.moot": "Không còn cần nữa",
+		"mobile.asks.dismiss_reason.moot_note": "Tác nhân sẽ không chờ câu trả lời nữa",
+		"mobile.asks.dismiss_title": "{count, plural, other {Đóng câu hỏi}}",
+		"mobile.asks.empty": "Không có gì đang chờ. Câu hỏi của tác nhân sẽ hiện ở đây.",
+		"mobile.asks.honesty": "Ứng dụng này hiển thị các câu hỏi đang chờ khi đang mở. Khi đã đóng, ứng dụng không thể báo cho bạn.",
+		"mobile.asks.loading": "Đang đọc câu hỏi…",
+		"mobile.asks.none_recorded": "Chưa ghi nhận câu trả lời nào cho câu hỏi này.",
+		"mobile.asks.nothing_left": "Không còn gì để trả lời ở đây. Một giao diện khác đã nhận những câu hỏi này.",
+		"mobile.asks.open_conversation": "Mở cuộc trò chuyện",
+		"mobile.asks.other_hint": "Nhập câu trả lời của bạn",
+		"mobile.asks.other_kept": "Văn bản của bạn được giữ lại, chưa gửi",
+		"mobile.asks.other_label": "Khác",
+		"mobile.asks.progress.pick_or_type": "Chọn một lựa chọn hoặc tự nhập câu trả lời để gửi.",
+		"mobile.asks.progress.tally": "Đã trả lời hoặc bỏ qua {answered} trên {total} câu hỏi",
+		"mobile.asks.progress.type": "Nhập câu trả lời hoặc bỏ qua câu hỏi để gửi.",
+		"mobile.asks.recommended": "· Được đề xuất",
+		"mobile.asks.secret_notice": "Bí mật: gửi trực tiếp, không hiển thị trong bản ghi",
+		"mobile.asks.secret_notice_saved": "Bí mật: gửi trực tiếp, không hiển thị trong bản ghi và được lưu trên máy tính để dùng lại",
+		"mobile.asks.secret_placeholder": "Giá trị bí mật",
+		"mobile.asks.send_answer": "Gửi câu trả lời",
+		"mobile.asks.send_answers": "Gửi các câu trả lời",
+		"mobile.asks.settled": "Đã xử lý",
+		"mobile.asks.skip": "Bỏ qua (không gửi câu trả lời)",
+		"mobile.asks.title_fallback": "Câu hỏi",
+		"mobile.asks.truncated": "Đang hiển thị các câu hỏi mới nhất. Mở một cuộc trò chuyện để xem phần còn lại.",
+		"mobile.asks.unskip": "Trả lời câu hỏi này",
+		"mobile.asks.urgent": "· Khẩn cấp",
 		"mobile.chrome.clear_search": "Xóa tìm kiếm",
 		"mobile.chrome.close_conversations": "Đóng danh sách cuộc trò chuyện",
 		"mobile.chrome.composer.dismiss_keyboard": "Ẩn bàn phím",
@@ -10989,6 +14277,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.chrome.composer.queued": "{count, plural, other {# tin nhắn trong hàng đợi}}",
 		"mobile.chrome.composer.row_cost": "Chi phí",
 		"mobile.chrome.composer.row_effort": "Mức suy luận",
+		"mobile.chrome.composer.row_identity": "Tác nhân hoặc nhóm",
 		"mobile.chrome.composer.row_model": "Mô hình",
 		"mobile.chrome.composer.row_questions": "Câu hỏi",
 		"mobile.chrome.composer.row_queue": "Hàng đợi",
@@ -11020,18 +14309,184 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.common.not_found.headline": "Trang đó không tồn tại.",
 		"mobile.common.not_found.next": "Quay lại danh sách phiên để tiếp tục.",
 		"mobile.common.not_found.title": "Không tìm thấy trang",
+		"mobile.common.resize_panel": "Đổi kích thước bảng",
 		"mobile.common.save": "Lưu",
 		"mobile.common.send": "Gửi",
+		"mobile.common.size.large": "Lớn",
+		"mobile.common.size.medium": "Vừa",
+		"mobile.common.size.shorter": "Thấp hơn",
+		"mobile.common.size.taller": "Cao hơn",
 		"mobile.common.try_again": "Thử lại",
+		"mobile.community.approvals.agent": "Tác nhân",
+		"mobile.community.approvals.decline": "Không đăng",
+		"mobile.community.approvals.empty": "Không có bài đăng nào của tác nhân đang chờ bạn.",
+		"mobile.community.approvals.expires": "{hours, plural, other {hết hạn sau # giờ}}",
+		"mobile.community.approvals.expires_days": "{days, plural, other {hết hạn sau # ngày}}",
+		"mobile.community.approvals.failed": "Không thực hiện được. Hãy thử lại.",
+		"mobile.community.approvals.open_computer": "Mở Local Operator trên máy tính để đọc chính xác nội dung và quyết định.",
+		"mobile.community.approvals.review": "Xem trên máy tính",
+		"mobile.community.approvals.review_note": "Xem trên máy tính sẽ giữ yêu cầu chờ tối đa 24 giờ.",
+		"mobile.community.approvals.stays": "Bản nháp vẫn ở trên máy tính của bạn cho đến khi bạn phê duyệt.",
+		"mobile.community.approvals.title": "Chánh văn phòng của bạn muốn đăng trong #{channel}",
+		"mobile.community.approvals.title_unknown": "Chánh văn phòng của bạn muốn đăng trong một kênh cộng đồng",
+		"mobile.community.approvals.waiting": "Đang chờ bạn trên máy tính.",
+		"mobile.community.browse.channels": "Kênh",
+		"mobile.community.browse.channels_empty": "Không có kênh nào phù hợp.",
+		"mobile.community.browse.join": "Tham gia",
+		"mobile.community.browse.load_more": "Tải thêm",
+		"mobile.community.browse.mode": "Hiển thị",
+		"mobile.community.browse.open": "Mở",
+		"mobile.community.browse.people": "Mọi người",
+		"mobile.community.browse.people_empty": "Không có ai phù hợp.",
+		"mobile.community.browse.private": "Riêng tư",
+		"mobile.community.browse.search": "Tìm kiếm",
+		"mobile.community.browse.title": "Duyệt",
+		"mobile.community.category.harassment_or_abuse": "Quấy rối hoặc lạm dụng",
+		"mobile.community.category.private_information": "Thông tin riêng tư",
+		"mobile.community.category.spam_or_promotion": "Spam hoặc quảng cáo không công khai",
+		"mobile.community.category.unsafe_or_illegal": "Nội dung nguy hiểm hoặc bất hợp pháp",
+		"mobile.community.common.loading": "Đang tải cộng đồng…",
+		"mobile.community.common.retry": "Thử lại",
+		"mobile.community.common.unavailable": "Cộng đồng không khả dụng",
+		"mobile.community.composer.attach": "Đính kèm hình ảnh",
+		"mobile.community.composer.audience": "Mọi thành viên cộng đồng đều thấy",
+		"mobile.community.composer.audience_dm": "Chỉ bạn và {name} thấy cuộc trò chuyện này",
+		"mobile.community.composer.blocked_archived": "Kênh này đã được lưu trữ.",
+		"mobile.community.composer.blocked_locked": "Kênh này đã bị khóa.",
+		"mobile.community.composer.blocked_read_only": "Cộng đồng này chỉ cho phép đọc.",
+		"mobile.community.composer.blocked_staff_only": "Chỉ nhân viên và người kiểm duyệt đăng ở đây.",
+		"mobile.community.composer.cancel": "Hủy",
+		"mobile.community.composer.cancelled": "Đã hủy. Không có gì được đăng.",
+		"mobile.community.composer.checking": "Đang kiểm tra…",
+		"mobile.community.composer.dismiss": "Đóng",
+		"mobile.community.composer.failed": "Tin nhắn chưa được gửi. Nội dung của bạn vẫn còn đây.",
+		"mobile.community.composer.forbidden": "Bạn không thể đăng ở đây.",
+		"mobile.community.composer.guidelines": "Nguyên tắc cộng đồng đã thay đổi. Hãy chấp nhận rồi thử lại.",
+		"mobile.community.composer.images_unavailable": "Chưa thể đăng hình ảnh trong cộng đồng. Nội dung của bạn vẫn còn đây.",
+		"mobile.community.composer.invalid": "Không thể gửi tin nhắn này như hiện tại. Hãy rút gọn hoặc chỉnh sửa rồi gửi lại.",
+		"mobile.community.composer.label": "Nhắn trong #{name}",
+		"mobile.community.composer.label_dm": "Nhắn cho {name}",
+		"mobile.community.composer.limited": "Bạn đang gửi nhanh hơn mức cộng đồng cho phép.",
+		"mobile.community.composer.limited_wait": "{seconds, plural, other {Thử lại sau # giây.}}",
+		"mobile.community.composer.refused": "Chưa đăng: {category}",
+		"mobile.community.composer.refused_detail": "Chỉ bạn thấy điều này. Mã tham chiếu {reference}. Hãy sửa tin nhắn để gửi lại.",
+		"mobile.community.composer.restricted": "Quyền đăng của bạn đang bị hạn chế. Mã tham chiếu {reference}.",
+		"mobile.community.composer.retry": "Thử lại",
+		"mobile.community.composer.review": "Xem nguyên tắc",
+		"mobile.community.composer.send": "Gửi",
+		"mobile.community.composer.unavailable": "Không thể kiểm tra tin nhắn nên chưa có gì được đăng. Nội dung của bạn vẫn còn đây.",
+		"mobile.community.conversation.agent": "Tác nhân",
+		"mobile.community.conversation.deleted": "Tin nhắn đã bị xóa",
+		"mobile.community.conversation.edited": "đã sửa",
+		"mobile.community.conversation.empty": "Chưa có tin nhắn nào.",
+		"mobile.community.conversation.former_member": "Cựu thành viên",
+		"mobile.community.conversation.join_prompt": "Bạn đang đọc #{name}. Tham gia kênh để đăng tại đây.",
+		"mobile.community.conversation.load_older": "Tải tin nhắn cũ hơn",
+		"mobile.community.conversation.older_error": "Không tải được tin nhắn cũ hơn.",
+		"mobile.community.conversation.replies": "{count, plural, other {# phản hồi}}",
+		"mobile.community.conversation.report": "Báo cáo tin nhắn",
+		"mobile.community.conversation.subtitle": "{community} · Công khai",
+		"mobile.community.conversation.view_profile": "Xem hồ sơ của {name}",
+		"mobile.community.directory.empty": "Hiện chưa có cộng đồng nào mở để tham gia.",
+		"mobile.community.directory.featured": "Nổi bật",
+		"mobile.community.directory.joined": "Đã tham gia",
+		"mobile.community.directory.read_only": "Chỉ đọc",
+		"mobile.community.directory.title": "Cộng đồng",
+		"mobile.community.error.auth_unavailable": "Radient hiện không thể kiểm tra đăng nhập của bạn. Hãy thử lại sau giây lát.",
+		"mobile.community.error.generic": "Đã xảy ra lỗi. Không có gì bị thay đổi.",
+		"mobile.community.error.load_failed": "Hiện không thể tải. Hãy kiểm tra kết nối rồi thử lại.",
+		"mobile.community.error.not_found": "Cộng đồng này không khả dụng với tài khoản này.",
+		"mobile.community.error.rate_limited": "Bạn đang thao tác nhanh hơn mức cộng đồng cho phép. Hãy thử lại sau ít phút.",
+		"mobile.community.error.sign_in": "Đăng nhập Radient để dùng cộng đồng.",
+		"mobile.community.error.unreachable": "Không kết nối được với cộng đồng. Hãy kiểm tra kết nối của thiết bị này.",
+		"mobile.community.home.browse": "Duyệt",
+		"mobile.community.home.channel_label": "#{name}{count, plural, =0 {} other { · # chưa đọc}}",
+		"mobile.community.home.channels": "Kênh",
+		"mobile.community.home.channels_empty": "Bạn chưa tham gia kênh nào. Hãy duyệt để tìm một kênh.",
+		"mobile.community.home.closed": "Cộng đồng này chỉ cho phép đọc và không nhận thành viên mới.",
+		"mobile.community.home.direct": "Tin nhắn trực tiếp",
+		"mobile.community.home.direct_empty": "Chưa có tin nhắn trực tiếp.",
+		"mobile.community.home.direct_label": "{name}{count, plural, =0 {} other { · # chưa đọc}}",
+		"mobile.community.home.join": "Tham gia",
+		"mobile.community.home.not_member": "Tham gia để đọc và đăng trong cộng đồng này.",
+		"mobile.community.home.reaccept": "Xem lại",
+		"mobile.community.home.reaccept_banner": "Nguyên tắc cộng đồng đã thay đổi. Hãy xem lại và chấp nhận để tiếp tục đăng.",
+		"mobile.community.home.requests": "Yêu cầu",
+		"mobile.community.home.requests_count": "{count, plural, other {Yêu cầu · #}}",
+		"mobile.community.home.switch": "Chuyển tổ chức hoặc cộng đồng",
+		"mobile.community.join.agree": "Tôi đồng ý với Nguyên tắc cộng đồng ({version}). Hồ sơ và bài đăng của tôi hiển thị với mọi thành viên.",
+		"mobile.community.join.changed": "Nguyên tắc đã thay đổi trong lúc bạn đọc. Hãy xem phiên bản mới rồi chấp nhận lại.",
+		"mobile.community.join.failed": "Chưa tham gia được. Hãy thử lại.",
+		"mobile.community.join.guidelines_heading": "Nguyên tắc cộng đồng ({version})",
+		"mobile.community.join.hint": "Đánh dấu ô để tham gia.",
+		"mobile.community.join.moderation": "Mỗi tin nhắn đều được kiểm tra trước khi đăng. Nếu nội dung không được đăng, chỉ bạn thấy lý do, kèm mã tham chiếu để khiếu nại.",
+		"mobile.community.join.profile": "Thành viên thấy tên Radient của bạn. Không bao giờ hiển thị: email, tổ chức.",
+		"mobile.community.join.reaccept_submit": "Chấp nhận và tiếp tục",
+		"mobile.community.join.reaccept_title": "Nguyên tắc cộng đồng đã cập nhật",
+		"mobile.community.join.submit": "Tham gia và mở cộng đồng",
+		"mobile.community.join.title": "Tham gia cộng đồng",
+		"mobile.community.no_plan.body": "Không gian công khai miễn phí do Radient vận hành. Nhận trợ giúp, chia sẻ góp ý và gặp gỡ những người dùng Local Operator khác.",
+		"mobile.community.no_plan.free": "Miễn phí. Không cần gói Team hay thanh toán.",
+		"mobile.community.no_plan.join": "Tham gia cộng đồng",
+		"mobile.community.no_plan.open": "Mở cộng đồng",
+		"mobile.community.no_plan.title": "Tham gia Local Operator Community",
+		"mobile.community.profile.block": "Chặn",
+		"mobile.community.profile.blocked": "Đã chặn. Hai bạn sẽ không thấy tin nhắn hay yêu cầu của nhau.",
+		"mobile.community.profile.failed": "Không thực hiện được. Hãy thử lại.",
+		"mobile.community.profile.joined": "Tham gia {month}",
+		"mobile.community.profile.message": "Nhắn tin",
+		"mobile.community.profile.message_sent": "Đã gửi yêu cầu nhắn tin. Người đó sẽ thấy trong mục yêu cầu.",
+		"mobile.community.profile.report": "Báo cáo",
+		"mobile.community.profile.title": "Hồ sơ",
+		"mobile.community.report.category": "Có vấn đề gì?",
+		"mobile.community.report.dm_consent": "Chia sẻ tin nhắn này với Trust & Safety của Radient. Chỉ người xem xét hồ sơ của họ thấy được; người kiểm duyệt cộng đồng thì không bao giờ.",
+		"mobile.community.report.failed": "Chưa gửi được báo cáo. Hãy thử lại.",
+		"mobile.community.report.note": "Còn điều gì chúng tôi nên biết không? (không bắt buộc)",
+		"mobile.community.report.revision_changed": "Tin nhắn này đã được sửa sau khi bạn mở. Hãy đọc lại, rồi xác nhận và báo cáo phiên bản hiện tại.",
+		"mobile.community.report.sent": "Đã gửi báo cáo. Mã tham chiếu {reference}.",
+		"mobile.community.report.submit": "Gửi báo cáo",
+		"mobile.community.report.title": "Báo cáo cho Radient Trust & Safety",
+		"mobile.community.requests.accept": "Chấp nhận",
+		"mobile.community.requests.approvals": "Phê duyệt của tác nhân",
+		"mobile.community.requests.block": "Chặn",
+		"mobile.community.requests.decline": "Từ chối",
+		"mobile.community.requests.dm": "Tin nhắn",
+		"mobile.community.requests.dm_body": "{name} muốn gửi tin nhắn trực tiếp cho bạn.",
+		"mobile.community.requests.dm_empty": "Không có yêu cầu nhắn tin.",
+		"mobile.community.requests.expires": "{hours, plural, other {Hết hạn sau # giờ}}",
+		"mobile.community.requests.expires_days": "{days, plural, other {Hết hạn sau # ngày}}",
+		"mobile.community.requests.mode": "Hiển thị",
+		"mobile.community.requests.title": "Yêu cầu",
+		"mobile.community.role.community_admin": "Quản trị viên cộng đồng",
+		"mobile.community.role.moderator": "Người kiểm duyệt",
+		"mobile.community.role.staff": "Nhân viên Radient",
+		"mobile.community.switcher.browse": "Duyệt cộng đồng…",
+		"mobile.community.switcher.communities": "Cộng đồng",
+		"mobile.community.switcher.note": "Chuyển đổi chỉ thay đổi những gì bạn thấy.",
+		"mobile.community.switcher.organizations": "Tổ chức",
+		"mobile.community.switcher.public": "Công khai",
+		"mobile.community.switcher.row_label": "{name} · Công khai{count, plural, =0 {} other { · # chưa đọc}}",
+		"mobile.community.switcher.search": "Tìm cộng đồng",
+		"mobile.composer_input.attach.camera": "Chụp ảnh",
+		"mobile.composer_input.attach.camera_denied": "Quyền truy cập máy ảnh đang tắt. Hãy bật trong Cài đặt để chụp ảnh.",
+		"mobile.composer_input.attach.camera_error": "Không mở được máy ảnh. Hãy thử lại.",
+		"mobile.composer_input.attach.camera_refused": "Không được phép truy cập máy ảnh. Nhấn Chụp ảnh để được hỏi lại.",
+		"mobile.composer_input.attach.camera_unavailable": "Thiết bị này không có máy ảnh khả dụng.",
+		"mobile.composer_input.attach.choose_image": "Chọn hình ảnh",
+		"mobile.composer_input.attach.files": "Hình ảnh từ Tệp",
+		"mobile.composer_input.attach.library": "Thư viện ảnh",
+		"mobile.composer_input.attach.open_settings": "Mở Cài đặt",
+		"mobile.composer_input.attach.paste": "Dán hình ảnh",
 		"mobile.composer_input.clear_draft": "Xóa bản nháp",
 		"mobile.composer_input.clear_draft_hint": "Chỉ xóa văn bản và hình ảnh trong bản nháp; giữ các tin nhắn đang chờ và chưa được xác nhận",
 		"mobile.composer_input.dismiss_error": "Ẩn lỗi",
 		"mobile.composer_input.dismiss_error_hint": "Ẩn lỗi này mà không thay đổi bản nháp hay trạng thái gửi",
 		"mobile.composer_input.notice_dismiss": "Ẩn",
 		"mobile.composer_input.notice_retry": "Thử lại",
-		"mobile.composer_input.paste.denied": "Không được phép dán. Chạm vào kẹp giấy, chọn Dán hình ảnh, rồi chọn “Cho phép dán”.",
+		"mobile.composer_input.paste.denied": "Không được phép dán. Chạm lại vào nút dán và chọn “Cho phép dán”.",
+		"mobile.composer_input.paste.empty_ios": "Chưa dán được hình ảnh nào. Hãy sao chép một hình ảnh, rồi chọn “Cho phép dán” nếu được hỏi.",
 		"mobile.composer_input.paste.image": "Dán hình ảnh",
-		"mobile.composer_input.paste.image_hint": "Đính kèm hình ảnh trong bộ nhớ tạm",
+		"mobile.composer_input.paste.image_hint": "Đính kèm hình ảnh bạn đã sao chép",
 		"mobile.composer_input.voice.discard": "Hủy nhập bằng giọng nói",
 		"mobile.composer_input.voice.finish": "Hoàn tất và chép lời",
 		"mobile.composer_input.voice.mic_setup": "Chưa thiết lập nhập bằng giọng nói",
@@ -11248,6 +14703,32 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.folders_read_failed": "Vừa rồi không đọc được thư mục trên máy tính này.",
 		"mobile.home.folders_read_sign_in": "Máy tính này yêu cầu bạn đăng nhập lại, nên không đọc được thư mục của nó.",
 		"mobile.home.greeting": "Hôm nay tôi có thể giúp gì?",
+		"mobile.home.identity.announce_picked": "Cuộc trò chuyện này sẽ bắt đầu với {name}",
+		"mobile.home.identity.band_agents": "Tác nhân",
+		"mobile.home.identity.band_recent": "Gần đây",
+		"mobile.home.identity.band_teams": "Nhóm",
+		"mobile.home.identity.default_agent": "Tác nhân mặc định",
+		"mobile.home.identity.empty": "Máy tính này chưa có tác nhân hoặc nhóm nào. Hãy tạo trong ứng dụng máy tính.",
+		"mobile.home.identity.no_matches": "Không có kết quả cho “{query}”.",
+		"mobile.home.identity.pill_label": "Bắt đầu cuộc trò chuyện này với {target}. Chọn một tác nhân hoặc nhóm",
+		"mobile.home.identity.read_failed": "Hiện không thể đọc tác nhân và nhóm của máy tính này.",
+		"mobile.home.identity.refused_connecting": "Máy tính này vẫn đang kết nối, nên chưa có gì được bắt đầu. Chạm vào tin nhắn để lấy lại, rồi gửi lại sau giây lát để bắt đầu với {name}.",
+		"mobile.home.identity.refused_fallback": "Không thể bắt đầu {name} trên máy tính này. Hãy chọn mục khác hoặc dùng tác nhân mặc định.",
+		"mobile.home.identity.refused_registry": "Máy tính này hiện không đọc được tác nhân và nhóm, nên chưa có gì được bắt đầu. Chạm vào tin nhắn để lấy lại và gửi lại, hoặc chọn tác nhân mặc định để gửi ngay.",
+		"mobile.home.identity.refused_unknown": "{name} không còn trên máy tính này. Hãy chọn mục khác, hoặc tác nhân mặc định, để gửi tin nhắn của bạn.",
+		"mobile.home.identity.refused_unlicensed": "Máy tính này hiện không thể bắt đầu trò chuyện với {name}. Hãy chọn tác nhân mặc định để gửi.",
+		"mobile.home.identity.refused_unsaved": "Máy tính này không lưu được {name} cho cuộc trò chuyện mới, nên chưa có gì được bắt đầu. Chạm vào tin nhắn để lấy lại, rồi gửi lại.",
+		"mobile.home.identity.row_agent": "{name}, tác nhân",
+		"mobile.home.identity.row_agent_described": "{name}, tác nhân. {description}",
+		"mobile.home.identity.row_team": "{name}, nhóm",
+		"mobile.home.identity.row_team_led": "{name}, nhóm, do {manager} dẫn dắt",
+		"mobile.home.identity.search": "Tìm tác nhân và nhóm",
+		"mobile.home.identity.sheet_title": "Bắt đầu cuộc trò chuyện này với",
+		"mobile.home.identity.starting_with": "Đang bắt đầu với {name}…",
+		"mobile.home.identity.team_led_by": "Do {manager} dẫn dắt",
+		"mobile.home.identity.team_members": "{count, plural, other {# thành viên}}",
+		"mobile.home.identity.team_subtitle": "Do {manager} dẫn dắt · {count, plural, other {# thành viên}}",
+		"mobile.home.identity.unsupported": "Local Operator trên máy tính này quá cũ để bắt đầu trò chuyện với tác nhân hoặc nhóm. Hãy cập nhật để chọn tại đây.",
 		"mobile.home.models_read_failed": "Vừa rồi không đọc được danh sách mô hình trên máy tính này.",
 		"mobile.home.options.default_model": "Dùng mô hình mặc định của máy tính này",
 		"mobile.home.options.fixed": "Tùy chọn khởi đầu của cuộc trò chuyện này đã cố định. Mở Chi tiết cuộc trò chuyện để dùng các điều khiển trực tiếp.",
@@ -11284,9 +14765,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.startup_queue.not_started": "Chưa bắt đầu",
 		"mobile.home.startup_queue.sending": "Đang gửi tin nhắn trong hàng đợi…",
 		"mobile.home.startup_queue.unconfirmed": "Chưa xác nhận bắt đầu",
-		"mobile.home.suggestion.last_turn": "Xem lượt gần nhất",
 		"mobile.home.suggestion.linear_mcp": "Thiết lập Linear MCP",
-		"mobile.home.suggestion.phone_access": "Bật truy cập điện thoại",
 		"mobile.home.suggestion.review_repo": "Rà soát repo này",
 		"mobile.home.suggestion.team_of_agents": "Tạo nhóm tác nhân",
 		"mobile.home.suggestion.wake_summary": "Đánh thức tôi kèm bản tóm tắt",
@@ -11295,6 +14774,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.tip.search": "tìm lại cuộc trò chuyện cũ để mở lại phiên",
 		"mobile.home.transcript.needs_answer": "Cần bạn trả lời",
 		"mobile.home.transcript.waiting": "Đang chờ cuộc trò chuyện…",
+		"mobile.home.work.all_conversations": "Tất cả cuộc trò chuyện",
+		"mobile.home.work.all_conversations_new": "Tất cả cuộc trò chuyện, {count, plural, other {# cuộc trò chuyện mới}}",
+		"mobile.home.work.needs_you": "Cần bạn",
+		"mobile.home.work.recent": "Gần đây",
+		"mobile.home.work.try": "Thử",
 		"mobile.library.action.add_tag": "Thêm",
 		"mobile.library.action.edit": "Chỉnh sửa",
 		"mobile.library.action.open_chat": "Mở cuộc trò chuyện",
@@ -11347,6 +14831,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.notifications.channel.system": "Âm thanh hệ thống",
 		"mobile.notifications.channel.tape_warble": "Băng rung",
 		"mobile.notifications.channel.task_complete": "Hoàn tất tác vụ",
+		"mobile.notifications.channel.team_bridge": "Team Bridge",
+		"mobile.notifications.channel.team_bridge_description": "Tin nhắn từ đồng đội của bạn và các tác tử của họ.",
 		"mobile.notifications.channel.two_note_chime": "Chuông hai nốt",
 		"mobile.notifications.computer_registration.failed": "Không thể đăng ký điện thoại này để nhận cảnh báo từ máy tính này. Ứng dụng sẽ thử lại khi bạn mở lại.",
 		"mobile.notifications.computer_registration.no_token": "Điện thoại này chưa có địa chỉ push, nên máy tính này không thể gửi cảnh báo đến nó. Hãy mở lại ứng dụng để thử lại.",
@@ -11388,6 +14874,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.notifications.preferences.agent_note": "Tắt cả hai loại thông báo tác nhân để chỉ giữ thông báo Team Bridge.",
 		"mobile.notifications.preferences.bridge_heading": "Team Bridge",
 		"mobile.notifications.preferences.bridge_note": "Với mỗi tin nhắn riêng, nhóm hoặc kênh, mở menu chuông và chọn {all}, {mentions} hoặc {muted}.",
+		"mobile.notifications.preferences.bridge_system_off": "Thông báo Team Bridge đang tắt trong cài đặt Android, nên sẽ không có thông báo nào hiện trên điện thoại này.",
+		"mobile.notifications.preferences.bridge_system_open": "Mở cài đặt Android",
 		"mobile.notifications.preferences.completions": "Agent đã hoàn tất",
 		"mobile.notifications.preferences.computer_keeps_sending": "Máy tính của bạn sẽ vẫn gửi thông báo của agent cho đến khi Local Operator trên máy được cập nhật.",
 		"mobile.notifications.preferences.disabled_hint": "Cần phiên bản Local Operator mới hơn trên máy tính của bạn.",
@@ -11404,6 +14892,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.notifications.priority_high": "Cao",
 		"mobile.notifications.section.waiting": "Chờ bạn",
 		"mobile.notifications.section.waiting_count": "Chờ bạn · {count}",
+		"mobile.notifications.team_bridge.self_name": "Bạn",
 		"mobile.notifications.title": "Thông báo",
 		"mobile.notifications.turn_on": "Bật thông báo",
 		"mobile.oauth.failed": "Không thể hoàn tất đăng nhập. Hãy thử lại.",
@@ -11589,7 +15078,16 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.composer.not_sent_storage": "Chưa gửi. Không thể lưu tin nhắn này an toàn để thử lại. Văn bản và hình ảnh của bạn vẫn còn ở đây. Hãy thử lại.",
 		"mobile.session.composer.retained_instruction": "Chỉ dẫn trước đó có thể đã được chuyển đến. Hãy thử gửi lại chỉ dẫn đó trước khi gửi bản nháp hiện tại.",
 		"mobile.session.composer.retry_not_sent_storage": "Lần thử gửi lại này chưa được gửi đi. Không thể chuẩn bị an toàn để gửi lại chỉ dẫn trước đó. Hãy thử gửi lại chỉ dẫn trước đó. Bản nháp hiện tại của bạn chưa được gửi.",
+		"mobile.session.composer.settings_not_applied": "Phiên đã được mở lại, nhưng không thể áp dụng mô hình hoặc mức suy luận bạn đã chọn, nên chưa có gì được gửi. Hãy thử lại, hoặc chọn mô hình hay mức suy luận khác.",
 		"mobile.session.conversation_details": "Chi tiết cuộc trò chuyện",
+		"mobile.session.diagram.close": "Đóng sơ đồ",
+		"mobile.session.diagram.copied": "đã sao chép",
+		"mobile.session.diagram.copy": "Sao chép nguồn của sơ đồ",
+		"mobile.session.diagram.error": "Không thể vẽ sơ đồ này. Đang hiển thị mã nguồn thay thế.",
+		"mobile.session.diagram.label": "Sơ đồ {type}",
+		"mobile.session.diagram.label_titled": "Sơ đồ {type}: {title}",
+		"mobile.session.diagram.open_hint": "Mở sơ đồ toàn màn hình",
+		"mobile.session.diagram.viewer": "Trình xem sơ đồ",
 		"mobile.session.empty.headline": "Chưa có gì ở đây.",
 		"mobile.session.empty.next": "Gửi tin nhắn đầu tiên bên dưới.",
 		"mobile.session.fallback_name": "phiên",
@@ -11618,6 +15116,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.history.loading": "Đang tải tin nhắn trước đó…",
 		"mobile.session.history.refresh_failed": "Không tải được các tin nhắn mới nhất.",
 		"mobile.session.history.stalled": "Tin nhắn trước đó đã ngừng tải. Hãy thử lại hoặc mở lại cuộc trò chuyện này.",
+		"mobile.session.inline_chart_data": "Dữ liệu biểu đồ",
+		"mobile.session.jump_to_latest": "↓ Đến mới nhất",
+		"mobile.session.jump_to_latest_name": "Đến mới nhất",
+		"mobile.session.jump_to_latest_short": "↓ Mới nhất",
 		"mobile.session.not_connected.headline": "Phiên này chưa được kết nối.",
 		"mobile.session.not_connected.next": "Sau khi kết nối máy tính, mở lại từ danh sách phiên.",
 		"mobile.session.outbox.composer_discarding": "Đang bỏ tin nhắn trước của bạn. Bạn có thể gửi tin này trong giây lát.",
@@ -11646,7 +15148,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.region.label_todos": "tác vụ",
 		"mobile.session.region.label_working": "hoạt động",
 		"mobile.session.region.more_below": "còn thêm bên dưới · cuộn ↓",
-		"mobile.session.sheet_title.attach": "đính kèm",
+		"mobile.session.sheet_title.attach": "Thêm hình ảnh",
 		"mobile.session.sheet_title.commands": "Lệnh",
 		"mobile.session.sheet_title.effort": "Mức suy luận",
 		"mobile.session.sheet_title.model": "Mô hình",
@@ -11760,7 +15262,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.settings.theme.no_match": "Không có giao diện phù hợp",
 		"mobile.settings.theme.row_label": "Giao diện, {name}",
 		"mobile.settings.theme.search_label": "Tìm giao diện",
-		"mobile.settings.theme.search_placeholder": "Tìm giao diện",
+		"mobile.settings.theme.search_placeholder": "Tên, ví dụ như Dracula",
 		"mobile.settings.theme.section_dark": "Tối ({count})",
 		"mobile.settings.theme.section_light": "Sáng ({count})",
 		"mobile.settings.theme.title": "Giao diện",
@@ -11771,6 +15273,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.sidebar.empty_by_view.next": "Bật lại các mục hoặc phiên đã kết thúc, hoặc đặt lại chế độ xem.",
 		"mobile.sidebar.empty_by_view.reset": "Đặt lại chế độ xem",
 		"mobile.sidebar.group.one_list": "Trong một danh sách",
+		"mobile.sidebar.group.tag": "Nhãn",
 		"mobile.sidebar.group.time_section": "Mục thời gian",
 		"mobile.sidebar.group_by": "Nhóm theo",
 		"mobile.sidebar.hidden_sections": "{count, plural, other {Đã ẩn # mục}}",
@@ -11784,16 +15287,31 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.sidebar.row.asks": "{count, plural, other {# câu hỏi}}",
 		"mobile.sidebar.row.asks_not_blocker": "{asks}, tác nhân vẫn chạy tiếp",
 		"mobile.sidebar.row.new": "mới",
+		"mobile.sidebar.row.on_device": "Trên {device}",
 		"mobile.sidebar.row.todos": "{count, plural, other {# tác vụ}}",
+		"mobile.sidebar.row_label.join": "{first}, {second}",
+		"mobile.sidebar.row_label.on_device": "trên {device}",
+		"mobile.sidebar.row_label.open": "đang xem",
+		"mobile.sidebar.row_label.waiting": "{kind, select, approval {đang chờ phê duyệt} other {đang chờ trả lời}}",
+		"mobile.sidebar.row_label.working": "đang làm việc",
+		"mobile.sidebar.row_status.approval": "phê duyệt",
+		"mobile.sidebar.row_status.ended": "đã kết thúc",
+		"mobile.sidebar.row_status.not_answering": "không phản hồi",
+		"mobile.sidebar.row_status.not_reachable": "mất kết nối",
+		"mobile.sidebar.row_status.question": "câu hỏi",
 		"mobile.sidebar.section.older": "Cũ hơn",
 		"mobile.sidebar.section.pinned": "Đã ghim",
 		"mobile.sidebar.section.running": "Đang chạy",
 		"mobile.sidebar.section.today": "Hôm nay",
+		"mobile.sidebar.section.untagged": "Không có nhãn",
 		"mobile.sidebar.section.week": "Tuần này",
 		"mobile.sidebar.sections": "Các mục",
 		"mobile.sidebar.settings_heading": "Thanh bên",
 		"mobile.sidebar.show_ended": "Hiện các phiên đã kết thúc",
 		"mobile.sidebar.show_ended_hint": "Các cuộc trò chuyện đã ghim và đang chạy luôn hiển thị.",
+		"mobile.sidebar.show_tags": "Hiện nhãn",
+		"mobile.sidebar.show_tags_hint": "Nhãn vẫn nằm trong menu của từng cuộc trò chuyện.",
+		"mobile.sidebar.tag_group.announcement": "{name}, {count, plural, other {# cuộc trò chuyện}}",
 		"mobile.sidebar.tags.announcement": "Nhãn: {names}",
 		"mobile.sidebar.tags.empty_headline": "Chưa có danh mục nào.",
 		"mobile.sidebar.tags.empty_next": "Tạo trên máy tính.",
@@ -11838,6 +15356,12 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.signin.use_address": "Dùng địa chỉ và mật khẩu",
 		"mobile.signin.welcome.body": "Ứng dụng này điều khiển các phiên trên chính máy của bạn và hiển thị những gì nó đã làm. Mã nguồn của bạn không bao giờ rời khỏi máy.",
 		"mobile.signin.welcome.headline": "Tác nhân của bạn chạy trên máy tính của bạn.",
+		"mobile.team_bridge.actions.a11y_react": "Bày tỏ cảm xúc",
+		"mobile.team_bridge.actions.copied": "Đã sao chép",
+		"mobile.team_bridge.actions.copy_text": "Sao chép văn bản",
+		"mobile.team_bridge.actions.reply_in_thread": "Trả lời trong chuỗi",
+		"mobile.team_bridge.actions.select_text": "Chọn văn bản",
+		"mobile.team_bridge.actions.title": "Thao tác với tin nhắn",
 		"mobile.team_bridge.attachment.add": "Thêm hình ảnh",
 		"mobile.team_bridge.attachment.attached_summary": "{count, plural, other {Đã đính kèm # hình ảnh}}",
 		"mobile.team_bridge.attachment.cannot_send": "Không thể gửi",
@@ -11881,6 +15405,23 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.team_bridge.attachment.viewer": "Trình xem ảnh",
 		"mobile.team_bridge.attachment.wait_uploads": "Có thể gửi khi các hình ảnh tải lên xong.",
 		"mobile.team_bridge.back": "Quay lại",
+		"mobile.team_bridge.card_body.deleted": "Tin nhắn này đã bị xóa.",
+		"mobile.team_bridge.card_body.held": "Đang bị giữ lại để xem xét.",
+		"mobile.team_bridge.card_body.held_transient": "Đang chờ sàng lọc — chưa hiển thị cho tác nhân của bạn.",
+		"mobile.team_bridge.card_body.loading": "Đang tải tin nhắn…",
+		"mobile.team_bridge.card_body.more_messages": "{count, plural, other {Còn # tin nhắn khác trong thẻ này}}",
+		"mobile.team_bridge.card_body.not_admitted": "Không được chuyển đến tác nhân của bạn.",
+		"mobile.team_bridge.card_body.not_member": "Bạn không còn tham gia cuộc trò chuyện này.",
+		"mobile.team_bridge.card_body.offline": "Không thể kết nối Radient — đang thử lại.",
+		"mobile.team_bridge.card_body.other_account": "Đã nhận bằng một tài khoản Radient khác.",
+		"mobile.team_bridge.card_body.pending": "Đang chờ chuyển đến tác nhân của bạn.",
+		"mobile.team_bridge.card_body.refused": "Bị kiểm duyệt từ chối.",
+		"mobile.team_bridge.card_body.show_less": "Thu gọn",
+		"mobile.team_bridge.card_body.show_more": "Xem thêm",
+		"mobile.team_bridge.card_body.signed_out": "Hãy đăng nhập Radient để xem tin nhắn này.",
+		"mobile.team_bridge.card_body.thread_reply": "Trả lời trong luồng",
+		"mobile.team_bridge.card_body.unavailable": "Nội dung tin nhắn không khả dụng.",
+		"mobile.team_bridge.card_body.untrusted": "Tin nhắn bên ngoài · nội dung không đáng tin cậy",
 		"mobile.team_bridge.conversation": "Cuộc trò chuyện",
 		"mobile.team_bridge.default_on.body": "Các tác nhân trong tổ chức có thể nhắn tin cho chánh văn phòng của bạn. Bạn có thể tắt tính năng này bất cứ lúc nào.",
 		"mobile.team_bridge.default_on.dismiss": "Đóng",
@@ -11943,6 +15484,15 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.team_bridge.list.preview": "Xem trước · Tham gia để đọc",
 		"mobile.team_bridge.list.quiet": "Thông báo im lặng",
 		"mobile.team_bridge.list.self": "bạn",
+		"mobile.team_bridge.mentions.dismiss_notice": "Bỏ qua",
+		"mobile.team_bridge.mentions.invited": "{name} chưa tham gia cuộc trò chuyện này và sẽ không nhận được thông báo.",
+		"mobile.team_bridge.mentions.no_endpoint": "Không thể thông báo cho {name} cho đến khi danh sách mọi người tải xong.",
+		"mobile.team_bridge.mentions.not_member": "{name} không có trong cuộc trò chuyện này và sẽ không nhận được thông báo.",
+		"mobile.team_bridge.mentions.results_count": "{count, plural, other {# gợi ý}}",
+		"mobile.team_bridge.mentions.row_label": "Nhắc đến {name}",
+		"mobile.team_bridge.mentions.section_members": "Trong cuộc trò chuyện này",
+		"mobile.team_bridge.mentions.section_org": "Những người khác trong tổ chức của bạn",
+		"mobile.team_bridge.mentions.unavailable": "Không có danh sách mọi người. Đang hiển thị thành viên của cuộc trò chuyện này.",
 		"mobile.team_bridge.navigation.caption": "Tổ chức luôn bên bạn, ngay cả khi máy tính đang ngủ",
 		"mobile.team_bridge.navigation.entry": "{count, plural, =0 {Team Bridge} other {Team Bridge · # chưa đọc}}",
 		"mobile.team_bridge.navigation.entry_loading": "Team Bridge · đang tải",
@@ -11959,6 +15509,35 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.team_bridge.profile.open": "Xem hồ sơ của {name}",
 		"mobile.team_bridge.profile.opens_hint": "Mở hồ sơ của họ",
 		"mobile.team_bridge.profile.title": "Hồ sơ",
+		"mobile.team_bridge.reactions.add": "Thêm cảm xúc",
+		"mobile.team_bridge.reactions.added": "Đã thêm cảm xúc",
+		"mobile.team_bridge.reactions.details": "Chi tiết biểu cảm",
+		"mobile.team_bridge.reactions.failed": "Không lưu được cảm xúc. Hãy thử lại.",
+		"mobile.team_bridge.reactions.hint_add": "Chạm hai lần để cùng bày tỏ cảm xúc",
+		"mobile.team_bridge.reactions.hint_inspect": "Nhấn đúp để xem chi tiết biểu cảm",
+		"mobile.team_bridge.reactions.hint_remove": "Chạm hai lần để gỡ cảm xúc của bạn",
+		"mobile.team_bridge.reactions.keyboard_hint": "Chọn một emoji từ bàn phím",
+		"mobile.team_bridge.reactions.pill": "{emoji}, {count, plural, other {# cảm xúc}}",
+		"mobile.team_bridge.reactions.pill_mine": "{emoji}, {count, plural, other {# cảm xúc}}, bạn đã bày tỏ cảm xúc",
+		"mobile.team_bridge.reactions.removed": "Đã gỡ cảm xúc",
+		"mobile.team_bridge.reactions.sample": "{count, plural, =0 {{labels}} other {{labels} và # người khác}}",
+		"mobile.team_bridge.reactions.sample_none": "Bản tóm tắt này không có tên.",
+		"mobile.team_bridge.reactions.sample_notice": "Tên hiển thị chỉ là một phần, không phải danh sách đầy đủ.",
+		"mobile.team_bridge.reactions.show_less": "Thu gọn",
+		"mobile.team_bridge.reactions.show_more": "Hiện thêm {count}",
+		"mobile.team_bridge.reactions.summary": "{count, plural, other {# cảm xúc}}",
+		"mobile.team_bridge.reactions.you_reacted": "Bạn đã bày tỏ cảm xúc",
+		"mobile.team_bridge.reply_thread.count": "{count, plural, other {# phản hồi}}",
+		"mobile.team_bridge.reply_thread.empty": "Chưa có phản hồi nào. Hãy bắt đầu chuỗi.",
+		"mobile.team_bridge.reply_thread.error": "Không thể tải chuỗi này.",
+		"mobile.team_bridge.reply_thread.last_reply": "Trả lời gần nhất: {time}",
+		"mobile.team_bridge.reply_thread.loading": "Đang tải chuỗi…",
+		"mobile.team_bridge.reply_thread.more": "Tải thêm phản hồi",
+		"mobile.team_bridge.reply_thread.open": "Xem chuỗi, {count, plural, other {# phản hồi}}",
+		"mobile.team_bridge.reply_thread.open_unread": "Xem chuỗi, {count, plural, other {# phản hồi}}, {unread, plural, other {# chưa đọc}}",
+		"mobile.team_bridge.reply_thread.reply": "Trả lời trong chuỗi",
+		"mobile.team_bridge.reply_thread.retry": "Thử tải lại chuỗi",
+		"mobile.team_bridge.reply_thread.title": "Chuỗi",
 		"mobile.team_bridge.retry": "Thử lại",
 		"mobile.team_bridge.thread.access_retry": "Thử truy cập lại",
 		"mobile.team_bridge.thread.anchor_missing": "Tin nhắn đó không còn khả dụng.",
@@ -12052,6 +15631,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"relay.health.quiet_detail": "Phiên này trên máy tính của bạn đã ngừng phản hồi — có thể đang bận hoặc bị treo. Có thể tin nhắn báo gửi thất bại nhưng vẫn được chuyển đến khi phiên bắt kịp. Thử lại sẽ không gửi tin nhắn hai lần.",
 		"relay.health.reconnecting": "Đang kết nối lại",
 		"relay.health.reconnecting_detail": "Điện thoại này đã mất kết nối với máy tính của bạn và đang liên tục thử lại. Phiên có thể vẫn đang chạy ở đó; gửi tin nhắn có thể không thành công cho đến khi kết nối trở lại.",
+		"relay.skills.skipped": "Đã gửi mà không kèm {names} — {count, plural, other {kỹ năng được liệt kê không có nội dung để đính kèm}}.",
+		"relay.skills.too_large": "Các kỹ năng này quá lớn để gửi cùng nhau. Bỏ một kỹ năng và gửi lại.",
+		"relay.skills.tray.hidden": "ẩn",
+		"relay.skills.tray.label": "Kỹ năng",
 		"relay.transcript.composer.queued": "{count, plural, other {# đang chờ}}",
 		"relay.transcript.fold.failed_label": "Có thao tác thất bại",
 		"relay.transcript.fold.more": "{count, plural, other {và # thao tác khác}}",
@@ -12089,6 +15672,43 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.account_routing.unsaved": "尚未保存。",
 		"mobile.agent_avatar.edit_hint": "请在桌面应用中更改此头像",
 		"mobile.agent_avatar.label": "智能体头像",
+		"mobile.asks.answer_label": "你对此问题的回答：{question}",
+		"mobile.asks.answer_placeholder": "你的回答",
+		"mobile.asks.choose_any": "可多选",
+		"mobile.asks.deadline_ago": "已超过截止时间 {duration}",
+		"mobile.asks.decline": "拒绝",
+		"mobile.asks.decline_hint": "不发送回答。由智能体自行决定。",
+		"mobile.asks.dismiss": "忽略",
+		"mobile.asks.dismiss_open": "忽略……",
+		"mobile.asks.dismiss_reason.chat": "已在对话中回答",
+		"mobile.asks.dismiss_reason.chat_note": "你已在对话中回复",
+		"mobile.asks.dismiss_reason.moot": "不再需要",
+		"mobile.asks.dismiss_reason.moot_note": "智能体不再等待回答",
+		"mobile.asks.dismiss_title": "{count, plural, other {忽略问题}}",
+		"mobile.asks.empty": "暂无待答问题。智能体提出的问题会显示在这里。",
+		"mobile.asks.honesty": "此应用在打开时显示排队的问题，关闭后无法通知你。",
+		"mobile.asks.loading": "正在读取问题……",
+		"mobile.asks.none_recorded": "此问题没有记录到回答。",
+		"mobile.asks.nothing_left": "这里没有需要回答的问题了。另一个界面已经接手了这些问题。",
+		"mobile.asks.open_conversation": "打开对话",
+		"mobile.asks.other_hint": "输入你的回答",
+		"mobile.asks.other_kept": "你的文字已保留，尚未发送",
+		"mobile.asks.other_label": "其他",
+		"mobile.asks.progress.pick_or_type": "选择一个选项，或输入你自己的回答后发送。",
+		"mobile.asks.progress.tally": "已回答或跳过 {answered}/{total} 个问题",
+		"mobile.asks.progress.type": "输入回答，或跳过该问题后发送。",
+		"mobile.asks.recommended": "· 推荐",
+		"mobile.asks.secret_notice": "机密：直接发送，不显示在记录中",
+		"mobile.asks.secret_notice_saved": "机密：直接发送，不显示在记录中，并保存在电脑上以便重复使用",
+		"mobile.asks.secret_placeholder": "机密值",
+		"mobile.asks.send_answer": "发送回答",
+		"mobile.asks.send_answers": "发送回答",
+		"mobile.asks.settled": "已处理",
+		"mobile.asks.skip": "跳过（不回答）",
+		"mobile.asks.title_fallback": "问题",
+		"mobile.asks.truncated": "正在显示最新的问题。打开一个对话可查看其余问题。",
+		"mobile.asks.unskip": "回答这个问题",
+		"mobile.asks.urgent": "· 紧急",
 		"mobile.chrome.clear_search": "清除搜索",
 		"mobile.chrome.close_conversations": "关闭对话列表",
 		"mobile.chrome.composer.dismiss_keyboard": "收起键盘",
@@ -12097,6 +15717,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.chrome.composer.queued": "{count, plural, other {# 条排队消息}}",
 		"mobile.chrome.composer.row_cost": "费用",
 		"mobile.chrome.composer.row_effort": "推理强度",
+		"mobile.chrome.composer.row_identity": "智能体或团队",
 		"mobile.chrome.composer.row_model": "模型",
 		"mobile.chrome.composer.row_questions": "问题",
 		"mobile.chrome.composer.row_queue": "队列",
@@ -12128,18 +15749,184 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.common.not_found.headline": "此页面不存在。",
 		"mobile.common.not_found.next": "返回会话列表即可继续。",
 		"mobile.common.not_found.title": "找不到页面",
+		"mobile.common.resize_panel": "调整面板大小",
 		"mobile.common.save": "保存",
 		"mobile.common.send": "发送",
+		"mobile.common.size.large": "大",
+		"mobile.common.size.medium": "中等",
+		"mobile.common.size.shorter": "更低",
+		"mobile.common.size.taller": "更高",
 		"mobile.common.try_again": "重试",
+		"mobile.community.approvals.agent": "智能体",
+		"mobile.community.approvals.decline": "不发布",
+		"mobile.community.approvals.empty": "没有等待你批准的智能体发帖。",
+		"mobile.community.approvals.expires": "{hours, plural, other {# 小时后过期}}",
+		"mobile.community.approvals.expires_days": "{days, plural, other {# 天后过期}}",
+		"mobile.community.approvals.failed": "未能完成，请重试。",
+		"mobile.community.approvals.open_computer": "在电脑上打开 Local Operator，查看确切内容后再决定。",
+		"mobile.community.approvals.review": "在电脑上查看",
+		"mobile.community.approvals.review_note": "“在电脑上查看”会让它最多再等待 24 小时。",
+		"mobile.community.approvals.stays": "在你批准之前，草稿一直留在你的电脑上。",
+		"mobile.community.approvals.title": "你的幕僚长想在 #{channel} 发帖",
+		"mobile.community.approvals.title_unknown": "你的幕僚长想在一个社区频道发帖",
+		"mobile.community.approvals.waiting": "正在电脑上等待你的决定。",
+		"mobile.community.browse.channels": "频道",
+		"mobile.community.browse.channels_empty": "没有匹配的频道。",
+		"mobile.community.browse.join": "加入",
+		"mobile.community.browse.load_more": "加载更多",
+		"mobile.community.browse.mode": "显示",
+		"mobile.community.browse.open": "打开",
+		"mobile.community.browse.people": "成员",
+		"mobile.community.browse.people_empty": "没有匹配的成员。",
+		"mobile.community.browse.private": "私密",
+		"mobile.community.browse.search": "搜索",
+		"mobile.community.browse.title": "浏览",
+		"mobile.community.category.harassment_or_abuse": "骚扰或辱骂",
+		"mobile.community.category.private_information": "隐私信息",
+		"mobile.community.category.spam_or_promotion": "垃圾信息或未披露的推广",
+		"mobile.community.category.unsafe_or_illegal": "不安全或违法内容",
+		"mobile.community.common.loading": "正在加载社区…",
+		"mobile.community.common.retry": "重试",
+		"mobile.community.common.unavailable": "社区不可用",
+		"mobile.community.composer.attach": "附加图片",
+		"mobile.community.composer.audience": "所有社区成员可见",
+		"mobile.community.composer.audience_dm": "只有你和 {name} 能看到此对话",
+		"mobile.community.composer.blocked_archived": "此频道已归档。",
+		"mobile.community.composer.blocked_locked": "此频道已锁定。",
+		"mobile.community.composer.blocked_read_only": "此社区为只读。",
+		"mobile.community.composer.blocked_staff_only": "只有工作人员和版主可以在这里发帖。",
+		"mobile.community.composer.cancel": "取消",
+		"mobile.community.composer.cancelled": "已取消，未发布任何内容。",
+		"mobile.community.composer.checking": "正在检查…",
+		"mobile.community.composer.dismiss": "关闭",
+		"mobile.community.composer.failed": "消息未发送。你的文字仍在这里。",
+		"mobile.community.composer.forbidden": "你不能在这里发帖。",
+		"mobile.community.composer.guidelines": "社区准则已更新。请接受后再试。",
+		"mobile.community.composer.images_unavailable": "社区暂不支持发布图片。你的文字仍在这里。",
+		"mobile.community.composer.invalid": "此消息无法按原样发送。请缩短或修改后再发送。",
+		"mobile.community.composer.label": "在 #{name} 发消息",
+		"mobile.community.composer.label_dm": "给 {name} 发消息",
+		"mobile.community.composer.limited": "你的发送速度超过了社区允许的范围。",
+		"mobile.community.composer.limited_wait": "{seconds, plural, other {请在 # 秒后重试。}}",
+		"mobile.community.composer.refused": "未发布：{category}",
+		"mobile.community.composer.refused_detail": "只有你能看到此提示。参考编号 {reference}。修改消息后可再次发送。",
+		"mobile.community.composer.restricted": "你的发帖权限受到限制。参考编号 {reference}。",
+		"mobile.community.composer.retry": "重试",
+		"mobile.community.composer.review": "查看准则",
+		"mobile.community.composer.send": "发送",
+		"mobile.community.composer.unavailable": "无法检查你的消息，因此未发布任何内容。你的文字仍在这里。",
+		"mobile.community.conversation.agent": "智能体",
+		"mobile.community.conversation.deleted": "消息已删除",
+		"mobile.community.conversation.edited": "已编辑",
+		"mobile.community.conversation.empty": "还没有消息。",
+		"mobile.community.conversation.former_member": "前成员",
+		"mobile.community.conversation.join_prompt": "你正在阅读 #{name}。加入频道即可在此发帖。",
+		"mobile.community.conversation.load_older": "加载更早的消息",
+		"mobile.community.conversation.older_error": "无法加载更早的消息。",
+		"mobile.community.conversation.replies": "{count, plural, other {# 条回复}}",
+		"mobile.community.conversation.report": "举报消息",
+		"mobile.community.conversation.subtitle": "{community} · 公开",
+		"mobile.community.conversation.view_profile": "查看 {name} 的个人资料",
+		"mobile.community.directory.empty": "目前没有可加入的社区。",
+		"mobile.community.directory.featured": "精选",
+		"mobile.community.directory.joined": "已加入",
+		"mobile.community.directory.read_only": "只读",
+		"mobile.community.directory.title": "社区",
+		"mobile.community.error.auth_unavailable": "Radient 暂时无法验证你的登录，请稍后再试。",
+		"mobile.community.error.generic": "出了点问题，未做任何更改。",
+		"mobile.community.error.load_failed": "暂时无法加载。请检查网络连接后重试。",
+		"mobile.community.error.not_found": "此帐户无法访问这个社区。",
+		"mobile.community.error.rate_limited": "你的操作速度超过了社区允许的范围，请稍后再试。",
+		"mobile.community.error.sign_in": "登录 Radient 以使用社区。",
+		"mobile.community.error.unreachable": "无法连接社区。请检查此设备的网络连接。",
+		"mobile.community.home.browse": "浏览",
+		"mobile.community.home.channel_label": "#{name}{count, plural, =0 {} other { · # 条未读}}",
+		"mobile.community.home.channels": "频道",
+		"mobile.community.home.channels_empty": "你还没有加入任何频道。浏览一下找一个吧。",
+		"mobile.community.home.closed": "此社区为只读，暂不接受新成员。",
+		"mobile.community.home.direct": "私信",
+		"mobile.community.home.direct_empty": "还没有私信。",
+		"mobile.community.home.direct_label": "{name}{count, plural, =0 {} other { · # 条未读}}",
+		"mobile.community.home.join": "加入",
+		"mobile.community.home.not_member": "加入后即可在此社区阅读和发帖。",
+		"mobile.community.home.reaccept": "查看",
+		"mobile.community.home.reaccept_banner": "社区准则已更新。请查看并接受，以便继续发帖。",
+		"mobile.community.home.requests": "请求",
+		"mobile.community.home.requests_count": "{count, plural, other {请求 · #}}",
+		"mobile.community.home.switch": "切换组织或社区",
+		"mobile.community.join.agree": "我同意社区准则（{version}）。我的个人资料和帖子对所有成员可见。",
+		"mobile.community.join.changed": "你阅读期间准则已更新。请查看新版本后重新接受。",
+		"mobile.community.join.failed": "未能加入，请重试。",
+		"mobile.community.join.guidelines_heading": "社区准则（{version}）",
+		"mobile.community.join.hint": "勾选复选框即可加入。",
+		"mobile.community.join.moderation": "每条消息在发布前都会经过检查。如果内容未发布，只有你能看到原因，并附带可用于申诉的参考编号。",
+		"mobile.community.join.profile": "成员会看到你的 Radient 名称。永不显示：电子邮件、组织。",
+		"mobile.community.join.reaccept_submit": "接受并继续",
+		"mobile.community.join.reaccept_title": "社区准则已更新",
+		"mobile.community.join.submit": "加入并打开社区",
+		"mobile.community.join.title": "加入社区",
+		"mobile.community.no_plan.body": "由 Radient 运营的免费公开空间。获取帮助、分享反馈，结识其他 Local Operator 用户。",
+		"mobile.community.no_plan.free": "免费。无需 Team 方案或付款。",
+		"mobile.community.no_plan.join": "加入社区",
+		"mobile.community.no_plan.open": "打开社区",
+		"mobile.community.no_plan.title": "加入 Local Operator Community",
+		"mobile.community.profile.block": "屏蔽",
+		"mobile.community.profile.blocked": "已屏蔽。你们将看不到彼此的消息或请求。",
+		"mobile.community.profile.failed": "未能完成，请重试。",
+		"mobile.community.profile.joined": "{month} 加入",
+		"mobile.community.profile.message": "发消息",
+		"mobile.community.profile.message_sent": "已发送私信请求，对方会在请求中看到。",
+		"mobile.community.profile.report": "举报",
+		"mobile.community.profile.title": "个人资料",
+		"mobile.community.report.category": "出了什么问题？",
+		"mobile.community.report.dm_consent": "将此消息分享给 Radient Trust & Safety。只有其案件审核人员能看到，社区版主永远看不到。",
+		"mobile.community.report.failed": "举报未发送，请重试。",
+		"mobile.community.report.note": "还有其他需要我们了解的吗？（可选）",
+		"mobile.community.report.revision_changed": "此消息在你打开后被编辑过。请重新阅读，然后确认并举报当前版本。",
+		"mobile.community.report.sent": "举报已发送。参考编号 {reference}。",
+		"mobile.community.report.submit": "发送举报",
+		"mobile.community.report.title": "向 Radient Trust & Safety 举报",
+		"mobile.community.requests.accept": "接受",
+		"mobile.community.requests.approvals": "智能体审批",
+		"mobile.community.requests.block": "屏蔽",
+		"mobile.community.requests.decline": "拒绝",
+		"mobile.community.requests.dm": "消息",
+		"mobile.community.requests.dm_body": "{name} 想给你发私信。",
+		"mobile.community.requests.dm_empty": "没有私信请求。",
+		"mobile.community.requests.expires": "{hours, plural, other {# 小时后过期}}",
+		"mobile.community.requests.expires_days": "{days, plural, other {# 天后过期}}",
+		"mobile.community.requests.mode": "显示",
+		"mobile.community.requests.title": "请求",
+		"mobile.community.role.community_admin": "社区管理员",
+		"mobile.community.role.moderator": "版主",
+		"mobile.community.role.staff": "Radient 工作人员",
+		"mobile.community.switcher.browse": "浏览社区…",
+		"mobile.community.switcher.communities": "社区",
+		"mobile.community.switcher.note": "切换只会改变你看到的内容。",
+		"mobile.community.switcher.organizations": "组织",
+		"mobile.community.switcher.public": "公开",
+		"mobile.community.switcher.row_label": "{name} · 公开{count, plural, =0 {} other { · # 条未读}}",
+		"mobile.community.switcher.search": "搜索社区",
+		"mobile.composer_input.attach.camera": "拍照",
+		"mobile.composer_input.attach.camera_denied": "相机访问已关闭。请在“设置”中开启，以便拍照。",
+		"mobile.composer_input.attach.camera_error": "无法打开相机。请重试。",
+		"mobile.composer_input.attach.camera_refused": "未允许访问相机。轻点“拍照”可再次请求。",
+		"mobile.composer_input.attach.camera_unavailable": "此设备上没有可用的相机。",
+		"mobile.composer_input.attach.choose_image": "选择图片",
+		"mobile.composer_input.attach.files": "来自“文件”的图片",
+		"mobile.composer_input.attach.library": "照片图库",
+		"mobile.composer_input.attach.open_settings": "打开设置",
+		"mobile.composer_input.attach.paste": "粘贴图片",
 		"mobile.composer_input.clear_draft": "清空草稿",
 		"mobile.composer_input.clear_draft_hint": "仅清空草稿中的文字和图片；保留排队中和未确认的消息",
 		"mobile.composer_input.dismiss_error": "关闭错误提示",
 		"mobile.composer_input.dismiss_error_hint": "隐藏此错误，不改变草稿或发送状态",
 		"mobile.composer_input.notice_dismiss": "关闭",
 		"mobile.composer_input.notice_retry": "重试",
-		"mobile.composer_input.paste.denied": "未允许粘贴。请点按回形针，选择“粘贴图片”，然后选择“允许粘贴”。",
+		"mobile.composer_input.paste.denied": "未允许粘贴。请再次点按粘贴按钮，然后选择“允许粘贴”。",
+		"mobile.composer_input.paste.empty_ios": "没有粘贴任何图片。请先复制一张图片，若出现提示，请选择“允许粘贴”。",
 		"mobile.composer_input.paste.image": "粘贴图片",
-		"mobile.composer_input.paste.image_hint": "附加剪贴板中的图片",
+		"mobile.composer_input.paste.image_hint": "附加你复制的图片",
 		"mobile.composer_input.voice.discard": "放弃语音输入",
 		"mobile.composer_input.voice.finish": "完成并转写",
 		"mobile.composer_input.voice.mic_setup": "语音输入尚未设置",
@@ -12356,6 +16143,32 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.folders_read_failed": "刚才无法读取此电脑的文件夹。",
 		"mobile.home.folders_read_sign_in": "此电脑要求重新登录，因此无法读取其文件夹。",
 		"mobile.home.greeting": "今天想让我帮你做点什么？",
+		"mobile.home.identity.announce_picked": "此对话将以 {name} 开始",
+		"mobile.home.identity.band_agents": "智能体",
+		"mobile.home.identity.band_recent": "最近",
+		"mobile.home.identity.band_teams": "团队",
+		"mobile.home.identity.default_agent": "默认智能体",
+		"mobile.home.identity.empty": "这台电脑上还没有智能体或团队。请在桌面应用中创建。",
+		"mobile.home.identity.no_matches": "没有与“{query}”匹配的结果。",
+		"mobile.home.identity.pill_label": "用 {target} 开始此对话。选择智能体或团队",
+		"mobile.home.identity.read_failed": "暂时无法读取这台电脑的智能体和团队。",
+		"mobile.home.identity.refused_connecting": "这台电脑仍在连接，因此尚未开始任何对话。点按你的消息将其取回，稍后重新发送即可以 {name} 开始。",
+		"mobile.home.identity.refused_fallback": "无法在这台电脑上以 {name} 开始。请另选一个，或使用默认智能体。",
+		"mobile.home.identity.refused_registry": "这台电脑暂时无法读取其智能体和团队，因此未开始任何对话。点按你的消息将其取回后重新发送，或选择默认智能体立即发送。",
+		"mobile.home.identity.refused_unknown": "{name} 在这台电脑上已不可用。另选一个或选择默认智能体，即可发送你的消息。",
+		"mobile.home.identity.refused_unlicensed": "这台电脑现在无法以 {name} 开始对话。请选择默认智能体后发送。",
+		"mobile.home.identity.refused_unsaved": "这台电脑无法为新对话保存 {name}，因此未开始任何对话。点按你的消息将其取回，然后重新发送。",
+		"mobile.home.identity.row_agent": "{name}，智能体",
+		"mobile.home.identity.row_agent_described": "{name}，智能体。{description}",
+		"mobile.home.identity.row_team": "{name}，团队",
+		"mobile.home.identity.row_team_led": "{name}，团队，由 {manager} 负责",
+		"mobile.home.identity.search": "搜索智能体和团队",
+		"mobile.home.identity.sheet_title": "用以下身份开始此对话",
+		"mobile.home.identity.starting_with": "正在以 {name} 开始…",
+		"mobile.home.identity.team_led_by": "由 {manager} 带领",
+		"mobile.home.identity.team_members": "{count, plural, other {# 名成员}}",
+		"mobile.home.identity.team_subtitle": "由 {manager} 负责 · {count, plural, other {# 名成员}}",
+		"mobile.home.identity.unsupported": "这台电脑上的 Local Operator 版本过旧，无法以智能体或团队开始对话。请更新后在此选择。",
 		"mobile.home.models_read_failed": "刚才无法读取此电脑的模型列表。",
 		"mobile.home.options.default_model": "使用此电脑的默认模型",
 		"mobile.home.options.fixed": "此对话的起始选项已固定。实时控制项可在“对话详情”中调整。",
@@ -12392,9 +16205,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.startup_queue.not_started": "未启动",
 		"mobile.home.startup_queue.sending": "正在发送排队消息……",
 		"mobile.home.startup_queue.unconfirmed": "启动未确认",
-		"mobile.home.suggestion.last_turn": "看看上一轮",
 		"mobile.home.suggestion.linear_mcp": "设置Linear MCP",
-		"mobile.home.suggestion.phone_access": "开启手机访问",
 		"mobile.home.suggestion.review_repo": "审查此仓库",
 		"mobile.home.suggestion.team_of_agents": "创建智能体团队",
 		"mobile.home.suggestion.wake_summary": "用摘要唤醒我",
@@ -12403,6 +16214,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.tip.search": "搜索过往对话以重新打开会话",
 		"mobile.home.transcript.needs_answer": "需要你的回答",
 		"mobile.home.transcript.waiting": "正在等待对话……",
+		"mobile.home.work.all_conversations": "全部对话",
+		"mobile.home.work.all_conversations_new": "全部对话，{count, plural, other {# 个新对话}}",
+		"mobile.home.work.needs_you": "待你处理",
+		"mobile.home.work.recent": "最近",
+		"mobile.home.work.try": "试试",
 		"mobile.library.action.add_tag": "添加",
 		"mobile.library.action.edit": "编辑",
 		"mobile.library.action.open_chat": "打开对话",
@@ -12455,6 +16271,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.notifications.channel.system": "系统声音",
 		"mobile.notifications.channel.tape_warble": "磁带颤音",
 		"mobile.notifications.channel.task_complete": "任务完成",
+		"mobile.notifications.channel.team_bridge": "Team Bridge",
+		"mobile.notifications.channel.team_bridge_description": "来自你的队友及其智能体的消息。",
 		"mobile.notifications.channel.two_note_chime": "双音钟声",
 		"mobile.notifications.computer_registration.failed": "无法为此手机注册来自这台电脑的提醒。重新打开应用时会再次尝试。",
 		"mobile.notifications.computer_registration.no_token": "此手机还没有推送地址，因此这台电脑无法向它发送提醒。请重新打开应用再试一次。",
@@ -12496,6 +16314,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.notifications.preferences.agent_note": "关闭两种智能体通知，即可仅保留 Team Bridge 通知。",
 		"mobile.notifications.preferences.bridge_heading": "Team Bridge",
 		"mobile.notifications.preferences.bridge_note": "在各私聊、群组或频道中，打开铃铛菜单，选择{all}、{mentions}或{muted}。",
+		"mobile.notifications.preferences.bridge_system_off": "Team Bridge 通知已在 Android 设置中关闭，因此此手机上不会显示任何通知。",
+		"mobile.notifications.preferences.bridge_system_open": "打开 Android 设置",
 		"mobile.notifications.preferences.completions": "智能体已完成",
 		"mobile.notifications.preferences.computer_keeps_sending": "在你的电脑上更新 Local Operator 之前，它会继续发送智能体通知。",
 		"mobile.notifications.preferences.disabled_hint": "你的电脑需要更新版本的 Local Operator。",
@@ -12512,6 +16332,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.notifications.priority_high": "高",
 		"mobile.notifications.section.waiting": "等待你处理",
 		"mobile.notifications.section.waiting_count": "等待你处理 · {count}",
+		"mobile.notifications.team_bridge.self_name": "你",
 		"mobile.notifications.title": "通知",
 		"mobile.notifications.turn_on": "开启通知",
 		"mobile.oauth.failed": "无法完成登录。请重试。",
@@ -12697,7 +16518,16 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.composer.not_sent_storage": "未发送。无法安全保存此消息以便重试。文字和图片仍保留在这里。请重试。",
 		"mobile.session.composer.retained_instruction": "之前的指令可能已送达。先重试之前的指令，再发送当前草稿。",
 		"mobile.session.composer.retry_not_sent_storage": "本次重试未发送。无法安全地准备重试之前的指令。请重试之前的指令。你当前的草稿尚未发送。",
+		"mobile.session.composer.settings_not_applied": "会话已重新打开，但未能应用你选择的模型或推理强度，因此未发送任何内容。请重试，或选择其他模型或推理强度。",
 		"mobile.session.conversation_details": "对话详情",
+		"mobile.session.diagram.close": "关闭图表",
+		"mobile.session.diagram.copied": "已复制",
+		"mobile.session.diagram.copy": "复制图表源码",
+		"mobile.session.diagram.error": "无法绘制此图表，已改为显示源码。",
+		"mobile.session.diagram.label": "{type} 图表",
+		"mobile.session.diagram.label_titled": "{type} 图表：{title}",
+		"mobile.session.diagram.open_hint": "全屏打开图表",
+		"mobile.session.diagram.viewer": "图表查看器",
 		"mobile.session.empty.headline": "暂无消息。",
 		"mobile.session.empty.next": "在下方发送第一条消息。",
 		"mobile.session.fallback_name": "会话",
@@ -12726,6 +16556,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.history.loading": "正在加载更早的消息…",
 		"mobile.session.history.refresh_failed": "无法加载最新的消息。",
 		"mobile.session.history.stalled": "无法继续加载更早的消息。请重试或重新打开此对话。",
+		"mobile.session.inline_chart_data": "图表数据",
+		"mobile.session.jump_to_latest": "↓ 跳到最新",
+		"mobile.session.jump_to_latest_name": "跳到最新",
+		"mobile.session.jump_to_latest_short": "↓ 最新",
 		"mobile.session.not_connected.headline": "此会话尚未连接。",
 		"mobile.session.not_connected.next": "连接电脑后，从会话列表中打开此会话。",
 		"mobile.session.outbox.composer_discarding": "正在放弃上一条消息。稍后即可发送这一条。",
@@ -12754,7 +16588,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.region.label_todos": "任务",
 		"mobile.session.region.label_working": "动态",
 		"mobile.session.region.more_below": "下方还有内容 · 向下滚动 ↓",
-		"mobile.session.sheet_title.attach": "添加附件",
+		"mobile.session.sheet_title.attach": "添加图片",
 		"mobile.session.sheet_title.commands": "命令",
 		"mobile.session.sheet_title.effort": "推理强度",
 		"mobile.session.sheet_title.model": "模型",
@@ -12868,7 +16702,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.settings.theme.no_match": "没有匹配的主题",
 		"mobile.settings.theme.row_label": "主题，{name}",
 		"mobile.settings.theme.search_label": "搜索主题",
-		"mobile.settings.theme.search_placeholder": "搜索主题",
+		"mobile.settings.theme.search_placeholder": "名称，例如Dracula",
 		"mobile.settings.theme.section_dark": "深色（{count}）",
 		"mobile.settings.theme.section_light": "浅色（{count}）",
 		"mobile.settings.theme.title": "主题",
@@ -12879,6 +16713,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.sidebar.empty_by_view.next": "重新开启分区或已结束的会话，或重置视图。",
 		"mobile.sidebar.empty_by_view.reset": "重置视图",
 		"mobile.sidebar.group.one_list": "统一列表",
+		"mobile.sidebar.group.tag": "标签",
 		"mobile.sidebar.group.time_section": "时间分区",
 		"mobile.sidebar.group_by": "分组方式",
 		"mobile.sidebar.hidden_sections": "{count, plural, other {已隐藏#个分区}}",
@@ -12892,16 +16727,31 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.sidebar.row.asks": "{count, plural, other {# 个问题}}",
 		"mobile.sidebar.row.asks_not_blocker": "{asks}，不阻塞智能体工作",
 		"mobile.sidebar.row.new": "新",
+		"mobile.sidebar.row.on_device": "在{device}上",
 		"mobile.sidebar.row.todos": "{count, plural, other {# 项任务}}",
+		"mobile.sidebar.row_label.join": "{first}，{second}",
+		"mobile.sidebar.row_label.on_device": "在{device}上",
+		"mobile.sidebar.row_label.open": "当前已打开",
+		"mobile.sidebar.row_label.waiting": "{kind, select, approval {等待你批准} other {等待你回答问题}}",
+		"mobile.sidebar.row_label.working": "工作中",
+		"mobile.sidebar.row_status.approval": "待审批",
+		"mobile.sidebar.row_status.ended": "已结束",
+		"mobile.sidebar.row_status.not_answering": "未响应",
+		"mobile.sidebar.row_status.not_reachable": "无法连接",
+		"mobile.sidebar.row_status.question": "待回答",
 		"mobile.sidebar.section.older": "更早",
 		"mobile.sidebar.section.pinned": "已置顶",
 		"mobile.sidebar.section.running": "运行中",
 		"mobile.sidebar.section.today": "今天",
+		"mobile.sidebar.section.untagged": "无标签",
 		"mobile.sidebar.section.week": "本周",
 		"mobile.sidebar.sections": "分区",
 		"mobile.sidebar.settings_heading": "侧边栏",
 		"mobile.sidebar.show_ended": "显示已结束的会话",
 		"mobile.sidebar.show_ended_hint": "已置顶和运行中的对话始终显示。",
+		"mobile.sidebar.show_tags": "显示标签",
+		"mobile.sidebar.show_tags_hint": "标签仍保留在每个对话的菜单中。",
+		"mobile.sidebar.tag_group.announcement": "{name}, {count, plural, other {# 个对话}}",
 		"mobile.sidebar.tags.announcement": "标签：{names}",
 		"mobile.sidebar.tags.empty_headline": "还没有标签类别。",
 		"mobile.sidebar.tags.empty_next": "需在桌面应用中创建。",
@@ -12946,6 +16796,12 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.signin.use_address": "使用地址和密码",
 		"mobile.signin.welcome.body": "此应用在你的电脑上运行会话，并展示它做了什么。你的代码绝不会离开这台电脑。",
 		"mobile.signin.welcome.headline": "智能体运行在你的电脑上。",
+		"mobile.team_bridge.actions.a11y_react": "回应",
+		"mobile.team_bridge.actions.copied": "已复制",
+		"mobile.team_bridge.actions.copy_text": "复制文本",
+		"mobile.team_bridge.actions.reply_in_thread": "在话题中回复",
+		"mobile.team_bridge.actions.select_text": "选择文本",
+		"mobile.team_bridge.actions.title": "消息操作",
 		"mobile.team_bridge.attachment.add": "添加图片",
 		"mobile.team_bridge.attachment.attached_summary": "{count, plural, other {已附加 # 张图片}}",
 		"mobile.team_bridge.attachment.cannot_send": "无法发送",
@@ -12989,6 +16845,23 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.team_bridge.attachment.viewer": "图片查看器",
 		"mobile.team_bridge.attachment.wait_uploads": "图片上传完成后即可发送。",
 		"mobile.team_bridge.back": "返回",
+		"mobile.team_bridge.card_body.deleted": "此消息已被删除。",
+		"mobile.team_bridge.card_body.held": "已暂扣，等待审核。",
+		"mobile.team_bridge.card_body.held_transient": "等待筛查——尚未展示给智能体。",
+		"mobile.team_bridge.card_body.loading": "正在加载消息…",
+		"mobile.team_bridge.card_body.more_messages": "{count, plural, other {此卡片中还有 # 条消息}}",
+		"mobile.team_bridge.card_body.not_admitted": "未送达智能体。",
+		"mobile.team_bridge.card_body.not_member": "你已不在此对话中。",
+		"mobile.team_bridge.card_body.offline": "无法连接 Radient——正在重试。",
+		"mobile.team_bridge.card_body.other_account": "通过另一个 Radient 账户接收。",
+		"mobile.team_bridge.card_body.pending": "等待送达智能体。",
+		"mobile.team_bridge.card_body.refused": "已被审核拒绝。",
+		"mobile.team_bridge.card_body.show_less": "收起",
+		"mobile.team_bridge.card_body.show_more": "显示更多",
+		"mobile.team_bridge.card_body.signed_out": "登录 Radient 以查看此消息。",
+		"mobile.team_bridge.card_body.thread_reply": "讨论串回复",
+		"mobile.team_bridge.card_body.unavailable": "消息正文不可用。",
+		"mobile.team_bridge.card_body.untrusted": "外部消息 · 不可信内容",
 		"mobile.team_bridge.conversation": "会话",
 		"mobile.team_bridge.default_on.body": "你所在组织的智能体可以向你的幕僚长发送消息。你可以随时关闭此功能。",
 		"mobile.team_bridge.default_on.dismiss": "关闭提示",
@@ -13051,6 +16924,15 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.team_bridge.list.preview": "预览 · 加入后阅读",
 		"mobile.team_bridge.list.quiet": "通知已静音",
 		"mobile.team_bridge.list.self": "你",
+		"mobile.team_bridge.mentions.dismiss_notice": "关闭",
+		"mobile.team_bridge.mentions.invited": "{name} 尚未加入此对话，不会收到通知。",
+		"mobile.team_bridge.mentions.no_endpoint": "人员列表加载完成前，无法通知 {name}。",
+		"mobile.team_bridge.mentions.not_member": "{name} 不在此对话中，不会收到通知。",
+		"mobile.team_bridge.mentions.results_count": "{count, plural, other {# 个建议}}",
+		"mobile.team_bridge.mentions.row_label": "提及 {name}",
+		"mobile.team_bridge.mentions.section_members": "此对话中",
+		"mobile.team_bridge.mentions.section_org": "你所在组织中的其他人",
+		"mobile.team_bridge.mentions.unavailable": "人员列表不可用，正在显示此对话的成员。",
 		"mobile.team_bridge.navigation.caption": "即使电脑休眠，也能与组织保持联系",
 		"mobile.team_bridge.navigation.entry": "{count, plural, =0 {Team Bridge} other {Team Bridge · # 条未读}}",
 		"mobile.team_bridge.navigation.entry_loading": "Team Bridge · 正在加载",
@@ -13067,6 +16949,35 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.team_bridge.profile.open": "查看{name}的个人资料",
 		"mobile.team_bridge.profile.opens_hint": "打开其个人资料",
 		"mobile.team_bridge.profile.title": "个人资料",
+		"mobile.team_bridge.reactions.add": "添加回应",
+		"mobile.team_bridge.reactions.added": "已添加回应",
+		"mobile.team_bridge.reactions.details": "表情回应详情",
+		"mobile.team_bridge.reactions.failed": "无法保存回应。请重试。",
+		"mobile.team_bridge.reactions.hint_add": "轻点两下以一起回应",
+		"mobile.team_bridge.reactions.hint_inspect": "轻点两下查看表情回应详情",
+		"mobile.team_bridge.reactions.hint_remove": "轻点两下以移除你的回应",
+		"mobile.team_bridge.reactions.keyboard_hint": "从键盘中选择一个表情",
+		"mobile.team_bridge.reactions.pill": "{emoji}，{count, plural, other {# 个回应}}",
+		"mobile.team_bridge.reactions.pill_mine": "{emoji}，{count, plural, other {# 个回应}}，你已回应",
+		"mobile.team_bridge.reactions.removed": "已移除回应",
+		"mobile.team_bridge.reactions.sample": "{count, plural, =0 {{labels}} other {{labels}及其他 # 位}}",
+		"mobile.team_bridge.reactions.sample_none": "此摘要未包含姓名。",
+		"mobile.team_bridge.reactions.sample_notice": "所显示的姓名仅为部分示例，并非完整列表。",
+		"mobile.team_bridge.reactions.show_less": "收起",
+		"mobile.team_bridge.reactions.show_more": "再显示 {count} 项",
+		"mobile.team_bridge.reactions.summary": "{count, plural, other {# 个回应}}",
+		"mobile.team_bridge.reactions.you_reacted": "你已回应",
+		"mobile.team_bridge.reply_thread.count": "{count, plural, other {# 条回复}}",
+		"mobile.team_bridge.reply_thread.empty": "还没有回复。发起话题吧。",
+		"mobile.team_bridge.reply_thread.error": "无法加载此话题。",
+		"mobile.team_bridge.reply_thread.last_reply": "最近回复：{time}",
+		"mobile.team_bridge.reply_thread.loading": "正在加载话题…",
+		"mobile.team_bridge.reply_thread.more": "加载更多回复",
+		"mobile.team_bridge.reply_thread.open": "查看话题，{count, plural, other {# 条回复}}",
+		"mobile.team_bridge.reply_thread.open_unread": "查看话题，{count, plural, other {# 条回复}}，{unread, plural, other {# 条未读}}",
+		"mobile.team_bridge.reply_thread.reply": "在话题中回复",
+		"mobile.team_bridge.reply_thread.retry": "重新加载话题",
+		"mobile.team_bridge.reply_thread.title": "话题",
 		"mobile.team_bridge.retry": "重试",
 		"mobile.team_bridge.thread.access_retry": "重试访问",
 		"mobile.team_bridge.thread.anchor_missing": "该消息已不可用。",
@@ -13160,6 +17071,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"relay.health.quiet_detail": "电脑上的此会话已停止响应——可能正忙或卡住了。发送可能显示失败，但会话重新响应后仍可能送达。重试也不会重复送达。",
 		"relay.health.reconnecting": "重连中",
 		"relay.health.reconnecting_detail": "此手机与电脑的连接已断开，正在不断尝试重连。会话可能仍在电脑上运行；重新连上之前，发送消息可能会失败。",
+		"relay.skills.skipped": "已发送，但未附带{names}——{count, plural, other {所列技能没有可附加的内容}}。",
+		"relay.skills.too_large": "这些技能太大，无法一起发送。移除一个技能后重新发送。",
+		"relay.skills.tray.hidden": "隐藏",
+		"relay.skills.tray.label": "技能",
 		"relay.transcript.composer.queued": "{count, plural, other {# 条已排队}}",
 		"relay.transcript.fold.failed_label": "包含失败的操作",
 		"relay.transcript.fold.more": "{count, plural, other {另有 # 项操作}}",

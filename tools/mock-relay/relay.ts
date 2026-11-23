@@ -94,6 +94,7 @@ import {
 	setCookieHeader,
 	sseFrame,
 	startEffortAdmitted,
+	startTargetRefusal,
 	syntheticSessionId,
 	verifyCookie,
 } from "./wire.ts";
@@ -1319,6 +1320,22 @@ export function createRelay(options: RelayOptions = {}) {
 				if (world.sessionTags !== undefined) {
 					capabilities.session_tags = { available: true };
 				}
+				/* The `$skill` licence, a TOP-LEVEL key (never `remote_sessions.
+				 *  skill_invocation`, which stays false). Present only when the
+				 *  scenario serves the picker: absence is an older relay. */
+				if (world.skills !== undefined) {
+					capabilities.skill_invocation = { available: true };
+				}
+				/* `agent`/`team` license the start fields AND the roster route
+				 *  (local-operator #4367); advertised only when the scenario serves
+				 *  a roster, so every other scenario stays an older relay. */
+				if (world.startTargets !== undefined) {
+					capabilities.session_start = {
+						...(capabilities.session_start ?? {}),
+						agent: true,
+						team: true,
+					};
+				}
 				if (world.remoteSessions === true) {
 					capabilities.remote_sessions = {
 						available: true,
@@ -1582,6 +1599,7 @@ export function createRelay(options: RelayOptions = {}) {
 
 	const sessionFrames = (
 		projection: SessionProjection,
+		serialize: (frame: SessionProjection) => SessionProjection,
 	): ((tick: number) => StreamFrame | "end" | null) => {
 		const stream = state.world.stream ?? { mode: "idle" };
 		if (stream.mode === "idle") {
@@ -1596,7 +1614,7 @@ export function createRelay(options: RelayOptions = {}) {
 				const current = projection.version ?? 1;
 				if (current <= sent) return null;
 				sent = current;
-				return { event: "projection", data: structuredClone(projection) };
+				return { event: "projection", data: serialize(projection) };
 			};
 		}
 		if (stream.mode !== "streaming") return () => null;
@@ -1615,7 +1633,7 @@ export function createRelay(options: RelayOptions = {}) {
 					? `${text}\n\nReconciliation finished: 214 files scanned, 3 edits applied.`
 					: `${text}${" ".repeat(0)}${tick === 0 ? "" : "\n"}pass ${tick}: scanning shard ${tick}…`;
 			}
-			const frame = structuredClone(projection);
+			const frame = { ...projection };
 			frame.version = version;
 			frame.streaming = !settled;
 			frame.activity = settled ? "" : "responding";
@@ -1660,7 +1678,7 @@ export function createRelay(options: RelayOptions = {}) {
 			// the client must drop `incoming.version < current.version`.
 			if (state.faults.sse.staleVersion && tick === settleAfter - 1)
 				frame.version = Math.max(1, version - 5);
-			return { event: "projection", data: frame };
+			return { event: "projection", data: serialize(frame) };
 		};
 	};
 
@@ -1890,6 +1908,39 @@ export function createRelay(options: RelayOptions = {}) {
 					return;
 				}
 			}
+			/* `expand_skills` is the relay's own flag: only a literal `true` expands,
+			 *  and a relay that does not serve the picker drops it silently (which on
+			 *  the wire looks exactly like a skill that did not fire). The receipt's
+			 *  `skills` block is present whenever expansion ran, even with both lists
+			 *  empty. The mock does not rewrite the text: what it can prove is the
+			 *  body the phone sent and the receipt it reads back. */
+			let skillsReceipt: { attached: string[]; skipped: string[] } | undefined;
+			if (body.expand_skills === true && world.skills !== undefined) {
+				if (world.skills.tooLarge === true) {
+					sendJson(res, 422, {
+						error: "the selected skills are too large to send together",
+						code: "skills_too_large",
+					});
+					return;
+				}
+				const mentioned = new Set(
+					[...String(body.text).matchAll(/(?:^|\s)\$([^\s$]+)/gu)].map(
+						(match) => match[1],
+					),
+				);
+				const known = world.skills.catalogue.filter((row) =>
+					mentioned.has(row.name),
+				);
+				const skipped = new Set(world.skills.skipped ?? []);
+				skillsReceipt = {
+					attached: known
+						.map((row) => row.name)
+						.filter((name) => !skipped.has(name)),
+					skipped: known
+						.map((row) => row.name)
+						.filter((name) => skipped.has(name)),
+				};
+			}
 			// Bound once, narrowed once: every later use (the ledger, the duplicate
 			// row) has to agree on which identity was admitted.
 			const commandId = String(body.command_id);
@@ -1952,8 +2003,19 @@ export function createRelay(options: RelayOptions = {}) {
 				});
 				return;
 			}
-			if (op === "steer") sendFixture(res, "command-steer-queued");
-			else sendFixture(res, "command-prompt-ok");
+			const ackFixture =
+				op === "steer" ? "command-steer-queued" : "command-prompt-ok";
+			if (skillsReceipt !== undefined) {
+				const base = fix.response(ackFixture);
+				sendFixture(res, ackFixture, {
+					json: {
+						...(base.json as Record<string, unknown>),
+						skills: skillsReceipt,
+					},
+				});
+				return;
+			}
+			sendFixture(res, ackFixture);
 			return;
 		}
 
@@ -2530,6 +2592,20 @@ export function createRelay(options: RelayOptions = {}) {
 				);
 				return;
 			}
+			/* `agent`/`team` (local-operator #4367), in the relay's order: shape and
+			 *  mutual exclusion first (`start_target`), then whether the name
+			 *  resolves (`_resolve_start_target` → 404 `unknown_start_target`),
+			 *  both before anything is created. A scenario with no roster is an
+			 *  OLDER relay, whose unkeyed start reads fields with `body.get` and
+			 *  silently drops these — mirrored, so a phone that skipped its
+			 *  capability gate would look "fine" here exactly as it would there. */
+			if (world.startTargets !== undefined) {
+				const refusal = startTargetRefusal(body, world.startTargets);
+				if (refusal !== null) {
+					sendJson(res, refusal.status, errorBody(refusal.code, refusal.code));
+					return;
+				}
+			}
 			if (typeof body.cwd === "string" && body.cwd.startsWith("/etc")) {
 				sendFixture(res, "start-bad-cwd");
 				return;
@@ -2698,6 +2774,33 @@ export function createRelay(options: RelayOptions = {}) {
 			sendFixture(res, "commands");
 			return;
 		}
+		if (pathname === "/api/skills" && method === "GET") {
+			/* Absence is an older relay: the route does not exist. */
+			const skillRoutes = world.skills;
+			if (skillRoutes === undefined) {
+				sendJson(res, 404, errorBody("not found"));
+				return;
+			}
+			const id = url.searchParams.get("session_id") ?? "";
+			/* `unknown session` is a 404 with a code, not an empty list: the real
+			 *  relay tells "no such conversation" from "no skills" (daemon.py
+			 *  `api_skills`). */
+			if (!projectionFor(id)) {
+				sendJson(res, 404, {
+					error: "unknown session",
+					code: "unknown_session",
+				});
+				return;
+			}
+			if (skillRoutes.failCatalogue !== undefined) {
+				sendJson(res, skillRoutes.failCatalogue.status, {
+					error: skillRoutes.failCatalogue.error,
+				});
+				return;
+			}
+			sendJson(res, 200, { skills: skillRoutes.catalogue });
+			return;
+		}
 		if (pathname === "/api/directories" && method === "GET") {
 			/* A scenario's own folder answer, else the corpus capture. */
 			if (world.directories !== undefined) {
@@ -2705,6 +2808,16 @@ export function createRelay(options: RelayOptions = {}) {
 				return;
 			}
 			sendFixture(res, "directories");
+			return;
+		}
+		if (pathname === "/api/start-targets" && method === "GET") {
+			/* Absent from an older relay: its route table has no such path, so
+			 *  the phone must never read a 404 here as "no agents". */
+			if (world.startTargets === undefined) {
+				sendJson(res, 404, errorBody("not found"));
+				return;
+			}
+			sendJson(res, 200, world.startTargets);
 			return;
 		}
 		if (pathname === "/api/models" && method === "GET") {
@@ -3311,6 +3424,24 @@ export function createRelay(options: RelayOptions = {}) {
 			const sessionId = decodeURIComponent(sessionMatch[1] ?? "");
 			const rest = sessionMatch[2] ?? "";
 			const projection = projectionFor(sessionId);
+			const chartMessages =
+				url.searchParams.get("inline_ui") === "1" &&
+				world.inlineUi?.sessionId === sessionId
+					? world.inlineUi.messages
+					: undefined;
+			const withChartMessages = <T extends { id: string }>(
+				entries: readonly T[],
+			) => {
+				if (!chartMessages) return {};
+				const messages = Object.fromEntries(
+					entries.flatMap(({ id }) =>
+						Object.hasOwn(chartMessages, id) ? [[id, chartMessages[id]]] : [],
+					),
+				);
+				return Object.keys(messages).length
+					? { inline_ui: { version: 1, messages } }
+					: {};
+			};
 
 			if (rest === "/events" && method === "GET") {
 				const stream: StreamSpec = world.stream ?? { mode: "idle" };
@@ -3349,19 +3480,25 @@ export function createRelay(options: RelayOptions = {}) {
 						frames: () => null,
 					});
 				}
-				const seedProjection = structuredClone(projection);
+				// As on the real relay, negotiation applies at serialization of
+				// every outgoing snapshot, not just the stream's initial seed.
+				const snapshot = (frame: SessionProjection) => ({
+					...structuredClone(frame),
+					...withChartMessages(frame.transcript),
+				});
+				const seedProjection = snapshot(projection);
 				return openStream(req, res, {
 					kind: "projection",
 					seed:
 						stream.mode === "keepalive-only"
 							? null
 							: { event: "projection", data: seedProjection },
-					frames: sessionFrames(projection),
+					frames: sessionFrames(projection, snapshot),
 					// The duplicate provider reads the live projection, so the second copy
 					// carries the admitted command's row and the version that announces it.
 					duplicate: () => ({
 						event: "projection",
-						data: structuredClone(projection),
+						data: snapshot(projection),
 					}),
 				});
 			}
@@ -3402,7 +3539,11 @@ export function createRelay(options: RelayOptions = {}) {
 				}
 				const sliceEnd = end < 0 ? all.length : end;
 				const entries = all.slice(Math.max(0, sliceEnd - limit), sliceEnd);
-				sendJson(res, 200, { entries, has_more: sliceEnd - limit > 0 });
+				sendJson(res, 200, {
+					entries,
+					has_more: sliceEnd - limit > 0,
+					...withChartMessages(entries),
+				});
 				return;
 			}
 
@@ -3943,6 +4084,7 @@ export function createRelay(options: RelayOptions = {}) {
 		{ match: /^\/api\/sessions\/[^/]+$/, methods: ["GET", "HEAD"] },
 		{ match: /^\/api\/sessions$/, methods: ["GET", "HEAD"] },
 		{ match: /^\/api\/commands$/, methods: ["GET", "HEAD"] },
+		{ match: /^\/api\/skills$/, methods: ["GET", "HEAD"] },
 		{ match: /^\/api\/directories$/, methods: ["GET", "HEAD"] },
 		{ match: /^\/api\/models$/, methods: ["GET", "HEAD"] },
 		{ match: /^\/api\/projects$/, methods: ["GET", "HEAD", "POST"] },

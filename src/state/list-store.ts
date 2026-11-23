@@ -164,9 +164,17 @@ export function createListStore(deps: { now?: () => number } = {}) {
 		inboxWatermark = known.high_water;
 		return known;
 	};
-	const withoutRemoteSessions = (capabilities: Capabilities): Capabilities => {
-		if (capabilities.remote_sessions === undefined) return capabilities;
-		const { remote_sessions: _stale, ...rest } = capabilities;
+	const withoutLiveOptIns = (capabilities: Capabilities): Capabilities => {
+		if (
+			capabilities.remote_sessions === undefined &&
+			capabilities.steer_journal_order === undefined
+		)
+			return capabilities;
+		const {
+			remote_sessions: _remote,
+			steer_journal_order: _steer,
+			...rest
+		} = capabilities;
 		return rest;
 	};
 	return createStore<ListStore>()((set, get) => ({
@@ -188,15 +196,14 @@ export function createListStore(deps: { now?: () => number } = {}) {
 				/* A frame that carries no capabilities must not erase the ones a previous
 				 * frame established: `capabilities.stt` decides whether a mic exists, and
 				 * blinking it off would remove and restore a control. */
-				/* EXCEPT `remote_sessions` on a LIVE frame: a cache-seeded remote block
-				 * describes the previous daemon, and a live relay that omits the whole
-				 * block cannot forward remote conversations. Keeping it would let the
-				 * remote gate admit on stale flags (PR #271 review R1-5); dropping only
-				 * that key keeps the mic from blinking. */
+				/* Live protocol opt-ins cannot inherit cache provenance: a flagless
+				 * relay has advertised neither remote forwarding nor journal-ordered
+				 * steers. `liveFrameAt` proves receipt, NOT the origin of retained
+				 * capabilities. Clear just these opt-ins, preserving mic availability. */
 				capabilities:
 					frame.capabilities ??
 					(origin === "live"
-						? withoutRemoteSessions(get().capabilities)
+						? withoutLiveOptIns(get().capabilities)
 						: get().capabilities),
 				/* The same rule, one level of subtlety more: a relay that carries the
 				 * block carries it on EVERY frame, so an absent block means an older

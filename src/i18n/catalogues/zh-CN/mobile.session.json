@@ -1,5 +1,6 @@
 {
 	"mobile.session.conversation_details": "对话详情",
+	"mobile.session.inline_chart_data": "图表数据",
 	"mobile.session.chip.model_default": "默认",
 	"mobile.session.chip.model_unknown": "未知",
 	"mobile.session.status_tray.hint": "打开工作状态行、任务和子智能体",
@@ -70,6 +71,7 @@
 	"mobile.session.chip.model_change_failed": "无法更改模型。",
 	"mobile.session.chip.effort_change_failed": "无法更改推理强度。",
 	"mobile.session.composer.retained_instruction": "之前的指令可能已送达。先重试之前的指令，再发送当前草稿。",
+	"mobile.session.composer.settings_not_applied": "会话已重新打开，但未能应用你选择的模型或推理强度，因此未发送任何内容。请重试，或选择其他模型或推理强度。",
 	"mobile.session.tray.context": "上下文{percent}%",
 	"mobile.session.tray.context_short": "上下文{percent}%",
 	"mobile.session.tray.context_estimate": "上下文{percent}%（估算）",
@@ -77,6 +79,9 @@
 	"mobile.session.region.end": "已到底部 · 向上滚动 ↑",
 	"mobile.session.region.below_labels": "{labels}在下方 · 向下滚动 ↓",
 	"mobile.session.region.more_below": "下方还有内容 · 向下滚动 ↓",
+	"mobile.session.jump_to_latest": "↓ 跳到最新",
+	"mobile.session.jump_to_latest_short": "↓ 最新",
+	"mobile.session.jump_to_latest_name": "跳到最新",
 	"mobile.session.video.title_fallback": "视频",
 	"mobile.session.fallback_name": "会话",
 	"mobile.session.region.label_working": "动态",
@@ -94,5 +99,13 @@
 	"mobile.session.outbox.composer_stopped": "上一条消息已停止发送。请在上方重试或放弃它，再发送这一条。",
 	"mobile.session.outbox.composer_discarding": "正在放弃上一条消息。稍后即可发送这一条。",
 	"mobile.session.sheet_title.commands": "命令",
-	"mobile.session.sheet_title.attach": "添加附件"
+	"mobile.session.sheet_title.attach": "添加图片",
+	"mobile.session.diagram.label": "{type} 图表",
+	"mobile.session.diagram.label_titled": "{type} 图表：{title}",
+	"mobile.session.diagram.copied": "已复制",
+	"mobile.session.diagram.error": "无法绘制此图表，已改为显示源码。",
+	"mobile.session.diagram.open_hint": "全屏打开图表",
+	"mobile.session.diagram.copy": "复制图表源码",
+	"mobile.session.diagram.close": "关闭图表",
+	"mobile.session.diagram.viewer": "图表查看器"
 }

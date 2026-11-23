@@ -1,0 +1,125 @@
+{
+ "record_kind": "i18n-audit",
+ "audit_id": "o3c-ru-eaf265",
+ "slice": "O3-c",
+ "locale": "ru",
+ "namespace": "mobile.sidebar",
+ "audit_date": "2026-11-18",
+ "key_count": 9,
+ "keys_audited": [
+  "mobile.sidebar.row_status.approval",
+  "mobile.sidebar.row_status.question",
+  "mobile.sidebar.row_status.not_reachable",
+  "mobile.sidebar.row_status.ended",
+  "mobile.sidebar.row_status.not_answering",
+  "mobile.sidebar.row_label.waiting",
+  "mobile.sidebar.row_label.working",
+  "mobile.sidebar.row_label.on_device",
+  "mobile.sidebar.row_label.open"
+ ],
+ "translator_session": "0d790ba194ba",
+ "auditor": {
+  "agent": "i18n-auditor (team lopdev)",
+  "session": "eaf2654d42af",
+  "model": "anthropic/claude-opus-5-5",
+  "actual_model_source": "harness system prompt 'Model:' line for this session; no fallback observed",
+  "independent_from_translator_session": true
+ },
+ "draft": {
+  "path": "/Users/damian/.local-operator/sessions/0d790ba194ba/scratchpad/o3c/draft-ru.json",
+  "sha256": "04f108c69a381e1562fe9183c95ec20c0d0f45d436a80e2b6fced5dfb3ee6c70"
+ },
+ "brief": {
+  "path": "/Users/damian/.local-operator/sessions/162198c78bcb/scratchpad/o3c-translation-brief.json",
+  "sha256": "e88beb09366b9ff795bf0ac916f30cef1c9a93c35fa4617575e904c7a6f5fd17"
+ },
+ "brief_sha256": "e88beb09366b9ff795bf0ac916f30cef1c9a93c35fa4617575e904c7a6f5fd17",
+ "source_commit": "e7ebc3917537d83cc772148fc5b2fc2ad3f43a41",
+ "read_route": "ordinary file reads of the draft, brief, worktree catalogues and ~/local-operator style guide/glossary (read_public_copy not used); mechanical checks through the worktree's src/i18n/messages.ts parseMessage/formatMessage via node_modules/.bin/tsx, read-only; no MT service",
+ "input_hashes": {
+  "en": {
+   "path": "local-operator-mobile@e7ebc391:src/i18n/catalogues/en/mobile.sidebar.json",
+   "sha256": "beaba7baeffe546ce65430d6cb18213da2fbb88d23128c071c286fb32a08ecdf"
+  },
+  "context": {
+   "path": "local-operator-mobile@e7ebc391:src/i18n/catalogues/en/mobile.sidebar.context.json",
+   "sha256": "858f7c51c595862306120be7833c4274439b436bb8bd1f547b88139f8d0f2fd3"
+  },
+  "ru": {
+   "path": "/Users/damian/.local-operator/sessions/0d790ba194ba/scratchpad/o3c/draft-ru.json",
+   "sha256": "04f108c69a381e1562fe9183c95ec20c0d0f45d436a80e2b6fced5dfb3ee6c70"
+  },
+  "ru_shipped": {
+   "path": "local-operator-mobile@e7ebc391:src/i18n/catalogues/ru/mobile.sidebar.json",
+   "sha256": "ae029496e813d0b08a3176c7f5a31cd28ae5fb14a8b3b916800278f4d33d268e",
+   "note": "existing shipped catalogue; draft keys are new"
+  },
+  "ru_shipped_reference": [
+   {
+    "path": "local-operator-mobile@e7ebc391:src/i18n/catalogues/ru/relay.chrome.json",
+    "sha256": "e838878911fdf3342bb7932decd97bc157578c4c5d169017b3160a5712ecfd97"
+   },
+   {
+    "path": "local-operator-mobile@e7ebc391:src/i18n/catalogues/ru/mobile.remote_sessions.json",
+    "sha256": "8b59dabaa9be70dd0b7c6ff3218aa407bdcefbfc4f811e7eb05ad0f6b57e1410"
+   }
+  ],
+  "style_guide": {
+   "path": "~/local-operator/i18n/style-guides/ru.md",
+   "sha256": "f20e1cafaf70578c17ce072c71725628808d228e4be5604329f8da30386f1fb5"
+  },
+  "glossary": {
+   "path": "~/local-operator/i18n/glossary.md",
+   "sha256": "0eb34437a8c3d6f564f278ef957a603b1d9f51bb07d5ddae5ea8f37deba962f8"
+  },
+  "parser": {
+   "path": "local-operator-mobile@e7ebc391:src/i18n/messages.ts",
+   "sha256": "c1831406332e907c9a914b3db0ec35fc9fd2cddd44c18cd2861b77667c5bdba0"
+  }
+ },
+ "checks": {
+  "keys_missing": 0,
+  "keys_extra": 0,
+  "placeholder_icu": "pass (kind, device identical; select arms approval/other)",
+  "nfc": "pass",
+  "codepoints": "Cyrillic + ASCII only; ё precomposed U+0451",
+  "width_over_hint": [],
+  "negative_controls": "4/4 caught (unterminated select, renamed arg, redaction literal, NFD)",
+  "repo_validator": "not run (draft is outside the repo; repo is read-only for this audit). Repo parseMessage used directly."
+ },
+ "redaction_marker_hits": {
+  "draft": 0,
+  "english_sources": 0,
+  "brief_excluding_redaction_scan_pattern": 0
+ },
+ "verdict": "passed",
+ "current_report_verdict": {
+  "status": "passed",
+  "unresolved_blocker_major_count": 0,
+  "finding_ids": [
+   "RU-N1"
+  ]
+ },
+ "findings": [
+  {
+   "id": "RU-N1",
+   "severity": "NIT",
+   "key": "mobile.sidebar.row_label.on_device",
+   "current": "на {device}",
+   "proposed": "keep «на {device}»",
+   "reason": "«на» + an uninflected name reads correctly for Latin hostnames (на Studio Mac) but is ungrammatical for a Cyrillic noun-like name (на Ноутбук). Same pattern as shipped mobile.remote_sessions.subtitle_owner «На {owner}»; no change in this slice, a corpus-wide decision if it ever matters."
+  }
+ ],
+ "artifacts": {
+  "report": {
+   "path": "report.md",
+   "sha256": "57808a370e872a9aab5c3dba70950df7c4741e10c458d075f444e28d24545658"
+  },
+  "audit_log": {
+   "path": "audit.log",
+   "sha256": "e4fe247d6c2d65d09312d2a1def90bd041df36a1d9ad9bf6fc4b7d3b414c2bec"
+  }
+ },
+ "audit_notes_not_execution_log": "report.md is the auditor's notes; audit.log carries the printed command output",
+ "ledger_appended": false
+}

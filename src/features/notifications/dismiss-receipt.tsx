@@ -5,6 +5,7 @@ import { Alert } from "@/ui/components/alert";
 import { Button } from "@/ui/components/button";
 
 import { UNDO_LABEL } from "./conversation-dismiss";
+import { dismissReceiptShowing } from "./notifications-model";
 import type { ConversationDismiss } from "./use-conversation-dismiss";
 
 /** What the last dismiss-all (or its Undo) actually did, with Undo while it can
@@ -15,6 +16,9 @@ export function DismissReceipt({
 	dismissAll: ConversationDismiss;
 }) {
 	const { phase } = dismissAll;
+	/* The rule the list's footer also reads, so the footer is occupied exactly
+	 *  when this draws (code review m1). */
+	if (!dismissReceiptShowing(phase)) return null;
 	/* A multi-page walk takes seconds on a large conversation. The row's rotor
 	 *  action has no other surface, so it says what it is doing rather than
 	 *  looking inert (code review n4). */
@@ -24,14 +28,6 @@ export function DismissReceipt({
 				<Alert severity="info">{`Counting ${phase.title}'s updates…`}</Alert>
 			</View>
 		);
-	}
-	if (
-		phase.kind !== "done" &&
-		phase.kind !== "undone" &&
-		phase.kind !== "none" &&
-		phase.kind !== "failed"
-	) {
-		return null;
 	}
 	/* A COMPLETED dismissal is a success, not a neutral note (design review D6:
 	 *  `info`'s leading glyph is "·", which in the frame reads as a stray bullet

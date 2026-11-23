@@ -1,0 +1,602 @@
+{
+	"mobile.community.approvals.agent": {
+		"role": "meta",
+		"note": "Badge on an agent approval card: the post would come from the user's agent."
+	},
+	"mobile.community.approvals.decline": {
+		"role": "button",
+		"note": "Declines the agent post from the phone."
+	},
+	"mobile.community.approvals.empty": {
+		"role": "status",
+		"note": "Empty approvals list."
+	},
+	"mobile.community.approvals.expires": {
+		"role": "meta",
+		"note": "Lower-case; time left before the approval lapses."
+	},
+	"mobile.community.approvals.expires_days": {
+		"role": "meta",
+		"note": "Lower-case; time left before an agent approval lapses when more than 48 hours remain, in whole days."
+	},
+	"mobile.community.approvals.failed": {
+		"role": "status",
+		"note": "Answering the approval failed."
+	},
+	"mobile.community.approvals.open_computer": {
+		"role": "help",
+		"note": "Instruction. 'Local Operator' is a product name."
+	},
+	"mobile.community.approvals.review": {
+		"role": "button",
+		"note": "Keeps the approval waiting; does not approve."
+	},
+	"mobile.community.approvals.review_note": {
+		"role": "help",
+		"note": "Explains the first button."
+	},
+	"mobile.community.approvals.stays": {
+		"role": "help",
+		"note": "The phone never sees the draft text."
+	},
+	"mobile.community.approvals.title": {
+		"role": "heading",
+		"note": "{channel} is a channel name without '#'. 'Chief of staff' is the user's own agent."
+	},
+	"mobile.community.approvals.title_unknown": {
+		"role": "heading",
+		"note": "Used when the channel name is not known on this phone."
+	},
+	"mobile.community.approvals.waiting": {
+		"role": "status",
+		"note": "Shown after Review on your computer."
+	},
+	"mobile.community.browse.channels": {
+		"role": "button",
+		"note": "Segment: search channels."
+	},
+	"mobile.community.browse.channels_empty": {
+		"role": "status",
+		"note": "Browse found no channel for the current search."
+	},
+	"mobile.community.browse.join": {
+		"role": "button",
+		"note": "Join a public channel."
+	},
+	"mobile.community.browse.load_more": {
+		"role": "button",
+		"note": "Loads the next page of results."
+	},
+	"mobile.community.browse.mode": {
+		"role": "help",
+		"note": "Accessible name of the Channels/People segmented control."
+	},
+	"mobile.community.browse.open": {
+		"role": "button",
+		"note": "Open a channel the user already joined."
+	},
+	"mobile.community.browse.people": {
+		"role": "button",
+		"note": "Segment: search members (approved profiles only)."
+	},
+	"mobile.community.browse.people_empty": {
+		"role": "status",
+		"note": "Browse found no member for the current search."
+	},
+	"mobile.community.browse.private": {
+		"role": "meta",
+		"note": "Badge: invite-only channel."
+	},
+	"mobile.community.browse.search": {
+		"role": "help",
+		"note": "Label of the Browse search field (channels or people)."
+	},
+	"mobile.community.browse.title": {
+		"role": "heading",
+		"note": "Title of the Browse screen (channels and people)."
+	},
+	"mobile.community.category.harassment_or_abuse": {
+		"role": "meta",
+		"note": "Refusal/report category label."
+	},
+	"mobile.community.category.private_information": {
+		"role": "meta",
+		"note": "Refusal/report category label (someone's personal data)."
+	},
+	"mobile.community.category.spam_or_promotion": {
+		"role": "meta",
+		"note": "Refusal/report category label."
+	},
+	"mobile.community.category.unsafe_or_illegal": {
+		"role": "meta",
+		"note": "Refusal/report category label."
+	},
+	"mobile.community.common.loading": {
+		"role": "status",
+		"note": "Accessible label of the loading placeholder."
+	},
+	"mobile.community.common.retry": {
+		"role": "button",
+		"note": "Retries a failed read."
+	},
+	"mobile.community.common.unavailable": {
+		"role": "heading",
+		"note": "Heading when the community cannot be shown (flag off, not found, or a failed read)."
+	},
+	"mobile.community.composer.attach": {
+		"role": "button",
+		"note": "Icon button beside Send: attach an image. While communities refuse images it opens an explanation instead of a picker. Accessible name only."
+	},
+	"mobile.community.composer.audience": {
+		"role": "help",
+		"note": "Audience line under the composer in a public channel."
+	},
+	"mobile.community.composer.audience_dm": {
+		"role": "help",
+		"note": "Audience line in a direct message."
+	},
+	"mobile.community.composer.blocked_archived": {
+		"role": "status",
+		"note": "No composer: archived channel."
+	},
+	"mobile.community.composer.blocked_locked": {
+		"role": "status",
+		"note": "No composer: locked by moderators."
+	},
+	"mobile.community.composer.blocked_read_only": {
+		"role": "status",
+		"note": "No composer: read-only community."
+	},
+	"mobile.community.composer.blocked_staff_only": {
+		"role": "status",
+		"note": "No composer: staff-only channel such as #welcome-and-rules."
+	},
+	"mobile.community.composer.cancel": {
+		"role": "button",
+		"note": "Best-effort cancel of the check; if it already posted, it stays posted."
+	},
+	"mobile.community.composer.cancelled": {
+		"role": "status",
+		"note": "Cancel won before the post was committed."
+	},
+	"mobile.community.composer.checking": {
+		"role": "status",
+		"note": "The message is being checked before it can be posted. Not 'Sending'."
+	},
+	"mobile.community.composer.dismiss": {
+		"role": "button",
+		"note": "Hides the outcome; the text stays in the field."
+	},
+	"mobile.community.composer.failed": {
+		"role": "status",
+		"note": "Network drop or unexpected answer. Retry is safe and cannot post twice."
+	},
+	"mobile.community.composer.forbidden": {
+		"role": "status",
+		"note": "No seat, locked channel, or similar."
+	},
+	"mobile.community.composer.guidelines": {
+		"role": "status",
+		"note": "The accepted guidelines version is stale; nothing was posted."
+	},
+	"mobile.community.composer.images_unavailable": {
+		"role": "status",
+		"note": "Image posting is not available yet."
+	},
+	"mobile.community.composer.invalid": {
+		"role": "status",
+		"note": "Shown to the sender when the server rejected the message itself (too long or malformed). There is no Retry; editing the text and sending again is the way out."
+	},
+	"mobile.community.composer.label": {
+		"role": "help",
+		"note": "Composer field label and placeholder. {name} is the channel name without '#'."
+	},
+	"mobile.community.composer.label_dm": {
+		"role": "help",
+		"note": "Composer placeholder in a direct message. {name} is the other person."
+	},
+	"mobile.community.composer.limited": {
+		"role": "status",
+		"note": "A per-sender limit applied; nothing was checked or stored."
+	},
+	"mobile.community.composer.limited_wait": {
+		"role": "status",
+		"note": "Countdown until Retry is allowed."
+	},
+	"mobile.community.composer.refused": {
+		"role": "status",
+		"note": "Sender-only outcome. {category} is one of the category labels in this namespace."
+	},
+	"mobile.community.composer.refused_detail": {
+		"role": "help",
+		"note": "{reference} looks like MOD-AB12-CD34; keep verbatim."
+	},
+	"mobile.community.composer.restricted": {
+		"role": "status",
+		"note": "A sanction applies. {reference} is verbatim."
+	},
+	"mobile.community.composer.retry": {
+		"role": "button",
+		"note": "Retries the same attempt; cannot post twice."
+	},
+	"mobile.community.composer.review": {
+		"role": "button",
+		"note": "Opens the updated guidelines to accept."
+	},
+	"mobile.community.composer.send": {
+		"role": "button",
+		"note": "Submits the message for checking and posting."
+	},
+	"mobile.community.composer.unavailable": {
+		"role": "status",
+		"note": "Moderation or sign-in check unavailable; fails closed."
+	},
+	"mobile.community.conversation.agent": {
+		"role": "meta",
+		"note": "Badge on a post written by someone's agent."
+	},
+	"mobile.community.conversation.deleted": {
+		"role": "meta",
+		"note": "Placeholder for a deleted thread root."
+	},
+	"mobile.community.conversation.edited": {
+		"role": "meta",
+		"note": "Lower-case marker after an edited message's time."
+	},
+	"mobile.community.conversation.empty": {
+		"role": "status",
+		"note": "Empty channel history."
+	},
+	"mobile.community.conversation.former_member": {
+		"role": "meta",
+		"note": "Author label for an erased account whose posts remain."
+	},
+	"mobile.community.conversation.join_prompt": {
+		"role": "help",
+		"note": "Replaces the composer in a channel opened from Browse without joining. {name} is the channel name WITHOUT the # sign; keep the # before it."
+	},
+	"mobile.community.conversation.load_older": {
+		"role": "button",
+		"note": "Loads the previous page of history."
+	},
+	"mobile.community.conversation.older_error": {
+		"role": "status",
+		"note": "Failed to load an older page."
+	},
+	"mobile.community.conversation.replies": {
+		"role": "meta",
+		"note": "Number of replies in a message's thread; {count} counts replies."
+	},
+	"mobile.community.conversation.report": {
+		"role": "button",
+		"note": "Accessible hint/long-press action to report a message."
+	},
+	"mobile.community.conversation.subtitle": {
+		"role": "meta",
+		"note": "Under the channel title. {community} is the community name."
+	},
+	"mobile.community.conversation.view_profile": {
+		"role": "button",
+		"note": "Accessible name of a message author's avatar (and hint on a DM request card); opens that member's community profile. {name} is the member's display name."
+	},
+	"mobile.community.directory.empty": {
+		"role": "status",
+		"note": "Empty state of the featured list."
+	},
+	"mobile.community.directory.featured": {
+		"role": "heading",
+		"note": "Section: communities Radient features that the user has not joined."
+	},
+	"mobile.community.directory.joined": {
+		"role": "heading",
+		"note": "Section: communities the user is a member of."
+	},
+	"mobile.community.directory.read_only": {
+		"role": "meta",
+		"note": "Badge: the community can be read but not posted in."
+	},
+	"mobile.community.directory.title": {
+		"role": "heading",
+		"note": "Screen title listing communities joined and joinable."
+	},
+	"mobile.community.error.auth_unavailable": {
+		"role": "status",
+		"note": "The server could not verify the sign-in (temporary). Not a sign-out."
+	},
+	"mobile.community.error.generic": {
+		"role": "status",
+		"note": "Any other failure of a read or a non-message action."
+	},
+	"mobile.community.error.load_failed": {
+		"role": "status",
+		"note": "A screen or list could not be READ (nothing was being changed). Says what to do; must not imply that an action failed."
+	},
+	"mobile.community.error.not_found": {
+		"role": "status",
+		"note": "Unknown, hidden, or not joined. Do not say the community does not exist."
+	},
+	"mobile.community.error.rate_limited": {
+		"role": "status",
+		"note": "A per-person limit; not a ban."
+	},
+	"mobile.community.error.sign_in": {
+		"role": "status",
+		"note": "The Radient sign-in is missing or expired."
+	},
+	"mobile.community.error.unreachable": {
+		"role": "status",
+		"note": "Network failure or timeout."
+	},
+	"mobile.community.home.browse": {
+		"role": "button",
+		"note": "Opens channel and people search."
+	},
+	"mobile.community.home.channel_label": {
+		"role": "meta",
+		"note": "Channel row. {name} is the channel name without '#'; keep the '#'. {count} counts unread messages."
+	},
+	"mobile.community.home.channels": {
+		"role": "heading",
+		"note": "Section of the community home: channels the user joined."
+	},
+	"mobile.community.home.channels_empty": {
+		"role": "status",
+		"note": "Shown when the member has joined no channels yet; points them to Browse."
+	},
+	"mobile.community.home.closed": {
+		"role": "status",
+		"note": "A read-only community cannot be joined."
+	},
+	"mobile.community.home.direct": {
+		"role": "heading",
+		"note": "Section: one-to-one conversations with other members."
+	},
+	"mobile.community.home.direct_empty": {
+		"role": "status",
+		"note": "Shown in the Direct messages section when there are none."
+	},
+	"mobile.community.home.direct_label": {
+		"role": "meta",
+		"note": "Direct message row. {name} is the other person's display name."
+	},
+	"mobile.community.home.join": {
+		"role": "button",
+		"note": "Opens the join dialog."
+	},
+	"mobile.community.home.not_member": {
+		"role": "help",
+		"note": "Shown to a non-member on the community home."
+	},
+	"mobile.community.home.reaccept": {
+		"role": "button",
+		"note": "Opens the updated guidelines to accept them again."
+	},
+	"mobile.community.home.reaccept_banner": {
+		"role": "status",
+		"note": "Banner when the accepted guidelines version is no longer current."
+	},
+	"mobile.community.home.requests": {
+		"role": "button",
+		"note": "Opens message requests and agent approvals."
+	},
+	"mobile.community.home.requests_count": {
+		"role": "button",
+		"note": "Requests button with the number of pending items (DM requests + agent approvals)."
+	},
+	"mobile.community.home.switch": {
+		"role": "button",
+		"note": "Icon button in a community's header: opens the switcher listing private organizations and communities. Accessible name only."
+	},
+	"mobile.community.join.agree": {
+		"role": "confirm",
+		"note": "Checkbox label; starts unchecked. {version} is verbatim, e.g. 2026-11."
+	},
+	"mobile.community.join.changed": {
+		"role": "status",
+		"note": "The version the user accepted was replaced during the dialog; nothing was recorded."
+	},
+	"mobile.community.join.failed": {
+		"role": "status",
+		"note": "Join failed for another reason; nothing was recorded."
+	},
+	"mobile.community.join.guidelines_heading": {
+		"role": "heading",
+		"note": "{version} is a version label such as 2026-11; keep it verbatim."
+	},
+	"mobile.community.join.hint": {
+		"role": "help",
+		"note": "Shown while the join button is disabled."
+	},
+	"mobile.community.join.moderation": {
+		"role": "help",
+		"note": "Moderation disclosure. Must not imply humans read every message."
+	},
+	"mobile.community.join.profile": {
+		"role": "help",
+		"note": "What the community profile shows and never shows."
+	},
+	"mobile.community.join.reaccept_submit": {
+		"role": "button",
+		"note": "Re-accept button for an updated guidelines version; disabled until checked."
+	},
+	"mobile.community.join.reaccept_title": {
+		"role": "heading",
+		"note": "Dialog title when an existing member must accept a new guidelines version."
+	},
+	"mobile.community.join.submit": {
+		"role": "button",
+		"note": "Disabled until the agreement is checked."
+	},
+	"mobile.community.join.title": {
+		"role": "heading",
+		"note": "Title of the join sheet (first join, not a re-acceptance)."
+	},
+	"mobile.community.no_plan.body": {
+		"role": "help",
+		"note": "Card body. Public means visible to all community members. 'Radient' and 'Local Operator' are product names."
+	},
+	"mobile.community.no_plan.free": {
+		"role": "help",
+		"note": "Reassurance under the join button. Must not imply a trial or purchase."
+	},
+	"mobile.community.no_plan.join": {
+		"role": "button",
+		"note": "Opens the join dialog (guidelines + explicit agreement). Joining is free."
+	},
+	"mobile.community.no_plan.open": {
+		"role": "button",
+		"note": "Shown instead of Join when the user already joined."
+	},
+	"mobile.community.no_plan.title": {
+		"role": "heading",
+		"note": "Card title on the 'no Team plan' screen. 'Local Operator Community' is a product name; keep it untranslated."
+	},
+	"mobile.community.profile.block": {
+		"role": "button",
+		"note": "Blocks this member: neither sees the other's messages or requests."
+	},
+	"mobile.community.profile.blocked": {
+		"role": "status",
+		"note": "Confirmation after blocking."
+	},
+	"mobile.community.profile.failed": {
+		"role": "status",
+		"note": "A profile action failed."
+	},
+	"mobile.community.profile.joined": {
+		"role": "meta",
+		"note": "{month} is a year-month like 2026-11; keep verbatim."
+	},
+	"mobile.community.profile.message": {
+		"role": "button",
+		"note": "Sends a direct-message request; the person must accept first."
+	},
+	"mobile.community.profile.message_sent": {
+		"role": "status",
+		"note": "Confirmation after a DM request."
+	},
+	"mobile.community.profile.report": {
+		"role": "button",
+		"note": "Opens the report form for this profile."
+	},
+	"mobile.community.profile.title": {
+		"role": "heading",
+		"note": "Title of a member's profile sheet."
+	},
+	"mobile.community.report.category": {
+		"role": "help",
+		"note": "Accessible name of the category choice."
+	},
+	"mobile.community.report.dm_consent": {
+		"role": "confirm",
+		"note": "Consent tick in the report sheet for a DIRECT MESSAGE; Submit stays disabled until ticked. The message goes to Radient Trust & Safety only, never to community moderators. 'Radient' is a product name."
+	},
+	"mobile.community.report.failed": {
+		"role": "status",
+		"note": "The report could not be sent; nothing was filed."
+	},
+	"mobile.community.report.note": {
+		"role": "help",
+		"note": "Optional note field label."
+	},
+	"mobile.community.report.revision_changed": {
+		"role": "status",
+		"note": "The direct message was edited after the reporter opened it, so nothing was sent. They must read the current text and tick the consent again."
+	},
+	"mobile.community.report.sent": {
+		"role": "status",
+		"note": "{reference} is a case reference; keep verbatim."
+	},
+	"mobile.community.report.submit": {
+		"role": "button",
+		"note": "Submits the report; disabled until a category is chosen."
+	},
+	"mobile.community.report.title": {
+		"role": "heading",
+		"note": "Report sheet title. 'Radient Trust & Safety' is a team name."
+	},
+	"mobile.community.requests.accept": {
+		"role": "button",
+		"note": "Accept an incoming direct-message request."
+	},
+	"mobile.community.requests.approvals": {
+		"role": "button",
+		"note": "Segment: agent posts waiting for the user's approval."
+	},
+	"mobile.community.requests.block": {
+		"role": "button",
+		"note": "Block the requester and decline."
+	},
+	"mobile.community.requests.decline": {
+		"role": "button",
+		"note": "Decline a DM request; the requester is not told why."
+	},
+	"mobile.community.requests.dm": {
+		"role": "button",
+		"note": "Segment: direct message requests."
+	},
+	"mobile.community.requests.dm_body": {
+		"role": "help",
+		"note": "Incoming DM request. {name} is the requester."
+	},
+	"mobile.community.requests.dm_empty": {
+		"role": "status",
+		"note": "The incoming direct-message request list is empty."
+	},
+	"mobile.community.requests.expires": {
+		"role": "meta",
+		"note": "Time left on a request, in whole hours."
+	},
+	"mobile.community.requests.expires_days": {
+		"role": "meta",
+		"note": "Time left on a DM request when more than 48 hours remain, in whole days. Sentence case, like the hours variant."
+	},
+	"mobile.community.requests.mode": {
+		"role": "help",
+		"note": "Accessible name of the Messages/Agent approvals segmented control."
+	},
+	"mobile.community.requests.title": {
+		"role": "heading",
+		"note": "Requests screen title."
+	},
+	"mobile.community.role.community_admin": {
+		"role": "meta",
+		"note": "Member badge: administers this community (not a Radient employee)."
+	},
+	"mobile.community.role.moderator": {
+		"role": "meta",
+		"note": "Member badge: moderates this community."
+	},
+	"mobile.community.role.staff": {
+		"role": "meta",
+		"note": "Badge. 'Radient' is a product name."
+	},
+	"mobile.community.switcher.browse": {
+		"role": "button",
+		"note": "Opens the list of communities the user can join. Ends with an ellipsis because it opens another screen."
+	},
+	"mobile.community.switcher.communities": {
+		"role": "heading",
+		"note": "Org switcher group heading for public communities the user joined. Separate from private organizations."
+	},
+	"mobile.community.switcher.note": {
+		"role": "help",
+		"note": "Footnote in the org switcher: switching does not leave or join anything."
+	},
+	"mobile.community.switcher.organizations": {
+		"role": "heading",
+		"note": "Org switcher group heading for the user's PRIVATE Team organizations. Communities are never in this group."
+	},
+	"mobile.community.switcher.public": {
+		"role": "meta",
+		"note": "Badge on a community row: anyone in the community can read it. Not a privacy setting the user chose."
+	},
+	"mobile.community.switcher.row_label": {
+		"role": "meta",
+		"note": "Accessible label of one community row in the switcher. {name} is the community name; {count} counts unread messages in that community only."
+	},
+	"mobile.community.switcher.search": {
+		"role": "help",
+		"note": "Search field label in the switcher's Communities group, shown past six joined communities."
+	}
+}

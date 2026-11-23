@@ -138,4 +138,38 @@ describe("mounted Team Bridge composer", () => {
 		expect(await s.run("", ["batt_1", "batt_2"])).toBe(true);
 		expect(s.send.mock.calls[2]?.[3]).toBe("ref-second");
 	});
+	it("forwards mentions, and a changed mention set mints a new ref", async () => {
+		const s = setup();
+		const ben = { kind: "human" as const, account_id: "a_ben" };
+		const aida = {
+			kind: "agent" as const,
+			account_id: "a_ben",
+			endpoint_id: "bep_aida",
+		};
+		s.send.mockRejectedValueOnce(new Error("dropped"));
+		await expect(s.run("@Ben Tran hi", [], [ben])).rejects.toThrow("dropped");
+		expect(s.send).toHaveBeenLastCalledWith(
+			TENANT,
+			s.row.id,
+			"@Ben Tran hi",
+			"ref-first",
+			[],
+			[ben],
+		);
+		// Same text, different mentions: the hub would answer the old ref from
+		// the STORED message (first mention set), so this must be a new ref.
+		expect(await s.run("@Ben Tran hi", [], [ben, aida])).toBe(true);
+		expect(s.send.mock.calls[1]?.[3]).toBe("ref-second");
+		expect(s.send.mock.calls[1]?.[5]).toEqual([ben, aida]);
+	});
+	it("a send without mentions keeps the exact pre-mentions call", async () => {
+		const s = setup();
+		await s.run("Hello", [], []);
+		expect(s.send.mock.calls[0]).toEqual([
+			TENANT,
+			s.row.id,
+			"Hello",
+			"ref-first",
+		]);
+	});
 });

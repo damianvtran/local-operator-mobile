@@ -9,6 +9,7 @@ import {
 	writeTeamBridgeDraft,
 } from "@/team-bridge/thread-drafts";
 import { CONTROL_DISABLED_INK } from "@/ui/variants";
+import { insertMention, serializeMentions } from "./mentions/tokens";
 
 const stripComments = (text: string) =>
 	text.replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, "");
@@ -45,6 +46,43 @@ const draftsSource = stripComments(
 /** A directory skeleton with no `ground`: the canvas default, wrong here. */
 const BARE_SKELETON = /<Skeleton lines=\{\d\} \/>/;
 const flat = (text: string) => text.replace(/\s+/g, " ");
+
+it("restores only chosen mentions from the original account and thread", () => {
+	clearTeamBridgeDrafts();
+	const key = (accountId: string, routeId: string) =>
+		teamBridgeDraftKey({ accountId, tenantId: "tnt_1", routeId });
+	const general = key("acct_me", "bcv_general");
+	const ops = key("acct_me", "bcv_ops");
+	const picked = insertMention(
+		"hi @be",
+		[],
+		{ start: 3, end: 6 },
+		{
+			kind: "human",
+			accountId: "acct_ben",
+			label: "Ben Tran",
+		},
+	);
+	writeTeamBridgeDraft(general, picked.text, picked.tokens);
+	writeTeamBridgeDraft(ops, picked.text); // identical spelling, no pick
+	const eligible = new Set(["human:acct_ben"]);
+	const restored = readTeamBridgeDraft(general);
+	expect(restored.text).toBe("hi @Ben Tran ");
+	expect(serializeMentions(restored.tokens, eligible)).toEqual([
+		{ kind: "human", account_id: "acct_ben" },
+	]);
+	expect(serializeMentions(restored.tokens, new Set())).toEqual([]);
+	expect(readTeamBridgeDraft(ops)).toEqual({ text: picked.text, tokens: [] });
+	expect(readTeamBridgeDraft(key("acct_other", "bcv_general")).tokens).toEqual(
+		[],
+	);
+	writeTeamBridgeDraft(general, "hi @Bon Tran ", picked.tokens);
+	expect(readTeamBridgeDraft(general).tokens).toEqual([]);
+	writeTeamBridgeDraft(general, picked.text, picked.tokens);
+	writeTeamBridgeDraft(general, "");
+	expect(readTeamBridgeDraft(general)).toEqual({ text: "", tokens: [] });
+	expect(readTeamBridgeDraft(ops).text).toBe(picked.text);
+});
 
 describe("activeBridgeRoute: route-driven directory row selection", () => {
 	it("extracts tenant and conversation id for an open channel or group thread", () => {
@@ -108,11 +146,20 @@ describe("Team Bridge account-scoped text draft persistence", () => {
 		});
 		writeTeamBridgeDraft(general, "unsent reply in general");
 		writeTeamBridgeDraft(ops, "checking ops status");
-		expect(readTeamBridgeDraft(general)).toBe("unsent reply in general");
-		expect(readTeamBridgeDraft(ops)).toBe("checking ops status");
+		expect(readTeamBridgeDraft(general)).toEqual({
+			text: "unsent reply in general",
+			tokens: [],
+		});
+		expect(readTeamBridgeDraft(ops)).toEqual({
+			text: "checking ops status",
+			tokens: [],
+		});
 		writeTeamBridgeDraft(general, "");
-		expect(readTeamBridgeDraft(general)).toBe("");
-		expect(readTeamBridgeDraft(ops)).toBe("checking ops status");
+		expect(readTeamBridgeDraft(general)).toEqual({ text: "", tokens: [] });
+		expect(readTeamBridgeDraft(ops)).toEqual({
+			text: "checking ops status",
+			tokens: [],
+		});
 	});
 
 	it("never evicts an unsent draft: no size cap, entries leave only on empty/send or the sign-out wipe (R1-7)", () => {
@@ -125,11 +172,17 @@ describe("Team Bridge account-scoped text draft persistence", () => {
 			});
 		// Past the former 64-entry cap, the FIRST draft must still be there.
 		for (let n = 0; n < 100; n++) writeTeamBridgeDraft(key(n), `draft ${n}`);
-		expect(readTeamBridgeDraft(key(0))).toBe("draft 0");
-		expect(readTeamBridgeDraft(key(99))).toBe("draft 99");
+		expect(readTeamBridgeDraft(key(0))).toEqual({
+			text: "draft 0",
+			tokens: [],
+		});
+		expect(readTeamBridgeDraft(key(99))).toEqual({
+			text: "draft 99",
+			tokens: [],
+		});
 		expect(draftsSource).not.toContain("MAX_DRAFTS");
 		clearTeamBridgeDrafts();
-		expect(readTeamBridgeDraft(key(0))).toBe("");
+		expect(readTeamBridgeDraft(key(0))).toEqual({ text: "", tokens: [] });
 	});
 
 	it("negative control: isolates accounts/draft-DM targets and wipes every draft on store reset or retire", () => {
@@ -151,21 +204,27 @@ describe("Team Bridge account-scoped text draft persistence", () => {
 		});
 		writeTeamBridgeDraft(accountA, "private draft for A");
 		writeTeamBridgeDraft(noAccount, "must never store without account");
-		expect(readTeamBridgeDraft(accountA)).toBe("private draft for A");
-		expect(readTeamBridgeDraft(accountB)).toBe("");
-		expect(readTeamBridgeDraft(noAccount)).toBe("");
+		expect(readTeamBridgeDraft(accountA)).toEqual({
+			text: "private draft for A",
+			tokens: [],
+		});
+		expect(readTeamBridgeDraft(accountB)).toEqual({ text: "", tokens: [] });
+		expect(readTeamBridgeDraft(noAccount)).toEqual({ text: "", tokens: [] });
 
 		const scoped = createTeamBridgeStore({
 			hub: () => ({}) as never,
 			accessToken: async () => null,
 		});
 		scoped.actions.reset();
-		expect(readTeamBridgeDraft(accountA)).toBe("");
+		expect(readTeamBridgeDraft(accountA)).toEqual({ text: "", tokens: [] });
 
 		writeTeamBridgeDraft(accountA, "second draft before retire");
-		expect(readTeamBridgeDraft(accountA)).toBe("second draft before retire");
+		expect(readTeamBridgeDraft(accountA)).toEqual({
+			text: "second draft before retire",
+			tokens: [],
+		});
 		scoped.actions.retire();
-		expect(readTeamBridgeDraft(accountA)).toBe("");
+		expect(readTeamBridgeDraft(accountA)).toEqual({ text: "", tokens: [] });
 	});
 });
 

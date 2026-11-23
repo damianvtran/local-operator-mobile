@@ -25,5 +25,6 @@
 	"mobile.chrome.composer.row_usage": "Ngữ cảnh",
 	"mobile.chrome.composer.row_cost": "Chi phí",
 	"mobile.chrome.composer.row_queue": "Hàng đợi",
-	"mobile.chrome.composer.row_questions": "Câu hỏi"
+	"mobile.chrome.composer.row_questions": "Câu hỏi",
+	"mobile.chrome.composer.row_identity": "Tác nhân hoặc nhóm"
 }

@@ -79,13 +79,51 @@ export const LAUNCHER_LABEL = "Operator";
 export const ANDROID_LOCAL_NETWORK_PERMISSION =
 	"android.permission.ACCESS_LOCAL_NETWORK";
 
+/** The Android runtime permission the composer's Camera row asks for at the
+ *  moment of use (`prepareCamera` in `src/features/session/attach.ts`). It must
+ *  be DECLARED: an undeclared permission can never be granted, and a manifest
+ *  without it would leave the row answering "access is off" forever. Required
+ *  in the strict (un-gated) form, like the local-network permission. */
+export const ANDROID_CAMERA_PERMISSION = "android.permission.CAMERA";
+
+/** The hardware features CAMERA implies, which must be declared OPTIONAL
+ *  (`<uses-feature android:required="false"/>`): otherwise Google Play treats a
+ *  back camera as required and hides the app from camera-less devices (PR #278
+ *  round 1, R1). Written by `plugins/with-android-optional-camera.js`. */
+export const ANDROID_OPTIONAL_CAMERA_FEATURES = [
+	"android.hardware.camera",
+	"android.hardware.camera.autofocus",
+] as const;
+
+/** Whether `<uses-feature android:name="<name>" … android:required="false">` is
+ *  declared, attributes in any order and either quote style (as
+ *  `declaresPermission` accepts). A missing `required` defaults to true on
+ *  Android, so only an explicit "false" passes. */
+const USES_FEATURE_TAG = /<uses-feature(?![\w-])[^>]*>/gi;
+const REQUIRED_FALSE = /\bandroid:required\s*=\s*["']false["']/i;
+const declaresOptionalFeature = (text: string, name: string): boolean => {
+	const escaped = name.replace(/\./g, "\\.");
+	const tags = text.match(USES_FEATURE_TAG) ?? [];
+	return tags.some(
+		(tag) =>
+			new RegExp(`\\bandroid:name\\s*=\\s*["']${escaped}["']`, "i").test(tag) &&
+			REQUIRED_FALSE.test(tag),
+	);
+};
+
 /**
  * The plist keys that may NEVER appear in the built app, however a dependency's
  * default configuration would like it: attachments are picked through the system
  * photo pickers (iOS 14+ `PHPickerViewController`, Android Photo Picker), which
- * grant per-item access WITHOUT a library permission — so a photo-library or
- * camera usage string here is over-declaration, the exact failure checklist B10
- * (and the app.config.ts plugin options that keep these out) exists to prevent.
+ * grant per-item access WITHOUT a library permission — so a photo-library usage
+ * string here is over-declaration, the exact failure checklist B10 (and the
+ * app.config.ts plugin options that keep these out) exists to prevent.
+ *
+ * `NSCameraUsageDescription` LEFT this list with the composer's camera capture:
+ * the camera is a privacy-gated device the app now uses, so its string is a
+ * declaration of real use and is REQUIRED instead (`checkIosInfoPlist`). The
+ * library keys stay forbidden — taking a photo does not need the library, and
+ * the captured image is never saved to it.
  *
  * `NSPhotoLibraryAddUsageDescription` is in the list although the picker path
  * never writes to the photo library: an app that declares ADD access it never
@@ -111,17 +149,17 @@ export const IOS_BACKGROUND_MODES = ["remote-notification", "fetch"] as const;
 
 export const IOS_FORBIDDEN_KEYS = [
 	"NSPhotoLibraryUsageDescription",
-	"NSCameraUsageDescription",
 	"NSPhotoLibraryAddUsageDescription",
 ] as const;
 
 /** The Android permissions that may NEVER appear in the release merged
- *  manifest. `expo-image-picker`'s library manifest declares CAMERA and both
- *  storage permissions for camera-roll flows this app does not use; the
- *  media-library pair is the Google Play "approved core use case" permission
- *  the picker-only design does not need (checklist B10). Blocked in
- *  `app.config.ts` (`blockedPermissions` + the plugin's `cameraPermission:
- *  false`); asserted absent here, where the merge result is what is read.
+ *  manifest. `expo-image-picker`'s library manifest declares both storage
+ *  permissions for camera-roll flows this app does not use; the media-library
+ *  pair is the Google Play "approved core use case" permission the picker-only
+ *  design does not need (checklist B10). Blocked in `app.config.ts`
+ *  (`blockedPermissions`); asserted absent here, where the merge result is what
+ *  is read. CAMERA left this list with the composer's camera capture and is
+ *  REQUIRED now (`ANDROID_CAMERA_PERMISSION`).
  *
  *  The four entries added by agent review round 1 (R2) are the adjacent
  *  spellings a transitively-merged library manifest could contribute without
@@ -132,7 +170,6 @@ export const IOS_FORBIDDEN_KEYS = [
  *  manifest and found none of them); this list exists so the next plugin bump
  *  that adds one is a CI failure rather than a silent over-declaration. */
 export const ANDROID_FORBIDDEN_PERMISSIONS = [
-	"android.permission.CAMERA",
 	"android.permission.READ_EXTERNAL_STORAGE",
 	"android.permission.WRITE_EXTERNAL_STORAGE",
 	"android.permission.READ_MEDIA_IMAGES",
@@ -174,7 +211,7 @@ export function checkIosInfoPlist(plist: unknown): Finding[] {
 			findings.push({
 				field: key,
 				problem:
-					"present — attachments go through the system photo picker, which needs no permission, so this usage string is over-declaration (checklist B10)",
+					"present — library attachments go through the system photo picker, which needs no permission, so this usage string is over-declaration (checklist B10)",
 			});
 		}
 	}
@@ -192,6 +229,18 @@ export function checkIosInfoPlist(plist: unknown): Finding[] {
 		findings.push({
 			field: "CFBundleDisplayName",
 			problem: `expected ${JSON.stringify(LAUNCHER_LABEL)}, found ${JSON.stringify(plist.CFBundleDisplayName)} — the home screen would show the sanitised CFBundleName or a truncated "Local Operator"`,
+		});
+	}
+
+	/* The camera's consent string: iOS kills an app that opens the camera
+	 *  without one (a privacy-violation crash, not a prompt), so its absence is
+	 *  the composer's Camera row crashing the app on first use. */
+	const camera = plist.NSCameraUsageDescription;
+	if (typeof camera !== "string" || camera.trim().length === 0) {
+		findings.push({
+			field: "NSCameraUsageDescription",
+			problem:
+				"missing or empty — the composer's Camera row would crash the app instead of asking (set the expo-image-picker plugin's cameraPermission in app.config.ts)",
 		});
 	}
 
@@ -278,6 +327,23 @@ export function checkIosInfoPlist(plist: unknown): Finding[] {
 const XML_COMMENT = /<!--[\s\S]*?-->/g;
 const APPLICATION_OPEN_TAG = /<application\b[^>]*>/i;
 const CLEARTEXT_TRUE = /\bandroid:usesCleartextTraffic\s*=\s*"true"/i;
+const RECEIVER_ELEMENT = /<receiver\b[^>]*>/gi;
+const NAME_ATTRIBUTE = /\bandroid:name\s*=\s*["']([^"']+)["']/i;
+
+/** ADR 0010 S2: the notification receiver swap made by
+ *  `plugins/with-android-team-bridge-push.js`. Expo dispatches to the FIRST
+ *  receiver handling its action, so the merged manifest must carry ours and
+ *  NOT Expo's; either half missing would ship Team Bridge pushes without the
+ *  avatar, grouping, lock-screen version or foreground banner, silently. */
+export const TEAM_BRIDGE_RECEIVER =
+	"dev.localoperator.teambridge.LoNotificationsService";
+export const EXPO_NOTIFICATIONS_RECEIVER =
+	"expo.modules.notifications.service.NotificationsService";
+
+const receiverNames = (text: string): string[] =>
+	[...text.matchAll(RECEIVER_ELEMENT)]
+		.map((match) => NAME_ATTRIBUTE.exec(match[0])?.[1])
+		.filter((name): name is string => name !== undefined);
 
 /** Remove XML comments so a commented-out element can never satisfy a check. */
 const stripComments = (xml: string): string => xml.replace(XML_COMMENT, "");
@@ -353,13 +419,47 @@ export function checkAndroidManifest(xml: string): Finding[] {
 		});
 	}
 
+	const receivers = receiverNames(text);
+	if (!receivers.includes(TEAM_BRIDGE_RECEIVER)) {
+		findings.push({
+			field: `receiver[${TEAM_BRIDGE_RECEIVER}]`,
+			problem:
+				"missing — Team Bridge pushes would use Expo's plain presentation (no avatar, group, lock-screen version or foreground banner); is plugins/with-android-team-bridge-push.js in app.config.ts?",
+		});
+	}
+	if (receivers.includes(EXPO_NOTIFICATIONS_RECEIVER)) {
+		findings.push({
+			field: `receiver[${EXPO_NOTIFICATIONS_RECEIVER}]`,
+			problem:
+				'present — Expo picks the first matching receiver, so its own could win over LoNotificationsService; the plugin\'s tools:node="remove" did not apply',
+		});
+	}
+
+	if (!declaresPermission(text, ANDROID_CAMERA_PERMISSION)) {
+		findings.push({
+			field: `uses-permission[${ANDROID_CAMERA_PERMISSION}]`,
+			problem:
+				"missing — the composer's Camera row asks for it at use, and an undeclared permission can never be granted",
+		});
+	}
+
+	for (const feature of ANDROID_OPTIONAL_CAMERA_FEATURES) {
+		if (!declaresOptionalFeature(text, feature)) {
+			findings.push({
+				field: `uses-feature[${feature}]@android:required`,
+				problem:
+					'expected "false" — CAMERA implies this feature, and Google Play would hide the app from devices without it (plugins/with-android-optional-camera.js)',
+			});
+		}
+	}
+
 	/* The forbidden permissions, in BOTH spellings — see `declaresPermission`. */
 	for (const permission of ANDROID_FORBIDDEN_PERMISSIONS) {
 		if (declaresPermission(text, permission, { sdkGated: true })) {
 			findings.push({
 				field: `uses-permission[${permission}]`,
 				problem:
-					"present — picker-only attachments need no media-or-camera permission (checklist B10); block it in app.config.ts's blockedPermissions and regenerate",
+					"present — picker-only library attachments need no media permission (checklist B10); block it in app.config.ts's blockedPermissions and regenerate",
 			});
 		}
 	}
@@ -418,8 +518,8 @@ export const summarize = (platform: Platform): string =>
 	platform === "android-badging"
 		? `built APK carries application-label=${JSON.stringify(LAUNCHER_LABEL)} with no locale override that differs`
 		: platform === "ios"
-			? `built Info.plist carries CFBundleDisplayName=${JSON.stringify(LAUNCHER_LABEL)}, ITSAppUsesNonExemptEncryption=false, UIBackgroundModes exactly ${JSON.stringify(IOS_BACKGROUND_MODES)}, NSLocalNetworkUsageDescription and the ATS local-networking configuration (NSAllowsLocalNetworking + ${IOS_EXCEPTION_DOMAINS.length} CIDR exceptions) and none of the ${IOS_FORBIDDEN_KEYS.length} photo/camera permission keys`
-			: `release merged manifest carries android:usesCleartextTraffic="true" and ${ANDROID_LOCAL_NETWORK_PERMISSION}, and none of the ${ANDROID_FORBIDDEN_PERMISSIONS.length} camera/media-library permissions`;
+			? `built Info.plist carries CFBundleDisplayName=${JSON.stringify(LAUNCHER_LABEL)}, ITSAppUsesNonExemptEncryption=false, UIBackgroundModes exactly ${JSON.stringify(IOS_BACKGROUND_MODES)}, NSLocalNetworkUsageDescription and the ATS local-networking configuration (NSAllowsLocalNetworking + ${IOS_EXCEPTION_DOMAINS.length} CIDR exceptions), NSCameraUsageDescription, and none of the ${IOS_FORBIDDEN_KEYS.length} photo-library permission keys`
+			: `release merged manifest carries android:usesCleartextTraffic="true", ${ANDROID_LOCAL_NETWORK_PERMISSION}, ${ANDROID_CAMERA_PERMISSION} and the Team Bridge notification receiver (not Expo's), ${ANDROID_OPTIONAL_CAMERA_FEATURES.join(" and ")} declared required="false", and none of the ${ANDROID_FORBIDDEN_PERMISSIONS.length} media-library/storage permissions`;
 
 // ---------------------------------------------------------------------------
 // CLI

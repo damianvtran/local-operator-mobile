@@ -44,6 +44,28 @@ import { TEAM_BRIDGE_FIXTURE_TOKEN } from "../src/testing/team-bridge-token.ts";
 import { DEVICES } from "./visual/matrix.ts";
 
 const MOCK_ROUTE = /^\/mock-hub\/([a-z0-9_~-]+)\/v1\/messaging(.*)$/;
+/* The hub's reaction write route (reactions spec §2.1), inside a mock world. */
+const REACTION_ROUTE =
+	/^\/conversations\/([^/]+)\/messages\/([^/]+)\/reactions\/([^/]+)$/;
+/*
+ * The community client's same-origin seam (`src/testing/community-fixture.ts`).
+ * There is no community FIXTURE here on purpose: with `MOCK_COMMUNITY_UPSTREAM`
+ * set (e.g. a local agent-server in SERVER_MODE=community, loopback only), the
+ * request is passed through unchanged so the real screens exercise the real
+ * server; unset, it answers the server's own 404 (the community is dark).
+ */
+const COMMUNITY_ROUTE = /^\/mock-community\/[a-z0-9_~-]+(\/community\/v1\/.*)$/;
+const COMMUNITY_HEADERS = [
+	"accept",
+	"authorization",
+	"content-type",
+	"idempotency-key",
+	"agent-approval-id",
+];
+const COMMUNITY_UPSTREAM = process.env.MOCK_COMMUNITY_UPSTREAM ?? "";
+/* Loopback only: a QA rig must never forward a fixture token off the machine. */
+const LOOPBACK_UPSTREAM = /^http:\/\/(127\.0\.0\.1|localhost):\d+$/;
+const COMMUNITY_FRAME_PATH = /^\/community(\/[A-Za-z0-9_-]+){0,3}$/;
 /* The profile slice's avatar route sits beside messaging, not under it. */
 const AVATAR_ROUTE =
 	/^\/mock-hub\/([a-z0-9_~-]+)\/v1\/accounts\/([A-Za-z0-9_-]+)\/avatar$/;
@@ -387,6 +409,175 @@ export function createTeamBridgeFixture(options: { root?: string } = {}) {
 		};
 	};
 	const imageWorlds = new Map<string, ReturnType<typeof createImageWorld>>();
+	/*
+	 * `tb-fixture=threads`: one reply thread under message 3 of every
+	 * conversation, mirroring the hub's thread routes (agent-server
+	 * `RepliesHandlerEcho` / `ThreadReadHandlerEcho`): replies stay OUT of the
+	 * timeline, the root carries the rollup, and the viewer's unread is the
+	 * replies above their thread cursor that someone else wrote. Per world and
+	 * conversation, so a read in one capture never leaks into another.
+	 */
+	type ReplyWorld = { replies: ReturnType<typeof message>[]; readSeq: number };
+	const replyWorlds = new Map<string, ReplyWorld>();
+	const THREAD_ROOT = "bcm_3";
+	const replyWorld = (key: string, conversationId: string): ReplyWorld => {
+		const id = `${key}|${conversationId}`;
+		let held = replyWorlds.get(id);
+		if (!held) {
+			const agent = {
+				account_id: BEN,
+				kind: "agent" as const,
+				display_label: "Aida",
+			};
+			const ada = {
+				account_id: ADA,
+				kind: "human" as const,
+				display_label: "Ada",
+			};
+			held = {
+				readSeq: 7,
+				replies: [
+					message(7, BEN, at(1), {
+						sender: agent,
+						origin: "agent",
+						body: "On it. I'll post progress here so the channel stays readable.",
+					}),
+					message(8, ADA, at(3), {
+						sender: ada,
+						body: "Thanks. Can you check the push deep link too?",
+					}),
+					message(9, BEN, at(4), {
+						sender: agent,
+						origin: "agent",
+						body: "Done: a reply notification now opens its thread.",
+					}),
+				].map((row) => ({
+					...row,
+					conversation_id: conversationId,
+					thread_root_id: THREAD_ROOT,
+				})),
+			};
+			replyWorlds.set(id, held);
+		}
+		return held;
+	};
+	const rollup = (thread: ReplyWorld) => {
+		const labels: string[] = [];
+		const ids: Array<{ account_id: string; kind: string }> = [];
+		for (const reply of [...thread.replies].reverse()) {
+			if (labels.includes(reply.sender.display_label) || labels.length === 3)
+				continue;
+			labels.push(reply.sender.display_label);
+			ids.push({
+				account_id: reply.sender.account_id,
+				kind: reply.sender.kind,
+			});
+		}
+		return {
+			reply_count: thread.replies.length,
+			last_reply_at: thread.replies.at(-1)?.created_at,
+			reply_participants: labels,
+			reply_participant_ids: ids,
+			thread_last_read_seq: thread.readSeq,
+			thread_unread_count: thread.replies.filter(
+				(reply) =>
+					reply.seq > thread.readSeq && reply.sender.account_id !== SELF,
+			).length,
+		};
+	};
+
+	/*
+	 * REACTIONS (reactions spec §2.1, gap G6): the hub's
+	 * `PUT|DELETE /conversations/{cid}/messages/{mid}/reactions/{emoji}` and the
+	 * `reactions` summary on every history/thread row, per world, so a capture
+	 * or a test never leaks a reaction into another. The viewer is SELF ("Sam");
+	 * `reacted_by_me` is SELF's own state, the labels a ≤ 3 sample, as served.
+	 *
+	 *  - `tb-fixture=reactions`: seeded pills (two of others' on message 3, one
+	 *    of mine; one on message 5), routes served.
+	 *  - `reactions_details`: 14 emoji on a threaded root; ownership absent from
+	 *    its three-label sample, plus a no-label summary. Exercises inspection,
+	 *    overflow, locale/scale and chip time without inventing a reactor API.
+	 *  - `reactions_fail`: same seeds, every write answers 500 (rollback path).
+	 *  - `reactions_unserved`: an OLD hub: the route answers an UNCODED 404 and
+	 *    rows carry no `reactions` (the phone must hide every control).
+	 *  - every other scenario: routes served, nothing seeded.
+	 * `/__stats` counts the writes (`reactionWrites`), which is how a double tap
+	 * is proved to send one request.
+	 */
+	type ReactionEntry = { count: number; mine: boolean; labels: string[] };
+	const reactionWorlds = new Map<
+		string,
+		Map<string, Map<string, ReactionEntry>>
+	>();
+	const reactionWrites = { put: 0, delete: 0 };
+	const reactionWorld = (key: string, scenario: string) => {
+		let held = reactionWorlds.get(key);
+		if (held) return held;
+		held = new Map();
+		if (scenario === "reactions" || scenario === "reactions_fail")
+			for (const row of conversations) {
+				held.set(
+					`${row.id}|bcm_3`,
+					new Map([
+						["\u{1F44D}", { count: 2, mine: false, labels: ["Ada", "Aida"] }],
+						["\u{1F389}", { count: 1, mine: true, labels: ["Sam"] }],
+					]),
+				);
+				held.set(
+					`${row.id}|bcm_5`,
+					new Map([
+						["\u2764\uFE0F", { count: 1, mine: false, labels: ["Ada"] }],
+					]),
+				);
+			}
+		if (scenario === "reactions_details") {
+			const emoji = [
+				"👍",
+				"🎉",
+				"😀",
+				"😁",
+				"😂",
+				"😃",
+				"😄",
+				"😅",
+				"😆",
+				"😉",
+				"😊",
+				"😋",
+				"😎",
+				"😍",
+			];
+			for (const row of conversations)
+				held.set(
+					`${row.id}|bcm_3`,
+					new Map(
+						emoji.map((item, index) => [
+							item,
+							{
+								count: index === 0 ? 8 : index === 1 ? 4 : 2,
+								mine: index === 0,
+								labels:
+									index === 0
+										? ["Ada", "Ben", "Cy"]
+										: index === 1
+											? []
+											: ["Ada"],
+							},
+						]),
+					),
+				);
+		}
+		reactionWorlds.set(key, held);
+		return held;
+	};
+	const reactionRows = (entries: Map<string, ReactionEntry> | undefined) =>
+		[...(entries ?? new Map<string, ReactionEntry>())].map(([emoji, e]) => ({
+			emoji,
+			count: e.count,
+			reacted_by_me: e.mine,
+			sample_labels: e.labels.slice(0, 3),
+		}));
 
 	const requests: Array<{ method: string; path: string }> = [];
 	const handle = async (
@@ -403,8 +594,14 @@ export function createTeamBridgeFixture(options: { root?: string } = {}) {
 				});
 				res.end(JSON.stringify(value));
 			};
+			/* Set once the mock world is known: adds the world's reaction summary
+			 *  to every message a hub answer carries (history, root, replies). */
+			let decorate: ((value: unknown) => unknown) | null = null;
 			const ok = (result: unknown) =>
-				send(200, { msg: "Fixture answer", result });
+				send(200, {
+					msg: "Fixture answer",
+					result: decorate ? decorate(result) : result,
+				});
 			if (url.pathname === "/__phone") {
 				const qaCase = url.searchParams.get("case") ?? "populated";
 				const theme = url.searchParams.get("theme") ?? "light";
@@ -442,8 +639,11 @@ export function createTeamBridgeFixture(options: { root?: string } = {}) {
 						: url.searchParams.get("conversation") === "dm"
 							? dm(ADA, "Ada").id
 							: "bcv_humans";
-				const route =
-					url.searchParams.get("thread") === "1"
+				/* `path=/community/...` frames a community screen (same seam). */
+				const communityPath = url.searchParams.get("path") ?? "";
+				const route = COMMUNITY_FRAME_PATH.test(communityPath)
+					? communityPath
+					: url.searchParams.get("thread") === "1"
 						? `/team-bridge/${TENANT}/${threadId}`
 						: "/team-bridge";
 				const viewer = url.searchParams.get("viewer");
@@ -464,7 +664,44 @@ setInterval(()=>{try{
 				return;
 			}
 			if (url.pathname === "/__stats") {
-				ok({ created, requests });
+				ok({ created, requests, reactionWrites });
+				return;
+			}
+			const community = COMMUNITY_ROUTE.exec(url.pathname);
+			if (community) {
+				if (!LOOPBACK_UPSTREAM.test(COMMUNITY_UPSTREAM)) {
+					send(404, { message: "Not Found" });
+					return;
+				}
+				const headers: Record<string, string> = {};
+				for (const name of COMMUNITY_HEADERS) {
+					const value = req.headers[name];
+					if (typeof value === "string") headers[name] = value;
+				}
+				const chunks: Buffer[] = [];
+				for await (const chunk of req) chunks.push(chunk as Buffer);
+				const upstream = await fetch(
+					`${COMMUNITY_UPSTREAM}${community[1]}${url.search}`,
+					{
+						method: req.method,
+						headers,
+						body:
+							req.method === "GET" || req.method === "HEAD"
+								? undefined
+								: Buffer.concat(chunks),
+					},
+				);
+				const body = Buffer.from(await upstream.arrayBuffer());
+				if (closing || res.destroyed || res.writableEnded) return;
+				res.writeHead(upstream.status, {
+					"content-type":
+						upstream.headers.get("content-type") ?? "application/json",
+					"cache-control": "no-store",
+					...(upstream.headers.get("retry-after")
+						? { "retry-after": upstream.headers.get("retry-after") ?? "" }
+						: {}),
+				});
+				res.end(body);
 				return;
 			}
 			const avatar = AVATAR_ROUTE.exec(url.pathname);
@@ -505,6 +742,32 @@ setInterval(()=>{try{
 				const noticeTenant = world.secondOrg ? OTHER_TENANT : TENANT;
 				const path = match[2] ?? "";
 				requests.push({ method: req.method ?? "GET", path });
+				const reactions = reactionWorld(match[1] ?? "", qaCase ?? "");
+				if (qaCase !== "reactions_unserved")
+					decorate = (value) => {
+						const withRows = (m: unknown) => {
+							if (!m || typeof m !== "object") return m;
+							const row = m as { id?: string; conversation_id?: string };
+							const rows = reactionRows(
+								reactions.get(`${row.conversation_id}|${row.id}`),
+							);
+							return rows.length > 0 ? { ...row, reactions: rows } : row;
+						};
+						if (!value || typeof value !== "object") return value;
+						const page = value as {
+							messages?: unknown[];
+							root?: unknown;
+							replies?: unknown[];
+						};
+						return {
+							...page,
+							...(page.messages
+								? { messages: page.messages.map(withRows) }
+								: {}),
+							...(page.root ? { root: withRows(page.root) } : {}),
+							...(page.replies ? { replies: page.replies.map(withRows) } : {}),
+						};
+					};
 				if (
 					qaCase?.startsWith("notice_") &&
 					req.headers.authorization !==
@@ -844,9 +1107,134 @@ setInterval(()=>{try{
 					ok(row);
 					return;
 				}
+				const reaction = REACTION_ROUTE.exec(path);
+				if (reaction && (req.method === "PUT" || req.method === "DELETE")) {
+					if (qaCase === "reactions_unserved") {
+						// An old hub's router: no route, so no code in the refusal.
+						send(404, { error: "Not Found" });
+						return;
+					}
+					reactionWrites[req.method === "PUT" ? "put" : "delete"]++;
+					const tenant =
+						req.method === "PUT"
+							? body.tenant_id
+							: url.searchParams.get("tenant_id");
+					if (tenant !== noticeTenant) {
+						send(403, { error: "Wrong organization", code: "not_a_member" });
+						return;
+					}
+					if (qaCase === "reactions_fail") {
+						send(500, {
+							error: "Synthetic reaction write failed.",
+							code: "internal_error",
+						});
+						return;
+					}
+					const [, cid = "", mid = "", raw = ""] = reaction;
+					const emoji = decodeURIComponent(raw).normalize("NFC");
+					const key = `${cid}|${mid}`;
+					const entries =
+						reactions.get(key) ?? new Map<string, ReactionEntry>();
+					const held = entries.get(emoji);
+					// Idempotent both ways, as the hub is: a repeat changes nothing.
+					if (req.method === "PUT" && !held?.mine)
+						entries.set(emoji, {
+							count: (held?.count ?? 0) + 1,
+							mine: true,
+							labels: ["Sam", ...(held?.labels ?? [])].slice(0, 3),
+						});
+					if (req.method === "DELETE" && held?.mine) {
+						if (held.count <= 1) entries.delete(emoji);
+						else
+							entries.set(emoji, {
+								count: held.count - 1,
+								mine: false,
+								labels: held.labels.filter((label) => label !== "Sam"),
+							});
+					}
+					reactions.set(key, entries);
+					send(200, {
+						msg: "Fixture answer",
+						result: { message_id: mid, reactions: reactionRows(entries) },
+					});
+					return;
+				}
 				const id = path.split("/")[2];
 				const row = threadRows.find((c) => c.id === id);
 				const history = histories.get(id ?? "") ?? [];
+				if ((qaCase === "threads" || qaCase === "reactions_details") && id) {
+					const thread = replyWorld(worldKey, id);
+					const rootOf = () => {
+						const root = history.find((entry) => entry.id === THREAD_ROOT);
+						return root ? { ...root, ...rollup(thread) } : null;
+					};
+					const replies =
+						/^\/conversations\/[^/]+\/messages\/([^/]+)\/replies$/.exec(path);
+					const threadRead =
+						/^\/conversations\/[^/]+\/messages\/([^/]+)\/read$/.exec(path);
+					if (replies || threadRead) {
+						const root = rootOf();
+						if (!root || (replies?.[1] ?? threadRead?.[1]) !== THREAD_ROOT) {
+							send(404, {
+								error: "Message not found",
+								code: "message_not_found",
+							});
+							return;
+						}
+						if (replies) {
+							ok({ root, replies: thread.replies, has_more: false });
+							return;
+						}
+						thread.readSeq = Math.max(thread.readSeq, Number(body.seq ?? 0));
+						const after = rollup(thread);
+						ok({
+							conversation_id: id,
+							root_id: THREAD_ROOT,
+							thread_last_read_seq: after.thread_last_read_seq,
+							thread_unread_count: after.thread_unread_count,
+						});
+						return;
+					}
+					if (path.endsWith("/messages") && req.method === "GET") {
+						ok({
+							messages: history.map((entry) =>
+								entry.id === THREAD_ROOT ? (rootOf() ?? entry) : entry,
+							),
+							has_more: false,
+						});
+						return;
+					}
+					if (
+						path.endsWith("/messages") &&
+						req.method === "POST" &&
+						body.thread_root_id
+					) {
+						if (body.thread_root_id !== THREAD_ROOT) {
+							send(400, {
+								error: "Invalid thread root",
+								code: "invalid_request",
+								details: { field: "thread_root_id", rule: "invalid_root" },
+							});
+							return;
+						}
+						const seq = Math.max(...thread.replies.map((r) => r.seq)) + 1;
+						const reply = {
+							...message(seq, SELF, new Date().toISOString(), {
+								sender: {
+									account_id: SELF,
+									kind: "human",
+									display_label: "Sam",
+								},
+								body: body.body,
+							}),
+							conversation_id: id,
+							thread_root_id: THREAD_ROOT,
+						};
+						thread.replies.push(reply);
+						ok(reply);
+						return;
+					}
+				}
 				if (path.endsWith("/messages") && req.method === "GET") {
 					// Read failures remain non-2xx, never fake legacy projection absence.
 					if (qaCase === "delivery-read-error") {

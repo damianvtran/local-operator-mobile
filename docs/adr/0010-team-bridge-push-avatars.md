@@ -82,7 +82,7 @@ a device to settle it.
 | Who draws | Core, `GET /v1/desktop/team-bridge/accounts/{id}/notification-avatar?kind&theme&size&initials[&v&avatar_account_id]`. The desktop never decodes a remote image or holds a URL. | `src/main/desktop-media.ts:193-214, 326-341`; core `local_operator/team_bridge/notification_avatar.py:1-41` |
 | Composite | 256 px canvas (64 px is a downsample). Circle-cropped photo or initials. LO mark badge at 40 % in the bottom-right with a punched gap. For `person_agent`, a 30 % agent marker top-right. | core `notification_avatar.py:76-80, 409-453` |
 | Placeholder colour | `sha256(origin + "\n" + account_id)[0] % 8` into fixed light/dark palettes. Never seeded by the name, so a rename keeps the colour. `origin` is the hub base, `https://api.radienthq.com/v1`. | core `notification_avatar.py:97-125, 200-203`; `team_bridge/client.py:1172, 3810`; `env.py:67` |
-| Initials | NFC. First and last word, first letter/digit of each, at most 2 code points, Unicode letters or digits. If the font lacks the script, it falls back to a silhouette. | desktop `team-bridge-notification-images.ts:119-132`; core `notification_avatar.py:189-197, 284-340` |
+| Initials | NFC. First and last word, first letter/digit of each, at most 2 code points, Unicode letters or digits. **Derived by the desktop** (`teamBridgeSenderInitials`); core only **validates** what it is sent (`valid_initials`) and, if the font lacks the script, falls back to a silhouette. *(Corrected 2026-11-17 by the S1 owner; this row first said core derived them.)* | desktop `team-bridge-notification-images.ts:119-132`; core `notification_avatar.py:189-197, 284-340` |
 | Cache | Main-process memory only. 15 min for photos, 12 h for initials, 8 MiB / 128 entries, a 30 s negative TTL. Keyed viewer + auth epoch + tenant + sender + kind + variant + version + size + theme. Cleared on every auth transition. | `team-bridge-notification-images.ts:39-99, 185-213` |
 | Deadline | A banner waits at most 250 ms for a photo, then posts the cached initials. A late photo is only cached and never reposts. | `team-bridge-notifier.ts:155, 520-541, 648-680` |
 | Dock/taskbar count | **None.** No `setBadgeCount`, `dock.setBadge` or overlay icon anywhere in `src/main`. "Badge" on desktop means only the LO corner mark. | grep of `src/main` at the provenance revision |
@@ -280,9 +280,21 @@ response pipeline. **Keep data-only and build on the device.**
   3. On **API 30+ only**, before posting, call `ShortcutManagerCompat.pushDynamicShortcut` (the
      shortcut is a separate object, so Compat is fine here) with a **long-lived** shortcut
      for that id. It carries the same `Person`, `setLongLived(true)`, an intent that opens the app
-     at the conversation deep link, and, on API 33+, `setExcludedFromSurfaces(SURFACE_LAUNCHER)` so
-     conversation names don't appear in the launcher's long-press menu. On sign-out and account
-     switch, call `removeLongLivedShortcuts` for all `tb:*` ids. They are account data.
+     at the conversation deep link. **Its icon is the conversation's face, not the message's:** on
+     API 31+ the shade draws the shortcut icon on every row that names the shortcut, and the
+     shortcut is republished per message, so a sender face there made every row of a group show
+     whoever spoke last (UX U7 / design D3, PR #304). A **DM** shortcut keeps the other person's
+     face. A **group or channel** (`conv.group == true`) shortcut gets one fixed face for every
+     message, lucide `Users` (the in-app group glyph) in white on the kit's light `ink-dim`
+     (`#656056`, 6.2:1, no sender tone; the payload cannot tell a channel from a group). Each
+     sender's face stays on the `MessagingStyle` message `Person`, with `setGroupConversation(true)`
+     and the conversation title (`ConversationShortcuts.shortcutFace`). It is **not** excluded from the launcher: the platform never
+     stores a shortcut marked `setExcludedFromSurfaces(SURFACE_LAUNCHER)` (AOSP
+     `ShortcutPackage.pushDynamicShortcut` keeps it only as transient AppSearch state), so on
+     API 33+ no conversation existed and the notification fell back to plain `MessagingStyle`
+     (installed-app QA F1, PR #304, run 44247024803). The launcher's long-press menu may
+     therefore list recent conversations, as it does for other messaging apps. On sign-out and
+     account switch, call `removeLongLivedShortcuts` for all `tb:*` ids. They are account data.
   4. The small icon stays `ic_notification` (the LO monochrome mark, `app.config.ts:452`).
      Android 11+ draws the app badge on the conversation avatar in the shade and the Conversations
      section. That is the Slack look without drawing the LO mark ourselves.
@@ -300,7 +312,9 @@ response pipeline. **Keep data-only and build on the device.**
 ## 5. Placeholder (one rule, three renderers)
 
 - **Computed in the cloud and sent in the payload,** so Swift and Kotlin only draw:
-  - `sender.initials`: core's rule exactly (first and last word, ≤ 2 Unicode letters or digits, NFC),
+  - `sender.initials`: the desktop's rule exactly — local-operator-ui's `teamBridgeSenderInitials`
+    derives them, and core only validates them (`valid_initials`) — (first and last word, ≤ 2
+    Unicode letters or digits, NFC),
     in Go.
   - `sender.tone`: `sha256(<hub origin> + "\n" + account_id)[0] % 8`. `<hub origin>` is the
     cloud's own **configured public API base** for that hub (`https://api.radienthq.com/v1` in
@@ -324,6 +338,10 @@ response pipeline. **Keep data-only and build on the device.**
   avatar**, which is its **endpoint** avatar in step 2, matching in-app (`avatars.ts:70-76`).
   Without one, it shows an **agent glyph** (the in-app agent mark) on the tone seeded by the owner's
   account id. It never shows the owner's face. `kind: "agent"` lets the renderers choose.
+  *(Corrected 2026-11-17 by the S1 owner, agent-server PR #399.)* On the wire an agent sender is
+  `sender{kind: "agent", tone}` with **no `initials`** — its stored label may carry "(Owner)", whose
+  letters would put the owner on the agent's face — and `tone` is seeded by the **owner's** account
+  id, because an agent has no account of its own.
   > **Known difference, not changed here.** The desktop composite draws the *owner's* face plus a
   > corner agent marker (`notification_avatar.py:7-9, 441-445`). Aligning the desktop is out of
   > scope for this ADR.
@@ -366,6 +384,32 @@ response pipeline. **Keep data-only and build on the device.**
        is never served.
     Any failure answers the same `404` with no body difference. Sign-out and account switch also
     delete that device's nonce rows.
+  - **Live contract (Radient S5, deployed; folded in 2026-11-18).** What the phone now relies on,
+    as shipped by the cloud. Where it differs from the design above, this is authoritative:
+    - **Payload:** `sender.photo = {url, nonce}` with `url` exactly
+      `https://api.radienthq.com/v1/push-avatars` (no path parameter, no query) and `nonce` 22
+      base64url characters (128 bits).
+    - **Request:** `GET` with `Authorization: PushAvatar <nonce>`; the server matches the scheme
+      case-insensitively. Redirects off; sent only to the origin the device registered with.
+    - **Success:** `200`, `image/jpeg` or `image/png`, one 256 px derivative,
+      `Cache-Control: private, no-store`.
+    - **Every failure is `404`, never `401`** — missing or malformed header, other scheme,
+      unknown, expired or revoked nonce, failed re-check — and a wrong method is also `404`, not
+      `405`, so no response distinguishes the route's existence.
+    - **Lifetime:** 15 minutes; the device's nonce rows are deleted on sign-out and on account
+      switch.
+    - **Tenant re-check:** serves when the recipient and sender **still share any tenant**, not
+      necessarily the one the push came from (re-check 3 as deployed).
+    - **Accepted residual S-2:** response timing may differ between a known and an unknown nonce;
+      accepted by the cloud review, since the nonce is 128 random bits and short-lived.
+    - **Initials** (the fallback face) follow the desktop rule (`teamBridgeSenderInitials`, §2),
+      not core's validation-only path; the cloud sends them already derived.
+    - **Phone conformance** (`PushAvatarFetcher.kt`, checked 2026-11-18): nonce shape validated
+      and a URL with query, fragment or user info refused before any request (the path itself is
+      the cloud's to choose); origin pinned to the registered hub origin
+      (`RADIENT_API_BASE`) on both `java.net.URL` and OkHttp's `HttpUrl`; `followRedirects(false)`
+      and `followSslRedirects(false)`; any non-`200` (so every `404`) returns null and the
+      notification draws initials; a 3 s deadline; no disk cache, no logging.
   - **Logging.** The nonce is in a request header, so every log that keeps URLs is out of reach
     by construction. Each sink was checked:
     - **The AWS WAF log keeps every request's path, and redacts only headers.**

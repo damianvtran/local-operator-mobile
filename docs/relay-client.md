@@ -89,6 +89,29 @@ the same rebuild at a ref where the caller had proved the end).
 `isSessionEnded` / `isSessionViewStale` (`state/projection-store.ts`) are
 the only places that read them.
 
+## Ended-session model intent
+
+The phone holds an ended local session's model/effort choice only for the open
+screen; reading `/api/models` and picking a row never wake the session. Explicit
+Resume or Send prepares the same session in order: Resume ACK, model ACK, optional
+effort ACK, then (for Send) prompt. Header Resume and Send share preparation so a
+late settings ACK cannot overwrite the first admitted prompt.
+
+Admission identity includes the relay client, session id and local/remote owner,
+not just ended/live status. Successful Resume changes liveness without revoking
+the choice. Ownership or route changes revoke execution, including between ACKs;
+a revoked selection refuses Send rather than silently sending under another
+model. No local Resume/settings preparation is forwarded to a remote owner.
+
+A partial settings refusal retains the choice and the composer's text/images.
+After Resume makes the session live, the model and effort sheets still update
+the same intent lane: the newest explicit choice supersedes the retained one
+synchronously, before React repaints. Concurrent preparations drain the old ACK
+before applying the latest intent. A second refusal retains that latest intent
+for retry. Model changes keep only a supported effort, using the existing picker
+policy; otherwise the model's default applies. No durable choice store, new
+session, or relay protocol is introduced.
+
 ## Error taxonomy → UI state
 
 Every failure is classified once, in `relay/errors.ts`. Three decisions ride on

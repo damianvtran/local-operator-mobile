@@ -21,6 +21,7 @@
 import { useEffect } from "react";
 import { useLocaleFrame } from "@/features/auth/connection-provider";
 import { ensureNotificationCategories } from "@/notifications/categories";
+import { ensureAndroidTeamBridgePresentation } from "@/team-bridge/android-presentation";
 
 export const useNotificationCategories = (): void => {
 	const language = useLocaleFrame();
@@ -29,5 +30,8 @@ export const useNotificationCategories = (): void => {
 		// `ensureNotificationCategories` at run time.
 		void language;
 		void ensureNotificationCategories();
+		// Android's counterpart (ADR 0010 S4): the Team Bridge channel name and
+		// the native delegate's lock-screen/"me" copy, in the same language.
+		void ensureAndroidTeamBridgePresentation();
 	}, [language]);
 };

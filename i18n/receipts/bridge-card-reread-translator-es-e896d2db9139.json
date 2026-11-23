@@ -1,0 +1,38 @@
+{
+	"schema": 1,
+	"receipt_kind": "translation-only; independent audit pending",
+	"instance": "e896d2db9139",
+	"date": "2026-11-21",
+	"translator": {
+		"agent": "i18n-translator (lopdev translation pass)",
+		"session": "e896d2db9139",
+		"model": "openai/gpt-6.1-sol",
+		"fallback": "anthropic/claude-opus-5-5 → openai/gpt-6.1-sol; provider quota failure"
+	},
+	"status": "translated-awaiting-independent-audit",
+	"scope_note": "Only listed bridge-card keys semantically reviewed. Metadata addition uses only thread_reply, no other new English labels found. No auditor result/native-speaker/rendered-fit/activation claim.",
+	"style_inputs": {
+		"repository": "local-operator",
+		"revision": "ebe4a4103ae2bee8cfc369450a72c79778721e5a",
+		"glossary_sha256": "5de3929198c3f603ce14bf75fb992c0f5c7a1952c440b496386977f8c636fcc7",
+		"style_sha256": "4a6f6270f028e5f5fbca7156a8f5099077f92585db94c14653482e9b188248a6"
+	},
+	"namespaces": {
+		"mobile.team_bridge": {
+			"keys_translated_reviewed": [
+				"mobile.team_bridge.card_body.held",
+				"mobile.team_bridge.card_body.offline",
+				"mobile.team_bridge.card_body.pending",
+				"mobile.team_bridge.card_body.thread_reply"
+			],
+			"source_path": "src/i18n/catalogues/en/mobile.team_bridge.json",
+			"target_path": "src/i18n/catalogues/es/mobile.team_bridge.json",
+			"context_path": "src/i18n/catalogues/en/mobile.team_bridge.context.json",
+			"sha256": {
+				"en": "077e9195346937b338b288c1ccbbbc5fb60b1d4aff6f8038bb683304c8dde8b0",
+				"es": "0d02937d64d95c5f0474bd1d8257c7d81b93a8a5a72ee3af850ef129233db35d",
+				"context": "cedfd178566653ac80674d6acde3d6c8458b499990f9b9e288518213c57c23eb"
+			}
+		}
+	}
+}

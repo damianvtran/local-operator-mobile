@@ -9,6 +9,7 @@ import {
 	reassertBadge,
 	resetAppBadgeForTests,
 	setBadgeSource,
+	writeBadge,
 } from "@/notifications/app-badge";
 import { followTeamBridgeBadge, teamBridgeBadge } from "@/team-bridge/badge";
 import {
@@ -157,5 +158,74 @@ describe("Team Bridge's badge source", () => {
 		publish({ gate: "open", unreadKnown: true, totalUnread: 8 });
 		await Promise.resolve();
 		expect(writes).toEqual([2, 3, 0]);
+	});
+});
+
+describe("writeBadge per platform (ADR 0010 S4, row 7)", () => {
+	const bridge = (id: string) => ({
+		request: {
+			identifier: id,
+			content: {
+				data: {
+					v: 1,
+					type: "team_bridge_message",
+					tenant_id: "t1",
+					conversation_id: "c1",
+				},
+			},
+		},
+	});
+	const session = (id: string) => ({
+		request: {
+			identifier: id,
+			content: { data: { type: "session_complete", sessionId: "s1" } },
+		},
+	});
+	const fakeModule = () => {
+		const calls: string[] = [];
+		return {
+			calls,
+			module: {
+				setBadgeCountAsync: async (count: number) => {
+					calls.push(`set:${count}`);
+					return true;
+				},
+				getPresentedNotificationsAsync: async () =>
+					[bridge("tb:c1:m1"), session("sess-1"), bridge("tb:c2:m9")] as never,
+				dismissNotificationAsync: async (id: string) => {
+					calls.push(`dismiss:${id}`);
+				},
+			},
+		};
+	};
+
+	it("Android 0 dismisses only Team Bridge notifications and never sets 0 (no cancelAll)", async () => {
+		const { calls, module } = fakeModule();
+		await writeBadge(module, 0, "android");
+		expect(calls).toEqual(["dismiss:tb:c1:m1", "dismiss:tb:c2:m9"]);
+		// The session notification survives: it is never dismissed.
+		expect(calls).not.toContain("dismiss:sess-1");
+	});
+
+	it("Android non-zero still writes the count", async () => {
+		const { calls, module } = fakeModule();
+		await writeBadge(module, 3, "android");
+		expect(calls).toEqual(["set:3"]);
+	});
+
+	it("iOS 0 writes 0 (the badge number, no notification is touched)", async () => {
+		const { calls, module } = fakeModule();
+		await writeBadge(module, 0, "ios");
+		expect(calls).toEqual(["set:0"]);
+	});
+
+	it("a dismiss that fails does not stop the rest", async () => {
+		const { calls, module } = fakeModule();
+		module.dismissNotificationAsync = async (id: string) => {
+			if (id === "tb:c1:m1") throw new Error("gone");
+			calls.push(`dismiss:${id}`);
+		};
+		await writeBadge(module, 0, "android");
+		expect(calls).toEqual(["dismiss:tb:c2:m9"]);
 	});
 });

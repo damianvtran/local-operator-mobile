@@ -90,6 +90,12 @@ describe("the set-up mic", () => {
 	});
 });
 
+/** Hoisted per biome's `useTopLevelRegex` (issue #323's two wiring reads). */
+const USER_EDIT_CLEARS =
+	/const editDraft = \(text: string\) => \{\s*voice\.clearOutcome\(\);\s*setDraft\(text\);/s;
+const SPLASH_PICK_IS_AN_EDIT = /<HomeSplash[^>]*\bonPick=\{editDraft\}/s;
+const APPEND_THROUGH_BARE_SETTER = /useHomeDictation\(\{[^}]*\bsetDraft,/s;
+
 /* "Home mic visible when the capability is present": the home renders no box in
  * Node, so this guards the wiring that makes it true — the home composer gets the
  * same dictation state (same capability gate) the session composer gets. */
@@ -106,6 +112,21 @@ describe("the home composer has a mic", () => {
 	});
 
 	it("drops a live take when the home sends (the session composer's rule)", () => {
-		expect(tag).toMatch(/onSend=\{\(\) => \{[^}]*voice\.cancelForSend\(\);/s);
+		// The order (live drop at the tap, resting line on admission) is
+		// `home-dictation-send.test.ts`'s; this pins that the home routes through it.
+		expect(tag).toContain("onSend={() => sendFromHome(voice, send)}");
+	});
+
+	it("ends a resting mic line on the reader's edit, not on the transcript append (#323)", () => {
+		// One user-edit path clears the line before it writes the draft…
+		expect(HOME).toMatch(USER_EDIT_CLEARS);
+		// …and both of the reader's own draft writes take it: typing in the field
+		// and a suggestion pick, which fills the empty draft a failed start leaves
+		// (round 3, integration MINOR).
+		expect(tag).toContain("onDraftChange={editDraft}");
+		expect(HOME).toMatch(SPLASH_PICK_IS_AN_EDIT);
+		// …and the dictation hook appends through the bare setter, so the append
+		// that earned "Transcript added" does not also erase it.
+		expect(HOME).toMatch(APPEND_THROUGH_BARE_SETTER);
 	});
 });

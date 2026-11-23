@@ -58,9 +58,37 @@ export type BuiltinSoundId = (typeof BUILTIN_SOUND_IDS)[number];
 export const bundledSoundFile = (id: string): string =>
 	`${id.replaceAll("-", "_")}.wav`;
 
-/** Android channel id for a payload `sound` value. */
+/** The WIRE channel id for a payload `sound` value: what the cloud names in
+ *  `data.channelId` (agent-server `sessionpush/envelope.go`). Since ADR 0010 S4
+ *  no channel with this id exists on the phone; see `sessionChannelId`. */
 export const soundChannelId = (value: BuiltinSoundId | "default" | "none") =>
 	`sound.${value}`;
+
+/**
+ * The ON-DEVICE channel id for a payload `sound` value (ADR 0010 S4, §7 row 4).
+ *
+ * WHY A SECOND ID. The `sound.*` channels were created at IMPORTANCE_DEFAULT,
+ * which on Android plays the sound but shows NO heads-up banner, where iOS
+ * shows one for the same push. Android fixes a channel's importance when the
+ * channel is created (`NotificationChannel` docs: only the user may change it
+ * afterwards), so raising it means new ids: these `alert.*` channels are
+ * created at HIGH and the `sound.*` ones are deleted.
+ *
+ * WHY THE CLOUD STILL SENDS `sound.*`. The phone's presentation delegate
+ * (`modules/lop-team-bridge-push`, `SessionChannels.kt`) rewrites a wire
+ * `sound.<v>` to `alert.<v>` before Expo looks the channel up, whenever the
+ * `alert.<v>` channel exists. So no cloud change is needed, an old app keeps
+ * working against the same cloud, and a phone that has not yet run the
+ * migration keeps posting on its old channel. The prefix swap is the whole
+ * contract: change both sides together (`session-channels.test.ts` pins it).
+ */
+export const sessionChannelId = (value: BuiltinSoundId | "default" | "none") =>
+	`alert.${value}`;
+
+/** The prefixes the native remap swaps; exported so the Kotlin pin test reads
+ *  the same two strings this module builds ids from. */
+export const WIRE_SESSION_CHANNEL_PREFIX = "sound.";
+export const DEVICE_SESSION_CHANNEL_PREFIX = "alert.";
 
 /** The legacy single channel the app created before per-sound channels. No
  *  push ever named it (the cloud forward, S7, is unbuilt), so it is removed
@@ -90,14 +118,37 @@ export type SoundChannelLabel =
 export const soundChannelSpecs = (): SoundChannelSpec[] => [
 	...BUILTIN_SOUND_IDS.map(
 		(id): SoundChannelSpec => ({
-			id: soundChannelId(id),
+			id: sessionChannelId(id),
 			label: { kind: "builtin", id },
 			sound: bundledSoundFile(id),
 		}),
 	),
-	{ id: soundChannelId("default"), label: { kind: "system" } },
-	{ id: soundChannelId("none"), label: { kind: "silent" }, sound: null },
+	{ id: sessionChannelId("default"), label: { kind: "system" } },
+	{ id: sessionChannelId("none"), label: { kind: "silent" }, sound: null },
 ];
+
+/**
+ * Channel ids the app created in earlier versions and must delete at start,
+ * given the ids `ensureAndroidSoundChannels` just created: the pre-sound
+ * `default` channel always, and each DEFAULT-importance `sound.<v>` channel
+ * only once its `alert.<v>` replacement exists. A replacement that failed to
+ * create (a missing sound file) keeps its old channel, so the native remap
+ * (which falls back to the wire id when the target is absent) still has a real
+ * channel to post on rather than Expo's generic "Miscellaneous" fallback.
+ *
+ * A user's own edits to a `sound.*` channel (muted, vibration off) do not carry
+ * over: Android offers no way to copy a channel's user-locked settings to a new
+ * id. Accepted in ADR 0010 §9 "Channel migration".
+ */
+export const legacyChannelIds = (created: ReadonlySet<string>): string[] => {
+	const values = [...BUILTIN_SOUND_IDS, "default", "none"] as const;
+	return [
+		LEGACY_ALERT_CHANNEL_ID,
+		...values
+			.filter((value) => created.has(sessionChannelId(value)))
+			.map((value) => soundChannelId(value)),
+	];
+};
 
 /** One row of `assets/notification-sounds/manifest.json`, written by
  *  `scripts/sounds/export-mobile.ts`. `source_sha256` is the core FLAC's sha

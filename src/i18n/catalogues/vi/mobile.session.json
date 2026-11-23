@@ -1,5 +1,6 @@
 {
 	"mobile.session.conversation_details": "Chi tiết cuộc trò chuyện",
+	"mobile.session.inline_chart_data": "Dữ liệu biểu đồ",
 	"mobile.session.chip.model_default": "Mặc định",
 	"mobile.session.chip.model_unknown": "Không rõ",
 	"mobile.session.status_tray.hint": "Mở dòng làm việc, tác vụ và tác nhân con",
@@ -70,6 +71,7 @@
 	"mobile.session.chip.model_change_failed": "Không thể đổi mô hình.",
 	"mobile.session.chip.effort_change_failed": "Không thể đổi mức suy luận.",
 	"mobile.session.composer.retained_instruction": "Chỉ dẫn trước đó có thể đã được chuyển đến. Hãy thử gửi lại chỉ dẫn đó trước khi gửi bản nháp hiện tại.",
+	"mobile.session.composer.settings_not_applied": "Phiên đã được mở lại, nhưng không thể áp dụng mô hình hoặc mức suy luận bạn đã chọn, nên chưa có gì được gửi. Hãy thử lại, hoặc chọn mô hình hay mức suy luận khác.",
 	"mobile.session.tray.context": "{percent}% ngữ cảnh",
 	"mobile.session.tray.context_short": "{percent}% ngữ cảnh",
 	"mobile.session.tray.context_estimate": "{percent}% ngữ cảnh (ước tính)",
@@ -77,6 +79,9 @@
 	"mobile.session.region.end": "hết · cuộn ↑",
 	"mobile.session.region.below_labels": "{labels} bên dưới · cuộn ↓",
 	"mobile.session.region.more_below": "còn thêm bên dưới · cuộn ↓",
+	"mobile.session.jump_to_latest": "↓ Đến mới nhất",
+	"mobile.session.jump_to_latest_short": "↓ Mới nhất",
+	"mobile.session.jump_to_latest_name": "Đến mới nhất",
 	"mobile.session.video.title_fallback": "Video",
 	"mobile.session.fallback_name": "phiên",
 	"mobile.session.region.label_working": "hoạt động",
@@ -94,5 +99,13 @@
 	"mobile.session.outbox.composer_stopped": "Tin nhắn trước của bạn đã ngừng gửi. Hãy thử lại hoặc bỏ tin đó ở trên để gửi tin này.",
 	"mobile.session.outbox.composer_discarding": "Đang bỏ tin nhắn trước của bạn. Bạn có thể gửi tin này trong giây lát.",
 	"mobile.session.sheet_title.commands": "Lệnh",
-	"mobile.session.sheet_title.attach": "đính kèm"
+	"mobile.session.sheet_title.attach": "Thêm hình ảnh",
+	"mobile.session.diagram.label": "Sơ đồ {type}",
+	"mobile.session.diagram.label_titled": "Sơ đồ {type}: {title}",
+	"mobile.session.diagram.copied": "đã sao chép",
+	"mobile.session.diagram.error": "Không thể vẽ sơ đồ này. Đang hiển thị mã nguồn thay thế.",
+	"mobile.session.diagram.open_hint": "Mở sơ đồ toàn màn hình",
+	"mobile.session.diagram.copy": "Sao chép nguồn của sơ đồ",
+	"mobile.session.diagram.close": "Đóng sơ đồ",
+	"mobile.session.diagram.viewer": "Trình xem sơ đồ"
 }

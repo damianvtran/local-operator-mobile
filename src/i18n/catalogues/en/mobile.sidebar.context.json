@@ -27,6 +27,10 @@
 		"role": "button",
 		"note": "Grouping option: one list with no section headings. Desktop: ui.chat.sidebar_view.one_list."
 	},
+	"mobile.sidebar.group.tag": {
+		"role": "button",
+		"note": "Grouping option: one group per tag, pinned conversations first and untagged last. Only offered on a relay with the tag registry. Desktop: ui.chat.sidebar_view.tag."
+	},
 	"mobile.sidebar.time_basis": {
 		"role": "heading",
 		"note": "Label of the choice of which clock the sections, the row times and the order read. Desktop: ui.chat.sidebar_view.time_basis."
@@ -51,6 +55,14 @@
 		"role": "help",
 		"note": "One sentence under the 'Show ended sessions' switch: turning it off never hides a pinned or running conversation."
 	},
+	"mobile.sidebar.show_tags": {
+		"role": "button",
+		"note": "Switch label: whether each conversation row paints its tag line in the drawer. On by default; a relay without the tag routes never shows the switch."
+	},
+	"mobile.sidebar.show_tags_hint": {
+		"role": "help",
+		"note": "One sentence under the 'Show tags' switch: turning the line off does not remove anything, because the tags sheet in each conversation's long-press menu still assigns them."
+	},
 	"mobile.sidebar.sections": {
 		"role": "heading",
 		"note": "Label of the list of switches that show or hide each drawer section. Desktop: ui.chat.sidebar_view.sections."
@@ -74,6 +86,14 @@
 	"mobile.sidebar.section.older": {
 		"role": "heading",
 		"note": "Drawer section heading for everything older than this week. Desktop: ui.chat.sidebar_view.section.older."
+	},
+	"mobile.sidebar.section.untagged": {
+		"role": "heading",
+		"note": "Drawer section heading under the Tag grouping for conversations whose primary tag is unset. Not a switch label; the tag grouping has no per-section switches."
+	},
+	"mobile.sidebar.tag_group.announcement": {
+		"role": "meta",
+		"note": "Screen-reader name of a tag group's heading. {name} is the operator's own tag name (or the word Untagged) and must not be translated here; the ICU plural says how many conversations the group holds and keeps the `#` placeholder."
 	},
 	"mobile.sidebar.more_settings": {
 		"role": "button",
@@ -166,5 +186,49 @@
 	"mobile.sidebar.row.todos": {
 		"role": "meta",
 		"note": "Count chip on a conversation row: open todo items in the conversation's task list. Monospace meta strip that yields at large text; keep each arm under ~10 characters. ICU plural with `#` for the number; keep the `one` and `other` arms and add the locale's own CLDR arms (few/many) where it has them."
+	},
+	"mobile.sidebar.row.on_device": {
+		"role": "meta",
+		"note": "Second line of a conversation row for a conversation running on ANOTHER of the reader's devices (paired over the mesh), in place of the folder/model line local rows show: it names the device the conversation lives on, e.g. \"On Studio Mac\". Plain, neutral statement of location in the muted row style, sentence case, no final full stop. Width: one line on narrow phone rows (as little as ~200 dp of text at default size), ellipsized at the tail, so keep the words around the name as short as your language allows; the name is what must stay visible. {device} is the device's NAME as the reader chose it (any script, often Latin even in RTL locales): never translate, transliterate, abbreviate or reorder anything inside it; you may move the placeholder within the sentence to suit your grammar (e.g. postposition languages put it first). Urdu (RTL): a Latin device name inside RTL text is bidirectional, so write no bidi control characters; the app lays out direction. Plain text, no ICU arms."
+	},
+	"mobile.sidebar.row_status.approval": {
+		"role": "status",
+		"note": "The one status word on a conversation row whose agent is waiting for the reader to approve an action. Painted in the danger colour in a crowded meta strip; one lowercase word, keep under ~10 characters. No placeholders."
+	},
+	"mobile.sidebar.row_status.question": {
+		"role": "status",
+		"note": "The one status word on a conversation row whose agent asked the reader a question and is waiting for the answer. Painted in the danger colour in a crowded meta strip; one lowercase word, keep under ~10 characters. No placeholders."
+	},
+	"mobile.sidebar.row_status.not_reachable": {
+		"role": "status",
+		"note": "Muted status word on a row for a conversation on ANOTHER device that the mesh can no longer reach, so the row is stale as a whole. Also read in the row's screen-reader name after the device. Lowercase, keep under ~14 characters; not an error. No placeholders."
+	},
+	"mobile.sidebar.row_status.ended": {
+		"role": "status",
+		"note": "Muted status word on a row whose conversation has ended (a receipt, not an error). Also read in the row's screen-reader name. One lowercase word, keep under ~10 characters. No placeholders."
+	},
+	"mobile.sidebar.row_status.not_answering": {
+		"role": "status",
+		"note": "Muted status word on a row whose conversation's runtime is up but has stopped answering (a receipt, not an error). Also read in the row's screen-reader name. Lowercase, keep under ~14 characters. No placeholders."
+	},
+	"mobile.sidebar.row_label.waiting": {
+		"role": "status",
+		"note": "Fragment of a conversation row's screen-reader name, read after the title when the agent is waiting on the reader: an approval or an answer to a question. Fragments are joined by mobile.sidebar.row_label.join (a comma in English) (\"Payments, approval waiting, open\"). Keep the select and both arms; translate each arm as a whole phrase, never by composing the status word."
+	},
+	"mobile.sidebar.row_label.working": {
+		"role": "status",
+		"note": "Fragment of a conversation row's screen-reader name, read after the title while the agent's turn is running. Fragments are joined by mobile.sidebar.row_label.join (a comma in English). Lowercase, no placeholders."
+	},
+	"mobile.sidebar.row_label.on_device": {
+		"role": "meta",
+		"note": "Fragment of a conversation row's screen-reader name for a conversation on another device: {device} is that device's name as the reader set it (e.g. \"on Studio Mac\"). Fragments are joined by mobile.sidebar.row_label.join (a comma in English). Keep the placeholder; never translate the name."
+	},
+	"mobile.sidebar.row_label.open": {
+		"role": "status",
+		"note": "Fragment of a conversation row's screen-reader name, read last when this conversation is the one currently open on screen. Fragments are joined by mobile.sidebar.row_label.join (a comma in English). Lowercase, no placeholders."
+	},
+	"mobile.sidebar.row_label.join": {
+		"role": "meta",
+		"note": "Separator between two fragments of a conversation row's screen-reader name (never shown on screen; a screen reader speaks it as a pause). {first} is the title or the already-joined fragments so far, {second} is the next fragment, e.g. \"Payments, approval waiting, on Studio, open\" is built by joining one fragment at a time. A bare list separator: use your locale's enumeration comma and spacing (e.g. full-width or ideographic comma, Arabic-script comma), never a word for \"and\", no final full stop. Keep both placeholders, {first} before {second}."
 	}
 }

@@ -1,0 +1,7 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <!-- The receiver swap (LoNotificationsService in, Expo's NotificationsService
+       out) is done in the APP manifest by plugins/with-android-team-bridge-push.js,
+       not here: a library manifest cannot reliably remove another library's
+       element, and the two must change together or both receivers would match
+       the notification action and Expo would pick whichever resolves first. -->
+</manifest>

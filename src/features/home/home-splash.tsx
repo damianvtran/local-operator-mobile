@@ -1,4 +1,4 @@
-import { ChevronRight } from "lucide-react-native";
+import { ChevronDown } from "lucide-react-native";
 import { useEffect, useRef, useState } from "react";
 import {
 	AccessibilityInfo,
@@ -9,26 +9,36 @@ import {
 	ScrollView,
 	Text,
 	TextInput,
-	useWindowDimensions,
 	View,
 } from "react-native";
+import type { SessionSummary } from "@/contracts";
 import { focusLatch } from "@/features/home/hero-focus";
 import {
+	HERO_LIST_MIN_GAP,
+	HERO_MARK_BLOCK,
 	HERO_MARK_SIZE,
 	heroHeldInset,
 	heroMeasured,
-	heroTopInset,
+	heroTopInsetAbove,
+	identityPillMarks,
+	listNaturalHeight,
+	WORK_LIST_GAP,
+	workListYield,
 } from "@/features/home/hero-layout";
-import { startingLine, suggestionSlotFor } from "@/features/home/home-copy";
+import { startingLine } from "@/features/home/home-copy";
+import { IdentityMark } from "@/features/home/home-pickers";
+import { trimWorkList, type WorkListSlot } from "@/features/home/work-list";
+import { WorkListView } from "@/features/home/work-list-view";
+import type { SidebarBasis } from "@/features/sessions/sidebar-view";
 import { t } from "@/i18n";
-import { ROLE, SURFACE } from "@/ui/a11y";
+import { CONTROL, ROLE, SURFACE, state } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
 import { Button } from "@/ui/components/button";
 import { NavigationMark } from "@/ui/components/navigation-mark";
 import { TOUCH_FLOOR } from "@/ui/layout";
 import { LARGE_TEXT_SCALE } from "@/ui/text-scale";
 import { useTextScale } from "@/ui/text-scale-provider";
-import { CONTROL_HEIGHTS, TYPE_STEPS } from "@/ui/tokens.gen";
+import { TYPE_STEPS } from "@/ui/tokens.gen";
 import { cx } from "@/ui/variants";
 
 /**
@@ -36,137 +46,139 @@ import { cx } from "@/ui/variants";
  *
  * It is the answer to the one question this screen exists for — "what can this
  * do?" — under a composer that is ready for the answer. Composed from the
- * spec's anatomy: mark, greeting, suggestions, tip, then the composer below (the
- * composer is NOT this component's child; the home composes them, and that is
- * what keeps the composer's foot position invariant in every yield below).
+ * spec's anatomy: mark, greeting, the work list (or a new account's TRY rows),
+ * then the composer below (the composer is NOT this component's child; the home
+ * composes them, and that is what keeps the composer's foot position invariant
+ * in every yield below).
+ *
+ * **The work list.** Above the composer the band also holds the home's work
+ * list (`work-list.ts` decides whether and what; `work-list-view.tsx` draws
+ * it), anchored to the band's bottom with a 12 pt gap. The hero then centres in
+ * the space the list leaves (`heroTopInsetAbove`), and when even that is too
+ * short the mark gives way first, then the running/recent rows beyond the first
+ * (`workListYield`), then the region scrolls. While the reader types, the list
+ * steps away and the hero keeps the inset it had (`heroHeldInset`) and the
+ * yield level it had, so a hidden mark is not redrawn before a key is typed.
  *
  * **The yield order.** When the free area cannot hold the splash, the splash
- * gives pieces up rather than growing into the composer: the tip goes first, then
- * the mark, then the third suggestion row, and only then does the region scroll
- * (the spec's order, at the sizes it names: the tip is −34 pt at 200 % and the
- * difference between fitting at 348 of 352 and not). The rule behind the order:
- * the greeting and the suggestions are the screen's content; the mark and the tip
- * are its decoration, and decoration yields first.
+ * gives pieces up rather than growing into the composer: the mark first, then
+ * the running/recent rows beyond the first, and only then does the region
+ * scroll. The rule behind the order: the greeting and the rows are the
+ * screen's content; the mark is its decoration, and decoration yields first.
  *
- * The measurement is two `onLayout`s — the region's box and the content's
- * natural height — and the levels re-run from zero whenever the region changes
- * (rotation, a text-scale change, the keyboard opening), because a yield
- * computed for one box is wrong for the next. Nothing here can move the
- * composer: it is a sibling, and every yield only makes this region shorter.
- *
- * **The tip rotates on twelve seconds and is not announced** (`home-copy.ts`
- * has the pool and the reasons). Its presence is a function of the region's
- * height and the pool at large — never of the current entry's length — and its
- * reserve is fixed for the scale (one `meta` line, two at large text, where the
- * line would otherwise paint wider than the phone and be cut at both ends —
- * review round 3, D2), so a rotation never moves anything below it.
+ * The measurement is the region's box and two `onLayout`s for the content's
+ * natural height (hero, list), and the levels follow the region whenever it
+ * changes (rotation, a text-scale change, the keyboard opening), because a
+ * yield computed for one box is wrong for the next. Both heights are NATURAL
+ * (nothing yielded) so the level cannot flip on its own layout; at level 2 the
+ * list's natural height is the last full-list measurement (`listNaturalHeight`).
+ * Nothing here can move the composer: it is a sibling, and every yield only
+ * makes this region shorter.
  */
 export type HomeSplashProps = {
 	draft: string;
 	editing?: boolean;
-	/** The suggestions' slot is the connect action when nothing is connected. */
-	connected: boolean;
+	/** What fills the band's bottom, above the composer — decided by
+	 *  `workListSlot` (`work-list.ts`), which owns every reason to hide it. */
+	workList: WorkListSlot;
+	/** A TRY row's tap stages its words in the composer. */
 	onPick: (text: string) => void;
-	onConnect: () => void;
+	onOpenSession: (session: SessionSummary) => void;
+	homeDirectory?: string | null;
+	basis?: SidebarBasis;
 	/** The first send is in flight: the splash yields to one line. */
 	starting: boolean;
 	/** Bump to move focus to the greeting (UX U5): the home asks after a
 	 *  Retry the reader pressed succeeds, because the alert that held focus
 	 *  unmounts. 0 / unchanged never moves anything. */
 	focusRequest?: number;
+	/** The "Start this chat with" pill under the greeting (identity-picker spec
+	 *  D-S1/D-S5), or `null` when the relay licenses no agent/team start —
+	 *  hidden, never disabled, because a dead control on the screen's focal line
+	 *  is clutter (D-S15). */
+	identity?: HeroIdentity | null;
 };
 
-/** One suggestion row: the `quiet` variant's language at full width.
- *
- * The rows are not `Button`s because a Button sizes to its label and these are
- * full-width targets (the spec's "full-width ghost rows"): a 44 pt row, the
- * label at the greeting's edge and a trailing chevron that says "this goes
- * somewhere" (design spec §2).
- *
- * **No rule between rows** (user feedback, this batch). A hairline under each row
- * turned a stack of controls into a table: the divider is the desktop's list
- * grammar, not its suggestion grammar. The desktop's measured stack does exactly
- * what these rows do now — text at rest, a `bg-elevated` surface on the row under
- * the pointer. The row stays full-bleed with its 44 pt floor, so the whole
- * width is still the target and no boundary is needed to find it.
- *
- * The one-line cap was calibrated at 100 % text scale. Large text instead gets
- * two left-aligned lines, so longer localized labels remain
- * readable rather than ending in an ellipsis. The minimum touch height stays a
- * floor: the row and its pressed surface grow with the wrapped label. */
-const SuggestionRow = ({
-	label,
-	largeText,
-	onPress,
-	testID,
-}: {
+/** What the hero pill shows and does. */
+export type HeroIdentity = Readonly<{
+	/** The chosen name (painted label), or "Default agent". */
 	label: string;
-	largeText: boolean;
+	kind: "agent" | "team" | "default";
+	agentId?: string | null;
+	avatarSha256?: string | null;
+	/** Something other than the default is chosen: the pill gains its border. */
+	chosen: boolean;
+	/** Not connected, or a start in flight (D-S10): the pill does not open. */
+	disabled: boolean;
 	onPress: () => void;
-	/** Set on the offline state's Connect row (`homeConnect`); the suggestion
-	 *  rows themselves carry no ids — they are content, and a flow presses them
-	 *  by their label. */
-	testID?: string;
+}>;
+
+/**
+ * The identity pill (D-S5..D-S10): mark → label → chevron in one 44 pt
+ * capsule, hugging its content and centred under the greeting.
+ *
+ * QUIET AT DEFAULT, PRESENT WHEN CHOSEN (D-S7). At default it is muted text
+ * with no fill or border — it reads as the second half of the greeting, not as
+ * a button competing with the suggestions. Chosen, the label steps to `ink`
+ * and the capsule gains the 1 pt `border-control` ring the hero mark already
+ * uses (the 3:1 non-text token). No Liquid Glass: glass on this screen is the
+ * composer's chrome, and the hero is content. Disabled steps the COLOUR to
+ * `ink-disabled` (never opacity, desktop design D-1).
+ */
+const IdentityPill = ({
+	identity,
+	largeText,
+	scale,
+}: {
+	identity: HeroIdentity;
+	largeText: boolean;
+	/** The effective text scale: the mark and chevron grow with the label (D5). */
+	scale: number;
 }) => {
-	const chevronInk = useTokenColor("ink-dim");
+	const marks = identityPillMarks(scale);
+	const muted = useTokenColor("ink-muted");
+	const disabledInk = useTokenColor("ink-disabled");
+	const ink = useTokenColor("ink");
+	const tone = identity.disabled ? disabledInk : identity.chosen ? ink : muted;
 	return (
 		<Pressable
 			accessibilityRole={ROLE.button}
-			onPress={onPress}
-			testID={testID}
-			style={{ minHeight: TOUCH_FLOOR }}
-		>
-			{({ pressed }) => (
-				<View
-					/* CENTRED ROWS under a centred greeting (operator, TestFlight 578:
-					 *  the logo "in the center above" the greeting). The rule from design
-					 *  spec §2 still holds — ONE rail for the whole hero, never centred
-					 *  rows under a left heading — only the rail moved to the centre
-					 *  line. The row stays FULL-WIDTH, so the 44 pt target and the
-					 *  pressed surface span the column; the label and its chevron are
-					 *  centred together as one phrase (`justify-center`), so the
-					 *  chevron reads as the label's own affordance rather than a far
-					 *  edge marker. `-mx-3 px-3` keeps the pressed surface's 12 pt
-					 *  room past the column edge. `elevated` is the token the desktop's
-					 *  `hover:bg-elevated` uses, so one gesture means one thing on both
-					 *  clients; no rule between rows (a divider turned the stack into a
-					 *  table).
-					 *  LARGE TEXT starts the row instead (design D1): a label that wraps
-					 *  takes the column's whole width, so a centred phrase left its
-					 *  chevron pinned to the far edge, level with neither line. Start-
-					 *  aligned, an unwrapped label keeps its chevron beside it and a
-					 *  wrapped one reads as a list row with its trailing disclosure. */
-					className={cx(
-						"-mx-3 min-h-11 flex-row items-center gap-1 rounded-sm px-3",
-						largeText ? "justify-start" : "justify-center",
-						pressed && "bg-elevated",
-					)}
-				>
-					{/* A NAMED TYPE ROLE, never a bare colour class (a bare class held
-					 *  14 px at 200 % and failed the capture's text-scale check). `body`
-					 *  (16, `ink-muted`, 8.60:1) is the spec's step for these rows: they
-					 *  are the hero's actions, and `body-sm` under a `display` greeting
-					 *  read as a caption. At large text a label may wrap to two lines,
-					 *  centred like the rest of the hero, so a long localization is
-					 *  read whole. `flex-shrink`, not `flex-1`: a growing label would
-					 *  push the chevron to the row's far edge and off the centre line. */}
-					<Text
-						className={cx(
-							"min-w-0 flex-shrink text-body",
-							largeText ? "text-start" : "text-center",
-							pressed ? "text-ink" : "text-ink-muted",
-						)}
-						numberOfLines={largeText ? 2 : 1}
-					>
-						{label}
-					</Text>
-					<ChevronRight
-						size={CONTROL_HEIGHTS.md.icon}
-						color={chevronInk}
-						aria-hidden
-					/>
-				</View>
+			accessibilityLabel={t("mobile.home.identity.pill_label", {
+				target: identity.label,
+			})}
+			accessibilityState={state({ disabled: identity.disabled })}
+			disabled={identity.disabled}
+			onPress={identity.onPress}
+			testID={CONTROL.homeIdentityPill}
+			style={{ minHeight: TOUCH_FLOOR, maxWidth: "100%" }}
+			className={cx(
+				"mt-2 flex-row items-center gap-1.5 rounded-full px-3",
+				identity.chosen ? "border border-border-control" : null,
 			)}
+		>
+			<IdentityMark
+				kind={identity.kind}
+				agentId={identity.agentId}
+				avatarSha256={identity.avatarSha256}
+				size={marks.mark}
+			/>
+			<Text
+				className="min-w-0 shrink text-body-sm"
+				style={{ color: tone }}
+				/* One line with an end ellipsis; two at large text, where one line
+				 *  would cut most names (D-S9/D-S26). */
+				numberOfLines={largeText ? 2 : 1}
+			>
+				{identity.label}
+			</Text>
+			{/* `flexShrink: 0`: an ellipsised name squeezed the chevron to 9.9 pt
+			 *  at 320 pt (D8). */}
+			<ChevronDown
+				size={marks.chevron}
+				color={tone}
+				style={{ flexShrink: 0 }}
+				aria-hidden
+			/>
 		</Pressable>
 	);
 };
@@ -200,23 +212,81 @@ const _tipReserveDp = (scale: number, largeText: boolean): number =>
 export const HomeSplash = ({
 	draft,
 	editing,
-	connected,
+	workList,
 	onPick,
+	onOpenSession,
+	homeDirectory,
+	basis,
 	starting,
 	focusRequest = 0,
+	identity = null,
 }: HomeSplashProps) => {
-	const { width } = useWindowDimensions();
 	const { effectiveScale } = useTextScale();
-	const slot = suggestionSlotFor({ connected, draft, width });
-	const rows =
-		slot.kind === "suggestions" && !draft.length && !editing
-			? slot.rows.slice(0, 2)
-			: [];
-	/* The two measurements the centring needs: the band (this region, which ends
-	 *  at the composer STACK's top — see `hero-layout.ts`) and the hero block's
-	 *  own height. Both re-measure on rotation, text scale, keyboard and notice. */
+	/* The measurements the centring needs: the band (this region, which ends at
+	 *  the composer STACK's top — see `hero-layout.ts`), the hero block's own
+	 *  height, and the work list's. All re-measure on rotation, text scale,
+	 *  keyboard and notice. */
 	const [band, setBand] = useState(0);
 	const [block, setBlock] = useState(0);
+	const [listMeasured, setListMeasured] = useState(0);
+	/* NATURAL heights — hero with its mark, list with every row — so the yield
+	 *  below is a function of numbers that do not change when it fires (see
+	 *  `workListYield`). Each is the measured height plus what the level in force
+	 *  when it was measured had taken away; `levelRef` is that level. */
+	const [heroNatural, setHeroNatural] = useState(0);
+	const [listNatural, setListNatural] = useState(0);
+	const [rowHeight, setRowHeight] = useState(0);
+	const levelRef = useRef<0 | 1 | 2>(0);
+	/* The last FULL-list height (measured below level 2) and the list it was
+	 *  measured for. Level 2 trims the list, so its own measurement is short by
+	 *  the dropped rows AND their section header; this is what it reuses
+	 *  (`listNaturalHeight`). Keyed by the row counts and the scale so a changed
+	 *  list never reuses a stale height. */
+	const fullList = useRef({ height: 0, key: "" });
+	const listKey =
+		workList.kind === "list"
+			? [
+					workList.list.needsYou.length,
+					workList.list.running.length,
+					workList.list.recent.length,
+					effectiveScale,
+				].join("/")
+			: workList.kind;
+	const hasList = workList.kind !== "none";
+	/* The level in force when the list last drew, kept while the list is away
+	 *  because the reader is typing in an empty composer (see `holding`). */
+	const lastLevel = useRef<0 | 1 | 2>(0);
+	const listLevel = hasList
+		? workListYield({
+				band,
+				hero: heroNatural,
+				mark: HERO_MARK_BLOCK,
+				list: listNatural,
+			})
+		: 0;
+	const holding = Boolean(editing) && !draft.length && !starting;
+	/* Focusing an empty composer removes the list, and with it the reason the
+	 *  mark was hidden; redrawing it would grow the hero ~50 pt while the held
+	 *  inset stays, dropping the greeting before a key is typed. */
+	const level = hasList ? listLevel : holding ? lastLevel.current : 0;
+	lastLevel.current = level;
+	levelRef.current = level;
+	/* Rows the second yield takes: running/recent beyond one. Needs-you rows are
+	 *  never given up. */
+	const trimmable =
+		workList.kind === "list"
+			? Math.max(
+					0,
+					workList.list.running.length + workList.list.recent.length - 1,
+				)
+			: 0;
+	const shown: Exclude<WorkListSlot, { kind: "none" }> | null =
+		workList.kind === "none"
+			? null
+			: workList.kind === "list" && level === 2
+				? { kind: "list", list: trimWorkList(workList.list, 1) }
+				: workList;
+	const listHeight = hasList ? listMeasured : 0;
 	/* `title` while the home IS the page, `heading` once there is a draft or a
 	 *  send in flight and it is a heading over other content. ONE STEP DOWN the
 	 *  type scale from the old `display`/`title` pair (operator, TestFlight 578:
@@ -226,13 +296,14 @@ export const HomeSplash = ({
 	 *  tapping into an empty field must not snap the greeting's size before a
 	 *  key is typed. */
 	const headline = !draft.length && !starting;
-	/* Focus on an empty field still drops the rows, so the inset is HELD at its
-	 *  resting value (`heroHeldInset`) rather than re-centring the shorter
-	 *  block. `restInset` is the last inset painted outside that state. */
-	const live = heroTopInset(band, block);
-	const holding = Boolean(editing) && !draft.length && !starting;
+	/* Focus on an empty field drops the list, so the inset is HELD at its
+	 *  resting value (`heroHeldInset`) rather than re-centring the hero in the
+	 *  space the list gave back. `restInset` is the last inset painted outside
+	 *  that state. */
+	const live = heroTopInsetAbove(band, block, listHeight);
 	const restInset = useRef(live);
 	if (!holding) restInset.current = live;
+	const painted = heroMeasured(band, block) && (!hasList || listMeasured > 0);
 	const greetingRef = useRef<Text | null>(null);
 	/* Seeded with the value this splash MOUNTED with (review M1): Home's counter
 	 *  never resets and the splash remounts on New chat and on a cleared
@@ -268,7 +339,15 @@ export const HomeSplash = ({
 			onLayout={(event) => setBand(Math.round(event.nativeEvent.layout.height))}
 		>
 			<ScrollView
-				contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24 }}
+				/* `flexGrow`: the content is at least the band, so the flexible
+				 *  spacer under the hero can push the work list to the band's bottom.
+				 *  The list's gap to the composer stack is `WORK_LIST_GAP`; without
+				 *  one the hero keeps its 24 pt foot. */
+				contentContainerStyle={{
+					paddingHorizontal: 16,
+					paddingBottom: hasList ? WORK_LIST_GAP : 24,
+					flexGrow: 1,
+				}}
 				keyboardShouldPersistTaps="handled"
 			>
 				{/* The centring offset is a SPACER'S HEIGHT, not a padding (QA
@@ -284,12 +363,18 @@ export const HomeSplash = ({
 					}}
 				/>
 				<View
-					onLayout={(event) =>
-						setBlock(Math.ceil(event.nativeEvent.layout.height))
-					}
+					onLayout={(event) => {
+						const height = Math.ceil(event.nativeEvent.layout.height);
+						setBlock(height);
+						setHeroNatural(
+							height + (levelRef.current >= 1 ? HERO_MARK_BLOCK : 0),
+						);
+					}}
 					/* Laid out (so it is measured) but unpainted until its centred
-					 *  place is known: no top-anchored first frame (R4/D4). */
-					style={{ opacity: heroMeasured(band, block) ? 1 : 0 }}
+					 *  place is known: no top-anchored first frame (R4/D4). With a
+					 *  list the place also depends on the list's height, so both
+					 *  appear together. */
+					style={{ opacity: painted ? 1 : 0 }}
 					/* THE CENTRED STACK (operator, TestFlight 578): mark, greeting,
 					 *  rows on one centre line. The mark is INSIDE this measured view,
 					 *  so the centring maths (`heroTopInset`) treats the stack as one
@@ -304,12 +389,16 @@ export const HomeSplash = ({
 					 *  is the 3:1 non-text token (3.42:1 light / 3.93:1 dark on
 					 *  canvas), so the disc's edge reads in both themes. It hugs the
 					 *  disc because the asset's disc fills its square edge to edge. */}
-					<View
-						className="mb-4 rounded-full border border-border-control"
-						testID={SURFACE.homeHeroMark}
-					>
-						<NavigationMark size={HERO_MARK_SIZE} />
-					</View>
+					{/* The first thing to give way when the band is short (`level` 0
+					 *  keeps it): decoration yields before content. */}
+					{level === 0 ? (
+						<View
+							className="mb-4 rounded-full border border-border-control"
+							testID={SURFACE.homeHeroMark}
+						>
+							<NavigationMark size={HERO_MARK_SIZE} />
+						</View>
+					) : null}
 					<Text
 						ref={greetingRef}
 						/* RN's Text types omit `tabIndex`; RN-web honours it. Spread, the
@@ -321,28 +410,65 @@ export const HomeSplash = ({
 						)}
 						testID={starting ? SURFACE.homeStarting : SURFACE.homeGreeting}
 					>
-						{starting ? startingLine() : t("mobile.chrome.home.greeting")}
+						{starting
+							? identity?.chosen
+								? t("mobile.home.identity.starting_with", {
+										name: identity.label,
+									})
+								: startingLine()
+							: t("mobile.chrome.home.greeting")}
 					</Text>
-					{rows.length ? (
-						/* `space.6` under the greeting, `space.2` between the rows. */
-						<View
-							/* `self-stretch`: the parent centres its children, and a
-							 *  shrink-wrapped column would shrink the rows' 44 pt targets
-							 *  to their labels. */
-							className="mt-6 gap-2 self-stretch"
-							testID={SURFACE.homeSuggestions}
-						>
-							{rows.map((label) => (
-								<SuggestionRow
-									key={label}
-									label={label}
-									largeText={effectiveScale > LARGE_TEXT_SCALE}
-									onPress={() => onPick(label)}
-								/>
-							))}
-						</View>
+					{/* Directly under the greeting, inside the measured hero block, so
+					 *  the centring maths counts it and the composer below never moves
+					 *  (D-S6/D-S8). It never yields: it is content, and it scrolls
+					 *  with the greeting. */}
+					{identity !== null ? (
+						<IdentityPill
+							identity={identity}
+							largeText={effectiveScale > LARGE_TEXT_SCALE}
+							scale={effectiveScale}
+						/>
 					) : null}
 				</View>
+				{shown !== null ? (
+					<>
+						{/* Grows to push the list to the band's foot; never below
+						 *  `HERO_LIST_MIN_GAP`, so a band too short for both (large
+						 *  text, scrolling) still keeps the greeting off the first
+						 *  header (design D4). */}
+						<View style={{ flexGrow: 1, minHeight: HERO_LIST_MIN_GAP }} />
+						<View
+							onLayout={(event) => {
+								const height = Math.ceil(event.nativeEvent.layout.height);
+								const at = levelRef.current;
+								if (at < 2) fullList.current = { height, key: listKey };
+								setListMeasured(height);
+								setListNatural(
+									listNaturalHeight({
+										measured: height,
+										level: at,
+										full:
+											fullList.current.key === listKey
+												? fullList.current.height
+												: 0,
+										trimmable,
+										rowHeight,
+									}),
+								);
+							}}
+							style={{ opacity: painted ? 1 : 0 }}
+						>
+							<WorkListView
+								slot={shown}
+								onPick={onPick}
+								onOpenSession={onOpenSession}
+								homeDirectory={homeDirectory}
+								basis={basis}
+								onRowHeight={setRowHeight}
+							/>
+						</View>
+					</>
+				) : null}
 			</ScrollView>
 		</View>
 	);

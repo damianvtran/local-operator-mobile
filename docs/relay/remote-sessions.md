@@ -44,7 +44,10 @@ never receives an owner control key, peer URL, or arbitrary attachment path.
 ## Supported instructions and media
 
 Typed prompt/steer and inline images use the existing command UUID/envelope
-lifecycle unchanged. The native client does not send `expand_skills=true`.
+lifecycle unchanged. The native client sends `expand_skills=true` only for a
+*local* conversation (`capabilities.skill_invocation.available` and a `$` in the
+text); it never sends it for a remote one, which the relay answers with
+`409 remote_unsupported` (`remote_sessions.skill_invocation` is `false`).
 Every other session control (Stop, approval/ask answers, the slash palette and
 typed `/commands`, model/effort pickers, Resume) is offered for a remote
 conversation only when its op is in `supported_command_ops`

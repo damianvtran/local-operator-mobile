@@ -13,9 +13,16 @@
  */
 import { usePathname, useRouter } from "expo-router";
 import { Bot, Clock, MessageSquare, UserRound } from "lucide-react-native";
-import { useCallback, useEffect, useState } from "react";
-import { Pressable, Text } from "react-native";
+import {
+	useCallback,
+	useEffect,
+	useRef,
+	useState,
+	useSyncExternalStore,
+} from "react";
+import { Platform, Pressable, Text, type View } from "react-native";
 import { toBase64 } from "@/features/session/runtime";
+import { useAvatarViewport } from "@/features/team-bridge/avatar-viewport-context";
 import { t } from "@/i18n";
 import {
 	type AvatarPixels,
@@ -60,6 +67,9 @@ const PIXELS: Record<AvatarSize, AvatarPixels> = { sm: 64, md: 64, lg: 256 };
 export function useAvatarUri(
 	member: DirectoryMember | null | undefined,
 	size: AvatarSize,
+	/** False while the row is off screen: show a held photo, read nothing. */
+	enabled = true,
+	row = false,
 ): { uri: string | null; onError: () => void } {
 	const { hub, avatars } = useTeamBridge();
 	const version = avatarVersion(member);
@@ -77,8 +87,9 @@ export function useAvatarUri(
 			setUri(null);
 			return;
 		}
-		let live = true;
 		setUri(avatars.peek(key));
+		if (!enabled) return;
+		const controller = new AbortController();
 		void avatars
 			.load(
 				key,
@@ -91,14 +102,13 @@ export function useAvatarUri(
 					return `data:${mime};base64,${toBase64(bytes)}`;
 				},
 				avatarFailure,
+				{ signal: controller.signal, row },
 			)
 			.then((value) => {
-				if (live) setUri(value);
+				if (!controller.signal.aborted) setUri(value);
 			});
-		return () => {
-			live = false;
-		};
-	}, [avatars, hub, key, accountId, hash, pixels]);
+		return () => controller.abort();
+	}, [avatars, hub, key, accountId, hash, pixels, enabled, row]);
 	const onError = useCallback(() => {
 		if (key) avatars.fail(key, "permanent");
 		setUri(null);
@@ -114,12 +124,17 @@ export function PersonAvatar({
 	member,
 	label,
 	size = "md",
+	deferred = false,
+	row = false,
 }: {
 	member: DirectoryMember | null | undefined;
 	label: string;
 	size?: AvatarSize;
+	/** Off screen in a list: keep a held photo, start no read. */
+	deferred?: boolean;
+	row?: boolean;
 }) {
-	const { uri, onError } = useAvatarUri(member, size);
+	const { uri, onError } = useAvatarUri(member, size, !deferred, row);
 	return (
 		<Avatar
 			initials={initialsOf(label)}
@@ -130,15 +145,17 @@ export function PersonAvatar({
 	);
 }
 
-/**
- * Endpoint photos are authorized on the hub, not inherited from the owner.
- * Never initialize from ready cache: the endpoint route is private/no-cache.
- * Display binds to cache instance, retirement epoch and the complete photo key,
- * so changing owner/endpoint/hash/size cannot flash the old result for a frame.
- */
+/** A retained endpoint photo is displayable only while an authorized read for
+ * this account is within `ENDPOINT_PHOTO_FRESH_MS` (`peekEndpoint`); a row
+ * re-entering inside that window repaints it on its first frame and spends no
+ * read (U5/D4). Past it, or never verified, the row starts on the glyph until
+ * this admission's GET confirms access. Off screen, nothing is displayed. */
 export function useEndpointAvatarUri(
 	member: DirectoryMember | null | undefined,
 	size: AvatarSize,
+	/** False while off screen: withdraw pending work and display no private bytes. */
+	enabled = true,
+	row = false,
 ): { uri: string | null; onError: () => void } {
 	const { hub, avatars } = useTeamBridge();
 	const version = endpointAvatarVersion(member?.agent);
@@ -147,33 +164,43 @@ export function useEndpointAvatarUri(
 	const pixels = PIXELS[size];
 	const key =
 		endpointId && hash ? endpointAvatarKey(endpointId, hash, pixels) : null;
-	const epoch = avatars.epoch;
+	const epoch = useSyncExternalStore(
+		avatars.subscribeEpoch,
+		avatars.getEpoch,
+		avatars.getEpoch,
+	);
 	const [loaded, setLoaded] = useState<EndpointAvatarSnapshot | null>(null);
 	useEffect(() => {
 		setLoaded(null);
-		if (!key || !endpointId || !hash) return;
-		let live = true;
+		if (!key || !endpointId || !hash || !enabled) return;
+		const controller = new AbortController();
+		const started = avatars.epoch;
 		void avatars
 			.loadEndpoint(
 				key,
-				async () => {
-					const { mime, bytes } = await hub.endpointAvatarBytes(
+				async (etag, onRequest) => {
+					const photo = await hub.revalidateEndpointAvatar(
 						endpointId,
 						hash,
 						pixels,
+						{ etag: etag ?? null, native: Platform.OS !== "web", onRequest },
 					);
-					return `data:${mime};base64,${toBase64(bytes)}`;
+					return (
+						photo && {
+							uri: `data:${photo.mime};base64,${toBase64(photo.bytes)}`,
+							etag: photo.etag,
+						}
+					);
 				},
 				endpointAvatarFailure,
+				{ signal: controller.signal, row, metered: true },
 			)
 			.then((uri) => {
-				if (live && avatars.epoch === epoch)
-					setLoaded({ cache: avatars, epoch, key, uri });
+				if (!controller.signal.aborted && avatars.epoch === started)
+					setLoaded({ cache: avatars, epoch: started, key, uri });
 			});
-		return () => {
-			live = false;
-		};
-	}, [avatars, hub, key, endpointId, hash, pixels, epoch]);
+		return () => controller.abort();
+	}, [avatars, hub, key, endpointId, hash, pixels, enabled, row]);
 	const onError = useCallback(() => {
 		// A late decoder callback from an old scope must not poison the new one.
 		if (key && avatars.epoch === epoch) avatars.fail(key, "permanent");
@@ -186,7 +213,10 @@ export function useEndpointAvatarUri(
 		);
 	}, [avatars, key, epoch]);
 	return {
-		uri: endpointDisplayUri(loaded, avatars, epoch, key),
+		uri: enabled
+			? (endpointDisplayUri(loaded, avatars, epoch, key) ??
+				(key ? avatars.peekEndpoint(key) : null))
+			: null,
 		onError,
 	};
 }
@@ -194,11 +224,15 @@ export function useEndpointAvatarUri(
 function AgentAvatar({
 	member,
 	size,
+	deferred = false,
+	row = false,
 }: {
 	member: DirectoryMember;
 	size: AvatarSize;
+	deferred?: boolean;
+	row?: boolean;
 }) {
-	const { uri, onError } = useEndpointAvatarUri(member, size);
+	const { uri, onError } = useEndpointAvatarUri(member, size, !deferred, row);
 	const ink = useTokenColor("accent-active");
 	return (
 		<Avatar
@@ -238,17 +272,29 @@ export function UnknownSenderAvatar({
 export function ProfileSubjectAvatar({
 	subject,
 	size = "md",
+	deferred = false,
+	row = false,
 }: {
 	subject: ProfileSubject;
 	size?: AvatarSize;
+	/** Off screen in a list (`useAvatarViewport`): no photo read yet. */
+	deferred?: boolean;
+	row?: boolean;
 }) {
 	return subject.agent ? (
-		<AgentAvatar member={subject.person} size={size} />
+		<AgentAvatar
+			member={subject.person}
+			size={size}
+			deferred={deferred}
+			row={row}
+		/>
 	) : (
 		<PersonAvatar
 			member={subject.person}
 			label={subjectMarkLabel(subject)}
 			size={size}
+			deferred={deferred}
+			row={row}
 		/>
 	);
 }
@@ -339,8 +385,13 @@ export function ProfileAvatarButton({
 	onOpen: (subject: ProfileSubject) => void;
 	testID: string;
 }) {
+	// The drawer mounts every row; only the ones on screen read their photo
+	// (`avatar-viewport.ts`). Outside the drawer this is true at once.
+	const box = useRef<View>(null);
+	const { visible, row } = useAvatarViewport(box);
 	return (
 		<Pressable
+			ref={box}
 			accessibilityRole={ROLE.button}
 			accessibilityLabel={t("mobile.team_bridge.profile.open", { name: label })}
 			className="items-center justify-center"
@@ -348,7 +399,12 @@ export function ProfileAvatarButton({
 			onPress={() => onOpen(subject)}
 			testID={testID}
 		>
-			<ProfileSubjectAvatar subject={subject} size={size} />
+			<ProfileSubjectAvatar
+				subject={subject}
+				size={size}
+				deferred={!visible}
+				row={row}
+			/>
 		</Pressable>
 	);
 }
@@ -395,11 +451,17 @@ export function ProfileAuthorName({
 	label,
 	onOpen,
 	testID,
+	onLongPress,
 }: {
 	subject: ProfileSubject;
 	label: string;
 	onOpen: (subject: ProfileSubject) => void;
 	testID: string;
+	/** The message row's long-press (its actions sheet). A Pressable with
+	 *  `onPress` but no `onLongPress` turns a hold into a press on release, so
+	 *  without this the innermost control took the hold and the row's sheet
+	 *  never opened (PR #339 round 1, m1/U2/U6). */
+	onLongPress?: () => void;
 }) {
 	return (
 		<Pressable
@@ -408,6 +470,7 @@ export function ProfileAuthorName({
 			accessibilityHint={t("mobile.team_bridge.profile.opens_hint")}
 			hitSlop={8}
 			onPress={() => onOpen(subject)}
+			onLongPress={onLongPress}
 			testID={testID}
 			className="rounded-xs"
 			style={AUTHOR_NAME_TOUCH_BOX}
@@ -421,9 +484,15 @@ export function ProfileAuthorName({
 export function ProfileAuthorPhoto({
 	subject,
 	onOpen,
+	onLongPress,
 }: {
 	subject: ProfileSubject;
 	onOpen: (subject: ProfileSubject) => void;
+	/** The message row's long-press (its actions sheet). A Pressable with
+	 *  `onPress` but no `onLongPress` turns a hold into a press on release, so
+	 *  without this the innermost control took the hold and the row's sheet
+	 *  never opened (PR #339 round 1, m1/U2/U6). */
+	onLongPress?: () => void;
 }) {
 	return (
 		<Pressable
@@ -441,6 +510,7 @@ export function ProfileAuthorPhoto({
 			hitSlop={6}
 			className="mt-0.5"
 			onPress={() => onOpen(subject)}
+			onLongPress={onLongPress}
 		>
 			<ProfileSubjectAvatar subject={subject} size="sm" />
 		</Pressable>

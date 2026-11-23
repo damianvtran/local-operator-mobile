@@ -1,4 +1,6 @@
+import { Platform } from "react-native";
 import { loadNotifications } from "@/notifications/native";
+import { teamBridgePushFromResponse } from "@/team-bridge/push-payload";
 
 /**
  * THE ONE WRITER of the app icon badge.
@@ -38,11 +40,54 @@ export type BadgeSource = "teamBridge";
 
 type Writer = (count: number) => Promise<unknown>;
 
+type BadgeModule = Pick<
+	typeof import("expo-notifications"),
+	| "setBadgeCountAsync"
+	| "getPresentedNotificationsAsync"
+	| "dismissNotificationAsync"
+>;
+
+/**
+ * Write one total to the OS, per platform.
+ *
+ * WHY ANDROID NEVER WRITES 0 (ADR 0010 S4, §7 row 7). expo-notifications'
+ * Android `BadgeHelper.setBadgeCount(0)` does not clear a number: it calls
+ * `NotificationManager.cancelAll()` (`BadgeHelper.kt:13-17`, expo-notifications
+ * 57.0.21). Reading every Team Bridge message would therefore also wipe a
+ * finished SESSION's notification the reader had not looked at yet. On Android
+ * 8+ the launcher's badge dot is derived from the notifications in the shade,
+ * so the honest equivalent of "0 unread" is to dismiss the Team Bridge
+ * notifications, which are the ones the count was about, and leave the rest.
+ * Non-zero counts still go through `setBadgeCountAsync` (ShortcutBadger), which
+ * cancels nothing.
+ */
+export async function writeBadge(
+	module: BadgeModule,
+	count: number,
+	os: string = Platform.OS,
+): Promise<void> {
+	if (os === "android" && count === 0) {
+		const presented = await module.getPresentedNotificationsAsync();
+		for (const notification of presented) {
+			// Parsed, not prefix-matched on the tag: the payload type is the
+			// contract, while the tag shape is a cloud implementation detail.
+			if (teamBridgePushFromResponse({ notification }) === null) continue;
+			try {
+				await module.dismissNotificationAsync(notification.request.identifier);
+			} catch {
+				/* Already gone (swiped, tapped): nothing left to clear. */
+			}
+		}
+		return;
+	}
+	await module.setBadgeCountAsync(count);
+}
+
 const defaultWriter: Writer = async (count) => {
 	const module = await loadNotifications();
 	// Web and builds without the module have no icon badge; nothing to do.
 	if (module === null) return;
-	await module.setBadgeCountAsync(count);
+	await writeBadge(module, count);
 };
 
 let writer: Writer = defaultWriter;

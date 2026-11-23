@@ -98,8 +98,14 @@ export type DictationEvent =
 	| { type: "settle"; outcome: DictationOutcome | null }
 	/** The reader's own discard: no request, and no line (their action, not a loss). */
 	| { type: "cancel" }
-	/** A send/steer took the composer: abort, discard, and SAY SO. */
+	/** A send/steer took the composer: abort, discard, and SAY SO. At rest it ends
+	 *  any resting line instead: that line answered the last mic action, and the
+	 *  message it sat beside has left (issue #323). */
 	| { type: "send" }
+	/** The reader's OWN edit of the draft (typing, a paste, a deletion). Ends a
+	 *  resting line and touches no live take. The transcript append is not this
+	 *  event — it is what `added` announces, so it must not also clear it. */
+	| { type: "edit" }
 	/* The mic was pressed on a computer with no speech-to-text configured
 	 * (`stt/capability.ts` `micSetupNeeded`). Not a phase: nothing records and
 	 * nothing is sent; the press is answered with the set-up line instead. */
@@ -227,8 +233,20 @@ export function reduceDictation(
 				? { state: IDLE_DICTATION, effects: [] }
 				: { state, effects: [] };
 
+		case "edit":
+			/* Issue #323: a resting line ("Couldn’t start recording…") otherwise
+			 * stayed until the next press, holding the dictation row open under a
+			 * reader who had moved on to typing. Every outcome clears, `added`
+			 * included: it was announced when the append landed, and the reader's
+			 * next keystroke is them working on the result. */
+			return phase === "idle"
+				? { state: IDLE_DICTATION, effects: [] }
+				: { state, effects: [] };
+
 		case "send": {
-			if (!live(phase)) return { state, effects: [] };
+			/* At rest there is nothing to discard, and the resting line belonged to
+			 * the message that just left (issue #323), so it ends with it. */
+			if (!live(phase)) return { state: IDLE_DICTATION, effects: [] };
 			/* U2: the send is not a deliberate cancel, so the drop is SAID. */
 			return {
 				state: { phase: "idle", outcome: "discarded" },

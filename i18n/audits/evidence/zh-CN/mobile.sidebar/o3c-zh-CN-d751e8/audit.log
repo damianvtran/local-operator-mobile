@@ -1,0 +1,81 @@
+# o3c-zh-CN-d751e8 mobile.sidebar — actual printed output of checks run in session d751e813fdef, 2026-11-18
+# Provenance: each block below is copied verbatim from a tool result this session printed. A single composite
+# re-capture command was refused by the harness guardrail (dangerous-delete review, guard 0.107.0; nothing ran),
+# so this log is assembled from the individual runs rather than one script. check-zh-CN.out is the checker's own tee'd output.
+
+$ shasum -a 256 <draft-zh-CN-r2.json> <o3c-translation-brief.json>
+e203a3c0dd267b8b043c89d8c63d12acc92e1862c860d9c73af7ef5e2b05edbf  .local-operator/sessions/6323bd03d1a2/scratchpad/o3c/draft-zh-CN-r2.json
+e88beb09366b9ff795bf0ac916f30cef1c9a93c35fa4617575e904c7a6f5fd17  .local-operator/sessions/162198c78bcb/scratchpad/o3c-translation-brief.json
+
+$ git -C ~/local-operator-mobile/.worktrees/i18n-m3-s2a rev-parse HEAD
+e7ebc3917537d83cc772148fc5b2fc2ad3f43a41
+
+$ shasum -a 256 ~/local-operator/i18n/glossary.md ~/local-operator/i18n/style-guides/zh-CN.md
+0eb34437a8c3d6f564f278ef957a603b1d9f51bb07d5ddae5ea8f37deba962f8  i18n/glossary.md
+8f95d89debbd0af848e72e4805e256ef9566632e520a5c6d9b37928cd617142c  i18n/style-guides/zh-CN.md
+(glossary row) | approvals | translate — `/approvals` stays | approbations · aprobaciones · 审批 · ...
+(style guide :29) 提交 (commit), 审批 (approvals), 用量 (usage), 费用 (cost).
+(style guide :67) - No space inserted between Chinese text and Latin/digit runs (width discipline; matches mainland software convention)
+
+$ shasum -a 256 src/i18n/catalogues/zh-CN/mobile.sidebar.json   (worktree)
+7775bffdcb80c26e035062a5d9ccd7f09df756d594604f57da6a2711375fe8e7  src/i18n/catalogues/zh-CN/mobile.sidebar.json
+keys 42 overlap []
+
+$ grep -n 'row_label|row_status|join(' src/ui/components/list-row-meta.ts
+478: t("mobile.sidebar.row_label.waiting", { kind: options.attentionWord }),
+481: parts.push(t("mobile.sidebar.row_label.working"));
+497: t("mobile.sidebar.row_label.on_device", {
+504: if (options.selected) parts.push(t("mobile.sidebar.row_label.open"));
+505: return parts.join(", ");
+
+## checker: cd <worktree> && ./node_modules/.bin/tsx /Users/damian/.local-operator/sessions/d751e813fdef/scratchpad/o3c-audit/zh-CN/mobile.sidebar/o3c-zh-CN-d751e8/check-zh-CN.mts
+draft sha256 e203a3c0dd267b8b043c89d8c63d12acc92e1862c860d9c73af7ef5e2b05edbf expected e203a3c0dd267b8b043c89d8c63d12acc92e1862c860d9c73af7ef5e2b05edbf
+brief sha256 e88beb09366b9ff795bf0ac916f30cef1c9a93c35fa4617575e904c7a6f5fd17 expected e88beb09366b9ff795bf0ac916f30cef1c9a93c35fa4617575e904c7a6f5fd17
+en sha256 beaba7baeffe546ce65430d6cb18213da2fbb88d23128c071c286fb32a08ecdf brief says beaba7baeffe546ce65430d6cb18213da2fbb88d23128c071c286fb32a08ecdf
+context sha256 858f7c51c595862306120be7833c4274439b436bb8bd1f547b88139f8d0f2fd3 brief says 858f7c51c595862306120be7833c4274439b436bb8bd1f547b88139f8d0f2fd3
+keys missing [] extra [] count 9
+mobile.sidebar.row_status.approval: "待审批" params [] arms - MATCH nfc true | sample "待审批" 3ch/6c hint 10ch | trail-punct false lead/trail-space false
+mobile.sidebar.row_status.question: "待回答" params [] arms - MATCH nfc true | sample "待回答" 3ch/6c hint 10ch | trail-punct false lead/trail-space false
+mobile.sidebar.row_status.not_reachable: "无法连接" params [] arms - MATCH nfc true | sample "无法连接" 4ch/8c hint 14ch | trail-punct false lead/trail-space false
+mobile.sidebar.row_status.ended: "已结束" params [] arms - MATCH nfc true | sample "已结束" 3ch/6c hint 10ch | trail-punct false lead/trail-space false
+mobile.sidebar.row_status.not_answering: "未响应" params [] arms - MATCH nfc true | sample "未响应" 3ch/6c hint 14ch | trail-punct false lead/trail-space false
+mobile.sidebar.row_label.waiting: "{kind, select, approval {等待你批准} other {等待你回答问题}}" params [["kind","select"]] arms kind:approval|other MATCH nfc true | sample "等待你批准" 5ch/10c hint 24ch | trail-punct false lead/trail-space false
+mobile.sidebar.row_label.working: "工作中" params [] arms - MATCH nfc true | sample "工作中" 3ch/6c hint 24ch | trail-punct false lead/trail-space false
+mobile.sidebar.row_label.on_device: "在{device}上" params [["device","text"]] arms - MATCH nfc true | sample "在Studio Mac上" 12ch/14c hint 24ch | trail-punct false lead/trail-space false
+mobile.sidebar.row_label.open: "当前已打开" params [] arms - MATCH nfc true | sample "当前已打开" 5ch/10c hint 24ch | trail-punct false lead/trail-space false
+waiting other-arm render: "等待你回答问题" | unknown kind: "等待你回答问题"
+negative control renamed_arg CAUGHT
+negative control dropped_other CAUGHT
+negative control renamed_placeholder CAUGHT
+negative control dropped_placeholder CAUGHT
+negative control unbalanced CAUGHT
+negative controls 5/5; real mismatches 0
+redaction hits: draft 0 | en 0 | context 0 | brief excl. pattern field 0
+label sample: 支付对账, 等待你批准, 在Studio Mac上, 无法连接, 当前已打开
+
+real	0m1.042s
+user	0m0.166s
+sys	0m0.095s
+
+## shipped-term anchors (python json reads of zh-CN catalogues)
+-- mobile (worktree src/i18n/catalogues/zh-CN), values containing 审批/批准:
+  mobile.remote_sessions.owner_only "目前，批准、停止、更换模型和斜杠命令仅能在 {owner} 上使用。"
+-- mobile, placeholder adjacency with 上:
+  unspaced: mobile.computers.wait.host_answering, mobile.computers.own_tunnel.foreground_note, mobile.computers.refusal.relay_stopped_title,
+            mobile.refusal.relay_stopped.title, mobile.refusal.relay_refused.title, mobile.refusal.tunnel_gone.title,
+            mobile.refusal.computer_sign_in.title, mobile.refusal.computer_attention.title   (8)
+  spaced:   mobile.remote_sessions.subtitle_owner "{state} · 在 {owner} 上", owner_only, health_live, health_reconnecting,
+            health_dropped, health_quiet, health_ended   (7)
+-- other anchors: mobile.remote_sessions.unreachable "无法连接会话所属电脑。…"; mobile.computers.hint.radient_unreachable "目前无法连接Radient";
+   mobile.sidebar.show_ended "显示已结束的会话"; mobile.sidebar.row.asks "{count, plural, other {# 个问题}}";
+   mobile.notifications.section.waiting "等待你处理"; mobile.computers.row.a11y_connecting "{name}，{status}，{reach}，连接中"
+-- core (~/local-operator/local_operator/i18n/catalogues/zh-CN):
+relay.asks.pending.kind_approval 需要审批
+relay.asks.pending.approve 批准
+relay.asks.dock.waiting {count, plural, other {# 个问题等待回答}}
+relay.chrome.session.subtitle.ended 已结束
+relay.chrome.session.subtitle.not_answering 未响应
+relay.chrome.session.subtitle.working_plain 工作中
+relay.chrome.session.subtitle.waiting 等待你处理
+relay.chrome.drawer.open 打开导航
+等待审批 in ['tui.app.help.title_note_more']

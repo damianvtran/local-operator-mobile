@@ -352,6 +352,64 @@ describe("hub client", () => {
 			);
 		});
 
+		it("mentions ride only when non-empty, in the hub's row shape", async () => {
+			const empty = fakeFetch([() => ok(message(1, "a", "x"))]);
+			await client(empty.impl).send(TENANT, "c1", {
+				clientRef: "r",
+				body: "hi",
+				mentions: [],
+			});
+			expect(JSON.parse(String(empty.calls[0]?.init.body))).not.toHaveProperty(
+				"mentions",
+			);
+			const rows = [
+				{ kind: "human" as const, account_id: "a_ben" },
+				{
+					kind: "agent" as const,
+					account_id: "a_ben",
+					endpoint_id: "bep_aida",
+				},
+			];
+			const { impl, calls } = fakeFetch([() => ok(message(1, "a", "x"))]);
+			await client(impl).send(TENANT, "c1", {
+				clientRef: "r",
+				body: "@Ben Tran @Aida (Ben Tran) hi",
+				mentions: rows,
+			});
+			expect(JSON.parse(String(calls[0]?.init.body)).mentions).toEqual(rows);
+		});
+
+		it("refuses duplicate, oversized or misshapen mention rows before the network", async () => {
+			const { impl, calls } = fakeFetch([]);
+			const ben = { kind: "human" as const, account_id: "a_ben" };
+			await expect(
+				client(impl).send(TENANT, "c1", {
+					clientRef: "r",
+					body: "x",
+					mentions: [ben, ben],
+				}),
+			).rejects.toThrow();
+			await expect(
+				client(impl).send(TENANT, "c1", {
+					clientRef: "r",
+					body: "x",
+					mentions: Array.from({ length: 51 }, (_, i) => ({
+						kind: "human" as const,
+						account_id: `a_${i}`,
+					})),
+				}),
+			).rejects.toThrow();
+			await expect(
+				client(impl).send(TENANT, "c1", {
+					clientRef: "r",
+					body: "x",
+					// A person row with an endpoint is refused by the hub too.
+					mentions: [{ ...ben, endpoint_id: "bep_x" } as never],
+				}),
+			).rejects.toThrow();
+			expect(calls).toHaveLength(0);
+		});
+
 		it("image-only send carries an empty body and the ids", async () => {
 			const { impl, calls } = fakeFetch([() => ok(message(1, "a", "x"))]);
 			await client(impl).send(TENANT, "c1", {

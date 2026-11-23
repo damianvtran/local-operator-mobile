@@ -13,7 +13,7 @@
 	"mobile.settings.theme.no_match": "No themes match",
 	"mobile.settings.theme.row_label": "Theme, {name}",
 	"mobile.settings.theme.search_label": "Search themes",
-	"mobile.settings.theme.search_placeholder": "Search themes",
+	"mobile.settings.theme.search_placeholder": "Name, such as Dracula",
 	"mobile.settings.theme.section_dark": "Dark ({count})",
 	"mobile.settings.theme.section_light": "Light ({count})",
 	"mobile.settings.theme.title": "Theme",

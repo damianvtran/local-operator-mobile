@@ -1,7 +1,10 @@
 import { memo, type RefObject, useRef } from "react";
 import { Pressable, Text, View } from "react-native";
-import type { TranscriptEntry } from "@/contracts";
 import { AskResponseRow } from "@/features/session/components/ask-response-row";
+import {
+	type BridgeBodyLoader,
+	BridgeCardBodyRegion,
+} from "@/features/session/components/bridge-card-body";
 import {
 	CollapsedRow,
 	firstLine,
@@ -24,6 +27,10 @@ import { TranscriptImage } from "@/features/session/components/transcript-image"
 import { UserMessageClamp } from "@/features/session/components/user-message-clamp";
 import { imageGenView } from "@/features/session/imagegen";
 import {
+	type DisplayTranscriptEntry,
+	LIVE_INLINE_UI,
+} from "@/features/session/live-inline-ui";
+import {
 	bridgeReceiptLabel,
 	bridgeReceiptMeta,
 	canonicalRowKey,
@@ -31,15 +38,23 @@ import {
 	hubLabel,
 	isBridgeReceipt,
 	isHubReceipt,
+	isLiveBridgeEcho,
 	peerLabel,
 	transcriptRowTestID,
 } from "@/features/session/projection";
+import type { StreamArrival } from "@/features/session/stream-arrival";
 import {
 	USER_BUBBLE_FRAME_CLASS,
 	userBubbleFill,
 } from "@/features/session/user-bubble";
 import { t } from "@/i18n";
-import { ROLE, SURFACE, transcriptImageId, userMessageMoreId } from "@/ui/a11y";
+import {
+	bridgeCardBodyId,
+	ROLE,
+	SURFACE,
+	transcriptImageId,
+	userMessageMoreId,
+} from "@/ui/a11y";
 import { useTheme } from "@/ui/appearance";
 import { TOUCH_FLOOR } from "@/ui/layout";
 import { cx } from "@/ui/variants";
@@ -79,9 +94,11 @@ import { TranscriptFiles } from "./transcript-files";
  * stable.
  */
 export type TranscriptRowProps = {
-	entry: TranscriptEntry;
+	entry: DisplayTranscriptEntry;
 	/** The anchor `transcript-streaming` belongs on this row. */
 	streaming?: boolean;
+	streamArrival?: StreamArrival | null;
+	streamMotion?: object | null;
 	/** Resolves an attachment's bytes; threaded from the screen. */
 	loadImage?: (entryId: string, index: number) => Promise<string | null>;
 	loadFile?: (
@@ -94,6 +111,10 @@ export type TranscriptRowProps = {
 	 *  carries — threaded from the screen so the route push (and its
 	 *  session-scoped params) stays the screen's business. */
 	onOpenVideo?: (entryId: string, index: number) => void;
+	/** Loads an inbound Team Bridge card's body. Absent on a relay without
+	 *  `team_bridge_card_body` (or a remote conversation, whose relay cannot
+	 *  resolve it): the receipt row then renders exactly as it always has. */
+	loadBridgeBody?: BridgeBodyLoader;
 	/** The turn interrupt, threaded to the image-gen card's Cancel. The screen
 	 *  withholds it while the composer's own Stop is not visible, so the two
 	 *  controls share one gate (`composer.controls.stopVisible`). Resolves
@@ -179,9 +200,12 @@ const UserBox = ({
 const TranscriptRowBody = ({
 	entry,
 	streaming = false,
+	streamArrival = null,
+	streamMotion = null,
 	loadImage,
 	onOpenAgent,
 	onOpenVideo,
+	loadBridgeBody,
 	onCancelTurn,
 	open,
 	onToggleOpen,
@@ -216,6 +240,46 @@ const TranscriptRowBody = ({
 			) : null}
 		</>
 	);
+
+	/* A relay that serves `team_bridge_card_body` gets the body region in
+	 *  place of the receipt text: that text is the relay's
+	 *  `<sender> · <conversation>` line (`bridge_delivery_receipt_line`),
+	 *  which the caption already says, so painting both would repeat it.
+	 *  Without the loader (old relay, remote conversation) nothing below
+	 *  changes. Both live shapes take this arm too (`isLiveBridgeEcho`): the
+	 *  `peer_message` echo used to paint as a generic peer row until reopen. */
+	if (
+		loadBridgeBody !== undefined &&
+		(isBridgeReceipt(entry) || isLiveBridgeEcho(entry))
+	) {
+		const sender = bridgeReceiptLabel(entry);
+		const where = bridgeReceiptMeta(entry);
+		return (
+			<View
+				className={cx(
+					"flex-row items-start py-3",
+					TRACE_ROW_OUTER_CLASS,
+					TRACE_COLUMN_GAP_CLASS,
+				)}
+				testID={testID}
+			>
+				<Text className={cx(TRACE_GLYPH_BOX_CLASS, "text-accent")} aria-hidden>
+					↔
+				</Text>
+				<View className="min-w-0 flex-1">
+					<Text className="text-meta text-ink-dim">
+						{where ? `${sender} · ${where}` : sender}
+					</Text>
+					<BridgeCardBodyRegion
+						entryId={entry.id}
+						load={loadBridgeBody}
+						testID={bridgeCardBodyId(testID)}
+					/>
+				</View>
+				{anchors}
+			</View>
+		);
+	}
 
 	if (kind === "tool") {
 		return (
@@ -281,7 +345,13 @@ const TranscriptRowBody = ({
 		 *  the bug the fold exists to fix. Same rule as an `ask` below. */
 		return (
 			<View className="px-4 py-1" testID={testID}>
-				<Markdown text={entry.text} />
+				<Markdown
+					text={entry.text}
+					assistantParts={entry[LIVE_INLINE_UI]}
+					streaming={streaming}
+					arrival={streamArrival}
+					motion={streamMotion}
+				/>
 				{/* An answer can carry inline images (a pasted chart, a returned
 				 *  screenshot) exactly as a prompt can; without this strip they were
 				 *  on the wire and nowhere on screen. Same strip as the user row's,

@@ -13,7 +13,7 @@
 	"mobile.settings.theme.no_match": "کوئی تھیم مماثل نہیں",
 	"mobile.settings.theme.row_label": "تھیم، {name}",
 	"mobile.settings.theme.search_label": "تھیمز تلاش کریں",
-	"mobile.settings.theme.search_placeholder": "تھیمز تلاش کریں",
+	"mobile.settings.theme.search_placeholder": "نام، مثلاً Dracula",
 	"mobile.settings.theme.section_dark": "گہرے ({count})",
 	"mobile.settings.theme.section_light": "روشن ({count})",
 	"mobile.settings.theme.title": "تھیم",

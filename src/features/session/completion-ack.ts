@@ -10,7 +10,11 @@
  * everything left in the hook is plumbing.
  */
 
-import type { CompletionAttention, EmptyAttention } from "@/contracts";
+import type {
+	CompletionAttention,
+	EmptyAttention,
+	TranscriptEntry,
+} from "@/contracts";
 
 /** The flat poll cadence while the completion has not been acknowledged. */
 export const ACK_CHECK_MS = 500;
@@ -50,6 +54,33 @@ export function attentionRecord(
 	const attention = projection?.attention;
 	if (attention === undefined) return null;
 	return "conversation_id" in attention ? attention : null;
+}
+
+/**
+ * The anchored completion row, as the gate reads it: the live frame's copy
+ * first (the freshest representation of a row both hold), then the rows the
+ * transcript actually renders — the reader's paged-in history included.
+ *
+ * WHY BOTH. The live frame is the relay's capped tail (80 rows). A completion
+ * followed by a long run of peer receipts and tool rows falls out of that tail
+ * while still being the conversation's anchor; the reader pages it in from
+ * `/history` and can see it, but a live-tail-only lookup answered "not
+ * loaded", so `completionComplete` stayed false and the notification never
+ * cleared (issue #322). Searching from the newest end: the anchor is almost
+ * always near it.
+ */
+export function completionAnchorEntry(
+	anchorId: string | null | undefined,
+	rendered: readonly TranscriptEntry[],
+	live: readonly TranscriptEntry[],
+): TranscriptEntry | undefined {
+	if (typeof anchorId !== "string") return undefined;
+	const inLive = live.find((entry) => entry.id === anchorId);
+	if (inLive !== undefined) return inLive;
+	for (let at = rendered.length - 1; at >= 0; at -= 1) {
+		if (rendered[at]?.id === anchorId) return rendered[at];
+	}
+	return undefined;
 }
 
 /** Every gate of one attempt, as facts. */

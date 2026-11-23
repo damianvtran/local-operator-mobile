@@ -215,17 +215,9 @@
 		"role": "status",
 		"note": "Queue-row state when the create may or may not have happened and no automatic retry is possible. Must not imply anything is waiting."
 	},
-	"mobile.home.suggestion.last_turn": {
-		"role": "button",
-		"note": "Suggestion chip. Sentence case, no final full stop, at most 24 characters at the source locale, and it must not begin with a verb another chip in the pool already uses."
-	},
 	"mobile.home.suggestion.linear_mcp": {
 		"role": "button",
 		"note": "Suggestion chip. 'Linear MCP' is a product name and a protocol name: do not translate either word. No final full stop, at most 24 characters at the source locale."
-	},
-	"mobile.home.suggestion.phone_access": {
-		"role": "button",
-		"note": "Suggestion chip. 'phone access' is the feature name used across the product. No final full stop, at most 24 characters at the source locale."
 	},
 	"mobile.home.suggestion.review_repo": {
 		"role": "button",
@@ -262,5 +254,129 @@
 	"mobile.home.chip.model_default_short": {
 		"role": "meta",
 		"note": "Visible text of the home's model chip when the computer's configured default applies but the app cannot name it (an older Local Operator). Says 'model' because it is the only chip on the row for both unnamed defaults: the effort chip is not drawn beside it. Keep it short: it shares one row with the folder chip and the send controls."
+	},
+	"mobile.home.identity.sheet_title": {
+		"role": "heading",
+		"note": "Title of the sheet that chooses which agent or team a NEW chat starts as. Mirrors the desktop's \"Start this chat with\" menu heading. New in the new-chat identity picker; the non-English text awaits the translation audit."
+	},
+	"mobile.home.identity.default_agent": {
+		"role": "button",
+		"note": "The choice that starts the chat with no particular agent or team: the computer's own default agent. Also the pill's label when nothing is chosen. New in the new-chat identity picker; the non-English text awaits the translation audit."
+	},
+	"mobile.home.identity.pill_label": {
+		"role": "help",
+		"note": "Spoken label of the home screen's pill under the greeting. {target} is the chosen agent or team name, or \"Default agent\". Two sentences: the state, then what tapping does. New in the new-chat identity picker; the non-English text awaits the translation audit."
+	},
+	"mobile.home.identity.band_teams": {
+		"role": "heading",
+		"note": "Heading over the list of teams in the picker. New in the new-chat identity picker; the non-English text awaits the translation audit."
+	},
+	"mobile.home.identity.band_agents": {
+		"role": "heading",
+		"note": "Heading over the list of agents in the picker. New in the new-chat identity picker; the non-English text awaits the translation audit."
+	},
+	"mobile.home.identity.band_recent": {
+		"role": "heading",
+		"note": "Heading over up to three agents or teams the reader picked recently on this computer. New in the new-chat identity picker; the non-English text awaits the translation audit."
+	},
+	"mobile.home.identity.search": {
+		"role": "help",
+		"note": "Label of the search field in the picker, shown only on a long list. New in the new-chat identity picker; the non-English text awaits the translation audit."
+	},
+	"mobile.home.identity.no_matches": {
+		"role": "status",
+		"note": "Shown when the search matches nothing. {query} is what the reader typed; keep the quotation marks around it. New in the new-chat identity picker; the non-English text awaits the translation audit."
+	},
+	"mobile.home.identity.team_subtitle": {
+		"role": "meta",
+		"note": "Second line of a team row. {manager} is the team manager's agent name; {count} counts the team's members. New in the new-chat identity picker; the non-English text awaits the translation audit."
+	},
+	"mobile.home.identity.team_members": {
+		"role": "meta",
+		"note": "Second line of a team row when the computer did not name its manager. {count} counts the team's members. New in the new-chat identity picker; the non-English text awaits the translation audit."
+	},
+	"mobile.home.identity.team_led_by": {
+		"role": "meta",
+		"note": "Second line of a team row when the computer did not say how many members the team has. {manager} is the team manager's agent name. New in the new-chat identity picker; the non-English text awaits the translation audit."
+	},
+	"mobile.home.identity.row_team": {
+		"role": "help",
+		"note": "Spoken label of a team row. {name} is the team's name. New in the new-chat identity picker; the non-English text awaits the translation audit."
+	},
+	"mobile.home.identity.row_team_led": {
+		"role": "help",
+		"note": "Spoken label of a team row that names its manager. {name} is the team, {manager} its manager agent. New in the new-chat identity picker; the non-English text awaits the translation audit."
+	},
+	"mobile.home.identity.row_agent": {
+		"role": "help",
+		"note": "Spoken label of an agent row. {name} is the agent's name. New in the new-chat identity picker; the non-English text awaits the translation audit."
+	},
+	"mobile.home.identity.row_agent_described": {
+		"role": "help",
+		"note": "Spoken label of an agent row that has a description. {name} is the agent's name; {description} is its one-line description, in whatever language the owner wrote it. New in the new-chat identity picker; the non-English text awaits the translation audit."
+	},
+	"mobile.home.identity.empty": {
+		"role": "status",
+		"note": "The computer answered and has no agents or teams a chat can start as. Points at where they are created. New in the new-chat identity picker; the non-English text awaits the translation audit."
+	},
+	"mobile.home.identity.read_failed": {
+		"role": "status",
+		"note": "The list of agents and teams could not be read (the computer's registries were unreadable or the request failed). Shown with a Retry button. Not the same as having none. New in the new-chat identity picker; the non-English text awaits the translation audit."
+	},
+	"mobile.home.identity.unsupported": {
+		"role": "help",
+		"note": "The connected computer runs a Local Operator too old to start a chat as an agent or team, so the picker offers nothing. \"Local Operator\" is the product name; do not translate it. New in the new-chat identity picker; the non-English text awaits the translation audit."
+	},
+	"mobile.home.identity.starting_with": {
+		"role": "status",
+		"note": "Shown while the first message is starting a chat bound to an agent or team. {name} is that agent or team. New in the new-chat identity picker; the non-English text awaits the translation audit."
+	},
+	"mobile.home.identity.refused_unknown": {
+		"role": "status",
+		"note": "The computer refused the start because the chosen agent or team (or one of the team's members) no longer exists there. {name} is the chosen name. The draft is kept. New in the new-chat identity picker; the non-English text awaits the translation audit. Picking another row (or the default agent) sends the queued message at once, which the second sentence says."
+	},
+	"mobile.home.identity.refused_registry": {
+		"role": "status",
+		"note": "The computer could not read its agent and team registries, so it could not start the chat as the chosen one. Nothing was started; the draft is kept. New in the new-chat identity picker; the non-English text awaits the translation audit. 'Tap your message' is the 'not sent — tap to put back' bubble; picking the default agent sends the queued message at once."
+	},
+	"mobile.home.identity.refused_unsaved": {
+		"role": "status",
+		"note": "The computer could not save the chosen agent or team for the new chat, so it started nothing. {name} is the chosen name. The draft is kept. New in the new-chat identity picker; the non-English text awaits the translation audit. 'Tap your message' is the 'not sent — tap to put back' bubble, the only retry route."
+	},
+	"mobile.home.identity.refused_fallback": {
+		"role": "status",
+		"note": "The computer refused to start the chat as the chosen agent or team for another reason (for example, the team's roster is invalid). {name} is the chosen name. New in the new-chat identity picker; the non-English text awaits the translation audit."
+	},
+	"mobile.home.identity.refused_unlicensed": {
+		"role": "status",
+		"note": "Shown instead of sending when the draft names an agent or team but the connected computer cannot (yet, or any more) accept one — sending would start a chat WITHOUT it. {name} is the chosen name. New in the new-chat identity picker; the non-English text awaits the translation audit."
+	},
+	"mobile.home.identity.refused_connecting": {
+		"role": "status",
+		"note": "Shown instead of sending when the draft names an agent or team but this computer's live connection has not reported yet whether it accepts one (just after a reconnect or a cold start) — sending now could start a chat WITHOUT it. Not final: a resend a moment later usually goes through, so it must not tell the reader to give up the agent or team. {name} is the chosen name. 'Tap your message' is the 'not sent — tap to put back' bubble."
+	},
+	"mobile.home.identity.announce_picked": {
+		"role": "status",
+		"note": "Announced to screen readers after a pick closes the sheet. {name} is the chosen agent or team, or \"Default agent\". New in the new-chat identity picker; the non-English text awaits the translation audit."
+	},
+	"mobile.home.work.needs_you": {
+		"role": "heading",
+		"note": "Home work-list section heading over conversations waiting on the reader for an approval or an answer. Shown upper-case in a small label; keep it to one to three words and address the reader directly."
+	},
+	"mobile.home.work.recent": {
+		"role": "heading",
+		"note": "Home work-list section heading over the most recently active conversations. Shown upper-case in a small label; one or two words."
+	},
+	"mobile.home.work.try": {
+		"role": "heading",
+		"note": "Home section heading over two example prompts shown only on a brand-new account. Shown upper-case in a small label; one word, an invitation."
+	},
+	"mobile.home.work.all_conversations": {
+		"role": "button",
+		"note": "Footer row on the home work list that opens the conversations drawer. A noun phrase; the drawer's own word for conversations, not a new term."
+	},
+	"mobile.home.work.all_conversations_new": {
+		"role": "button",
+		"note": "Spoken label of the same footer row when the drawer button carries a count of new conversations. {count} is a number. Preserve ICU plural arms and placeholder; use the drawer's word for conversations."
 	}
 }

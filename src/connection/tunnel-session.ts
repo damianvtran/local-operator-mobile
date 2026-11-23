@@ -28,7 +28,7 @@
  */
 
 import { z } from "zod";
-import { resolveFetch } from "../relay/platform-fetch";
+import { readWithDeadline, resolveFetch } from "../relay/platform-fetch";
 import { envelopeSchema, RADIENT_API_BASE } from "./discovery";
 import { type CryptoDeps, createPkcePair, randomState } from "./pkce";
 import { RADIENT_COOKIES } from "./profile";
@@ -121,6 +121,9 @@ export class TunnelSessionError extends Error {
 
 export interface TunnelSessionDeps {
 	fetchImpl?: typeof globalThis.fetch;
+	/** Total control-plane request budget, including the response body. Uses the
+	 * same 20 s budget as relay HTTP, OAuth and discovery, not a new retry policy. */
+	timeoutMs?: number;
 	now?: () => number;
 	crypto?: CryptoDeps;
 	apiBase?: string;
@@ -158,27 +161,41 @@ async function postSession(
 ): Promise<unknown> {
 	const fetchImpl = resolveFetch(deps.fetchImpl);
 	let response: Response;
-	try {
-		response = await fetchImpl(url, {
-			method: "POST",
-			headers: {
-				"content-type": "application/json",
-				accept: "application/json",
-				...(bearer ? { authorization: `Bearer ${bearer}` } : {}),
-			},
-			body: JSON.stringify(body),
-			credentials: "omit",
-			...(deps.signal ? { signal: deps.signal } : {}),
-		});
-	} catch {
-		throw new TunnelSessionError("network", `${what} could not reach Radient`);
-	}
-
 	let parsed: unknown;
 	try {
-		parsed = await response.json();
+		/* Foreground grant maintenance has no relay-request signal. If its POST
+		 * hangs, every list/transcript open joins the same single-flight forever:
+		 * their own deadlines abandon a waiter, not the manager's flight. Bound
+		 * the owner through body consumption so later retries can get a new grant.
+		 * Reuse the account request budget and deadline primitive, including its
+		 * race for transports that fail to honour AbortSignal after suspension. */
+		const result = await readWithDeadline(
+			fetchImpl,
+			url,
+			{
+				method: "POST",
+				headers: {
+					"content-type": "application/json",
+					accept: "application/json",
+					...(bearer ? { authorization: `Bearer ${bearer}` } : {}),
+				},
+				body: JSON.stringify(body),
+				credentials: "omit",
+				...(deps.signal ? { signal: deps.signal } : {}),
+			},
+			deps.timeoutMs ?? 20_000,
+			async (answer): Promise<unknown> => {
+				try {
+					return await answer.json();
+				} catch {
+					return undefined;
+				}
+			},
+		);
+		response = result.response;
+		parsed = result.body;
 	} catch {
-		parsed = undefined;
+		throw new TunnelSessionError("network", `${what} could not reach Radient`);
 	}
 
 	if (response.status === 429) {
@@ -394,7 +411,10 @@ export async function revokeTunnelSession(
 ): Promise<{ revoked: boolean; via: "tunnel" | "control-plane" | "none" }> {
 	const fetchImpl = resolveFetch(deps.fetchImpl);
 	try {
-		const response = await fetchImpl(
+		// Retirement gates the next native admission. A stale tunnel must not
+		// hold that barrier forever before the control-plane fallback is tried.
+		const { response } = await readWithDeadline(
+			fetchImpl,
 			`https://${session.hostname}/_radient/logout`,
 			{
 				method: "POST",
@@ -405,6 +425,13 @@ export async function revokeTunnelSession(
 				},
 				credentials: "omit",
 				redirect: "manual",
+				...(deps.signal ? { signal: deps.signal } : {}),
+			},
+			deps.timeoutMs ?? 20_000,
+			async (answer) => {
+				// Only the status is part of logout's contract; discard any body so
+				// the old transport is not retained across the route switch.
+				await answer.body?.cancel();
 			},
 		);
 		if (response.ok || response.status === 303 || response.status === 204) {

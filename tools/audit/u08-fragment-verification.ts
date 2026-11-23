@@ -16,6 +16,7 @@ import { type AuditNode, type AuditState, runChecks } from "./checks.ts";
 import { floorsFromTokens } from "./color.ts";
 import { type PaintRect, paintOverlap } from "./paint-fragments.ts";
 import { EXTRACT_PROBE, u08GeometryProbe } from "./probe.ts";
+import type { RenderedSource } from "./u08-content-pins.ts";
 
 export const POSITIVE_IDS = ["modal-collide-a", "modal-collide-b"] as const;
 export const ARTIFACT_LIMIT_BYTES = 5 * 1024 * 1024;
@@ -146,6 +147,9 @@ export function assertTurnControl(
 }
 export interface FailureContext {
 	head: string;
+	/** The app source the frames were rendered from (u08-content-pins.ts,
+	 * RUN_DERIVED_ROOTS); optional only so unit fixtures can omit it. */
+	renderedSource?: RenderedSource;
 	phase: string;
 	cell: CellIdentity | null;
 	completedKeys: string[];
@@ -650,6 +654,8 @@ interface Context {
 	relay: string;
 	out: string;
 	head: string;
+	/** Hashed by the admission that preceded this run; recorded, never compared. */
+	renderedSource: RenderedSource;
 	baseRecord: AuditRecord;
 	nodePath: string;
 	historical: {
@@ -671,6 +677,7 @@ export async function verifyFragments(ctx: Context) {
 	const cells: Record<string, unknown>[] = [];
 	const failure: FailureContext = {
 		head: ctx.head,
+		renderedSource: ctx.renderedSource,
 		phase: "initializing",
 		cell: null,
 		completedKeys: [],
@@ -961,6 +968,7 @@ export async function verifyFragments(ctx: Context) {
 						{
 							kind: "PARTIAL CORRECTED CELL — NOT COMPLETE VERIFICATION",
 							head: ctx.head,
+							renderedSource: ctx.renderedSource,
 							...cells.at(-1),
 						},
 						null,
@@ -1048,6 +1056,7 @@ export async function verifyFragments(ctx: Context) {
 		const receipt = {
 			kind: "CORRECTED FRAGMENT VERIFICATION — NOT HISTORICAL REPRODUCTION OR FULL AUDIT",
 			head: ctx.head,
+			renderedSource: ctx.renderedSource,
 			schema: 1,
 			historicalIncident: ctx.historical,
 			hostedBeforeProofRun: "39544082930",

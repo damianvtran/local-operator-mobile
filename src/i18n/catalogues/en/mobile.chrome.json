@@ -25,5 +25,6 @@
 	"mobile.chrome.composer.row_usage": "Context",
 	"mobile.chrome.composer.row_cost": "Cost",
 	"mobile.chrome.composer.row_queue": "Queue",
-	"mobile.chrome.composer.row_questions": "Questions"
+	"mobile.chrome.composer.row_questions": "Questions",
+	"mobile.chrome.composer.row_identity": "Agent or team"
 }

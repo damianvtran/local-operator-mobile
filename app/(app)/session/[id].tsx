@@ -14,6 +14,7 @@ import type { PromptImage } from "@/contracts";
 import { avatarRefOf } from "@/features/agent-avatar/agent-avatar";
 import { HeaderAgentAvatar } from "@/features/agent-avatar/agent-avatar-view";
 import { useListState } from "@/features/auth/connection-provider";
+import { homeEffortChip, modelLabel } from "@/features/home/picker-model";
 import { useStartup } from "@/features/new-session/use-startup";
 import {
 	activityCounts,
@@ -24,6 +25,7 @@ import {
 	blockingPending,
 	outstandingAsks,
 } from "@/features/session/asks";
+import { bridgeCardBodyServed } from "@/features/session/bridge-card-body";
 import {
 	attentionRecord,
 	overlaysBlocked,
@@ -98,6 +100,7 @@ import {
 import { RemoteSessionGate } from "@/features/session/remote-session-gate";
 import { sessionSupplementsAvailable } from "@/features/session/remote-supplements";
 import { sessionChipLabels } from "@/features/session/session-chips";
+import { useSkills } from "@/features/session/skills/use-skills";
 import { sessionFactsFrom } from "@/features/session/state-marker";
 import { createScrollPresence } from "@/features/session/transcript-presence";
 import { useAsksSheet } from "@/features/session/use-asks-sheet";
@@ -106,6 +109,10 @@ import { useCompletionAck } from "@/features/session/use-completion-ack";
 import { draftSlashQuery, useComposer } from "@/features/session/use-composer";
 import { useFind } from "@/features/session/use-find";
 import { useSessionRuntime } from "@/features/session/use-session";
+import {
+	storedEfforts,
+	useStoredModel,
+} from "@/features/session/use-stored-model";
 import {
 	remoteConversationOf,
 	sessionCapabilities,
@@ -286,7 +293,28 @@ function Session() {
 		listRow !== undefined &&
 		!isRemoteRow(listRow) &&
 		canAssignSessionTags(capabilities);
+	const storedModel = useStoredModel({
+		client: runtime.source.endpoints,
+		sessionId,
+		ownership: remoteConversation
+			? `remote:${listRow?.owner_device ?? owner ?? "unknown"}`
+			: "local",
+		// Resume has no remote form: never route a cold remote choice through
+		// the connected computer even if it advertises live model switching.
+		enabled:
+			headerHealth(runtime.projection, runtime.link) === "ended" &&
+			ownerLabel === null,
+		ended: headerHealth(runtime.projection, runtime.link) === "ended",
+	});
+	/* The `$skill` licence for THIS conversation: the relay's top-level
+	 *  `capabilities.skill_invocation` (absent = an older relay = no `$`), already
+	 *  withheld for a remote conversation by `sessionCapabilities`. One value feeds
+	 *  the tray, the catalogue fetch and the `expand_skills` flag, so they cannot
+	 *  disagree. */
+	const skillsAvailable = capabilities.skill_invocation?.available === true;
 	const composer = useComposer({
+		expandSkills: skillsAvailable,
+		beforeSend: storedModel.prepare,
 		sessionId,
 		source: runtime.source,
 		streaming: runtime.streaming,
@@ -306,6 +334,17 @@ function Session() {
 			ownerLabel !== null && !controlPolicy.allows("slash")
 				? remoteOwnerOnlyCopy(ownerLabel)
 				: null,
+	});
+	/* The `$skill` tray: catalogue fetched once per session, caret read from the
+	 *  field, a pick rewrites only the token. A leading `/` belongs to the slash
+	 *  sheet (one caret, one list). */
+	const skills = useSkills({
+		sessionId,
+		endpoints: runtime.source.endpoints,
+		available: skillsAvailable,
+		text: composer.draft,
+		setText: composer.setDraft,
+		slashDraft: draftSlashQuery(composer.draft) !== null,
 	});
 	/* Stop is withheld when the relay does not forward `abort`: every Stop on this
 	 *  screen (composer ■, pinned line, image-gen Cancel) reads this one gate. */
@@ -365,7 +404,14 @@ function Session() {
 	 *  sheet, a dropped route) was a silent `void` (review round 1, m1): the
 	 *  chip kept its old value and nothing said why. It rides the composer's
 	 *  own error line, as home's refused abort does; the next pick clears it. */
-	const [chipError, setChipError] = useState<string | null>(null);
+	/* Owned by `useStoredModel` (PR #350 U2) so it retires when the settings it
+	 * names are applied; the screen only words it. */
+	const chipError =
+		storedModel.settingsError === "model"
+			? t("mobile.session.chip.model_change_failed")
+			: storedModel.settingsError === "effort"
+				? t("mobile.session.chip.effort_change_failed")
+				: null;
 	/** The composer's field, so the asks sheet's auto-open can READ focus at the
 	 *  moment it decides (focus is not React state). */
 	const composerFieldRef = useRef<TextInput | null>(null);
@@ -447,6 +493,7 @@ function Session() {
 		sessionId,
 		endpoints: runtime.source.endpoints,
 		projection: runtime.projection,
+		entries: runtime.entries,
 		anchorVisible: completionVisible,
 		blocked: overlaysBlocked({
 			models: modelsOpen,
@@ -465,10 +512,25 @@ function Session() {
 	 * the same fact, and an empty ladder means the selected model has no effort
 	 * control — a sheet with no rows and nothing to press is the dead-end modal the
 	 * QA round found (Q3). */
-	const effortLadder = useMemo(
-		() => projection?.effort_ladder ?? [],
-		[projection?.effort_ladder],
-	);
+	const storedPicker =
+		headerHealth(projection, runtime.link) === "ended" && ownerLabel === null;
+	const pickerModels = storedPicker ? storedModel.models : runtime.models;
+	const selectedModel =
+		storedModel.pending?.model ??
+		pickerModels.find(
+			(model) =>
+				model.selector ===
+					(projection?.model_selector || listRow?.model_label) ||
+				`${model.provider}/${model.model_id}` ===
+					(projection?.model_selector || listRow?.model_label) ||
+				model.model_id === listRow?.model_label,
+		) ??
+		null;
+	const effortLadder = storedPicker
+		? selectedModel === null
+			? []
+			: storedEfforts(selectedModel)
+		: (projection?.effort_ladder ?? []);
 
 	const todos = useMemo(
 		() => projectTodos(projection?.todos ?? []),
@@ -521,14 +583,45 @@ function Session() {
 	 *  never-started conversation is served a durable fold with no model or
 	 *  effort, while the row still names what it last ran (TestFlight 578;
 	 *  `session-chips.ts` carries the whole rule, including why an ended
-	 *  session's chips are shown but disabled). */
+	 *  session's chips defer their changes until Resume/Send). */
 	const sessionChips = sessionChipLabels({
 		projection,
 		row: listRow ?? null,
-		models: runtime.models,
+		models: pickerModels,
 		connection: chipConnection,
 		ended: headerHealth(projection, runtime.link) === "ended",
 	});
+	if (storedModel.pending !== null) {
+		const name = modelLabel(storedModel.pending.model);
+		sessionChips.model = {
+			kind: "value",
+			text: name,
+			accessibilityLabel: `Model, ${name}`,
+		};
+	}
+	if (storedPicker) {
+		sessionChips.effort =
+			effortLadder.length === 0
+				? null
+				: homeEffortChip({
+						offer: {
+							kind: "ladder",
+							rungs: effortLadder,
+							exact: selectedModel?.efforts !== undefined,
+						},
+						chosenEffort:
+							storedModel.pending !== null
+								? storedModel.pending.effort
+								: effortLadder.includes(
+											projection?.effort || listRow?.effort || "",
+										)
+									? projection?.effort || listRow?.effort || null
+									: null,
+						defaultEffort: null,
+						catalogueLoading: storedModel.loading,
+						connection: chipConnection,
+					});
+	}
 	/* A remote conversation keeps its model/effort VALUE visible but disabled
 	 *  when the relay does not forward `set_model`/`set_effort` (R1-1/U2). */
 	const chipLabels =
@@ -537,7 +630,8 @@ function Session() {
 			: {
 					model: remoteChip(
 						sessionChips.model,
-						controlPolicy.allows("set_model"),
+						headerHealth(projection, runtime.link) !== "ended" &&
+							controlPolicy.allows("set_model"),
 						ownerLabel,
 					),
 					effort:
@@ -545,7 +639,8 @@ function Session() {
 							? null
 							: remoteChip(
 									sessionChips.effort,
-									controlPolicy.allows("set_effort"),
+									headerHealth(projection, runtime.link) !== "ended" &&
+										controlPolicy.allows("set_effort"),
 									ownerLabel,
 								),
 				};
@@ -631,7 +726,7 @@ function Session() {
 	 *  dot, no announcement (review M3, UX U4/U5). */
 	const health = headerHealth(projection, runtime.link);
 	const ended = health === "ended";
-	const resume = useResume(sessionId, ended);
+	const resume = useResume(sessionId, ended, storedModel.resume);
 	/* Resume is a connected-computer route with no remote form in v1; offered only
 	 *  when the relay advertises it for this conversation (always, for local). */
 	const resumeOffered = ended && controlPolicy.allows("resume");
@@ -1022,12 +1117,16 @@ function Session() {
 					historyErrorScope={runtime.historyErrorScope}
 					loadingOlder={runtime.loadingOlder}
 					hasOlder={runtime.hasOlder}
+					olderFillReady={runtime.olderFillReady}
 					historyError={runtime.historyError}
 					historyGap={runtime.historyGap}
 					historyGapBefore={runtime.historyGapBefore}
 					footer={transcriptNotice}
 					pending={pendingRows}
+					sendMark={composer.sendMark}
 					streamingRowId={runtime.streamingRowId}
+					streamArrivalEpoch={runtime.streamArrivalEpoch}
+					streamArrivalTail={runtime.streamArrivalTail}
 					loadImage={runtime.loadImage}
 					loadFile={runtime.loadFile}
 					onOpenAgent={openAgent}
@@ -1039,6 +1138,15 @@ function Session() {
 						capabilities,
 					)}
 					onOpenVideo={openVideo}
+					/* Inbound Team Bridge bodies: only where the relay serves the
+					   route AND can resolve this conversation — the route answers
+					   durable sessions on its own machine, so a remote conversation
+					   keeps today's receipt row rather than a guaranteed failure. */
+					loadBridgeBody={
+						!remoteConversation && bridgeCardBodyServed(capabilities)
+							? runtime.loadBridgeBody
+							: undefined
+					}
 					/* The image-gen card's Cancel is the composer's OWN stop path (the
 					   one turn-interrupt — no second mechanism). The gate is the
 					   composer's own (`stopVisible` = a turn is running), so the two
@@ -1834,21 +1942,33 @@ function Session() {
 						testID={SURFACE.sessionComposer}
 						controls={composerControls}
 						draft={composer.draft}
-						onDraftChange={composer.setDraft}
+						onDraftChange={skills.onChangeText}
+						skills={{
+							rows: skills.rows,
+							onPick: skills.pick,
+							onHold: skills.hold,
+							onRelease: skills.release,
+							onSelectionChange: skills.onSelectionChange,
+							selection: skills.selection,
+							onFocus: skills.onFocus,
+							onBlur: skills.onBlur,
+						}}
 						images={composer.images}
 						onRemoveImage={composer.removeImage}
 						onAttach={composer.attach}
 						onPasteFile={composer.pasteFile}
+						onPasteImages={composer.pasteImages}
 						attaching={composer.attaching}
+						onAttachOpen={composer.abandonAttach}
 						voice={composer.voice}
 						onSend={composer.send}
 						onClearDraft={() => {
 							composer.clearUnsentDraft();
-							setChipError(null);
+							storedModel.clearSettingsError();
 						}}
 						onDismissError={() => {
 							composer.dismissError();
-							setChipError(null);
+							storedModel.clearSettingsError();
 						}}
 						onStop={composer.stop}
 						stopping={composer.stopping}
@@ -1943,19 +2063,20 @@ function Session() {
 			<ModelSheet
 				visible={modelsOpen}
 				onClose={() => setModelsOpen(false)}
-				models={runtime.models}
-				selected={projection?.model_selector ?? ""}
+				models={pickerModels}
+				selected={
+					storedModel.pending?.model.selector ??
+					projection?.model_selector ??
+					""
+				}
+				loading={storedPicker && storedModel.loading}
+				failed={storedPicker && storedModel.failed}
+				onRetry={storedPicker ? storedModel.retry : undefined}
 				onPick={(model) => {
-					setChipError(null);
-					void runtime.source.endpoints
-						?.command(sessionId, {
-							op: "set_model",
-							provider: model.provider,
-							model_id: model.model_id,
-						})
-						.catch(() =>
-							setChipError(t("mobile.session.chip.model_change_failed")),
-						);
+					if (composer.sending || resume.busy) return;
+					// The hook records the failure as `settingsError`; the rejection
+					// is only kept from going unhandled here.
+					void storedModel.selectModel(model).catch(() => {});
 				}}
 			/>
 
@@ -1963,17 +2084,12 @@ function Session() {
 				visible={effortOpen && effortLadder.length > 0}
 				onClose={() => setEffortOpen(false)}
 				ladder={effortLadder}
-				selected={projection?.effort ?? ""}
+				selected={storedModel.pending?.effort ?? projection?.effort ?? ""}
 				onPick={(effort) => {
-					setChipError(null);
-					void runtime.source.endpoints
-						?.command(sessionId, {
-							op: "set_effort",
-							effort,
-						})
-						.catch(() =>
-							setChipError(t("mobile.session.chip.effort_change_failed")),
-						);
+					if (composer.sending || resume.busy) return;
+					// The hook records the failure as `settingsError`; the rejection
+					// is only kept from going unhandled here.
+					void storedModel.selectEffort(effort, selectedModel).catch(() => {});
 				}}
 			/>
 
@@ -2007,7 +2123,7 @@ function Session() {
 				visible={asksOpen}
 				onClose={asksSheet.close}
 				initialOpenAsk={asksSheet.initialOpenAsk}
-				seedRows={asksSheet.seedRows}
+				frameRows={asksSheet.frameRows}
 				onReadFailed={asksSheet.readFailed}
 				client={runtime.source.endpoints}
 				currentSessionId={sessionId}

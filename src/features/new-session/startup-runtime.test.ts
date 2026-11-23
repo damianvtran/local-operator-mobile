@@ -63,6 +63,12 @@ vi.mock("@/relay/send-command", () => ({
 }));
 
 const { openStartup } = await import("./startup-runtime");
+/* Loaded with `openStartup`, so it is the SAME module instance the runtime's
+ *  `gatedStart` reads its licence register from: tests below reset the module
+ *  registry, and a later import would hand back a fresh, empty register. */
+const { noteStartTargetSupport } = await import(
+	"@/features/home/start-targets"
+);
 
 const auth = () => {
 	if (authorization === null) throw new Error("missing authorization");
@@ -311,5 +317,42 @@ describe("an unconfirmed start does not own the next draft", () => {
 
 		expect(again).toBe(first);
 		expect(records.get(activeKey(scope))).toBe(pointer);
+	});
+});
+
+describe("the runtime's start dependency is the agent/team gate (PR #358 F3)", () => {
+	beforeEach(() => {
+		records.clear();
+		recoveryRecords.clear();
+		recoveryAuthority = "owner-a";
+		scope = `scope-gate-${++scopeCounter}`;
+		authorization = { scope, revision: 1 };
+	});
+
+	it("sends nothing for a team until the relay's live frame licensed it, then sends it", async () => {
+		/* Through `openStartup`'s own `dependencies().start` — where the bytes
+		 *  leave, and the path a RESTORED record replays by before the home has
+		 *  rendered. RED if `startup-runtime.ts` went back to
+		 *  `client.startSession(selection)`: the team would be posted unlicensed. */
+		const sent: unknown[] = [];
+		const relay = {
+			startSession: async (request: unknown) => {
+				sent.push(request);
+				return { ok: true as const, pid: 1, session_id: "gated-session" };
+			},
+		} as unknown as RelayEndpoints;
+		const startup = await openStartup(auth(), relay);
+		startup.resume();
+		await startup.configure({ cwd: "/home/fixture", team: "lopdev" });
+		startup.edit("hello team", []);
+		await startup.enqueue();
+		await startup.quiesce();
+		expect(sent).toStrictEqual([]);
+		expect(startup.snapshot().phase).toBe("refused");
+
+		noteStartTargetSupport(relay, { agent: true, team: true });
+		await startup.retry();
+		await startup.quiesce();
+		expect(sent).toStrictEqual([{ cwd: "/home/fixture", team: "lopdev" }]);
 	});
 });

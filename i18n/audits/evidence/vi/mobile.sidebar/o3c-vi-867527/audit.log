@@ -1,0 +1,58 @@
+# o3c-vi-867527 mobile.sidebar: actual printed output of checks run in session 86752777063d (shell + worktree tsx)
+
+## inputs, hashes, redaction
+$ git rev-parse HEAD && git branch --show-current
+e7ebc3917537d83cc772148fc5b2fc2ad3f43a41
+feat/i18n-o3c-rows-headers
+$ shasum -a 256 (inputs)
+e88beb09366b9ff795bf0ac916f30cef1c9a93c35fa4617575e904c7a6f5fd17  /Users/damian/.local-operator/sessions/162198c78bcb/scratchpad/o3c-translation-brief.json
+8d48b29f99b0a862dd0a9460325e8dea6b62f46fdadc445a74292e754cb7d629  /Users/damian/.local-operator/sessions/7b4714a933c5/scratchpad/o3c/draft-vi.json
+beaba7baeffe546ce65430d6cb18213da2fbb88d23128c071c286fb32a08ecdf  src/i18n/catalogues/en/mobile.sidebar.json
+858f7c51c595862306120be7833c4274439b436bb8bd1f547b88139f8d0f2fd3  src/i18n/catalogues/en/mobile.sidebar.context.json
+5e6cb54f7cd2e9086055069809909ae096897329cb8011c85affe855627e6dcf  src/i18n/catalogues/vi/mobile.sidebar.json
+cf410d8d8af0757910fe0bc02524039d3732ee8213371f1eaaf7d0bb52d92212  src/i18n/catalogues/vi/relay.chrome.json
+97394e3bb4277d3d4b134f4df4ade4c95d21c355c43b78eaf0118c96ffc6b6e4  src/i18n/catalogues/vi/mobile.remote_sessions.json
+c1831406332e907c9a914b3db0ec35fc9fd2cddd44c18cd2861b77667c5bdba0  src/i18n/messages.ts
+0eb34437a8c3d6f564f278ef957a603b1d9f51bb07d5ddae5ea8f37deba962f8  /Users/damian/local-operator/i18n/glossary.md
+e4901497ed553e2b2ae4a2660bf776adb787b89e11d7eb0f8d08f3da4b227888  /Users/damian/local-operator/i18n/style-guides/vi.md
+$ git blobs
+src/i18n/catalogues/en/mobile.sidebar.json worktree=d9478d71f7f7a246e96d735822008b5c2622c827 @e7ebc391=d9478d71f7f7a246e96d735822008b5c2622c827
+src/i18n/catalogues/en/mobile.sidebar.context.json worktree=2c4c6ef8362380738bc714f4071d27e2474f746d @e7ebc391=2c4c6ef8362380738bc714f4071d27e2474f746d
+b42471d3935cb7e95d64428af27c32626665f4c0
+redaction hits draft 0
+redaction hits en 0
+redaction hits en_context 0
+redaction hits brief raw 2 brief excluding redaction_scan.pattern 0
+brief english vs source mismatches []
+overlap draft vs shipped vi mobile.sidebar []
+shipped row.new vi 'mới'
+
+## parseMessage checker (script: /Users/damian/.local-operator/sessions/86752777063d/scratchpad/o3c-audit/vi/work/check.ts, sha256 ee1ec21b901bff8ac82ef8c1e32e2123a31e13e0490aa39739ce2166ef7c13c0)
+$ cd /Users/damian/local-operator-mobile/.worktrees/i18n-m3-s2a && env -u XPC_FLAGS node_modules/.bin/tsx <check.ts>
+## parseMessage check on draft
+errors: []
+## renders (formatMessage, locale vi)
+mobile.sidebar.row_status.approval {} => "phê duyệt" chars=9 hint=10 ok
+mobile.sidebar.row_status.question {} => "câu hỏi" chars=7 hint=10 ok
+mobile.sidebar.row_status.not_reachable {} => "mất kết nối" chars=11 hint=14 ok
+mobile.sidebar.row_status.ended {} => "đã kết thúc" chars=11 hint=10 OVER
+mobile.sidebar.row_status.not_answering {} => "không phản hồi" chars=14 hint=14 ok
+mobile.sidebar.row_label.waiting {"kind":"approval"} => "đang chờ phê duyệt" chars=18 hint=24 ok
+mobile.sidebar.row_label.waiting {"kind":"question"} => "đang chờ trả lời" chars=16 hint=24 ok
+mobile.sidebar.row_label.working {} => "đang làm việc" chars=13 hint=24 ok
+mobile.sidebar.row_label.on_device {"device":"Studio Mac"} => "trên Studio Mac" chars=15 hint=24 ok
+mobile.sidebar.row_label.open {} => "đang mở" chars=7 hint=24 ok
+## label sample
+Payments, đang chờ phê duyệt, đã kết thúc, trên Studio Mac, mất kết nối, đang mở
+## negative controls
+control 'drop key': CAUGHT ["keyset missing=mobile.sidebar.row_label.open extra="]
+control 'extra key': CAUGHT ["keyset missing= extra=mobile.sidebar.row_label.extra"]
+control 'rename placeholder': CAUGHT ["mobile.sidebar.row_label.on_device: params en=[[\"device\",\"text\"]] vi=[[\"thiet_bi\",\"text\"]]"]
+control 'drop select arm': CAUGHT ["mobile.sidebar.row_label.waiting: arms en=[\"kind:approval|other\"] vi=[\"kind:other\"]"]
+control 'rename select arg': CAUGHT ["mobile.sidebar.row_label.waiting: params en=[[\"kind\",\"select\"]] vi=[[\"loai\",\"select\"]]","mobile.sidebar.row_label.waiting: arms en=[\"kind:approval|other\"] vi=[\"loai:approval|other\"]"]
+control 'unbalanced': CAUGHT ["mobile.sidebar.row_label.waiting: parse Invalid message \"{kind, select, approval {đang chờ phê duyệt} other {đang chờ trả lời}\": unterminated select (at offset 69)"]
+control 'decomposed NFD': CAUGHT ["mobile.sidebar.row_status.ended: not NFC"]
+control 'redaction': CAUGHT ["mobile.sidebar.row_status.question: redaction marker"]
+control 'trailing punct': CAUGHT ["mobile.sidebar.row_label.open: leading/trailing punct/space"]
+control 'uppercase': CAUGHT ["mobile.sidebar.row_status.ended: not lowercase"]
+[exit 0]

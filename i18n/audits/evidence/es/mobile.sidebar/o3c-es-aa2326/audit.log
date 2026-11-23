@@ -1,0 +1,72 @@
+# o3c-es-aa2326 mobile.sidebar: actual printed output of commands run in auditor session aa2326d64c30 (bash/eval), 2026-11-18
+
+$ cd /Users/damian/local-operator-mobile/.worktrees/i18n-m3-s2a && git rev-parse HEAD && git branch --show-current
+e7ebc3917537d83cc772148fc5b2fc2ad3f43a41
+feat/i18n-o3c-rows-headers
+[exit 0]
+$ shasum -a 256 /Users/damian/.local-operator/sessions/a0a12eebb67d/scratchpad/o3c/draft-es.json /Users/damian/.local-operator/sessions/162198c78bcb/scratchpad/o3c-translation-brief.json /Users/damian/.local-operator/sessions/aa2326d64c30/scratchpad/o3c-audit/draft-es.copy.json
+e86851c57eaaddd6d615a1cff8ec5fb12422be6c3501dae6d31e880b330d84dd  /Users/damian/.local-operator/sessions/a0a12eebb67d/scratchpad/o3c/draft-es.json
+e88beb09366b9ff795bf0ac916f30cef1c9a93c35fa4617575e904c7a6f5fd17  /Users/damian/.local-operator/sessions/162198c78bcb/scratchpad/o3c-translation-brief.json
+e86851c57eaaddd6d615a1cff8ec5fb12422be6c3501dae6d31e880b330d84dd  /Users/damian/.local-operator/sessions/aa2326d64c30/scratchpad/o3c-audit/draft-es.copy.json
+[exit 0]
+$ cd /Users/damian/local-operator-mobile/.worktrees/i18n-m3-s2a && git show e7ebc391:src/i18n/catalogues/en/mobile.sidebar.json | shasum -a 256 && git show e7ebc391:src/i18n/catalogues/en/mobile.sidebar.context.json | shasum -a 256
+beaba7baeffe546ce65430d6cb18213da2fbb88d23128c071c286fb32a08ecdf  -
+858f7c51c595862306120be7833c4274439b436bb8bd1f547b88139f8d0f2fd3  -
+[exit 0]
+$ cd /Users/damian/local-operator-mobile/.worktrees/i18n-m3-s2a && shasum -a 256 src/i18n/catalogues/es/mobile.sidebar.json src/i18n/catalogues/es/mobile.settings.json src/i18n/catalogues/es/relay.chrome.json src/i18n/catalogues/es/mobile.remote_sessions.json
+f90ad13be9be33579026977fb2a37cd36f89ee2256004f32cfe3f321aba4f197  src/i18n/catalogues/es/mobile.sidebar.json
+8095f67921ce79ff26648091d7a881ef4eeb792e48887d9673040540505c0ba5  src/i18n/catalogues/es/mobile.settings.json
+047c5dcfc70e0add879c896df3fcc811e95cf665e7d0041d6efd8261af215944  src/i18n/catalogues/es/relay.chrome.json
+465cb080574f5398ad7a4adb0907239986603c872e9d676bd84e578628c77881  src/i18n/catalogues/es/mobile.remote_sessions.json
+[exit 0]
+$ shasum -a 256 /Users/damian/.local-operator/sessions/aa2326d64c30/scratchpad/o3c-audit/check-es.ts
+6ca177a35d48ecd9373ac1748a02f799f2cfab8b92973c863cf6e5010dc7133e  /Users/damian/.local-operator/sessions/aa2326d64c30/scratchpad/o3c-audit/check-es.ts
+[exit 0]
+## repo-parser checker (parseMessage/formatMessage from worktree src/i18n/messages.ts, read-only) with negative controls
+$ cd /Users/damian/.local-operator/sessions/aa2326d64c30/scratchpad/o3c-audit && /Users/damian/local-operator-mobile/.worktrees/i18n-m3-s2a/node_modules/.bin/tsx check-es.ts /Users/damian/.local-operator/sessions/aa2326d64c30/scratchpad/o3c-audit/draft-es.copy.json
+en keys in scope: 9
+errors on draft: []
+len mobile.sidebar.row_status.approval = 10 cps; NFC=true
+len mobile.sidebar.row_status.question = 8 cps; NFC=true
+len mobile.sidebar.row_status.not_reachable = 12 cps; NFC=true
+len mobile.sidebar.row_status.ended = 10 cps; NFC=true
+len mobile.sidebar.row_status.not_answering = 11 cps; NFC=true
+len mobile.sidebar.row_label.waiting = 74 cps; NFC=true
+len mobile.sidebar.row_label.working = 10 cps; NFC=true
+len mobile.sidebar.row_label.on_device = 11 cps; NFC=true
+len mobile.sidebar.row_label.open = 7 cps; NFC=true
+render waiting approval: aprobación pendiente
+render waiting question: pregunta pendiente
+render on_device: en Studio Mac
+sample label: Payments, aprobación pendiente, finalizada, en Studio Mac, sin conexión, abierta
+control 'drop key': CAUGHT ["keyset missing=[\"mobile.sidebar.row_label.open\"] extra=[]"]
+control 'rename placeholder': CAUGHT ["mobile.sidebar.row_label.on_device: params en=[[\"device\",\"text\"]] es=[[\"dispositivo\",\"text\"]]"]
+control 'drop select arm': CAUGHT ["mobile.sidebar.row_label.waiting: select arms en=[[\"kind\",[\"approval\",\"other\"]]] es=[[\"kind\",[\"other\"]]]"]
+control 'rename select arg': CAUGHT ["mobile.sidebar.row_label.waiting: params en=[[\"kind\",\"select\"]] es=[[\"tipo\",\"select\"]]","mobile.sidebar.row_label.waiting: select arms en=[[\"kind\",[\"approval\",\"other\"]]] es=[[\"tipo\",[\"approval\",\"other\"]]]"]
+control 'unbalanced': CAUGHT ["mobile.sidebar.row_label.waiting: ICU parse Invalid message \"{kind, select, approval {a} other {b}\": unterminated select (at offset 37)"]
+control 'redaction': CAUGHT ["mobile.sidebar.row_status.ended: redaction marker","mobile.sidebar.row_status.ended: not lowercase"]
+control 'NFD': CAUGHT ["mobile.sidebar.row_status.not_reachable: not NFC"]
+control 'over width': CAUGHT ["mobile.sidebar.row_status.not_reachable: width 21 > 14"]
+control 'trailing punct': CAUGHT ["mobile.sidebar.row_label.open: leading/trailing punctuation or space"]
+[exit 0]
+## redaction scan (brief scanned with its own redaction_scan.pattern field removed) and brief-vs-source
+$ python3 /Users/damian/.local-operator/sessions/aa2326d64c30/scratchpad/o3c-audit/redaction.py
+draft hits: 0
+brief hits excl pattern field: 0
+en source hits: 0
+brief english mismatches: []
+[exit 0]
+## shipped es sibling terms consulted
+$ cd /Users/damian/local-operator-mobile/.worktrees/i18n-m3-s2a/src/i18n/catalogues && grep -nE '"(mobile.sidebar.row.new|mobile.sidebar.row.asks|mobile.settings.status.offline|mobile.settings.diagnostics.stream_offline|mobile.settings.diagnostics.stream_degraded|relay.chrome.session.subtitle.ended|relay.chrome.session.subtitle.working_plain|relay.chrome.session.subtitle.not_answering)"' es/*.json
+es/mobile.settings.json:53:	"mobile.settings.status.offline": "Sin conexión",
+es/mobile.settings.json:59:	"mobile.settings.diagnostics.stream_degraded": "no responde",
+es/mobile.settings.json:60:	"mobile.settings.diagnostics.stream_offline": "sin conexión",
+es/mobile.sidebar.json:39:	"mobile.sidebar.row.new": "nueva",
+es/mobile.sidebar.json:40:	"mobile.sidebar.row.asks": "{count, plural, one {# pregunta} many {# de preguntas} other {# preguntas}}",
+es/relay.chrome.json:2:	"relay.chrome.session.subtitle.not_answering": "No responde",
+es/relay.chrome.json:3:	"relay.chrome.session.subtitle.ended": "Finalizada",
+es/relay.chrome.json:7:	"relay.chrome.session.subtitle.working_plain": "Trabajando",
+[exit 0]
+$ cd /Users/damian/local-operator-mobile/.worktrees/i18n-m3-s2a && sed -n 356p src/ui/components/list-row.tsx
+				On {remote.device}
+[exit 0]

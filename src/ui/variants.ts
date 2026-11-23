@@ -29,7 +29,7 @@
  */
 
 import { LARGE_TEXT_SCALE, lineBoxPt } from "@/ui/text-scale";
-import { TOUCH_TARGET } from "@/ui/tokens.gen";
+import { type ColorRole, TOUCH_TARGET } from "@/ui/tokens.gen";
 
 /** Join class names, dropping falsy entries. Local by design: `clsx` is not in
  * the shared dependency set, and this is all of it that the app needs. */
@@ -443,6 +443,74 @@ export const cardClasses = (options: { inList?: boolean } = {}): string =>
 		"rounded-md border border-hairline bg-surface",
 		options.inList ? "p-3" : "p-4",
 	);
+
+/**
+ * One option row of an ask's answer form (ask-panel parity N2/D4): a tinted fill
+ * with an accent left edge and a trailing indicator, the same object on the
+ * relay page.
+ *
+ * - Rest: `accent-wash` fill, 2 pt `accent` edge, an EMPTY ring (single choice)
+ *   or square (`multi`) in `border-control`. Pressed: `accent-muted`.
+ * - Selected: `accent-muted` fill, 4 pt edge, a semibold label, and the indicator
+ *   FILLS to an accent disc/square holding the check — selection is shape and
+ *   weight as well as colour, so it survives greyscale.
+ * - Disabled is a colour change (`sunken`, `ink-disabled`), never an opacity
+ *   change (components.md § 0). A SELECTED row that goes disabled while the
+ *   answer is in flight keeps its selected look: the reader must still see
+ *   which answer is being sent.
+ * - Contrast, light / dark (computed from `tokens.gen.ts`, pinned by
+ *   `variants.test.ts`): `ink` on `accent-wash` 14.36 / 13.36 and on
+ *   `accent-muted` 12.51 / 10.73; the description's `ink-dim` 5.40 / 5.95 on
+ *   wash and 4.70 / 4.77 on muted. The ring (`border-control`) is 3.45 / 3.74 on
+ *   wash and 3.00 / 3.00 on muted (pressed) — the 3:1 non-text floor. The
+ *   selected disc is `accent` on `accent-muted` 4.22 / 5.76 with the check in
+ *   `on-accent` on `accent` 5.33 / 8.58.
+ * - The edge slot is 4 pt wide in every state so the label never shifts when
+ *   the edge thickens.
+ */
+export const choiceRowClasses = (
+	state: ControlState & { multi?: boolean } = {},
+) => {
+	const {
+		selected = false,
+		pressed = false,
+		disabled = false,
+		multi = false,
+	} = state;
+	const dimmed = disabled && !selected;
+	return {
+		row: cx(
+			"flex-row items-stretch overflow-hidden rounded-sm",
+			selected
+				? "bg-accent-muted"
+				: dimmed
+					? "bg-sunken"
+					: pressed
+						? "bg-accent-muted"
+						: "bg-accent-wash",
+		),
+		edgeSlot: "w-1 self-stretch",
+		edge: cx(
+			"flex-1",
+			selected ? "w-1" : "w-0.5",
+			dimmed ? "bg-hairline-strong" : "bg-accent",
+		),
+		indicator: cx(
+			"h-5 w-5 items-center justify-center border-2",
+			multi ? "rounded-sm" : "rounded-full",
+			selected
+				? "border-accent bg-accent"
+				: dimmed
+					? "border-hairline-strong"
+					: "border-border-control",
+		),
+		label: cx(
+			selected && "font-semibold",
+			dimmed ? "text-ink-disabled" : "text-ink",
+		),
+		note: dimmed ? "text-ink-disabled" : "text-ink-dim",
+	};
+};
 
 /**
  * A tappable card that navigates or selects: a computer on Computers, the Team
@@ -1028,6 +1096,20 @@ export const SKELETON_PULSE_MS = 1400;
 export const emptyStateClasses =
 	"flex-1 items-center justify-center gap-3 px-6 py-10";
 
+/**
+ * The same empty state inside a scrolling body. `flex-1` is a ZERO flex basis:
+ * a content-sized parent — which a scroll body's content is — offers it no
+ * height, and its centred block spills over its neighbours (#321, iOS). `grow`
+ * still fills a taller viewport, but keeps the content's own height as its
+ * floor, so a short screen at large text scrolls to the sentence instead.
+ * The vertical pad is `py-4`, not `py-10`, because here it is part of that
+ * floor: at 320 x 568 / 100 % the default pad made the block taller than its
+ * region, so it stopped centring and its action slid under the footer rule
+ * (design review D2). The centring supplies the air the pad used to.
+ */
+export const emptyStateScrollingClasses =
+	"grow items-center justify-center gap-3 px-6 py-4";
+
 /* -------------------------------------------------------------------------- */
 /* Divider, avatar                                                            */
 /* -------------------------------------------------------------------------- */
@@ -1071,3 +1153,71 @@ export const toastClasses =
 /** Long enough for one short line to be read: 1.5 × `duration.beat`. */
 export const TOAST_MIN_MS = 1050;
 export const TOAST_EXIT_MS = 120;
+
+/* -------------------------------------------------------------------------- */
+/* Switch                                                                     */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * How the platform draws its switch, which decides what the thumb is seen
+ * against. iOS's thumb sits INSIDE the track (`inset`). react-native-web's and
+ * Android's thumb is taller than the track (`overhang`), so the thumb's edge
+ * sits on the page and has to read against it.
+ */
+export type SwitchGeometry = "inset" | "overhang";
+
+export const switchGeometry = (os: string): SwitchGeometry =>
+	os === "ios" ? "inset" : "overhang";
+
+type SwitchPair = { track: ColorRole; thumb: ColorRole };
+
+/**
+ * The platform switch's colours, as roles (a `Switch` takes colour VALUES, so
+ * `SwitchRow` resolves these with `useTokenColor`). The platform defaults
+ * painted it before: react-native-web's teal thumb on the green track, and
+ * iOS's white thumb, which on the dark accent is the kit's one hard
+ * prohibition (2.16:1, components.md § 2).
+ *
+ *  - `inset` (iOS): on is the `accent` track with `on-accent`, the accent's own
+ *    ink, as the thumb; off is the neutral `border-control` track with an
+ *    `elevated` thumb. The track is the shape on the page, so it clears 3:1.
+ *  - `overhang` (web, Android): the THUMB carries the state, because it is
+ *    what reaches the page. On is an `accent` disc on an `accent-muted` track
+ *    (the Material dark pattern); off is an `ink-muted` disc on a
+ *    `hairline-strong` track. Both thumbs clear 3:1 against the track AND
+ *    against canvas, surface and elevated in every shipped palette — review
+ *    round 1 (Q1/D1) measured the first fix's dark thumbs at 1.00–1.28:1 on the
+ *    page, so a dark switch read as a bar with a notch.
+ *  - `disabled`, either geometry: the kit's disabled ink on the decorative
+ *    `hairline` track, in both states. A colour step, never an opacity
+ *    (components.md § 0); exempt from contrast as an inactive control. Without
+ *    it an explicit thumb overrides react-native-web's own disabled grey, and a
+ *    disabled switch looked enabled (Q3).
+ *
+ * Colour is never the only signal: the thumb's side is the state, and the row
+ * announces `checked`. `switch-colours.test.ts` pins every rule above over all
+ * shipped palettes.
+ */
+export const SWITCH_ROLES = {
+	inset: {
+		on: { track: "accent", thumb: "on-accent" },
+		off: { track: "border-control", thumb: "elevated" },
+	},
+	overhang: {
+		on: { track: "accent-muted", thumb: "accent" },
+		off: { track: "hairline-strong", thumb: "ink-muted" },
+	},
+	disabled: { track: "hairline", thumb: "ink-disabled" },
+} as const satisfies Record<SwitchGeometry, Record<"on" | "off", SwitchPair>> &
+	Record<"disabled", SwitchPair>;
+
+/** The roles one switch paints: its geometry's pair for `value`, or the
+ *  disabled pair whatever the value. */
+export const switchRoles = (
+	geometry: SwitchGeometry,
+	value: boolean,
+	disabled: boolean,
+): SwitchPair =>
+	disabled
+		? SWITCH_ROLES.disabled
+		: SWITCH_ROLES[geometry][value ? "on" : "off"];

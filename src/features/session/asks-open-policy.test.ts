@@ -1513,7 +1513,12 @@ describe("U9/M1 - the reader mid-answer when the opening read fails", () => {
 
 		// The opening read fails - seconds later. It reports what is DRAWN.
 		const aggregate: PendingAsk[] = []; // a failed read never sets the rows
-		const drawn = drawnRows(SEED, aggregate, false);
+		const drawn = drawnRows({
+			frame: SEED,
+			aggregate,
+			aggregateRead: false,
+			currentSessionId: SESSION,
+		});
 		expect(drawn).toHaveLength(2);
 		expect(
 			view.controller.readFailed({ sessionId: SESSION, drawn: drawn.length }),
@@ -1527,7 +1532,9 @@ describe("U9/M1 - the reader mid-answer when the opening read fails", () => {
 	it("still closes back to the bar when NOTHING is drawn, remembering nothing", () => {
 		const view = mount();
 		view.see(fresh({ asks: SEED, asks_open: 2 }));
-		expect(drawnRows(null, [], false)).toHaveLength(0);
+		expect(
+			drawnRows({ frame: null, aggregate: [], aggregateRead: false }),
+		).toHaveLength(0);
 		expect(view.controller.readFailed({ sessionId: SESSION, drawn: 0 })).toBe(
 			true,
 		);
@@ -1535,14 +1542,35 @@ describe("U9/M1 - the reader mid-answer when the opening read fails", () => {
 		expect(view.ledger.isDismissed(SESSION)).toBe(false);
 	});
 
-	it("draws the seed until the aggregate has been read SUCCESSFULLY, then the aggregate", () => {
+	it("draws the frame rows whole until the aggregate has been read SUCCESSFULLY, then merges them", () => {
 		const aggregate = [ask({ ask_id: "a1", status: "answered" })];
-		expect(drawnRows(SEED, [], false)).toBe(SEED);
-		// A failed read leaves `aggregateRead` false and the rows empty: the seed stays.
-		expect(drawnRows(SEED, [], false)).toBe(SEED);
-		expect(drawnRows(SEED, aggregate, true)).toBe(aggregate);
-		// No seed (a reader-opened sheet): always the aggregate.
-		expect(drawnRows(null, aggregate, false)).toBe(aggregate);
+		// A failed read leaves `aggregateRead` false and the rows empty: the frame stands.
+		const failed = drawnRows({
+			frame: SEED,
+			aggregate: [],
+			aggregateRead: false,
+			currentSessionId: SESSION,
+		});
+		expect(failed.map((row) => row.ask_id)).toEqual(["a1", "a2"]);
+		// The first SUCCESS: the aggregate's row wins for `a1`; the frame's `a2` is
+		// still outstanding and is drawn beside it (issue #247's union, not a switch).
+		const merged = drawnRows({
+			frame: SEED,
+			aggregate,
+			aggregateRead: true,
+			currentSessionId: SESSION,
+		});
+		expect(merged.map((row) => [row.ask_id, row.status])).toEqual([
+			["a1", "answered"],
+			["a2", "open"],
+		]);
+		// No frame rows (a runtime that publishes no asks): the aggregate alone.
+		const aggregateOnly = drawnRows({
+			frame: null,
+			aggregate,
+			aggregateRead: true,
+		});
+		expect(aggregateOnly).toBe(aggregate);
 	});
 });
 
@@ -1577,5 +1605,204 @@ describe("Q5/M2 - no stale expanded frame after a policy open", () => {
 		expect(choice).toBeNull();
 		choice = reduceExpansion(choice, { type: "pick", ask: "a3" });
 		expect(choice).toBe("a3");
+	});
+});
+
+describe("issue #247 — the sheet draws the rows the app already holds", () => {
+	/** An aggregate row: the richer shape, carrying the conversation and cwd the
+	 *  frame's rows do not. */
+	const aggregateRow = (patch: Partial<PendingAsk> = {}): PendingAsk =>
+		ask({ session_id: SESSION, cwd: "/work/repo", ...patch });
+
+	it("draws a frame row the aggregate does not carry at all — the empty read of the report", () => {
+		// The read SUCCEEDED and answered with nothing. The old contract drew that
+		// empty list, so a sheet the reader opened by hand painted blank while the
+		// conversation's own frame still held the question (issue #247).
+		const drawn = drawnRows({
+			frame: [ask({ ask_id: "a1" })],
+			aggregate: [],
+			aggregateRead: true,
+			currentSessionId: SESSION,
+		});
+		expect(drawn).toHaveLength(1);
+		expect(drawn[0]).toMatchObject({ ask_id: "a1", session_id: SESSION });
+	});
+
+	it("draws the union when the aggregate is short — 2 of the frame's 3", () => {
+		const drawn = drawnRows({
+			frame: ["a1", "a2", "a3"].map((id) => ask({ ask_id: id })),
+			aggregate: [
+				aggregateRow({ ask_id: "a1" }),
+				aggregateRow({ ask_id: "a2" }),
+			],
+			aggregateRead: true,
+			currentSessionId: SESSION,
+		});
+		expect(drawn.map((row) => row.ask_id)).toEqual(["a1", "a2", "a3"]);
+	});
+
+	it("keeps an aggregate-only row from another conversation — the aggregate is not filtered", () => {
+		const drawn = drawnRows({
+			frame: [ask({ ask_id: "a1" })],
+			aggregate: [
+				aggregateRow({
+					ask_id: "other",
+					session_id: OTHER,
+					cwd: "/work/other",
+				}),
+			],
+			aggregateRead: true,
+			currentSessionId: SESSION,
+		});
+		expect(drawn.map((row) => [row.ask_id, row.session_id])).toEqual([
+			["other", OTHER],
+			["a1", SESSION],
+		]);
+	});
+
+	it("lets the aggregate row WIN for an ask in both — the richer row, not the frame's", () => {
+		const aggregate = [aggregateRow({ ask_id: "a1", urgent: true })];
+		const drawn = drawnRows({
+			// The frame's copy carries no session_id and says `urgent: false`: if it
+			// won, the row would lose its conversation and its consequence line.
+			frame: [ask({ ask_id: "a1", urgent: false })],
+			aggregate,
+			aggregateRead: true,
+			currentSessionId: SESSION,
+		});
+		expect(drawn).toBe(aggregate);
+		expect(drawn[0]?.urgent).toBe(true);
+	});
+
+	it("drops a frame row the frame itself has settled — answered, declined, expired", () => {
+		const drawn = drawnRows({
+			frame: ADDRESSED.asks,
+			aggregate: [],
+			aggregateRead: true,
+			currentSessionId: SESSION,
+		});
+		expect(drawn).toHaveLength(0);
+	});
+
+	it("drops a LAPSED frame row once the aggregate has been read: lapsed is settled, per `isOutstanding`", () => {
+		// The SAME predicate the bar counts and the policy opens on — a sheet may
+		// not count a timed-out ask as waiting while the bar does not.
+		const drawn = drawnRows({
+			frame: [ask({ ask_id: "t", status: "timed_out" })],
+			aggregate: [],
+			aggregateRead: true,
+			currentSessionId: SESSION,
+		});
+		expect(drawn).toHaveLength(0);
+	});
+
+	it("keeps the frame rows WHOLE before the first successful read — the lapsed ask's Dismiss lives there", () => {
+		// A failed opening read never sets the rows and never sets `aggregateRead`:
+		// the sheet stays up, so what it is up for stays whole (round 2, U9) — the
+		// outstanding filter above is only for a frame standing beside a READ
+		// aggregate.
+		const frame = [
+			ask({ ask_id: "a1" }),
+			ask({ ask_id: "t", status: "timed_out" }),
+		];
+		const drawn = drawnRows({
+			frame,
+			aggregate: [],
+			aggregateRead: false,
+			currentSessionId: SESSION,
+		});
+		expect(drawn.map((row) => row.ask_id)).toEqual(["a1", "t"]);
+	});
+
+	it("never resurrects an ask this sheet settled, while the frame still lists it", () => {
+		const frame = [ask({ ask_id: "a1" })];
+		const settled = new Set(["a1"]);
+		expect(
+			drawnRows({
+				frame,
+				aggregate: [],
+				aggregateRead: true,
+				currentSessionId: SESSION,
+				settled,
+			}),
+		).toHaveLength(0);
+		// Control: the same row WITHOUT the settlement record is drawn — so the
+		// assertion above is the record working, not the row dropping anyway.
+		expect(
+			drawnRows({
+				frame,
+				aggregate: [],
+				aggregateRead: true,
+				currentSessionId: SESSION,
+			}),
+		).toHaveLength(1);
+	});
+
+	it("does not filter the aggregate by `settled`: a fresh read already reflects the settle", () => {
+		const aggregate = [aggregateRow({ ask_id: "a1", status: "answered" })];
+		expect(
+			drawnRows({
+				frame: [],
+				aggregate,
+				aggregateRead: true,
+				currentSessionId: SESSION,
+				settled: new Set(["a1"]),
+			}),
+		).toBe(aggregate);
+	});
+
+	it("stamps a kept frame row with the conversation's id and leaves the aggregate's row as read", () => {
+		const drawn = drawnRows({
+			frame: [ask({ ask_id: "a1" })],
+			aggregate: [aggregateRow({ ask_id: "other", session_id: OTHER })],
+			aggregateRead: true,
+			currentSessionId: SESSION,
+		});
+		expect(drawn.find((row) => row.ask_id === "a1")?.session_id).toBe(SESSION);
+		expect(drawn.find((row) => row.ask_id === "other")?.session_id).toBe(OTHER);
+	});
+
+	it("draws the held rows for a hand-open after a close — the reported sequence", () => {
+		const view = mount();
+		// 1. The conversation opens with the ask pending: the policy opens the sheet.
+		view.see(fresh(PENDING));
+		expect(view.controller.openOrigin()).toBe("policy");
+		// 2. The first aggregate read lands EMPTY (the report's build). `aggregateRead`
+		//    is per mount, so every later open on this screen draws with it true.
+		const aggregate: PendingAsk[] = [];
+		expect(
+			drawnRows({
+				frame: PENDING.asks,
+				aggregate,
+				aggregateRead: true,
+				currentSessionId: SESSION,
+			}),
+		).toHaveLength(1);
+		// 3. The reader dismisses the sheet — the dismissal memory, not the asks.
+		view.controller.closed({ sessionId: SESSION, pending: ["a1"] });
+		expect(view.controller.isOpenFor(SESSION)).toBe(false);
+		// 4. They open it again from the bar: a READER open, drawing the empty
+		//    aggregate alone under the old contract — the blank sheet of #247.
+		view.controller.opened({ sessionId: SESSION });
+		expect(view.controller.openOrigin()).toBe("reader");
+		expect(
+			drawnRows({
+				frame: PENDING.asks,
+				aggregate,
+				aggregateRead: true,
+				currentSessionId: SESSION,
+			}).map((row) => row.ask_id),
+		).toEqual(["a1"]);
+	});
+
+	it("leaves the dismissal memory alone: a fresh frame does not re-open a sheet the reader dismissed", () => {
+		// Rule 7 — the fix draws rows, it does not make the dismissed auto-open
+		// forget (ADR 0005: in memory, by design).
+		const view = mount();
+		view.see(fresh(PENDING));
+		view.controller.closed({ sessionId: SESSION, pending: ["a1"] });
+		expect(view.ledger.isDismissed(SESSION)).toBe(true);
+		expect(view.see(fresh(PENDING))).toBe(false);
+		expect(view.controller.isOpenFor(SESSION)).toBe(false);
 	});
 });

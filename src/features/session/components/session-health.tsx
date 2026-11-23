@@ -66,7 +66,11 @@ import { useTextScale } from "@/ui/text-scale-provider";
  * `ended` going false is the signal that the session came back, so it clears
  * the state.
  */
-export function useResume(sessionId: string, ended: boolean) {
+export function useResume(
+	sessionId: string,
+	ended: boolean,
+	resumeAction?: () => Promise<void>,
+) {
 	const { relay } = useConnection();
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState<string | null>(null);
@@ -94,7 +98,8 @@ export function useResume(sessionId: string, ended: boolean) {
 		setError(null);
 		setNotice(null);
 		try {
-			await client.resumeSession(sessionId);
+			if (resumeAction) await resumeAction();
+			else await client.resumeSession(sessionId);
 			/* The notice lands BEFORE busy clears, in one batch, so the button
 			   never reads "Resume" again while the line under it says the reopen
 			   is under way (design round 1, N1). Busy still clears on success: a
@@ -116,7 +121,7 @@ export function useResume(sessionId: string, ended: boolean) {
 			);
 			setBusy(false);
 		}
-	}, [busy, relay, sessionId]);
+	}, [busy, relay, sessionId, resumeAction]);
 
 	useEffect(() => {
 		if (notice !== healthResumeCopy().reopening) return;

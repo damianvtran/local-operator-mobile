@@ -19,7 +19,7 @@
  * recorded (the schema reads that `null` as absence); without one an ended
  * session's effort is genuinely unknown — the chip is HIDDEN rather than shown
  * as a dash, because a control that names nothing and does nothing is noise on
- * a screen whose only action is Resume.
+ * a screen whose next send may reopen the conversation.
  *
  * LABELS ARE THE PICKERS' OWN. The chip names the catalogue row (`modelLabel`:
  * "Opus 5.5", not `anthropic/claude-opus-5-5`) and the rung (`effortLabel`:
@@ -27,13 +27,11 @@
  * about what a thing is called. A model the catalogue does not list (or a
  * catalogue not read yet) falls back to the bare model id (`modelChipText`).
  *
- * TAPPING AN ENDED SESSION'S CHIP: nothing can apply. The relay's command
- * route refuses `set_model`/`set_effort` with no live entry (409; only a cold
- * `prompt` wakes a host), and `POST /api/sessions/resume` takes no model or
- * effort. So the chip shows the last-known value DISABLED, with a hint saying
- * to resume first — the honest reading of the existing resume semantics, with
- * no new wire. Once resumed the runtime's projection takes over and the chip
- * opens the picker as on any live session.
+ * TAPPING AN ENDED SESSION'S CHIP selects the next run's model. There is no
+ * runtime to mutate: `use-stored-model.ts` retains that intent and applies it
+ * through same-session Resume → set_model → set_effort only on an explicit
+ * Resume/Send. A catalogue/read failure remains reachable through the picker,
+ * rather than trapping the reader behind a disabled last-known model.
  *
  * BEFORE THE FIRST FRAME nothing has said whether the session ended, so the
  * row's model is shown DISABLED too (review round 1, m1): a tap in that window
@@ -57,7 +55,6 @@ import {
 	modelChipText,
 	NOT_CONNECTED_HINT,
 	reportedModel,
-	UNAVAILABLE_TEXT,
 } from "@/features/session/chip-labels";
 import { t } from "@/i18n";
 
@@ -105,7 +102,7 @@ export const sessionChipLabels = (input: {
 	row: SessionChipRow | null;
 	models: readonly ModelEntry[];
 	connection: ChipConnection;
-	/** No runtime can take a change (the header's `ended` verdict). */
+	/** Cold session: the host defers the choice until explicit Resume/Send. */
 	ended: boolean;
 }): { model: ComposerChip; effort: ComposerChip | null } => {
 	const p = input.projection;
@@ -118,23 +115,28 @@ export const sessionChipLabels = (input: {
 
 	if (input.ended) {
 		const model = friendlyModelName(modelSource, input.models);
+		// This is a next-send choice, not a command to a nonexistent runtime.
+		// The host defers applying it until explicit Resume/Send.
 		return {
 			model:
 				model !== null
-					? lastKnown(model, `Model, ${model}`, "model")
+					? {
+							kind: "value",
+							text: model,
+							accessibilityLabel: `Model, ${model}`,
+						}
 					: {
-							kind: "unavailable",
-							text: UNAVAILABLE_TEXT,
+							kind: "value",
+							text: t("mobile.home.chip.model_default_short"),
 							accessibilityLabel: "Model, not recorded",
-							accessibilityHint: t("mobile.session.chip.model_unrecorded_hint"),
 						},
 			effort:
 				effortSource.length > 0
-					? lastKnown(
-							effortLabel(effortSource),
-							`Effort, ${effortLabel(effortSource)}`,
-							"effort",
-						)
+					? {
+							kind: "value",
+							text: effortLabel(effortSource),
+							accessibilityLabel: `Effort, ${effortLabel(effortSource)}`,
+						}
 					: null,
 		};
 	}
@@ -187,22 +189,6 @@ export const sessionChipLabels = (input: {
 					}),
 	};
 };
-
-/** A value the session last ran with, which cannot be changed until it is
- *  resumed: shown, but disabled, with the reason as its hint. */
-const lastKnown = (
-	text: string,
-	accessibilityLabel: string,
-	field: "model" | "effort",
-): ComposerChip => ({
-	kind: "unavailable",
-	text,
-	accessibilityLabel,
-	accessibilityHint:
-		field === "model"
-			? t("mobile.session.chip.model_resume_hint")
-			: t("mobile.session.chip.effort_resume_hint"),
-});
 
 /** Swap a VALUE chip's raw wire text for the pickers' label; other kinds pass. */
 const friendlyValue = (

@@ -33,6 +33,7 @@ import type { Json } from "../lib/json.ts";
 import { isRecord } from "../lib/json.ts";
 import type { FixtureCorpus } from "./fixtures.ts";
 import { repoRoot } from "./fixtures.ts";
+import { type InlineUiFixture, inlineChartWorld } from "./inline-charts.ts";
 import type { TranscribeAnswer } from "./transcribe.ts";
 import { syntheticSessionId } from "./wire.ts";
 
@@ -98,6 +99,8 @@ export interface FixtureOverride {
  * must not leak into the next run of the same scenario.
  */
 export interface ScenarioWorld {
+	/** Synthetic rich parts, exposed only on negotiated reads for this session. */
+	inlineUi?: InlineUiFixture;
 	/** Session id → projection. An empty object is "no conversations at all". */
 	projections?: Record<string, SessionProjection>;
 	/**
@@ -153,6 +156,13 @@ export interface ScenarioWorld {
 	 *  naming no model or effort runs. `undefined` omits the key, as an older
 	 *  daemon does; `null` is a computer that resolved no default. */
 	modelDefault?: Json | null;
+	/** `GET /api/start-targets`'s body (local-operator #4367). PRESENT means a
+	 *  relay that advertises `session_start.agent/team`, serves this roster and
+	 *  validates the start fields against it; ABSENT is an older relay — no flag,
+	 *  no route, and a start body's `agent`/`team` silently dropped, exactly the
+	 *  hazard the phone's capability gate exists for. Opt-in, like tags, so no
+	 *  existing scenario changes shape. */
+	startTargets?: Json;
 	/** `GET /api/directories`'s body. `undefined` serves the corpus capture
 	 *  (home `~`, no recents, no default), which every existing scenario reads. */
 	directories?: Json;
@@ -190,6 +200,27 @@ export interface ScenarioWorld {
 		 * that a measurement rather than a staged overlay.
 		 */
 		failWrite?: { status: number; error: string };
+	};
+	/**
+	 * The `$skill` surface (local-operator SKM-D3), as one block because it is one
+	 * feature: PRESENT advertises the TOP-LEVEL `capabilities.skill_invocation`,
+	 * serves `GET /api/skills` and honours `expand_skills` on a prompt/steer body
+	 * with the additive `skills: {attached, skipped}` receipt. ABSENT is an older
+	 * relay: no capability, a 404 route, and the flag silently dropped — exactly
+	 * the hazard the phone's capability gate exists for. Opt-in, so no existing
+	 * scenario changes shape.
+	 */
+	skills?: {
+		/** `GET /api/skills`'s rows, in the order served (the relay sorts by name). */
+		catalogue: Array<{ name: string; description: string; hidden: boolean }>;
+		/** Names the expansion reports as skipped (an empty SKILL.md) rather than
+		 *  attached, when a message mentions them. */
+		skipped?: string[];
+		/** Every expansion is refused `422 skills_too_large`. */
+		tooLarge?: boolean;
+		/** The catalogue read is refused with this status (the tray must stay
+		 *  closed, silently). */
+		failCatalogue?: { status: number; error: string };
 	};
 	/**
 	 * The armed-index surface this state pins (S17): the whole
@@ -658,6 +689,52 @@ const ANSWERS: readonly string[] = [
 ];
 
 /**
+ * Issue #322's conversation: older user and assistant turns, then a run of
+ * 200 peer receipts and tool rows — longer than the relay's 80-row live frame
+ * AND the first 80-row older page together, so whichever of the two the
+ * screen reads first (the frame, or the mount's history read), the reader
+ * opens on a window with no conversation row in it. Returns the full journal
+ * (`history`), the 80-row live tail, and the id of the last answer — the
+ * completion anchor, which exists ONLY in history. Journal-style ids
+ * throughout (`m-…`): none of the live-only prefixes the pager refuses as a
+ * cursor (`journalAddressableRow`).
+ */
+function peerTailConversation(base: SessionProjection): {
+	history: SessionProjection["transcript"];
+	tail: SessionProjection["transcript"];
+	anchorId: string;
+} {
+	const tool = base.transcript.find((entry) => entry.kind === "tool");
+	const peer = base.transcript.find((entry) => entry.kind === "peer_message");
+	if (tool === undefined || peer === undefined) {
+		throw new Error("the peer-tail base projection is missing a row to clone");
+	}
+	const turns = longConversation(base, 3, 4);
+	const anchorId = turns.at(-1)?.id ?? "";
+	const run: SessionProjection["transcript"] = [];
+	for (let step = 0; run.length < 200; step += 1) {
+		const at = String(step).padStart(3, "0");
+		run.push({
+			...structuredClone(peer),
+			id: `m-tail-${at}-peer`,
+			text: `Handoff ${step + 1}: shard ${step % 7} is reconciled; nothing for you.`,
+		});
+		run.push({
+			...structuredClone(tool),
+			id: `m-tail-${at}-tool`,
+			tool_call_id: `tail-${step}`,
+			tool_name: "bash",
+			tool_state: "done",
+			summary: `checking shard ${step % 7}`,
+			text: "",
+			images: [],
+			error: "",
+		});
+	}
+	return { history: [...turns, ...run], tail: run.slice(-80), anchorId };
+}
+
+/**
  * Build the scenario registry against a loaded fixture corpus.
  * `fix` is the object `loadFixtures()` returns.
  */
@@ -1061,6 +1138,13 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 	);
 
 	add(
+		"inline-charts",
+		"One transcript with a literal code fence and negotiated charts, including four series modes.",
+		[],
+		() => inlineChartWorld(liveIdle),
+	);
+
+	add(
 		"many",
 		"Twelve rows: pinned, streaming, needing attention, running subagents, a long name and a long cwd.",
 		/* `narrow` used to be declared beside `populated-long` (then `S4/narrow` ×
@@ -1332,6 +1416,79 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 				projections: { [eight.projection.session_id]: eight.projection },
 				rowOverridesById: { [eight.projection.session_id]: eight.override },
 				sessionTags: { catalogue },
+			};
+		},
+	);
+
+	/* The `$skill` picker's world: a live idle row and a catalogue that exercises
+	 * the tray — a hidden skill, a long description that must truncate, an
+	 * uppercase-prefix-free mix for the lowercase-evidence rule. Interaction-only
+	 * (no `shows` cell), like `tags-cap`: it exists so the picker, the
+	 * `expand_skills` body and the receipt can be driven without a real relay. */
+	const skillsCatalogue = () => [
+		{
+			name: "ape-agent",
+			description: "Drive an agent through a long-running task.",
+			hidden: false,
+		},
+		{
+			name: "architect",
+			description:
+				"Design a change before writing it: read the code, name the seams, and write the plan down in one page.",
+			hidden: false,
+		},
+		{ name: "research", description: "Look something up.", hidden: false },
+		{
+			name: "secret-sauce",
+			description: "Not offered automatically; invoked by name only.",
+			hidden: true,
+		},
+		{ name: "empty-skill", description: "Has no content.", hidden: false },
+	];
+	const skillsRow = () =>
+		projectionFrom(liveIdle, {
+			session_id: syntheticSessionId("skills-row"),
+			conversation_name: "Skills picker",
+		});
+
+	add(
+		"skills",
+		"A live conversation on a relay that serves the `$skill` picker: `capabilities.skill_invocation`, `GET /api/skills` and `expand_skills` with its receipt (`empty-skill` is reported skipped).",
+		[],
+		() => {
+			const row = skillsRow();
+			return {
+				projections: { [row.session_id]: row },
+				skills: { catalogue: skillsCatalogue(), skipped: ["empty-skill"] },
+			};
+		},
+	);
+
+	add(
+		"skills-too-large",
+		"The `$skill` picker's relay refusing every expansion `422 skills_too_large`: the draft stays and the composer says what to do.",
+		[],
+		() => {
+			const row = skillsRow();
+			return {
+				projections: { [row.session_id]: row },
+				skills: { catalogue: skillsCatalogue(), tooLarge: true },
+			};
+		},
+	);
+
+	add(
+		"skills-error",
+		"The `$skill` catalogue read is refused: the tray never opens and nothing is said (the draft stays plain prose).",
+		[],
+		() => {
+			const row = skillsRow();
+			return {
+				projections: { [row.session_id]: row },
+				skills: {
+					catalogue: skillsCatalogue(),
+					failCatalogue: { status: 500, error: "skills unavailable" },
+				},
 			};
 		},
 	);
@@ -2962,6 +3119,49 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 	);
 
 	add(
+		"peer-tail-history",
+		"Issue #322: an ended conversation whose last 200 rows are peer receipts and tool rows, so its 80-row live frame and first older page hold no conversation; the earlier user and assistant turns are only in deeper /history pages, and an unseen completion is anchored on the last answer, which no live row carries.",
+		[],
+		() => {
+			const { history, tail, anchorId } = peerTailConversation(everyKind);
+			/* The token is the one the corpus's `/seen` success capture answers
+			 *  for this session, so a receipt the app sends here settles. */
+			const projection = projectionFrom(everyKind, {
+				transcript: tail,
+				transcript_head_pinned: false,
+				// Settled and ended, like `sse_projection_ended`: the base frame is
+				// mid-turn, and its activity, queue and panels would read as work.
+				ended: true,
+				pid: 0,
+				streaming: false,
+				activity: "",
+				activity_started_s: null,
+				queued_count: 0,
+				todos: [],
+				subagents: [],
+				attention: {
+					conversation_id: `session/${everyKind.session_id}`,
+					completion_token: "cf6b89c0-1fde-4b8f-9032-700119607c60",
+					anchor_id: anchorId,
+					kind: "complete",
+					reason: "",
+					cause: "",
+					notify: true,
+					unseen: true,
+					revision: [2, 1],
+				},
+			});
+			return {
+				projections: { [projection.session_id]: projection },
+				history,
+				rowOverridesById: {
+					[projection.session_id]: { unseen: true, section: "active" },
+				},
+			};
+		},
+	);
+
+	add(
 		"long-names",
 		"A 64-character conversation name, a deep cwd, and a 400-character pending question.",
 		["S5/populated-long", "S15/populated-long", "S8/populated-long"],
@@ -3473,6 +3673,87 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 				],
 				tmp: "/private/tmp",
 			},
+		}),
+	);
+
+	/* The new-chat agent/team picker (local-operator #4367). Synthetic names,
+	 *  not a capture: two teams, three installed agents, and one builtin the
+	 *  phone must hide (the desktop menu's rule). */
+	const startTargetRoster = {
+		agents: [
+			{
+				name: "default",
+				label: "Default",
+				kind: "role",
+				source: "builtin",
+				description: "The packaged default agent.",
+				agent_id: null,
+				avatar_sha256: null,
+			},
+			{
+				name: "coder",
+				label: "Coder",
+				kind: "role",
+				source: "installed",
+				description: "Implements one bounded slice and reports what changed.",
+				agent_id: null,
+				avatar_sha256: null,
+			},
+			{
+				name: "reviewer",
+				label: "Reviewer",
+				kind: "role",
+				source: "installed",
+				description: "Reviews a diff for defects.",
+				agent_id: null,
+				avatar_sha256: null,
+			},
+			{
+				name: "research-analyst",
+				label: "Research Analyst",
+				kind: "specialist",
+				source: "custom",
+				description: "",
+				agent_id: null,
+				avatar_sha256: null,
+			},
+		],
+		teams: [
+			{
+				name: "lopdev",
+				label: "Lopdev",
+				description: "Builds and ships Local Operator.",
+				manager: "manager",
+				member_count: 7,
+			},
+			{
+				name: "support",
+				label: "Support",
+				description: "",
+				manager: "triage",
+				member_count: 1,
+			},
+		],
+		degraded: false,
+	};
+	add(
+		"start-targets",
+		"The new-chat agent/team picker: a relay that advertises `session_start.agent/team`, serves two teams and three installed agents (plus one builtin the phone hides), and binds a start to one of them.",
+		/* NO CELL, for the pickers' reason: the sheet opens from the hero pill, and
+		 *  nothing on the wire opens it. This is the world a rendered pass runs in. */
+		[],
+		() => ({
+			startTargets: startTargetRoster,
+			models: pickerModels,
+		}),
+	);
+	add(
+		"start-targets-degraded",
+		"The agent/team picker when the computer could not read its registries: the capability is advertised, and the roster answers `degraded: true` with empty lists.",
+		[],
+		() => ({
+			startTargets: { agents: [], teams: [], degraded: true },
+			models: pickerModels,
 		}),
 	);
 

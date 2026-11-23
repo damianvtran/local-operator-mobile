@@ -65,6 +65,18 @@ once chosen — do not assume one before it lands.
   check that proves it; no check, no shortcut. PR #156: a 20 s hierarchy-read cap
   against measured 66–173 s reads, and candidate-app reuse that assumed a fixed
   fixture port when the fixture used an ephemeral one (the round-36 blocker).
+- **Two-tier pull-request CI (`CI Gate` + `Merge gate (full suite)`).** Per-push
+  pull requests run `ci.yml` (`CI Gate` — fast Linux lint, format, typecheck,
+  unit tests, web export, and path-gated `design-kit`), skip `e2e.yml`, and run
+  `ios.yml` / `android.yml` only when native-affecting inputs change. Once
+  review rounds are clean and `CI Gate` is green on the final head SHA, run
+  `pnpm merge-gate <pr>` (`scripts/ci/merge-gate.ts`) to re-arm the
+  `ready-to-merge` label and run `merge-gate.yml` (`Merge gate (full suite)` —
+  full iOS Release simulator build+launch, Android APK + manifest + determinism,
+  and E2E mock-relay contract) before merging. Pushing after arming leaves
+  `Merge gate (full suite)` `Expected` on the new SHA; re-run
+  `pnpm merge-gate <pr>` on the final head (`docs/ci.md`, "Two-tier pull-request
+  CI").
 - **Converge `main` once, at the merge gate.** Do not merge or rebase `main` into
   a pull request mid-review: PR #156's 13 merges of `main` each cost a
   convergence proof and often a round. The exception is a DIRTY pull request

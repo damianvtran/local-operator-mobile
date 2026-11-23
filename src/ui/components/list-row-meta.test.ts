@@ -1,4 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
+
+import { renderFor, resetLocaleSource, setLocaleSource } from "@/i18n";
 
 import {
 	charWidthDp,
@@ -6,6 +8,7 @@ import {
 	MODEL_MIN_CHARS,
 	metaLineFor,
 	middleFit,
+	rowAccessibilityLabel,
 	sansTextWidthDp,
 	tailFit,
 	textWidthDp,
@@ -327,3 +330,120 @@ it("fits the drawer's own sans face, and still elides a genuinely narrow slot", 
 	expect(middleFit(name, width, 1)).not.toBe(name);
 	expect(middleFit(name, 24, 1, sans)).not.toBe(name);
 });
+
+describe("the row's spoken name is keyed (O3-c)", () => {
+	afterEach(() => resetLocaleSource());
+	const ROW = {
+		title: "Payments",
+		attention: "pending",
+		attentionWord: "approval",
+		selected: true,
+		ended: true,
+		remoteDevice: "Studio",
+		remoteUnreachable: true,
+	} as const;
+
+	it("keeps the English label byte for byte", () => {
+		setLocaleSource(() => "en");
+		expect(rowAccessibilityLabel(ROW)).toBe(
+			"Payments, approval waiting, ended, on Studio, not reachable, open",
+		);
+		expect(
+			rowAccessibilityLabel({
+				...ROW,
+				attention: "streaming",
+				ended: false,
+				degraded: true,
+				remoteDevice: undefined,
+				selected: false,
+			}),
+		).toBe("Payments, working, not answering");
+		expect(
+			rowAccessibilityLabel({
+				...ROW,
+				attentionWord: "question",
+				ended: false,
+				remoteDevice: undefined,
+				selected: false,
+			}),
+		).toBe("Payments, question waiting");
+	});
+
+	it("reads every fragment from the reader's catalogue (ur)", () => {
+		setLocaleSource(() => "ur");
+		expect(rowAccessibilityLabel(ROW)).toBe(
+			[
+				"Payments",
+				renderFor(
+					"mobile.sidebar.row_label.waiting",
+					{ kind: "approval" },
+					"ur",
+				),
+				renderFor("mobile.sidebar.row_status.ended", {}, "ur"),
+				renderFor(
+					"mobile.sidebar.row_label.on_device",
+					{ device: "Studio" },
+					"ur",
+				),
+				renderFor("mobile.sidebar.row_status.not_reachable", {}, "ur"),
+				renderFor("mobile.sidebar.row_label.open", {}, "ur"),
+			].reduce((first, second) => joinFor(first, second, "ur")),
+		);
+		expect(
+			rowAccessibilityLabel({
+				...ROW,
+				attention: "unread",
+				selected: false,
+				ended: false,
+				remoteDevice: undefined,
+			}),
+		).toBe(
+			joinFor("Payments", renderFor("mobile.sidebar.row.new", {}, "ur"), "ur"),
+		);
+	});
+
+	it("joins fragments with the reader's separator, not a literal comma", () => {
+		/* The separator is a catalogue message: a locale that punctuates a
+		 *  list differently must be heard that way. The expectation is built
+		 *  from the join key, pairwise and title first, so it holds whatever a
+		 *  translator chose; the `ur` case above is the discriminating one once
+		 *  the Urdu join carries the Arabic comma rather than `", "`. */
+		setLocaleSource(() => "en");
+		expect(
+			rowAccessibilityLabel({
+				title: "Payments",
+				attention: "none",
+				attentionWord: "approval",
+				selected: true,
+				remoteDevice: "Studio",
+			}),
+		).toBe(
+			joinFor(
+				joinFor(
+					"Payments",
+					renderFor(
+						"mobile.sidebar.row_label.on_device",
+						{ device: "Studio" },
+						"en",
+					),
+					"en",
+				),
+				renderFor("mobile.sidebar.row_label.open", {}, "en"),
+				"en",
+			),
+		);
+		// A lone title has nothing to join: no trailing separator.
+		expect(
+			rowAccessibilityLabel({
+				title: "Payments",
+				attention: "none",
+				attentionWord: "approval",
+				selected: false,
+			}),
+		).toBe("Payments");
+	});
+});
+
+/** The label's separator as `locale` renders it. */
+const joinFor = (first: string, second: string, locale: string): string =>
+	renderFor("mobile.sidebar.row_label.join", { first, second }, locale);

@@ -24,6 +24,14 @@
  *   resolves into nothing.
  * - Bounded in entries AND bytes, least recently used first. A crowded list
  *   that cannot make room renders initials rather than growing the heap.
+ * - An endpoint hash versions bytes, not access. Held bytes are displayable
+ *   only for `ENDPOINT_PHOTO_FRESH_MS` after an authorized 200/304 for this
+ *   account (this cache's epoch); past that they are only a validator for the
+ *   next authorized read. A refusal (404, 401) withdraws them at once, and
+ *   `clear()` on account change drops them.
+ * - Visible rows can withdraw queued reads; foreground marks outrank the row
+ *   queue. Concurrency and a separate rolling request budget protect the
+ *   shared hub bucket even if responses arrive instantly.
  * - A failure is remembered. A 404 (no photo, or not readable) and an
  *   undecodable answer stay failed for that hash; a network failure is retried
  *   only after a cool-down. Scrolling a list of people with no photos must not
@@ -182,22 +190,78 @@ export function avatarFailure(error: unknown): AvatarFailure {
  * The account-photo policy above is intentionally unchanged.
  */
 export function endpointAvatarFailure(error: unknown): AvatarFailure {
-	if (
-		isHubError(error) &&
-		error.status !== null &&
-		[401, 403, 404].includes(error.status)
-	)
-		return "transient";
+	if (endpointRefusal(error)) return "transient";
 	return avatarFailure(error);
 }
 
+/*
+ * The hub's answer that this account may not (or no longer) read the endpoint's
+ * photo. Access does not depend on size, so `load` also withdraws the other
+ * size's display on one (review R3-1); a 5xx, 429 or timeout says nothing
+ * about access and leaves the other size alone.
+ */
+const endpointRefusal = (error: unknown): boolean =>
+	isHubError(error) &&
+	error.status !== null &&
+	[401, 403, 404].includes(error.status);
+
 type Entry =
-	| { state: "ready"; uri: string; bytes: number }
-	| { state: "loading"; promise: Promise<string | null> }
+	| {
+			state: "ready";
+			uri: string;
+			bytes: number;
+			etag: string | null;
+			/** When an authorized read last answered 200/304 for this key. */
+			verifiedAt: number;
+	  }
+	| { state: "loading"; promise: Promise<string | null>; bytes: number }
 	| { state: "failed"; retryAt: number; permanent: boolean };
 
 /** A read waiting for a slot: run it when one frees, or settle it on `clear()`. */
-type Waiter = { run: () => void; cancel: () => void };
+type Waiter = { run: () => void; cancel: () => void; priority: number };
+type PhotoResult = string | { uri: string; etag: string | null } | null;
+type ReadOptions = {
+	signal?: AbortSignal;
+	row?: boolean;
+	/** `fetchUri` reports each dispatched request through its `onRequest`. */
+	metered?: boolean;
+};
+type FetchUri = (etag?: string, onRequest?: () => void) => Promise<PhotoResult>;
+
+const READ_WINDOW_MS = 60_000;
+/*
+ * TestFlight 1157: 119 photo GETs exhausted the hub's 120/min read bucket.
+ * Photos get half of it; the other half is the directory, settings and every
+ * other foreground read (review R1-2). The budget is counted in HTTP REQUESTS,
+ * each held until a full window after its read settles.
+ *
+ * A read may send two requests (the client's one 401-refresh retry), so it is
+ * admitted only with two free and holds both while in flight; once it settles,
+ * a metered read keeps only the requests it actually sent. Round 2 counted
+ * every read as two (U5/D4: 30 photos a minute). Measured on that head:
+ * reviewer R2 loopback, n=30 reads on a valid bearer, 30 requests (1 each,
+ * median 1, max 1); QA R2's forced-401 fixture, n=30 reads, 60 requests
+ * (max 2). So a valid session gets ~60 photos a minute, and the all-401
+ * worst case is still capped at 60 requests, never more than half the bucket.
+ * Invariant: requests reserved in any trailing window >= photo requests sent
+ * in it, and <= PHOTO_REQUESTS_PER_WINDOW (avatar-fanout.test.ts).
+ */
+export const PHOTO_REQUESTS_PER_WINDOW = 120 / 2;
+const REQUESTS_PER_READ = 2;
+/*
+ * How long an authorized endpoint-photo read stays displayable without a new
+ * one (U5/D4: a row scrolled past and back, or a reopened drawer, sat on the
+ * glyph for 51-53 s waiting for a read slot). Equal to the store's
+ * `DIRECTORY_TTL_MS` (not imported: the store imports this module): the
+ * directory entry that tells the phone this account may see this agent is
+ * itself reused that long without re-asking, so trusting the photo read no
+ * longer than that adds no staleness the list does not already have. A 404 or
+ * 401 from any read of either size of the key withdraws it before then. Invariant: endpoint
+ * bytes are shown only within this window of a 200/304 in the current epoch
+ * (endpoint-avatars.test.ts, "displays a verified photo for the freshness
+ * window only").
+ */
+export const ENDPOINT_PHOTO_FRESH_MS = 5 * 60_000;
 
 /* `account:hash:size`, as `avatarKey` builds it; anything else has no sibling. */
 const SIZED_KEY = /^(.*):(64|256)$/;
@@ -208,6 +272,8 @@ export interface AvatarCacheOptions {
 	maxEntries?: number;
 	/** Most `data:` URI characters held across ready entries. */
 	maxBytes?: number;
+	/** Most reads outstanding at once; the rest wait their turn. */
+	maxInFlight?: number;
 	/** How long a network failure is remembered before one more try. */
 	transientCooldownMs?: number;
 	now?: () => number;
@@ -223,10 +289,18 @@ export interface AvatarCacheOptions {
 const DEFAULT_MAX_ENTRIES = 200;
 const DEFAULT_MAX_BYTES = 4 * 1024 * 1024;
 const DEFAULT_TRANSIENT_COOLDOWN_MS = 60_000;
+/*
+ * Four keeps a screenful of photos arriving within a few round trips while a
+ * 100-agent organization drains as a trickle, not a burst, against the shared
+ * 120/min `reads` bucket. Hub variants are a few KB, so latency, not bandwidth,
+ * is what a higher number would buy.
+ */
+export const AVATAR_MAX_IN_FLIGHT = 4;
 
 export function createAvatarCache(options: AvatarCacheOptions = {}) {
 	const maxEntries = options.maxEntries ?? DEFAULT_MAX_ENTRIES;
 	const maxBytes = options.maxBytes ?? DEFAULT_MAX_BYTES;
+	const maxInFlight = Math.max(1, options.maxInFlight ?? AVATAR_MAX_IN_FLIGHT);
 	const cooldown = options.transientCooldownMs ?? DEFAULT_TRANSIENT_COOLDOWN_MS;
 	const now = options.now ?? Date.now;
 	/* Map iteration order is insertion order: re-inserting on use makes the
@@ -239,32 +313,48 @@ export function createAvatarCache(options: AvatarCacheOptions = {}) {
 	/* Reads started and not yet settled, so `wakeOne` can tell whether a woken
 	 * waiter took a slot. */
 	let inFlight = 0;
-	/*
-	 * Reads refused because every slot is an outstanding read. They wait, FIFO,
-	 * and one is started each time a read settles, so an organization with more
-	 * photos than slots fills in as reads finish instead of leaving the overflow
-	 * on initials until the screen remounts. The queue holds closures, not
-	 * bytes, and only one per mounted mark.
-	 */
 	const waiters: Waiter[] = [];
-	/*
-	 * Hand freed capacity to the queue. A woken waiter's `load()` may start no
-	 * fetch at all (its photo is already held, already in flight as a duplicate
-	 * key, or cooling down), and then nothing would ever wake the NEXT waiter:
-	 * the queue would strand with a slot free (review round 2, R2-1). So keep
-	 * waking until a waiter actually occupies a slot or the room runs out.
-	 */
-	const wakeOne = () => {
-		while (waiters.length > 0 && makeRoom(1, 0)) {
-			const before = inFlight;
+	const reservations = new Set<{ until: number }>();
+	const epochListeners = new Set<() => void>();
+	let wakeTimer: ReturnType<typeof setTimeout> | undefined;
+	let throttledUntil = 0;
+	const nextReadAt = () => {
+		const at = now();
+		for (const reservation of reservations) {
+			if (reservation.until <= at) reservations.delete(reservation);
+		}
+		// A new read needs room for its worst case; otherwise it waits until
+		// enough reservations expire (Infinity: until in-flight reads settle).
+		const short =
+			reservations.size + REQUESTS_PER_READ - PHOTO_REQUESTS_PER_WINDOW;
+		const budgetAt =
+			short <= 0
+				? at
+				: (Array.from(reservations, (reservation) => reservation.until).sort(
+						(a, b) => a - b,
+					)[short - 1] ?? Number.POSITIVE_INFINITY);
+		return Math.max(throttledUntil, budgetAt);
+	};
+	const cancelWake = () => {
+		clearTimeout(wakeTimer);
+		wakeTimer = undefined;
+	};
+	const wake = () => {
+		cancelWake();
+		while (waiters.length && inFlight < maxInFlight) {
+			const due = nextReadAt();
+			if (due > now()) {
+				if (Number.isFinite(due)) wakeTimer = setTimeout(wake, due - now());
+				return;
+			}
+			if (!makeRoom(1, 0)) return;
 			waiters.shift()?.run();
-			if (inFlight > before) return;
 		}
 	};
 
 	const remove = (key: string) => {
 		const entry = entries.get(key);
-		if (entry?.state === "ready") heldBytes -= entry.bytes;
+		if (entry && entry.state !== "failed") heldBytes -= entry.bytes;
 		entries.delete(key);
 	};
 
@@ -336,74 +426,153 @@ export function createAvatarCache(options: AvatarCacheOptions = {}) {
 		}
 	};
 
+	/*
+	 * After a refusal of one size, the other size's held photo is no longer
+	 * authorized either. Expire its freshness rather than dropping it: the bytes
+	 * and ETag stay a validator, so the next read can still answer 304, but
+	 * `peekEndpoint` and `load` no longer display them without that read
+	 * (review R3-1). A sibling in flight settles on its own answer.
+	 */
+	const expireSibling = (key: string): void => {
+		const sized = SIZED_KEY.exec(key);
+		if (!sized) return;
+		for (const size of SIZES) {
+			const name = `${sized[1]}:${size}`;
+			if (name === key) continue;
+			const sibling = entries.get(name);
+			if (sibling?.state === "ready")
+				sibling.verifiedAt = Number.NEGATIVE_INFINITY;
+		}
+	};
+
+	/* A plain boolean, not a type guard: its false branch must not narrow
+	 * "ready" away from callers that still read a stale entry as a validator. */
+	const fresh = (entry: Entry | undefined): boolean =>
+		entry?.state === "ready" &&
+		now() - entry.verifiedAt < ENDPOINT_PHOTO_FRESH_MS;
+
 	const load = (
 		key: string,
-		fetchUri: () => Promise<string>,
+		fetchUri: FetchUri,
 		classify: (error: unknown) => AvatarFailure,
+		options: ReadOptions = {},
+		fromQueue = false,
 	): Promise<string | null> => {
-		const retainReady = !ENDPOINT_KEY.test(key);
+		const { signal } = options;
+		if (signal?.aborted) return Promise.resolve(null);
+		const endpoint = ENDPOINT_KEY.test(key);
 		const held = entries.get(key);
-		if (held?.state === "ready") {
-			if (retainReady) {
-				touch(key, held);
-				return Promise.resolve(held.uri);
-			}
-			remove(key);
+		if (held?.state === "ready" && (!endpoint || fresh(held))) {
+			// Re-entering rows reuse a current authorization and spend no budget.
+			touch(key, held);
+			return Promise.resolve(held.uri);
 		}
 		if (held?.state === "loading") return held.promise;
-		if (held?.state === "failed") {
-			if (now() < held.retryAt) return Promise.resolve(null);
-			remove(key);
-		}
-		if (!makeRoom(1, 0)) {
-			// Every slot is an outstanding read: wait for one to settle.
+		if (held?.state === "failed" && now() < held.retryAt)
+			return Promise.resolve(null);
+		if (
+			(!fromQueue && waiters.length > 0) ||
+			inFlight >= maxInFlight ||
+			nextReadAt() > now() ||
+			(held === undefined && !makeRoom(1, 0))
+		) {
 			return new Promise((resolve) => {
-				waiters.push({
-					// `load` runs synchronously up to starting its fetch, so the
-					// caller sees `inFlight` move before this returns.
-					run: () => resolve(load(key, fetchUri, classify)),
-					cancel: () => resolve(null),
-				});
+				const detach = () => signal?.removeEventListener("abort", cancel);
+				const cancel = () => {
+					detach();
+					const index = waiters.indexOf(waiter);
+					if (index !== -1) waiters.splice(index, 1);
+					if (waiters.length === 0) cancelWake();
+					resolve(null);
+				};
+				const waiter: Waiter = {
+					priority: options.row ? 0 : 1,
+					run: () => {
+						detach();
+						resolve(load(key, fetchUri, classify, options, true));
+					},
+					cancel,
+				};
+				// A newly entered band is more relevant than old queued rows.
+				// Cards/threads still take precedence over speculative list work.
+				const index = waiters.findIndex(
+					(other) => other.priority <= waiter.priority,
+				);
+				waiters.splice(index < 0 ? waiters.length : index, 0, waiter);
+				signal?.addEventListener("abort", cancel, { once: true });
+				wake();
 			});
 		}
+		const validator = held?.state === "ready" ? held : null;
 		const started = epoch;
+		const reserved = Array.from({ length: REQUESTS_PER_READ }, () => ({
+			until: Number.POSITIVE_INFINITY,
+		}));
+		for (const reservation of reserved) reservations.add(reservation);
+		let sent = 0;
 		inFlight += 1;
-		const promise = fetchUri()
+		const promise = fetchUri(validator?.etag ?? undefined, () => {
+			sent += 1;
+		})
 			.then(
-				(uri) => {
-					if (started !== epoch) return retainReady ? uri : null;
+				(result) => {
+					if (started !== epoch)
+						return endpoint ? null : typeof result === "string" ? result : null;
 					remove(key);
-					/* A URI over the WHOLE budget is refused before anything is
-					 * evicted: storing it would empty the cache and still not fit,
-					 * and not remembering it would refetch it on every mount. */
+					const photo =
+						typeof result === "string"
+							? { uri: result, etag: null }
+							: (result ?? (validator?.etag ? validator : null));
+					if (!photo) return null;
+					const { uri, etag } = photo;
 					if (uri.length > maxBytes) {
-						// THIS size only: "too big for the cache" is about the
-						// variant, not the photo, so the other size stays readable.
 						remember(key, Number.POSITIVE_INFINITY, true);
 						return null;
 					}
-					// Co-member endpoint reads are private/no-cache. A mounted view
-					// may show its newly authorized result, but a later mount must
-					// read the hub again (withdrawal may now answer 404).
-					if (!retainReady) return uri;
-					if (!makeRoom(1, uri.length)) return uri;
-					heldBytes += uri.length;
-					entries.set(key, { state: "ready", uri, bytes: uri.length });
+					if (makeRoom(1, uri.length)) {
+						heldBytes += uri.length;
+						entries.set(key, {
+							state: "ready",
+							uri,
+							bytes: uri.length,
+							etag,
+							verifiedAt: now(),
+						});
+					}
 					return uri;
 				},
 				(error: unknown) => {
 					if (started !== epoch) return null;
+					if (isHubError(error) && error.kind === "rate_limited") {
+						throttledUntil = Math.max(
+							throttledUntil,
+							now() + transientDelay(error.retryAfterMs, cooldown),
+						);
+					}
 					remove(key);
 					fail(key, classify(error), retryAfterOf(error));
+					if (endpoint && endpointRefusal(error)) expireSibling(key);
 					return null;
 				},
 			)
 			.finally(() => {
 				if (started !== epoch) return;
+				// Unmetered callers cannot prove a request unused: keep both.
+				const kept = options.metered
+					? Math.min(sent, REQUESTS_PER_READ)
+					: REQUESTS_PER_READ;
+				reserved.forEach((reservation, index) => {
+					if (index < kept) reservation.until = now() + READ_WINDOW_MS;
+					else reservations.delete(reservation);
+				});
 				inFlight -= 1;
-				wakeOne();
+				wake();
 			});
-		entries.set(key, { state: "loading", promise });
+		entries.set(key, {
+			state: "loading",
+			promise,
+			bytes: validator?.bytes ?? 0,
+		});
 		return promise;
 	};
 
@@ -413,11 +582,31 @@ export function createAvatarCache(options: AvatarCacheOptions = {}) {
 			return epoch;
 		},
 
-		/** A held account photo's URI; endpoint authorization is never cached. */
+		getEpoch: () => epoch,
+		subscribeEpoch(listener: () => void) {
+			epochListeners.add(listener);
+			return () => {
+				epochListeners.delete(listener);
+			};
+		},
+		/** Only public-to-this-view account photos can bypass a new read. */
 		peek(key: string): string | null {
 			if (ENDPOINT_KEY.test(key)) return null;
 			const entry = entries.get(key);
 			if (entry?.state !== "ready") return null;
+			touch(key, entry);
+			return entry.uri;
+		},
+
+		/**
+		 * An endpoint photo authorized for this account within
+		 * `ENDPOINT_PHOTO_FRESH_MS`, for a row's first frame on re-entry; `null`
+		 * otherwise (the row shows its glyph and asks through `loadEndpoint`).
+		 */
+		peekEndpoint(key: string): string | null {
+			if (!ENDPOINT_KEY.test(key)) return null;
+			const entry = entries.get(key);
+			if (entry?.state !== "ready" || !fresh(entry)) return null;
 			touch(key, entry);
 			return entry.uri;
 		},
@@ -434,16 +623,17 @@ export function createAvatarCache(options: AvatarCacheOptions = {}) {
 		load,
 
 		/**
-		 * Share an active authorized endpoint read, never reusable ready bytes.
-		 * Failed entries still honor bounded cooldown and the existing size rules.
+		 * An endpoint photo: held bytes for this hash, the read in flight, or a
+		 * new one. Refuses anything that is not an endpoint key.
 		 */
 		loadEndpoint(
 			key: string,
-			fetchUri: () => Promise<string>,
+			fetchUri: FetchUri,
 			classify: (error: unknown) => AvatarFailure,
+			options?: ReadOptions,
 		): Promise<string | null> {
 			if (!ENDPOINT_KEY.test(key)) return Promise.resolve(null);
-			return load(key, fetchUri, classify);
+			return load(key, fetchUri, classify, options);
 		},
 
 		fail,
@@ -454,8 +644,12 @@ export function createAvatarCache(options: AvatarCacheOptions = {}) {
 			inFlight = 0;
 			entries.clear();
 			heldBytes = 0;
+			reservations.clear();
+			throttledUntil = 0;
+			cancelWake();
 			// Queued reads belong to the old account: settle them, never run them.
 			for (const waiter of waiters.splice(0)) waiter.cancel();
+			for (const listener of epochListeners) listener();
 		},
 
 		/** For tests and diagnostics: counts only, never keys or bytes. */

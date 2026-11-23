@@ -1,0 +1,51 @@
+# o3c-hi-58c86e mobile.sidebar: actual printed output of checks run in session 58c86e4852a5 (shell + eval kernel)
+
+## hashes / source
+$ git -C worktree rev-parse HEAD -> e7ebc3917537d83cc772148fc5b2fc2ad3f43a41 (branch feat/i18n-o3c-rows-headers)
+draft sha256 769b65ff02a1f0d267c2ec62ee6c85a44c74674337f3355b5961ef4aeda2bd7e (expected 769b65ff…bd7e: MATCH)
+brief sha256 e88beb09366b9ff795bf0ac916f30cef1c9a93c35fa4617575e904c7a6f5fd17 (expected e88beb09…fd17: MATCH)
+en sidebar HEAD sha256 beaba7baeffe546ce65430d6cb18213da2fbb88d23128c071c286fb32a08ecdf; context 858f7c51c595862306120be7833c4274439b436bb8bd1f547b88139f8d0f2fd3; match brief.english_files: True
+
+## redaction scan (python re, brief pattern)
+{"draft_file": 0, "brief_excluding_pattern_field": 0, "en_sidebar": 0, "en_sidebar_context": 0}
+
+## checker on draft (worktree parseMessage/formatMessage via node_modules/.bin/tsx; script scratchpad/o3c-work/check.ts)
+errors: []
+redaction marker hits in draft values: 0 | in whole draft file: 0
+control 'drop key': CAUGHT ["keyset missing=mobile.sidebar.row_label.open extra="]
+control 'extra key': CAUGHT ["keyset missing= extra=mobile.sidebar.row_label.extra"]
+control 'rename placeholder': CAUGHT ["mobile.sidebar.row_label.on_device: parse Invalid message \"{डिवाइस} पर\": expected a placeholder name (at offset 1)"]
+control 'drop select arm': CAUGHT ["mobile.sidebar.row_label.waiting: arms en=kind=approval|other hi=kind=other"]
+control 'rename select arg': CAUGHT ["mobile.sidebar.row_label.waiting: params en=kind:select hi=type:select","mobile.sidebar.row_label.waiting: arms en=kind=approval|other hi=type=approval|other","mobile.sidebar.row_label.waiting: stray Latin"]
+control 'unbalanced': CAUGHT ["mobile.sidebar.row_label.waiting: parse Invalid message \"{kind, select, approval {स्वीकृति का इंतज़ार} other {सवाल\": expected '}' (at offset 57)"]
+control 'trailing danda': CAUGHT ["mobile.sidebar.row_status.ended: trailing punctuation"]
+control 'devanagari digit': CAUGHT ["mobile.sidebar.row_status.ended: Devanagari digits"]
+control 'redaction': CAUGHT ["mobile.sidebar.row_status.ended: stray Latin","mobile.sidebar.row_status.ended: redaction marker"]
+render approval: Payments, स्वीकृति का इंतज़ार, खुली
+render question: Payments, सवाल के जवाब का इंतज़ार
+render remote: Payments, काम जारी, उत्तर नहीं दे रही, Studio Mac पर, पहुँच से बाहर, खुली
+render ended: Payments, समाप्त
+mobile.sidebar.row_status.approval: cp=8 mn=2 spacing=6 en_len=8
+mobile.sidebar.row_status.question: cp=4 mn=0 spacing=4 en_len=8
+mobile.sidebar.row_status.not_reachable: cp=13 mn=3 spacing=10 en_len=13
+mobile.sidebar.row_status.ended: cp=6 mn=1 spacing=5 en_len=5
+mobile.sidebar.row_status.not_answering: cp=17 mn=3 spacing=14 en_len=13
+mobile.sidebar.row_label.waiting: cp=78 mn=7 spacing=71 en_len=68
+mobile.sidebar.row_label.working: cp=8 mn=0 spacing=8 en_len=7
+mobile.sidebar.row_label.on_device: cp=11 mn=0 spacing=11 en_len=11
+mobile.sidebar.row_label.open: cp=4 mn=1 spacing=3 en_len=4
+
+## rendered advance width (CoreText, 100pt; en=design/fonts/Figtree-Medium.ttf, hi=KohinoorDevanagari-Medium; script scratchpad/o3c-work/measure.swift)
+deva font: KohinoorDevanagari-Medium
+en not answering 6.39 em
+en not reachable 6.17 em
+en approval 3.88 em
+en question 3.92 em
+en ended 2.83 em
+hi उत्तर नहीं दे रही 5.42 em
+hi जवाब नहीं दे रही 6.07 em
+hi पहुँच से बाहर 4.79 em
+hi स्वीकृति 2.89 em
+hi सवाल 2.25 em
+hi समाप्त 2.44 em
+hi नई 1.06 em

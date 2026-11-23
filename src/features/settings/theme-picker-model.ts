@@ -1,3 +1,4 @@
+import { t } from "@/i18n";
 import type { ThemeMode, ThemeSelection } from "@/state/theme-preference";
 import { THEMES, type ThemeEntry, type ThemeName } from "@/ui/tokens.gen";
 
@@ -64,3 +65,30 @@ export const captionCase = (
 	selection: ThemeSelection,
 	names: { light: string; dark: string },
 ): CaptionCase => ({ kind: selection.mode, ...names });
+
+/** The appearance modes, in the ONE order every mode control shows them:
+ *  System first (the default, which follows the device), then the two forced
+ *  sides Light and Dark. Settings and the Theme picker both draw from this, so
+ *  the same three choices can never sit in two orders (UX pass, settings). */
+export const THEME_MODE_ORDER: readonly ThemeMode[] = [
+	"system",
+	"light",
+	"dark",
+];
+
+const MODE_LABEL = {
+	system: "mobile.settings.theme.mode_system",
+	light: "mobile.settings.theme.mode_light",
+	dark: "mobile.settings.theme.mode_dark",
+} as const satisfies Record<ThemeMode, string>;
+
+/** The `Segmented` options for a mode control, in `THEME_MODE_ORDER`. Each
+ *  surface passes its own test ids (the E2E flows address them), nothing else. */
+export const themeModeOptions = (
+	testIDs: Readonly<Record<ThemeMode, string>>,
+): { value: ThemeMode; label: string; testID: string }[] =>
+	THEME_MODE_ORDER.map((mode) => ({
+		value: mode,
+		label: t(MODE_LABEL[mode]),
+		testID: testIDs[mode],
+	}));

@@ -25,5 +25,6 @@
 	"mobile.chrome.composer.row_usage": "Контекст",
 	"mobile.chrome.composer.row_cost": "Стоимость",
 	"mobile.chrome.composer.row_queue": "Очередь",
-	"mobile.chrome.composer.row_questions": "Вопросы"
+	"mobile.chrome.composer.row_questions": "Вопросы",
+	"mobile.chrome.composer.row_identity": "Агент или команда"
 }

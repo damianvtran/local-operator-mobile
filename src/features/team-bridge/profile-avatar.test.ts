@@ -3,16 +3,19 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ProfileAvatarButton } from "@/features/team-bridge/profile-card";
-import { avatarKey } from "@/team-bridge/avatars";
+import { avatarKey, endpointAvatarKey } from "@/team-bridge/avatars";
 import { directoryMemberSchema } from "@/team-bridge/contract";
 
 const scope = vi.hoisted(() => ({
 	avatars: {
 		peek: vi.fn<(key: string) => string | null>(),
+		peekEndpoint: vi.fn<(key: string) => string | null>(),
 		load: vi.fn(),
 		loadEndpoint: vi.fn(),
 		fail: vi.fn(),
 		epoch: 0,
+		getEpoch: () => 0,
+		subscribeEpoch: () => () => {},
 	},
 	hub: { avatarBytes: vi.fn(), endpointAvatarBytes: vi.fn() },
 }));
@@ -65,6 +68,7 @@ beforeEach(() => {
 	scope.avatars.peek.mockImplementation((key) =>
 		key === OWNER_KEY ? OWNER_URI : null,
 	);
+	scope.avatars.peekEndpoint.mockReturnValue(null);
 });
 
 const render = (agent: boolean) =>
@@ -89,5 +93,62 @@ describe("profile avatar identity selection", () => {
 		expect(scope.avatars.peek).not.toHaveBeenCalledWith(OWNER_KEY);
 		expect(html).toContain('data-agent-glyph="true"');
 		expect(scope.hub.avatarBytes).not.toHaveBeenCalled();
+	});
+	it("a visible agent starts on its glyph even if cached bytes exist for the same hash", () => {
+		const endpointUri = "data:image/png;base64,ENDPOINT_PRIVATE_SENTINEL";
+		const endpointId = "bep_agent_fixture";
+		const advertised = directoryMemberSchema.parse({
+			...person,
+			agent: {
+				...person.agent,
+				endpoint_id: endpointId,
+				avatar_url: `/v1/messaging/endpoints/${endpointId}/avatar?v=${HASH}`,
+				avatar: { hash: HASH, updated_at: "2026-11-17T00:00:00Z" },
+			},
+		});
+		const key = endpointAvatarKey(endpointId, HASH, 64);
+		scope.avatars.peek.mockImplementation((id) =>
+			id === key ? endpointUri : null,
+		);
+		const html = renderToStaticMarkup(
+			h(ProfileAvatarButton, {
+				subject: { person: advertised, agent: true },
+				label: "Nova",
+				onOpen: vi.fn(),
+				testID: "private-photo",
+			}),
+		);
+		expect(html).not.toContain(endpointUri);
+		expect(html).toContain('data-agent-glyph="true"');
+		expect(scope.avatars.peek).not.toHaveBeenCalledWith(key);
+	});
+	it("a re-entering agent row paints a photo verified inside the freshness window on its first frame (U5/D4)", () => {
+		const endpointUri = "data:image/png;base64,ENDPOINT_VERIFIED_SENTINEL";
+		const endpointId = "bep_agent_fixture";
+		const advertised = directoryMemberSchema.parse({
+			...person,
+			agent: {
+				...person.agent,
+				endpoint_id: endpointId,
+				avatar_url: `/v1/messaging/endpoints/${endpointId}/avatar?v=${HASH}`,
+				avatar: { hash: HASH, updated_at: "2026-11-17T00:00:00Z" },
+			},
+		});
+		const key = endpointAvatarKey(endpointId, HASH, 64);
+		scope.avatars.peekEndpoint.mockImplementation((id) =>
+			id === key ? endpointUri : null,
+		);
+		const html = renderToStaticMarkup(
+			h(ProfileAvatarButton, {
+				subject: { person: advertised, agent: true },
+				label: "Nova",
+				onOpen: vi.fn(),
+				testID: "verified-photo",
+			}),
+		);
+		expect(html).toContain(endpointUri);
+		expect(scope.avatars.peekEndpoint).toHaveBeenCalledWith(key);
+		// Still never the account-photo path for an endpoint key.
+		expect(scope.avatars.peek).not.toHaveBeenCalledWith(key);
 	});
 });

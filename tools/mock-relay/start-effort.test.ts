@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { START_EFFORTS, startEffortAdmitted } from "./wire.ts";
+import {
+	START_EFFORTS,
+	startEffortAdmitted,
+	startTargetRefusal,
+} from "./wire.ts";
 
 /**
  * The mock's copy of the relay's `start_effort` (local-operator v0.101.9,
@@ -26,5 +30,36 @@ describe("the start route's effort check", () => {
 		expect(startEffortAdmitted("turbo")).toBe(false);
 		expect(startEffortAdmitted(3)).toBe(false);
 		expect(startEffortAdmitted(["high"])).toBe(false);
+	});
+});
+
+/** The mock's copy of the relay's start-target check (local-operator #4367). */
+describe("the start route's agent/team check", () => {
+	const roster = {
+		agents: [{ name: "coder" }],
+		teams: [{ name: "lopdev" }],
+	};
+	it("admits no target, and a listed one case-insensitively", () => {
+		expect(startTargetRefusal({ cwd: "/tmp" }, roster)).toBeNull();
+		expect(startTargetRefusal({ team: " LOPDEV " }, roster)).toBeNull();
+		expect(startTargetRefusal({ agent: "coder", team: "" }, roster)).toBeNull();
+	});
+	it("refuses both kinds, a bad shape, and an unknown name as the relay does", () => {
+		expect(
+			startTargetRefusal({ agent: "coder", team: "lopdev" }, roster),
+		).toEqual({
+			status: 400,
+			code: "invalid_start_target",
+		});
+		expect(startTargetRefusal({ team: 7 }, roster)?.code).toBe(
+			"invalid_start_target",
+		);
+		expect(startTargetRefusal({ team: "x".repeat(129) }, roster)?.code).toBe(
+			"invalid_start_target",
+		);
+		expect(startTargetRefusal({ team: "gone" }, roster)).toEqual({
+			status: 404,
+			code: "unknown_start_target",
+		});
 	});
 });

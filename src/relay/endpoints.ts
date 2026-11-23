@@ -52,6 +52,8 @@ export interface HistoryPage {
 	 *  entries immediately older than it. Omitted means the tail. */
 	before?: string;
 	limit?: number;
+	/** Viewer capability; command reconciliation does not need overlays. */
+	inlineUi?: boolean;
 }
 
 export interface SearchRequest {
@@ -87,6 +89,18 @@ export interface StartSessionRequest {
 	 *  (an older relay refuses it on a keyed start, drops it on an unkeyed one).
 	 *  Absent means the computer's configured default. */
 	effort?: string;
+	/** Bind the new chat to this agent profile (local-operator #4367). Mutually
+	 *  exclusive with `team` — the relay refuses both (`invalid_start_target`).
+	 *  Sent ONLY when the reader chose one AND the relay advertises
+	 *  `capabilities.session_start.agent`: an older relay's unkeyed start drops
+	 *  the field and would start an UNBOUND chat while the pill named the agent.
+	 *  The relay writes the session's `attachment.json` before the child spawns,
+	 *  so the first turn already runs as the agent. Never changes the model. */
+	agent?: string;
+	/** Bind the new chat to this team: the session becomes the team's manager
+	 *  with its brief and roster. Same exclusivity and capability rule as
+	 *  `agent` (`capabilities.session_start.team`). */
+	team?: string;
 }
 
 /**
@@ -117,21 +131,44 @@ export interface SetProjectMilestoneRequest {
 }
 
 /**
+ * The `audio` part for a native recording, as bytes.
+ *
+ * Exists because React Native's `{ uri, name, type }` descriptor is NOT
+ * uploadable here: SDK 57's global `fetch` is `expo/fetch`, whose multipart
+ * encoder reads a string, a `Blob`, or anything with `bytes()`, and throws
+ * `Unsupported FormDataPart implementation` for the descriptor before a request
+ * is sent. `stt/recorder.ts` reads the file and builds this.
+ */
+export interface TranscribeAudioBytesPart {
+	/** The multipart part's filename. */
+	name: string;
+	/** The container type, from the recording's extension. */
+	type: string;
+	/** Read lazily — the encoder calls this once, on the upload's own turn, so
+	 *  building a part never touches the file. */
+	bytes: () => Promise<Uint8Array>;
+}
+
+/**
  * One audio recording for `POST /api/transcribe`.
  *
- * Two shapes, because the runtime's `FormData` and the browser's are different
- * at the file part: React Native appends a `{ uri, name, type }` descriptor and
- * reads the file itself, while the web/Node targets append a `Blob` with a
- * filename. `audio` is unioned so ONE endpoint call serves both, decided at the
- * call site by the recorder (see `stt/recorder.ts`).
+ * Three shapes, because the runtime's `FormData` and the browser's are different
+ * at the file part: React Native's own `fetch` reads a `{ uri, name, type }`
+ * descriptor, the web/Node targets append a `Blob` with a filename, and
+ * `expo/fetch` reads `TranscribeAudioBytesPart`. `audio` is unioned so ONE
+ * endpoint call serves all of them, decided at the call site by the recorder
+ * (see `stt/recorder.ts`).
  *
  * `language`, `prompt` and `model` are forward-compat passthroughs (contract
  * §4.10 lists them as optional); nothing in this app sets them yet.
  */
 export interface TranscribeUpload {
-	audio: Blob | { uri: string; name: string; type: string };
-	/** The multipart filename, for the Blob arm. Ignored for the `{ uri }` arm,
-	 *  which carries its own `name`. */
+	audio:
+		| Blob
+		| { uri: string; name: string; type: string }
+		| TranscribeAudioBytesPart;
+	/** The multipart filename, for the Blob arm. Ignored for the other arms,
+	 *  which carry their own `name`. */
 	filename?: string;
 	language?: string;
 	prompt?: string;
@@ -151,14 +188,12 @@ export interface TranscribeResponse {
  *  the shared reload rule, and the transport's own taxonomy must raise it. */
 const TRANSCRIBE_READ_STATUSES = [402, 413, 422, 500, 502, 503] as const;
 
-/** True for the RN file descriptor shape (`{ uri }`) rather than a `Blob`. A
- *  `Blob` answers `arrayBuffer`; the RN descriptor does not — that is the whole
- *  discrimination, and it is why this is not a `typeof` check on a class name
- *  that the two runtimes spell differently. */
-function isNativeFilePart(
-	audio: TranscribeUpload["audio"],
-): audio is { uri: string; name: string; type: string } {
-	return typeof (audio as Blob).arrayBuffer !== "function";
+/** True for a `Blob`, the one arm that wants a filename argument. A `Blob`
+ *  answers `arrayBuffer`; the RN descriptor and the bytes part do not — that is
+ *  the whole discrimination, and it is why this is not a `typeof` check on a
+ *  class name that the runtimes spell differently. */
+function isBlobPart(audio: TranscribeUpload["audio"]): audio is Blob {
+	return typeof (audio as Blob).arrayBuffer === "function";
 }
 
 /** Builds the multipart body. The file part's FIELD NAME must be `audio` — the
@@ -166,11 +201,14 @@ function isNativeFilePart(
  *  `422 audio file is required` rather than a silent success. */
 export function transcribeForm(upload: TranscribeUpload): FormData {
 	const form = new FormData();
-	if (isNativeFilePart(upload.audio)) {
-		/* React Native's convention; `fetch` reads the URI and streams the file. */
-		form.append("audio", upload.audio as unknown as Blob);
-	} else {
+	if (isBlobPart(upload.audio)) {
 		form.append("audio", upload.audio, upload.filename ?? "recording.bin");
+	} else {
+		/* Appended as given: the runtime's `FormData` keeps the part, and its own
+		 * encoder decides how to read it. RN's `fetch` reads the `{ uri }` descriptor;
+		 * `expo/fetch` reads `{ name, type, bytes() }` and cannot read a `{ uri }` one
+		 * (see `TranscribeAudioBytesPart`). */
+		form.append("audio", upload.audio as unknown as Blob);
 	}
 	if (upload.language !== undefined) form.append("language", upload.language);
 	if (upload.prompt !== undefined) form.append("prompt", upload.prompt);
@@ -1008,6 +1046,7 @@ export class RelayEndpoints {
 			path: `/api/sessions/${encodeURIComponent(sessionId)}/history${query({
 				before: page.before,
 				limit: wireLimit(page.limit, HISTORY_LIMIT),
+				inline_ui: page.inlineUi ? 1 : undefined,
 			})}`,
 		});
 	}
@@ -1112,6 +1151,26 @@ export class RelayEndpoints {
 		return this.http.json("supplementDocument", {
 			method: "GET",
 			path: `/api/sessions/${encodeURIComponent(sessionId)}/supplements/${encodeURIComponent(digest)}/document`,
+		});
+	}
+
+	/**
+	 * The admitted bodies behind one inbound Team Bridge card (local-operator
+	 * #4238, design §4), keyed by the transcript ROW the phone already reads —
+	 * never by a message id, so this cannot probe arbitrary messages.
+	 *
+	 * Only call it when the relay advertises `features.team_bridge_card_body`
+	 * (`bridgeCardBodyServed`): an older relay has no route. The answer is
+	 * `private, no-store` and the caller must not cache it either, so a revoked
+	 * or deleted message disappears on the next read.
+	 */
+	async bridgeCardBody(
+		sessionId: string,
+		entryId: string,
+	): Promise<Payload<"bridgeCardBody">> {
+		return this.http.json("bridgeCardBody", {
+			method: "GET",
+			path: `/api/sessions/${encodeURIComponent(sessionId)}/bridge-cards/${encodeURIComponent(entryId)}/body`,
 		});
 	}
 
@@ -1222,6 +1281,20 @@ export class RelayEndpoints {
 		return this.http.json("commands", { method: "GET", path: "/api/commands" });
 	}
 
+	/**
+	 * `GET /api/skills?session_id=` — the `$name` vocabulary for ONE conversation
+	 * (discovery walks up from the session's own directory, so it is never
+	 * relay-wide). Sorted by name by the relay; **render it in the order given**.
+	 * Only meaningful when `capabilities.skill_invocation.available`; an unknown
+	 * id is a `404 unknown_session`, which the caller reads as "no tray".
+	 */
+	async skills(sessionId: string): Promise<Payload<"skills">> {
+		return this.http.json("skills", {
+			method: "GET",
+			path: `/api/skills${query({ session_id: sessionId })}`,
+		});
+	}
+
 	/** The model catalogue. **The array order is the ranking** — render it as
 	 *  given; re-sorting it client-side throws away the server's answer. */
 	async models(): Promise<Payload<"models">> {
@@ -1253,6 +1326,17 @@ export class RelayEndpoints {
 			signal: options?.signal,
 		});
 		return { status, text };
+	}
+
+	/** The new-chat target picker's roster: the agents and teams a start may
+	 *  name (local-operator #4367). Licensed by `capabilities.session_start.agent`
+	 *  / `.team`; a relay without them has no such route, so callers check the
+	 *  capability first rather than reading a 404 as "none". */
+	async startTargets(): Promise<Payload<"startTargets">> {
+		return this.http.json("startTargets", {
+			method: "GET",
+			path: "/api/start-targets",
+		});
 	}
 
 	/** The new-session directory picker's data. `tmp` is the RESOLVED temp dir the
@@ -1479,10 +1563,17 @@ export class RelayEndpoints {
 		 * refuse a malformed op with a prose `422`, and a client that can produce one
 		 * has a bug it should hear about at the call site rather than in a toast. */
 		const validated = parsePayload("commandOp", body);
+		// Renderer capability, not a command option or a stored draft field.
+		// Inject at the common send boundary so cold starts, queued retries and
+		// steers all advertise the same viewer without changing command identity.
+		const payload =
+			validated.op === "prompt" || validated.op === "steer"
+				? { ...validated, inline_ui: true }
+				: validated;
 		return this.http.json("commandAck", {
 			method: "POST",
 			path: `/api/sessions/${encodeURIComponent(sessionId)}/command`,
-			body: validated,
+			body: payload,
 			timeoutMs: options.timeoutMs,
 		});
 	}
@@ -1681,14 +1772,30 @@ export class RelayEndpoints {
 
 	/** `GET /api/sessions/{id}/events`: one session's projection stream. The relay
 	 *  sends the current projection as the seed frame, which is what makes
-	 *  reconnect-and-resync work without a replay protocol. */
+	 *  reconnect-and-resync work without a replay protocol.
+	 *
+	 *  `steerJournalOrder` declares `?steer_journal_order=1` (local-operator
+	 *  #4395): the relay then moves a delivered phone steer from its send-time
+	 *  slot to its journal slot, so the live order matches `/history`. The relay
+	 *  reads it once per connection, so it is a per-stream flag like
+	 *  `include_peers`. Pass it ONLY when the live capabilities advertise
+	 *  `steer_journal_order.available` — left off, the URL is byte-for-byte what
+	 *  every older build asked an older relay for. */
 	sessionStream(
 		sessionId: string,
-		options: Omit<SseConnectionOptions, "open"> & { signal?: AbortSignal },
+		options: Omit<SseConnectionOptions, "open"> & {
+			signal?: AbortSignal;
+			steerJournalOrder?: boolean;
+			inlineUi?: boolean;
+		},
 	): RelayStream {
+		const { steerJournalOrder, inlineUi, ...connection } = options;
 		return this.stream(
-			`/api/sessions/${encodeURIComponent(sessionId)}/events`,
-			options,
+			`/api/sessions/${encodeURIComponent(sessionId)}/events${query({
+				steer_journal_order: steerJournalOrder ? "1" : undefined,
+				inline_ui: inlineUi ? 1 : undefined,
+			})}`,
+			connection,
 		);
 	}
 

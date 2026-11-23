@@ -1,0 +1,77 @@
+# audit.log ondev-ur-5a0f53 — 2026-11-21T08:00:59Z — actual output of: python3 check.py ur
+$ git -C /Users/damian/local-operator-mobile/.worktrees/i18n-on-device rev-parse HEAD; git status --porcelain
+d1ed0e2a82615f53ee18fd3ea2ad6d51a8308a35 0 dirty paths
+$ sha256
+8ca29c50fb6cca5f329510b0ae209e2dd1372562b9ecb330307dc1de22df2bc2  brief  /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/on-device-brief.json
+1f670ee1ffae1456fa0be14ce16cb7351f7f13dc1c62b78c43aedc436cf21fdf  draft  /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/on-device/draft-ur.json
+fa75c73f7477ebedc0b22f8aa05b9470d874c5284d558f3864a0464e531734b9  en  /Users/damian/local-operator-mobile/.worktrees/i18n-on-device/src/i18n/catalogues/en/mobile.sidebar.json
+71e6533736c8accd336298da920d83f777933b1d4b5cc30dacf9fa11818e01e1  en_context  /Users/damian/local-operator-mobile/.worktrees/i18n-on-device/src/i18n/catalogues/en/mobile.sidebar.context.json
+3aa656af43163cf68e8a2c63bb997d9c8cc4ca92ba808cd4916bb0cee4aed657  ur_sidebar  /Users/damian/local-operator-mobile/.worktrees/i18n-on-device/src/i18n/catalogues/ur/mobile.sidebar.json
+5fe972d199b0e30fa312880a81d5b5a35c043e469f3317027b133bfbb43e7935  ur_session  /Users/damian/local-operator-mobile/.worktrees/i18n-on-device/src/i18n/catalogues/ur/mobile.session.json
+en sha matches brief (fa75c73f…): True
+brief.english_source.sha256 == en file: True | brief.english_context.sha256 == context file: True
+brief keys: ['mobile.sidebar.row.on_device', 'mobile.sidebar.row_label.join']
+draft keys: ['mobile.sidebar.row.on_device', 'mobile.sidebar.row_label.join']
+missing: [] extra: []
+brief english == en catalogue [mobile.sidebar.row.on_device]: True
+brief english == en catalogue [mobile.sidebar.row_label.join]: True
+draft.source_sha256 == en sha: True | draft.translator_session: a74b1eaff17c
+--- mobile.sidebar.row.on_device
+  value: ڈیوائس {device} پر
+  codepoints: U+0688 U+06CC U+0648 U+0627 U+0626 U+0633 U+0020 U+007B U+0064 U+0065 U+0076 U+0069 U+0063 U+0065 U+007D U+0020 U+067E U+0631
+  brace_set_target: ['device']
+  brace_set_en: ['device']
+  brace_set_equal: True
+  brace_order_equal: True
+  brace_count_open_close: (1, 1)
+  bidi_controls: []
+  zero_width_or_nbsp: []
+  nfc: True
+  edge_whitespace: False
+  double_space: False
+  ends_with_stop: False
+  len_target: 18
+  len_en: 11
+  len_without_placeholders: 10
+  len_en_without_placeholders: 3
+--- mobile.sidebar.row_label.join
+  value: {first}، {second}
+  codepoints: U+007B U+0066 U+0069 U+0072 U+0073 U+0074 U+007D U+060C U+0020 U+007B U+0073 U+0065 U+0063 U+006F U+006E U+0064 U+007D
+  brace_set_target: ['first', 'second']
+  brace_set_en: ['first', 'second']
+  brace_set_equal: True
+  brace_order_equal: True
+  brace_count_open_close: (2, 2)
+  bidi_controls: []
+  zero_width_or_nbsp: []
+  nfc: True
+  edge_whitespace: False
+  double_space: False
+  ends_with_stop: False
+  len_target: 17
+  len_en: 17
+  len_without_placeholders: 2
+  len_en_without_placeholders: 2
+existing row_label.on_device: 'ڈیوائس {device} پر'
+existing withheld_reasons_join: '{first}، {second}'
+row.on_device == fragment: True | == fragment with first letter upper-cased: True
+row_label.join == withheld_reasons_join: True
+join separator: '، ' ['U+060C ARABIC COMMA', 'U+0020 SPACE']
+word-for-'and' in join: []
+keys already present in worktree target catalogue (expect False, draft not applied): {'mobile.sidebar.row.on_device': False, 'mobile.sidebar.row_label.join': False}
+redaction-pattern hits: draft.values 0 | en 0 | en_context 0
+ur first strong char of value: U+0688 AL
+ur bidi classes: [('ڈ', 'AL'), ('ی', 'AL'), ('و', 'AL'), ('ا', 'AL'), ('ئ', 'AL'), ('س', 'AL'), ('SP', 'WS'), ('{device}', 'L(name)'), ('SP', 'WS'), ('پ', 'AL'), ('ر', 'AL')]
+ur sample 'Studio Mac': logical='ڈیوائس Studio Mac پر' classes_around_name_end=['L', 'L', 'WS', 'AL']
+ur sample 'Pixel!': logical='ڈیوائس Pixel! پر' classes_around_name_end=['L', 'ON', 'WS', 'AL']
+ur sample 'Mac (2)': logical='ڈیوائس Mac (2) پر' classes_around_name_end=['EN', 'ON', 'WS', 'AL']
+$ node parse.mts (repo src/i18n/messages.ts parseMessage/formatMessage)
+parseMessage[mobile.sidebar.row.on_device] ok; argument order target=["device"] en=["device"] params=[["device","text"]] en_params=[["device","text"]]
+formatMessage[mobile.sidebar.row.on_device] sample -> "ڈیوائس Studio Mac پر"
+parseMessage[mobile.sidebar.row_label.join] ok; argument order target=["first","second"] en=["first","second"] params=[["first","text"],["second","text"]] en_params=[["first","text"],["second","text"]]
+formatMessage[mobile.sidebar.row_label.join] sample -> "Payments، approval waiting"
+fold(4 parts) -> "Payments، <waiting>، <on device>، <open>"
+negative control: 'On {devise}' args=["devise"] (comparator must flag mismatch vs ["device"])
+negative control unterminated: rejected: Invalid message "On {device": expected ',' or '}' (at offset 10)
+
+node exit 0

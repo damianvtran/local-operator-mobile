@@ -302,7 +302,13 @@ export function createWarmCache(
 				"session",
 				projection,
 				() => {
-					const { version: _version, ...rest } = projection;
+					// Cache the legacy snapshot only: live/paged reads re-negotiate
+					// their typed presentation without duplicating the stored prose.
+					const {
+						version: _version,
+						inline_ui: _inlineUi,
+						...rest
+					} = projection;
 					return JSON.stringify({
 						schema: SCHEMA,
 						savedAt: now(),

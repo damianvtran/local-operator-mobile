@@ -152,7 +152,7 @@ describe("history reader production wiring", () => {
 		expect(create(identity, current, endpoints)).toBe(historyWindow);
 		expect(endpoints.history).toHaveBeenCalledExactlyOnceWith(
 			identity.sessionId,
-			{ before: undefined },
+			{ before: undefined, inlineUi: true },
 		);
 		expect(JSON.stringify(composer)).toBe(before);
 		expect(declaration).not.toMatch(NON_READER_MUTATIONS);
@@ -281,8 +281,9 @@ describe("history reader production wiring", () => {
 		expect(list).not.toContain("onStartReached=");
 		expect(runtime).toContain("return () => historyWindow.retire();");
 		expect(runtime).toContain(
-			"if (ownsProjection) historyWindow.accept(projection);",
+			"if (hydrated) historyWindow.seedFromCache(projection);",
 		);
+		expect(runtime).toContain("else historyWindow.accept(projection);");
 		expect(runtime).toContain(
 			"ownsProjection ? historyWindow.visibleRows : EMPTY_HISTORY",
 		);
@@ -298,7 +299,7 @@ describe("history retry targets the read that failed (PR #207 R2)", () => {
 		hasOlder: boolean;
 	}) => {
 		const start = list.indexOf("const newestFailed =");
-		const end = list.indexOf("\n\t/** The capture hook", start);
+		const end = list.indexOf("\n\t/* THE READER'S SCROLL", start);
 		expect(start).toBeGreaterThan(-1);
 		expect(end).toBeGreaterThan(start);
 		const retryHistory = vi.fn(async () => {});
@@ -468,6 +469,7 @@ describe("web prepend keeps the reader's row in place (PR #207 Q5/Q6)", () => {
 			webRows,
 			webAnchor,
 			atTail: { current: true },
+			markAtTail: vi.fn(),
 			loadOlder: vi.fn(async () => {}),
 			loadingOlder: false,
 			hasOlder: true,

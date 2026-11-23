@@ -13,7 +13,7 @@
 	"mobile.settings.theme.no_match": "没有匹配的主题",
 	"mobile.settings.theme.row_label": "主题，{name}",
 	"mobile.settings.theme.search_label": "搜索主题",
-	"mobile.settings.theme.search_placeholder": "搜索主题",
+	"mobile.settings.theme.search_placeholder": "名称，例如Dracula",
 	"mobile.settings.theme.section_dark": "深色（{count}）",
 	"mobile.settings.theme.section_light": "浅色（{count}）",
 	"mobile.settings.theme.title": "主题",

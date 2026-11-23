@@ -8,6 +8,7 @@ import {
 	teamBridgeChiefId,
 	teamBridgeConversationId,
 	teamBridgeGateId,
+	teamBridgeMentionId,
 	teamBridgeMessageId,
 	teamBridgeNotifyId,
 	teamBridgeOrganizationId,
@@ -29,6 +30,7 @@ describe("Team Bridge identifier stability", () => {
 		[teamBridgeOrganizationId, "tenant-example", "team-bridge-org-"],
 		[teamBridgeMessageId, "message-example", "team-bridge-message-"],
 		[teamBridgeNotifyId, "mention", "team-bridge-notify-"],
+		[teamBridgeMentionId, "human:account-example", "team-bridge-mention-"],
 	] as const)("registers and preserves %s", (build, value, prefix) => {
 		expect(IDENTIFIER_FAMILIES).toContain(prefix);
 		expect(build(value)).toBe(`${prefix}${value}`);
@@ -41,5 +43,7 @@ describe("Team Bridge identifier stability", () => {
 		expect(CONTROL.teamBridgeNavigation).toBe("team-bridge-navigation");
 		expect(CONTROL.teamBridgeMessageInput).toBe("team-bridge-message-input");
 		expect(SURFACE.teamBridgeComposer).toBe("team-bridge-composer");
+		expect(SURFACE.teamBridgeMentionStrip).toBe("team-bridge-mention-strip");
+		expect(SURFACE.teamBridgeMentionNotice).toBe("team-bridge-mention-notice");
 	});
 });

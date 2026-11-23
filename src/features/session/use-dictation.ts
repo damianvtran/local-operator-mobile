@@ -57,6 +57,7 @@ import {
 	type ActiveRecording,
 	discardRecording,
 	readMicPermission,
+	recordingUploadPart,
 	requestMicPermission,
 	startRecording,
 	warmRecorder,
@@ -96,6 +97,10 @@ export interface DictationState {
 	cancel: () => void;
 	/** A send/steer took the composer: abort, discard, and SAY SO (U2). */
 	cancelForSend: () => void;
+	/** The reader edited the draft: end a resting line, leave a live take alone
+	 *  (issue #323). Called from the FIELD's change handler only — never from the
+	 *  transcript append, whose `added` line it would hide. */
+	clearOutcome: () => void;
 }
 
 export interface DictationInput {
@@ -242,15 +247,17 @@ export const useDictation = (input: DictationInput): DictationState => {
 			const outcome = await dictate(
 				recording,
 				{
-					transcribe: (rec, options) =>
-						endpoints === null
-							? Promise.reject(new Error("no relay route"))
-							: endpoints.transcribe(
-									{
-										audio: { uri: rec.uri, name: rec.name, type: rec.mimeType },
-									},
-									options,
-								),
+					transcribe: async (rec, options) => {
+						if (endpoints === null) throw new Error("no relay route");
+						/* The recording goes up as bytes: SDK 57's global `fetch` is `expo/fetch`,
+						 * which cannot encode React Native's `{ uri }` descriptor (see
+						 * `transcribeForm` and `recordingUploadPart`). The file is read inside
+						 * this call, not when the part is built. */
+						return endpoints.transcribe(
+							{ audio: await recordingUploadPart(rec) },
+							options,
+						);
+					},
 					discard: discardRecording,
 				},
 				{ signal: controller.signal },
@@ -397,6 +404,11 @@ export const useDictation = (input: DictationInput): DictationState => {
 		discardLive();
 	}, [discardLive, dispatch]);
 
+	/* No effects to perform: `edit` never touches a live take. */
+	const clearOutcome = useCallback(() => {
+		dispatch({ type: "edit" });
+	}, [dispatch]);
+
 	/* Navigating away must not leave the microphone hot: a recording in flight is
 	 * stopped and its file discarded, and a transcription on the wire is aborted
 	 * (its result would have nowhere to land). */
@@ -428,6 +440,7 @@ export const useDictation = (input: DictationInput): DictationState => {
 		press,
 		cancel,
 		cancelForSend,
+		clearOutcome,
 	};
 };
 

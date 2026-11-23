@@ -102,9 +102,11 @@ export const SlashSheet = ({
 			    used to sit in was a second scroll region on the same axis: it cut
 			    the list to 288 pt inside a taller sheet, drew no edge cue of its
 			    own, and on Android a vertical ScrollView inside another does not
-			    scroll without `nestedScrollEnabled`. The cost is that the filter
-			    scrolls away with the list; it is the first thing in the body, so
-			    it is back at the top. */}
+			    scroll without `nestedScrollEnabled`. With it gone, the body's own
+			    `keyboardShouldPersistTaps="handled"` reaches the rows, so a pick
+			    with the keyboard up still takes one tap (review R1-m2). The cost is
+			    that the filter scrolls away with the list; it is the first thing in
+			    the body, so it is back at the top. */}
 			<View>
 				{rows.map(({ command }) => {
 					const hint = argumentHint(command);

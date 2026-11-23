@@ -234,6 +234,35 @@ describe("bridge thread title", () => {
 		expect(plain).not.toContain("aria-label=");
 	});
 
+	it("a reply thread's subtitle names its conversation on one line, after the heading (D3/U2)", () => {
+		const html = renderToStaticMarkup(
+			createElement(BridgeThreadTitleView, {
+				title: "Thread",
+				subtitle: "# humans",
+				compact: false,
+				stacked: false,
+			}),
+		);
+		const h1 = html.indexOf("<h1");
+		const sub = html.indexOf("# humans");
+		expect(h1).toBeGreaterThan(-1);
+		// Drawn after the heading, outside it: the screen's name stays "Thread".
+		expect(sub).toBeGreaterThan(html.indexOf("</h1>"));
+		expect(html.slice(html.lastIndexOf("<", sub), sub)).toContain(
+			"r-whiteSpace-",
+		);
+		// Negative control: no subtitle, no extra line.
+		expect(
+			renderToStaticMarkup(
+				createElement(BridgeThreadTitleView, {
+					title: "Thread",
+					compact: false,
+					stacked: false,
+				}),
+			),
+		).not.toContain("# humans");
+	});
+
 	it("is no longer #208's 20 pt two-line title step", () => {
 		expect(headingProps(false, false).className).not.toMatch(OLD_TITLE_STEPS);
 	});

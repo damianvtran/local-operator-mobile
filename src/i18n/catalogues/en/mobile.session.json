@@ -1,5 +1,6 @@
 {
 	"mobile.session.conversation_details": "Conversation details",
+	"mobile.session.inline_chart_data": "Chart data",
 	"mobile.session.status_tray.hint": "Opens the working line, tasks and subagents",
 	"mobile.session.highlights.withheld": "{count, plural, one {# file not shown} other {# files not shown}}: {reasons}",
 	"mobile.session.highlights.withheld_outside": "outside allowed locations",
@@ -70,6 +71,7 @@
 	"mobile.session.chip.model_change_failed": "Could not change the model.",
 	"mobile.session.chip.effort_change_failed": "Could not change the effort.",
 	"mobile.session.composer.retained_instruction": "An earlier instruction may have been delivered. Retry that earlier instruction before sending your current draft.",
+	"mobile.session.composer.settings_not_applied": "The session reopened, but your model or effort choice couldn’t be applied, so nothing was sent. Try again, or choose a different model or effort.",
 	"mobile.session.tray.context": "{percent}% context",
 	"mobile.session.tray.context_short": "{percent}% ctx",
 	"mobile.session.tray.context_estimate": "{percent}% context (est.)",
@@ -77,6 +79,9 @@
 	"mobile.session.region.end": "end · scroll ↑",
 	"mobile.session.region.below_labels": "{labels} below · scroll ↓",
 	"mobile.session.region.more_below": "more below · scroll ↓",
+	"mobile.session.jump_to_latest": "↓ Jump to latest",
+	"mobile.session.jump_to_latest_short": "↓ Latest",
+	"mobile.session.jump_to_latest_name": "Jump to latest",
 	"mobile.session.video.title_fallback": "Video",
 	"mobile.session.fallback_name": "session",
 	"mobile.session.region.label_working": "activity",
@@ -94,5 +99,13 @@
 	"mobile.session.outbox.composer_stopped": "Your earlier message stopped sending. Retry or discard it above to send this one.",
 	"mobile.session.outbox.composer_discarding": "Discarding your earlier message. You can send this one in a moment.",
 	"mobile.session.sheet_title.commands": "Commands",
-	"mobile.session.sheet_title.attach": "attach"
+	"mobile.session.sheet_title.attach": "Add Image",
+	"mobile.session.diagram.label": "{type} diagram",
+	"mobile.session.diagram.label_titled": "{type} diagram: {title}",
+	"mobile.session.diagram.copied": "copied",
+	"mobile.session.diagram.error": "Couldn’t draw this diagram. Showing the source instead.",
+	"mobile.session.diagram.open_hint": "Opens the diagram full screen",
+	"mobile.session.diagram.copy": "Copy diagram source",
+	"mobile.session.diagram.close": "Close diagram",
+	"mobile.session.diagram.viewer": "Diagram viewer"
 }

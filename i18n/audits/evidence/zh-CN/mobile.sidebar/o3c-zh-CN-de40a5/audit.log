@@ -1,0 +1,66 @@
+# audit.log — O3-c zh-CN mobile.sidebar, auditor session de40a5fa6cff (actual execution output, not notes)
+# audit_date 2026-11-18
+
+$ git -C /Users/damian/local-operator-mobile/.worktrees/i18n-m3-s2a rev-parse HEAD && git branch --show-current
+e7ebc3917537d83cc772148fc5b2fc2ad3f43a41
+feat/i18n-o3c-rows-headers
+
+$ shasum -a 256 <draft-zh-CN.json> <o3c-translation-brief.json>
+c019694104901cbe725aad4c997224898e6757a8ea0145bde00dfc459acc5912  /Users/damian/.local-operator/sessions/702e8c7d168e/scratchpad/o3c/draft-zh-CN.json
+e88beb09366b9ff795bf0ac916f30cef1c9a93c35fa4617575e904c7a6f5fd17  /Users/damian/.local-operator/sessions/162198c78bcb/scratchpad/o3c-translation-brief.json
+
+$ shasum -a 256 ~/local-operator/i18n/glossary.md ~/local-operator/i18n/style-guides/zh-CN.md
+0eb34437a8c3d6f564f278ef957a603b1d9f51bb07d5ddae5ea8f37deba962f8  i18n/glossary.md
+8f95d89debbd0af848e72e4805e256ef9566632e520a5c6d9b37928cd617142c  i18n/style-guides/zh-CN.md
+
+$ /Users/damian/local-operator-mobile/.worktrees/i18n-m3-s2a/node_modules/.bin/tsx check-zh-CN.mts   # imports the repo's own parseMessage/formatMessage from src/i18n/messages.ts, read-only
+draft sha256 c019694104901cbe725aad4c997224898e6757a8ea0145bde00dfc459acc5912 expected c019694104901cbe725aad4c997224898e6757a8ea0145bde00dfc459acc5912
+brief sha256 e88beb09366b9ff795bf0ac916f30cef1c9a93c35fa4617575e904c7a6f5fd17 expected e88beb09366b9ff795bf0ac916f30cef1c9a93c35fa4617575e904c7a6f5fd17
+en sha256 beaba7baeffe546ce65430d6cb18213da2fbb88d23128c071c286fb32a08ecdf brief says beaba7baeffe546ce65430d6cb18213da2fbb88d23128c071c286fb32a08ecdf
+context sha256 858f7c51c595862306120be7833c4274439b436bb8bd1f547b88139f8d0f2fd3 brief says 858f7c51c595862306120be7833c4274439b436bb8bd1f547b88139f8d0f2fd3
+keys missing [] extra [] count 9
+mobile.sidebar.row_status.approval: "待批准" params [] arms - MATCH nfc true | sample "待批准" 3ch/6c hint 10ch | trail-punct false lead/trail-space false
+mobile.sidebar.row_status.question: "待回答" params [] arms - MATCH nfc true | sample "待回答" 3ch/6c hint 10ch | trail-punct false lead/trail-space false
+mobile.sidebar.row_status.not_reachable: "无法连接" params [] arms - MATCH nfc true | sample "无法连接" 4ch/8c hint 14ch | trail-punct false lead/trail-space false
+mobile.sidebar.row_status.ended: "已结束" params [] arms - MATCH nfc true | sample "已结束" 3ch/6c hint 10ch | trail-punct false lead/trail-space false
+mobile.sidebar.row_status.not_answering: "未响应" params [] arms - MATCH nfc true | sample "未响应" 3ch/6c hint 14ch | trail-punct false lead/trail-space false
+mobile.sidebar.row_label.waiting: "{kind, select, approval {等待你批准} other {等待你回答问题}}" params [["kind","select"]] arms kind:approval|other MATCH nfc true | sample "等待你批准" 5ch/10c hint 24ch | trail-punct false lead/trail-space false
+mobile.sidebar.row_label.working: "工作中" params [] arms - MATCH nfc true | sample "工作中" 3ch/6c hint 24ch | trail-punct false lead/trail-space false
+mobile.sidebar.row_label.on_device: "在 {device} 上" params [["device","text"]] arms - MATCH nfc true | sample "在 Studio Mac 上" 14ch/16c hint 24ch | trail-punct false lead/trail-space false
+mobile.sidebar.row_label.open: "当前已打开" params [] arms - MATCH nfc true | sample "当前已打开" 5ch/10c hint 24ch | trail-punct false lead/trail-space false
+waiting other-arm render: "等待你回答问题" | unknown kind: "等待你回答问题"
+negative control renamed_arg CAUGHT
+negative control dropped_other CAUGHT
+negative control renamed_placeholder CAUGHT
+negative control dropped_placeholder CAUGHT
+negative control unbalanced CAUGHT
+negative controls 5/5; real mismatches 0
+redaction hits: draft 0 | en 0 | context 0 | brief excl. pattern field 0
+label sample: 支付对账, 等待你批准, 在 Studio Mac 上, 无法连接, 当前已打开
+
+$ shasum -a 256 (worktree) src/i18n/catalogues/zh-CN/{mobile.sidebar,mobile.remote_sessions,relay.chrome,mobile.settings,mobile.computers}.json
+7775bffdcb80c26e035062a5d9ccd7f09df756d594604f57da6a2711375fe8e7  src/i18n/catalogues/zh-CN/mobile.sidebar.json
+eb825b4e48b28aa8bdc7bc1610c5edccd5b7bc2f679d36cab1c94ecd79ed1249  src/i18n/catalogues/zh-CN/mobile.remote_sessions.json
+ead09845311695bd01a73f7627ffada9c292d52499bbd2e2164b5b23f3452bf2  src/i18n/catalogues/zh-CN/relay.chrome.json
+6bd8136bed7ef53b5da32bc121929b332834ebea36d3d4d53e9ecd2f1643e667  src/i18n/catalogues/zh-CN/mobile.settings.json
+7c0514af7ef1741d1f445c1bf196b3eab98d8734a27b7c74cf0e7f5e2d2cd0d3  src/i18n/catalogues/zh-CN/mobile.computers.json
+
+$ (core ~/local-operator/local_operator/i18n/catalogues/zh-CN) grep -hoE '"[^"]+": "[^"]*(审批|批准)[^"]*"' *.json   [excerpt of actual output]
+"relay.asks.pending.kind_approval": "需要审批"
+"relay.asks.pending.approve": "批准"
+"relay.chrome.session.tray.approve": "批准"
+"relay.chrome.session.tray.approve_label": "批准——有请求等待你处理"
+"tui.app.help.title_note_more": "或设置`LOCAL_OPERATOR_NO_TERMINAL_TITLE=1`；图例：`lo ›`空闲，`lo ⣾`运行中，`lo !`等待审批"
+"wire.errors.desktop.question_no_longer_pending": "此问题或审批已不再待处理"
+core relay.asks.json sha256 30220048a1deda92cac75c284f764e06a970d00b09703e63f15b83e1c342c7e1
+core tui.app.json sha256 e1f79b11108e0179e4b0a9e6b8a7c273931fd322ddc9e483d54042f45567b490
+core relay.chrome.json sha256 d47a5d58a73a92f53c160fe26429432db2a8ea63a48e92cd5e18109b2efcf89e
+
+$ (mobile worktree) grep -hoE '...(审批|批准|问题|待)...' src/i18n/catalogues/zh-CN/*.json   [excerpt]
+"mobile.remote_sessions.owner_only": "目前，批准、停止、更换模型和斜杠命令仅能在 {owner} 上使用。"
+"mobile.sidebar.row.asks": "{count, plural, other {# 个问题}}"
+(no 审批 in any mobile zh-CN catalogue)
+"mobile.computers.row.a11y_connecting": "{name}，{status}，{reach}，连接中"
+
+# repo validator (npm run i18n:check) NOT run: the draft is outside the catalogue tree and this audit is read-only on the worktree; the repo's parseMessage via tsx stands in (5/5 negative controls caught).
+# read route: ordinary file reads + git show at e7ebc391; read_public_copy not used.

@@ -5,6 +5,7 @@ import {
 	registerStartupAuthorizationCleanup,
 } from "@/connection/startup-authorization";
 import { promptImageSchema } from "@/contracts/schemas";
+import { gatedStart } from "@/features/home/start-targets";
 import {
 	draftKey,
 	hasOrdinarySessionDraft,
@@ -329,7 +330,11 @@ function dependencies(
 		},
 		uuid: randomUUID,
 		isCurrent: () => current(auth),
-		start: (selection) => client.startSession(selection),
+		/* Through the agent/team gate (`start-targets.ts` `gatedStart`): this is
+		 *  also the path a RESTORED record replays by on `resume()`, before the
+		 *  home has rendered, so the capability check must live here, not only
+		 *  in the screen. A body naming no target is sent unchanged. */
+		start: (selection) => gatedStart(client, selection),
 		send: async (sessionId, envelope) => {
 			if (!current(auth)) throw new Error("authorization changed");
 			await sendPersistedCommand({

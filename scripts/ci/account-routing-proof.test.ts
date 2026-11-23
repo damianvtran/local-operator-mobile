@@ -101,13 +101,29 @@ const sha = (text: string) => createHash("sha256").update(text).digest("hex");
  *   so this emulator is the only surface where the component's appearance is
  *   observable. The condition, the trigger gating and every other job are
  *   untouched, and the truth table below still holds — which is the point of the
- *   pin: the change had to be deliberate and named, not a drift nobody noticed. */
+ *   pin: the change had to be deliberate and named, not a drift nobody noticed.
+ *
+ * Re-derived again for the CI capacity trim (branch `ci/capacity-trim`), which moved
+ * `web-audit` to nightly/on demand. Only COMMENT lines changed in either body — the
+ * phrase "per-push" became "`ci`-tier", because the `ci` sample no longer runs per
+ * push — and `git diff -U0` of e2e.yml shows no executable line inside either job
+ * other than `web-audit`'s own `if:` (which `jobBodySha` excludes):
+ * - `web-audit` 111655be → 3f85c544; `web-audit-core` 25ff0a6f → a1c2c482.
+ * Derived by the same normalization, which reproduces 111655be / 25ff0a6f from
+ * origin/main 90bdff1f byte for byte. */
 const CURRENT_PRESERVED_BODY_SHA256: Readonly<Record<string, string>> = {
 	"web-audit":
-		"111655be72c1c6fb7b683b8b0c056d5ff4ed654123c8d38c891e71a6c7bab1a6",
+		"3f85c544c6daa8f2fe46952fd483a13fdfa2e6abc795096507703c5997d2811e",
 	"web-audit-core":
-		"25ff0a6f4dbf29ab0a136a3630bc5827e3a0d0cd45739b3c5709c9e98cddbfdd",
+		"a1c2c48279345131ecb75b2128b356b786cb4f3a4072eccf8c6cabca7aa22eba",
 };
+
+/** Jobs whose selection deliberately NARROWED to the nightly schedule and manual
+ *  dispatch after the baseline was frozen (2026-11-18, CI capacity trim: the two
+ *  ~45-50 min device legs ran on every push and pull request and crowded the
+ *  account's one shared concurrent-job pool). For these the truth table below is
+ *  "the old answer, and only on schedule or dispatch" — still pinned, never free. */
+const NIGHTLY_ONLY_SINCE_BASELINE: ReadonlySet<string> = new Set(["web-audit"]);
 
 /** Bodies accepted at a CURRENT head whose intended drift is NOT the web audit's
  *  `--no-strict` command, so they cannot live in the table above: that table's
@@ -319,8 +335,14 @@ describe("staged proof source contract — mocks only, no mDNS/native/CI executi
 				);
 			for (const event of ["pull_request", "push", "schedule", MANUAL])
 				for (const mode of ["", "full", "s15-proof"])
-					expect(evaluate(job.condition, event, mode)).toBe(
-						evaluate(old.condition, event, mode),
+					expect(
+						evaluate(job.condition, event, mode),
+						`${name}/${event}/${mode}`,
+					).toBe(
+						evaluate(old.condition, event, mode) &&
+							(!NIGHTLY_ONLY_SINCE_BASELINE.has(name) ||
+								event === "schedule" ||
+								event === MANUAL),
 					);
 			for (const event of ["pull_request", "push", "schedule", MANUAL])
 				if (name !== "harness")

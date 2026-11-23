@@ -2,9 +2,11 @@
 import * as Clipboard from "expo-clipboard";
 import {
 	memo,
+	type RefObject,
 	useCallback,
 	useContext,
 	useEffect,
+	useLayoutEffect,
 	useMemo,
 	useRef,
 	useState,
@@ -12,7 +14,6 @@ import {
 import {
 	Linking,
 	Platform,
-	Pressable,
 	ScrollView,
 	Text,
 	type TextStyle,
@@ -20,12 +21,28 @@ import {
 	View,
 } from "react-native";
 import Svg, { Defs, LinearGradient, Rect, Stop } from "react-native-svg";
+import { DiagramBlock } from "@/features/session/components/diagram-block";
 import {
+	type InlineUiData,
+	InlineUiPreview,
+	inlineUiData,
+	inlineUiPlainText,
+} from "@/features/session/components/inline-ui-preview";
+import {
+	type HostSelection,
 	SelectableMessage,
 	useTextSelection,
 } from "@/features/session/components/selectable-message";
-import { GroupInsetContext } from "@/features/session/components/trace-rail";
 import {
+	CODE_CARD_INITIAL_OPACITY,
+	StreamBlock,
+	useWebStreamFade,
+} from "@/features/session/components/stream-fade";
+import { GroupInsetContext } from "@/features/session/components/trace-rail";
+import { isDiagramBlock } from "@/features/session/diagram-source";
+import type { AssistantPart } from "@/features/session/inline-ui-parts";
+import {
+	type Block,
 	blocksPlainText,
 	type InlineSpan,
 	parseInline,
@@ -39,13 +56,19 @@ import {
 	openMarkdownLink,
 	safeMarkdownHref,
 } from "@/features/session/markdown-links";
+import { NATIVE_MONO_FAMILY } from "@/features/session/mono-face";
+import type { StreamArrival } from "@/features/session/stream-arrival";
+import {
+	type MarkdownFrame,
+	parseMarkdownFrame,
+} from "@/features/session/streaming-markdown";
 import { forcedTableScroll } from "@/features/session/table-scroll-hook";
-import { leafSelectable } from "@/features/session/text-selection";
 import { CONTROL, ROLE, SURFACE } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
 import { estimatedColumnWidth } from "@/ui/column";
 import { LTR_TEXT, useIsRTL } from "@/ui/direction";
 import { TOUCH_FLOOR } from "@/ui/layout";
+import { ScrollSafePressable } from "@/ui/scroll-safe-pressable";
 import { useTextScale } from "@/ui/text-scale-provider";
 import { cx } from "@/ui/variants";
 
@@ -78,23 +101,12 @@ import { cx } from "@/ui/variants";
  *  traces" — is that ratio; with the trace on `trace` 13 (`tool-row.tsx`) it is
  *  now the relay's 1.08x (review round 1, m1). */
 const MESSAGE_BODY_CLASS = "text-body-read text-ink";
-/** Native selection on the leaf `<Text>` (Android, web); iOS selects through
- *  `SelectableMessage`'s mode instead — `text-selection.ts` has the why. */
-const LEAF_SELECTABLE = leafSelectable();
+/* Leaf selectability comes from `useTextSelection().leafSelectable`: the
+ *  platform policy (`text-selection.ts` has the why), except a host-driven
+ *  Bridge message on Android, selectable only while in the mode. */
 
-/**
- * The mono face's NATIVE family name: the PostScript name of the bundled
- * `design/fonts/JetBrainsMono-Regular.ttf` (iOS matches it) and that file's
- * basename (the name `expo-font`'s config plugin registers on Android).
- *
- * WHY A STYLE AND NOT ONLY THE CLASS (operator report, iPhone build 773): the
- * theme's `--font-mono` is a CSS fallback LIST (`'JetBrains Mono', ui-monospace,
- * …`). The web resolves it; React Native has no fallback stacks and treats the
- * whole string as one family name, finds none, and silently paints the system
- * sans — so inline code read as "smaller plain text". Web keeps the class's
- * stack (and its woff2), so this applies off-web only.
- */
-const NATIVE_MONO_FAMILY = "JetBrainsMono-Regular";
+/* The mono face's native family name lives in `mono-face.ts` (the diagram block
+ * needs it too); the reason web differs is recorded there. */
 /* `no-contextual` turns off JetBrains Mono's `calt` ligatures natively (design
  * D4): with the real face now resolving, `!=` would otherwise draw as `≠` in a
  * listing the reader is meant to copy. Web keeps the theme's ligature setting
@@ -138,22 +150,142 @@ const spanClass = (span: InlineSpan): string =>
 		span.href && safeMarkdownHref(span.href) && "text-info underline",
 	);
 
+// Split only at a space (without isolating bidi runs). Splitting a word can
+// break shaping/ligatures; a combining mark after even a space can join it.
+const SUFFIX_BOUNDARY = /[ \t\n\r]/;
+const JOINING_START = /^(?:\p{M}|\p{Emoji_Modifier}|\u200c|\u200d)/u;
+const OPEN_CLUSTER_END = /(?:\p{Surrogate}|\u200d)$/u;
+const SAME_STYLE = (a: InlineSpan, b: InlineSpan): boolean =>
+	a.code === b.code &&
+	a.bold === b.bold &&
+	a.italic === b.italic &&
+	a.href === b.href &&
+	a.strike === b.strike;
+
+function InlineSuffix({
+	value,
+	nodeRef,
+	animate,
+}: {
+	value: string;
+	nodeRef: RefObject<Text | null>;
+	animate: boolean;
+}) {
+	useWebStreamFade(nodeRef, animate ? value : null);
+	return <Text ref={nodeRef}>{value}</Text>;
+}
+
+type SuffixSplit = { span: number; start: number; end: number; value: string };
+
+function selectionIntersects(node: Node | null): boolean {
+	if (!node?.isConnected) return false;
+	const selection = node.ownerDocument?.getSelection();
+	if (!selection || selection.isCollapsed) return false;
+	for (let index = 0; index < selection.rangeCount; index += 1) {
+		if (selection.getRangeAt(index).intersectsNode(node)) return true;
+	}
+	return false;
+}
+
 const Inline = memo(function Inline({
 	text,
 	base,
+	appendFrom,
 }: {
 	text: string;
 	base?: string;
+	appendFrom?: string;
 }) {
 	/* PARSED ONCE PER STRING (design pass item E, cause 2). The parse used to run
 	 *  in the render body, so a panel re-render or a row re-render re-tokenised the
 	 *  same text: on a long answer that is the frame budget spent on work whose
 	 *  input did not change. */
 	const spans = useMemo(() => parseInline(text), [text]);
-	const { selectionColor, accessibility } = useTextSelection();
+	const previous = useRef<{
+		text: string;
+		spans: InlineSpan[];
+		split: SuffixSplit | null;
+	} | null>(null);
+	const nodeRef = useRef<Text>(null);
+	const splitSpan =
+		(nodeRef.current as unknown as Node | null)?.parentNode ?? null;
+	const [, releaseSelection] = useState(false);
+	const old = previous.current;
+	let fresh: SuffixSplit | null = null;
+	const last = spans.at(-1);
+	const oldLast = old?.spans.at(-1);
+	if (
+		Platform.OS === "web" &&
+		appendFrom !== undefined &&
+		old?.text === appendFrom &&
+		oldLast &&
+		last &&
+		!last.href &&
+		!last.code &&
+		old.spans.length === spans.length &&
+		SAME_STYLE(oldLast, last) &&
+		last.text.startsWith(oldLast.text) &&
+		old.spans.every((before, index) => {
+			if (index === spans.length - 1) return true;
+			const after = spans[index];
+			return (
+				after !== undefined &&
+				before.text === after.text &&
+				SAME_STYLE(before, after)
+			);
+		})
+	) {
+		const next = last.text.slice(oldLast.text.length);
+		if (
+			next.length > 0 &&
+			!JOINING_START.test(next) &&
+			!OPEN_CLUSTER_END.test(next) &&
+			(typeof document === "undefined" ||
+				document.getSelection?.()?.isCollapsed !== false) &&
+			(SUFFIX_BOUNDARY.test(oldLast.text.slice(-1)) ||
+				SUFFIX_BOUNDARY.test(next[0] ?? ""))
+		) {
+			fresh = {
+				span: spans.length - 1,
+				start: oldLast.text.length,
+				end: last.text.length,
+				value: next,
+			};
+		}
+	}
+	// Flattening replaces the unanimated prefix text node too. A Range anywhere
+	// in the split's parent span owns its identity, independently of paint.
+	// Hold only the affected split, and only until the selection leaves.
+	const priorSplit = old?.split;
+	const priorSpan = priorSplit ? old?.spans[priorSplit.span] : undefined;
+	const sameSpan = priorSplit ? spans[priorSplit.span] : undefined;
+	const held =
+		!fresh &&
+		priorSplit &&
+		priorSpan &&
+		sameSpan &&
+		SAME_STYLE(priorSpan, sameSpan) &&
+		sameSpan.text.startsWith(priorSpan.text.slice(0, priorSplit.end)) &&
+		selectionIntersects(splitSpan)
+			? priorSplit
+			: null;
+	const split = fresh ?? held;
+	useLayoutEffect(() => {
+		previous.current = { text, spans, split };
+	}, [spans, split, text]);
+	useLayoutEffect(() => {
+		const doc = splitSpan?.ownerDocument;
+		if (!held || !doc) return;
+		const release = () => {
+			if (!selectionIntersects(splitSpan)) releaseSelection((value) => !value);
+		};
+		doc.addEventListener("selectionchange", release);
+		return () => doc.removeEventListener("selectionchange", release);
+	}, [held, splitSpan]);
+	const { selectionColor, accessibility, leafSelectable } = useTextSelection();
 	return (
 		<Text
-			selectable={LEAF_SELECTABLE}
+			selectable={leafSelectable}
 			selectionColor={selectionColor}
 			{...accessibility}
 			className={cx(base ?? MESSAGE_BODY_CLASS)}
@@ -186,7 +318,20 @@ const Inline = memo(function Inline({
 							: undefined
 					}
 				>
-					{span.text}
+					{split?.span === index ? (
+						<>
+							{span.text.slice(0, split.start)}
+							<InlineSuffix
+								key={split.end}
+								value={split.value}
+								nodeRef={nodeRef}
+								animate={fresh !== null}
+							/>
+							{span.text.slice(split.end)}
+						</>
+					) : (
+						span.text
+					)}
 				</Text>
 			))}
 		</Text>
@@ -627,10 +772,10 @@ function CodeBlockView({
 	language: string;
 }) {
 	const [copied, setCopied] = useState(false);
-	const { enter, selectionColor } = useTextSelection();
+	const { enter, selectionColor, leafSelectable } = useTextSelection();
 	const body = lines.join("\n");
 	return (
-		<Pressable
+		<ScrollSafePressable
 			accessibilityRole={ROLE.button}
 			accessibilityLabel={`Copy ${language || "code"} block`}
 			// The visual is the block itself, whose height follows its content — a
@@ -650,7 +795,7 @@ function CodeBlockView({
 				// transient, because a toast for a copy would replace a real message.
 				void Clipboard.setStringAsync(body).then(() => setCopied(true));
 			}}
-			// This Pressable is the deepest responder under a long-press on code, so
+			// This is the deepest touch reader under a long-press on code, so
 			// it must forward the hold to the message's selection mode (iOS). On
 			// Android `enter` is a no-op whose presence still stops the long hold
 			// that selected text natively from also firing the copy-on-tap.
@@ -667,7 +812,7 @@ function CodeBlockView({
 				    column never widens (the transcript's own overflow guard). */}
 				<ScrollView horizontal showsHorizontalScrollIndicator={false}>
 					<Text
-						selectable={LEAF_SELECTABLE}
+						selectable={leafSelectable}
 						selectionColor={selectionColor}
 						className="px-2 py-1 font-mono text-mono-sm text-ink-muted"
 						/* Code keeps its own direction inside an Urdu transcript: the block
@@ -681,7 +826,7 @@ function CodeBlockView({
 					</Text>
 				</ScrollView>
 			</View>
-		</Pressable>
+		</ScrollSafePressable>
 	);
 }
 
@@ -693,18 +838,79 @@ const HEADING_CLASS: Record<number, string> = {
 	3: "text-body-lg font-medium text-ink",
 };
 
-export const Markdown = memo(function Markdown({ text }: { text: string }) {
-	/* THE PARSE IS A FUNCTION OF THE TEXT AND NOTHING ELSE (design pass item E,
-	 *  cause 2), so it is memoised on the text alone: a re-render that arrives with
-	 *  the same answer (a panel opening, a scroll-linked parent, the row's own
-	 *  disclosure) re-uses the block list, and a streaming frame re-parses only the
-	 *  row that actually changed. */
-	const blocks = useMemo(() => parseMarkdown(text), [text]);
-	const plainText = useCallback(() => blocksPlainText(blocks), [blocks]);
+type MessageBlock = Block | { kind: "inline-ui"; data: InlineUiData };
+
+export const Markdown = memo(function Markdown({
+	text,
+	host,
+	assistantParts,
+	streaming = false,
+	arrival = null,
+	motion = null,
+}: {
+	text: string;
+	assistantParts?: readonly AssistantPart[];
+	/** A host that owns the long-press (Team Bridge's actions sheet); see
+	 *  `HostSelection`. Pass a memoised object: this component is `memo`. */
+	host?: HostSelection;
+	streaming?: boolean;
+	arrival?: StreamArrival | null;
+	motion?: object | null;
+}) {
+	// The sidecar's prose and widget positions belong to a different source
+	// from the legacy `text` that arrival tracks. Never use its offsets or
+	// opacity wrappers for widgets: a stream settle must leave the figure,
+	// disclosure focus and selected text mounted in place.
+	const rich = useMemo(
+		() =>
+			assistantParts?.flatMap<MessageBlock>((part) =>
+				part.kind === "markdown"
+					? parseMarkdown(part.text)
+					: [{ kind: "inline-ui", data: inlineUiData(part.value) }],
+			),
+		[assistantParts],
+	);
+	const previous = useRef<MarkdownFrame | null>(null);
+	const old = previous.current;
+	const source = useMemo(
+		() => rich ?? parseMarkdownFrame(text, streaming, previous.current),
+		[rich, streaming, text],
+	);
+	const frame = Array.isArray(source) ? null : source;
+	useLayoutEffect(() => {
+		previous.current = frame;
+	}, [frame]);
+	const blocks = Array.isArray(source) ? source : source.blocks;
+	const from =
+		!frame || !arrival || arrival.sealed || motion === null
+			? null
+			: arrival.previousText;
+	const oldBlocks = from !== null && old?.text === from ? old.blocks : null;
+	// A single update can grow prose and insert a card. Its raw source start,
+	// not equality of the preceding rendered block, decides whether it is new.
+	// A delimiter that adopts older source is not a birth.
+	const boundary = from === "" || oldBlocks ? from?.length : undefined;
+	const plainText = useCallback(
+		() =>
+			!Array.isArray(source)
+				? blocksPlainText(source.blocks)
+				: source
+						.map((block) =>
+							block.kind === "inline-ui"
+								? inlineUiPlainText(block.data)
+								: blocksPlainText([block]),
+						)
+						.join("\n\n"),
+		[source],
+	);
 	return (
 		/* The whole answer is ONE selection surface, so a drag can run across
 		 *  paragraphs, lists and code (iOS mode; `selectable-message.tsx`). */
-		<SelectableMessage text={plainText} textClassName={MESSAGE_BODY_CLASS}>
+		<SelectableMessage
+			text={plainText}
+			textClassName={MESSAGE_BODY_CLASS}
+			host={host}
+		>
 			{/* ONE gap container, and every block carries no outer margin of its own
 			 * (`components.md` §22, "the container owns the gap"). Before this an
 			 * answer's only separation was each block's own line-box leading: a code
@@ -713,63 +919,127 @@ export const Markdown = memo(function Markdown({ text }: { text: string }) {
 			 * value. The gap is the `between-components` tier, desktop parity. */}
 			<View className="gap-3">
 				{blocks.map((block, index) => {
-					switch (block.kind) {
-						case "code":
-							return (
-								<CodeBlock
-									key={index}
-									lines={block.lines}
-									language={block.language}
-								/>
-							);
-						case "heading":
-							return (
-								<Inline
-									key={index}
-									text={block.text}
-									base={HEADING_CLASS[block.level] ?? "text-body-lg text-ink"}
-								/>
-							);
-						case "list":
-							return (
-								<View key={index} className="gap-1">
-									{block.items.map((item, itemIndex) => (
-										<View
-											key={itemIndex}
-											className="flex-row gap-2"
-											style={{
-												paddingStart: (block.indents?.[itemIndex] ?? 0) * 8,
-											}}
-										>
-											<Text className="text-body-read text-ink-dim" aria-hidden>
-												{block.markers?.[itemIndex] ??
-													(block.ordered ? `${itemIndex + 1}.` : "•")}
-											</Text>
-											<View className="min-w-0 flex-1">
-												<Inline text={item} />
-											</View>
-										</View>
-									))}
-								</View>
-							);
-						case "quote":
-							return (
-								<View key={index} className="border-s-2 border-hairline ps-2">
-									<Inline
-										text={block.text}
-										base="text-body-sm text-ink-muted"
-									/>
-								</View>
-							);
-						case "table":
-							return (
-								<Table key={index} header={block.header} rows={block.rows} />
-							);
-						default:
-							return <Inline key={index} text={block.text} />;
-					}
+					if (block.kind === "inline-ui")
+						return <InlineUiPreview key={index} data={block.data} />;
+					const prior = oldBlocks?.[index];
+					const start = frame?.starts[index];
+					const born =
+						boundary !== undefined && start !== undefined && start >= boundary;
+					const appendFrom =
+						!born &&
+						prior?.kind === block.kind &&
+						"text" in prior &&
+						"text" in block &&
+						block.text !== prior.text &&
+						block.text.startsWith(prior.text)
+							? prior.text
+							: undefined;
+					return (
+						<MarkdownBlock
+							key={index}
+							block={block}
+							appendFrom={appendFrom}
+							birth={born ? motion : null}
+							motion={frame ? motion : null}
+						/>
+					);
 				})}
 			</View>
 		</SelectableMessage>
 	);
+});
+
+const MarkdownBlock = memo(function MarkdownBlock({
+	block,
+	appendFrom,
+	birth,
+	motion,
+}: {
+	block: Block;
+	appendFrom: string | undefined;
+	birth: object | null;
+	motion: object | null;
+}) {
+	return (
+		<StreamBlock
+			birth={birth}
+			motion={motion}
+			initialOpacity={
+				block.kind === "code" ? CODE_CARD_INITIAL_OPACITY : undefined
+			}
+		>
+			<BlockBody block={block} appendFrom={appendFrom} />
+		</StreamBlock>
+	);
+});
+
+const BlockBody = memo(function BlockBody({
+	block,
+	appendFrom,
+}: {
+	block: Block;
+	appendFrom: string | undefined;
+}) {
+	switch (block.kind) {
+		case "code": {
+			const listing = (
+				<CodeBlock lines={block.lines} language={block.language} />
+			);
+			// A closed ```mermaid fence draws as a diagram; the listing is
+			// what it falls back to (still loading, or Pele refused it).
+			return isDiagramBlock(block) ? (
+				<DiagramBlock
+					source={block.lines.join("\n")}
+					language={block.language}
+					fallback={listing}
+				/>
+			) : (
+				listing
+			);
+		}
+		case "heading":
+			return (
+				<Inline
+					text={block.text}
+					appendFrom={appendFrom}
+					base={HEADING_CLASS[block.level] ?? "text-body-lg text-ink"}
+				/>
+			);
+		case "list":
+			return (
+				<View className="gap-1">
+					{block.items.map((item, itemIndex) => (
+						<View
+							key={itemIndex}
+							className="flex-row gap-2"
+							style={{
+								paddingStart: (block.indents?.[itemIndex] ?? 0) * 8,
+							}}
+						>
+							<Text className="text-body-read text-ink-dim" aria-hidden>
+								{block.markers?.[itemIndex] ??
+									(block.ordered ? `${itemIndex + 1}.` : "•")}
+							</Text>
+							<View className="min-w-0 flex-1">
+								<Inline text={item} />
+							</View>
+						</View>
+					))}
+				</View>
+			);
+		case "quote":
+			return (
+				<View className="border-s-2 border-hairline ps-2">
+					<Inline
+						text={block.text}
+						appendFrom={appendFrom}
+						base="text-body-sm text-ink-muted"
+					/>
+				</View>
+			);
+		case "table":
+			return <Table header={block.header} rows={block.rows} />;
+		default:
+			return <Inline text={block.text} appendFrom={appendFrom} />;
+	}
 });

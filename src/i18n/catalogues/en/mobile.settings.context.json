@@ -57,7 +57,7 @@
 	},
 	"mobile.settings.theme.search_placeholder": {
 		"role": "help",
-		"note": "Placeholder inside the same search field. Usually identical to the field's accessible name. No final full stop."
+		"note": "Placeholder hint inside the theme search field, shown under its visible label `Search themes` (mobile.settings.theme.search_label) until the reader types. Says WHAT to type: part of a theme's name. It must not repeat or paraphrase the label. `Dracula` is the name of a theme the app ships: keep it exactly, in Latin script, never translated or transliterated. Sentence fragment, no final full stop."
 	},
 	"mobile.settings.theme.section_dark": {
 		"role": "heading",

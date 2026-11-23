@@ -641,9 +641,10 @@ export function mergeMessages(
 /**
  * Deep equality for parsed JSON values (what the hub client hands back after
  * schema validation): primitives, arrays and plain objects. Key ORDER is
- * ignored, so a server that reorders fields is still "unchanged".
+ * ignored, so a server that reorders fields is still "unchanged". Exported
+ * for the reply-thread root patch (`reply-threads.ts` `withRoot`).
  */
-function sameValue(a: unknown, b: unknown): boolean {
+export function sameValue(a: unknown, b: unknown): boolean {
 	if (Object.is(a, b)) return true;
 	if (typeof a !== "object" || typeof b !== "object" || !a || !b) return false;
 	if (Array.isArray(a) !== Array.isArray(b)) return false;

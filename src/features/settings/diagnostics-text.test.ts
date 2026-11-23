@@ -124,6 +124,43 @@ describe("Copy diagnostics", () => {
 	});
 });
 
+/* PR #328 review round 1, R1: the attach handoff's trail rides Copy
+ *  diagnostics, because a TestFlight build has no other log a reader can send. */
+describe("Copy diagnostics carries the attach handoff trail", () => {
+	const base = {
+		route: null,
+		computerName: null,
+		stream: "live",
+		lastError: null,
+		version: "1.2.3",
+		platform: "ios",
+	} as const;
+	it("as one line when there is a trail", () => {
+		expect(
+			diagnosticsText({
+				...base,
+				attachHandoff: "onDismiss 14ms, fallback 1000ms, late onDismiss 1180ms",
+			})
+				.split("\n")
+				.at(-1),
+		).toBe(
+			"Attach handoff: onDismiss 14ms, fallback 1000ms, late onDismiss 1180ms",
+		);
+	});
+	it("and not at all when there is none", () => {
+		expect(diagnosticsText({ ...base, attachHandoff: null })).not.toContain(
+			"Attach handoff",
+		);
+	});
+	it("from the handoff's own trail, read when the reader copies", () => {
+		const settings = readFileSync(
+			new URL("./settings.tsx", import.meta.url),
+			"utf8",
+		);
+		expect(settings).toContain("attachHandoff: attachHandoffDiagnostics(),");
+	});
+});
+
 /* PR #261 Q5/R3: every shape round 1 leaked, seeded and read back. Values are
  *  assembled at run time so the source holds no credential-looking literal. */
 describe("Copy diagnostics redacts every secret shape", () => {
