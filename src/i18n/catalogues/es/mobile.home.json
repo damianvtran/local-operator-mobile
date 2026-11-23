@@ -53,9 +53,7 @@
 	"mobile.home.startup_queue.not_started": "Sin iniciar",
 	"mobile.home.startup_queue.sending": "Enviando los mensajes en cola…",
 	"mobile.home.startup_queue.unconfirmed": "Inicio sin confirmar",
-	"mobile.home.suggestion.last_turn": "Muéstrame el último turno",
 	"mobile.home.suggestion.linear_mcp": "Configura Linear MCP",
-	"mobile.home.suggestion.phone_access": "Activa el acceso telefónico",
 	"mobile.home.suggestion.review_repo": "Revisa este repo",
 	"mobile.home.suggestion.team_of_agents": "Crea un equipo de agentes",
 	"mobile.home.suggestion.wake_summary": "Despiértame con un resumen",
@@ -90,5 +88,10 @@
 	"mobile.home.identity.refused_fallback": "No se ha podido iniciar {name} en este ordenador. Elige otro o usa el agente predeterminado.",
 	"mobile.home.identity.refused_unlicensed": "Este ordenador no puede iniciar un chat con {name} ahora mismo. Elige el agente predeterminado para enviar.",
 	"mobile.home.identity.refused_connecting": "Este ordenador aún se está conectando, así que todavía no se ha iniciado nada. Toca tu mensaje para recuperarlo y vuelve a enviarlo en un momento para iniciar con {name}.",
-	"mobile.home.identity.announce_picked": "Este chat empezará con {name}"
+	"mobile.home.identity.announce_picked": "Este chat empezará con {name}",
+	"mobile.home.work.needs_you": "Te necesitan",
+	"mobile.home.work.recent": "Recientes",
+	"mobile.home.work.try": "Prueba",
+	"mobile.home.work.all_conversations": "Todas las conversaciones",
+	"mobile.home.work.all_conversations_new": "Todas las conversaciones, {count, plural, one {# conversación nueva} other {# conversaciones nuevas}}"
 }

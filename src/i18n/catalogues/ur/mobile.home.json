@@ -53,9 +53,7 @@
 	"mobile.home.startup_queue.not_started": "شروع نہیں ہوا",
 	"mobile.home.startup_queue.sending": "قطار کے پیغامات بھیجے جا رہے ہیں…",
 	"mobile.home.startup_queue.unconfirmed": "شروع ہونے کی تصدیق نہیں",
-	"mobile.home.suggestion.last_turn": "آخری ٹرن دکھائیں",
 	"mobile.home.suggestion.linear_mcp": "Linear MCP سیٹ اپ کریں",
-	"mobile.home.suggestion.phone_access": "فون رسائی آن کریں",
 	"mobile.home.suggestion.review_repo": "اس repo کا جائزہ لیں",
 	"mobile.home.suggestion.team_of_agents": "ایجنٹس کی ٹیم بنائیں",
 	"mobile.home.suggestion.wake_summary": "مجھے خلاصہ دے کر جگائیں",
@@ -90,5 +88,10 @@
 	"mobile.home.identity.refused_fallback": "{name} اس کمپیوٹر پر شروع نہیں ہو سکا۔ کوئی اور منتخب کریں، یا ڈیفالٹ ایجنٹ استعمال کریں۔",
 	"mobile.home.identity.refused_unlicensed": "یہ کمپیوٹر ابھی {name} کے ساتھ چیٹ شروع نہیں کر سکتا۔ بھیجنے کے لیے ڈیفالٹ ایجنٹ منتخب کریں۔",
 	"mobile.home.identity.refused_connecting": "یہ کمپیوٹر ابھی کنیکٹ ہو رہا ہے، اس لیے ابھی کچھ شروع نہیں ہوا۔ اپنے پیغام پر ٹیپ کر کے اسے واپس لائیں، پھر {name} کے ساتھ شروع کرنے کے لیے تھوڑی دیر میں دوبارہ بھیجیں۔",
-	"mobile.home.identity.announce_picked": "یہ چیٹ {name} کے ساتھ شروع ہوگی"
+	"mobile.home.identity.announce_picked": "یہ چیٹ {name} کے ساتھ شروع ہوگی",
+	"mobile.home.work.needs_you": "آپ کے منتظر",
+	"mobile.home.work.recent": "حالیہ",
+	"mobile.home.work.try": "آزمائیں",
+	"mobile.home.work.all_conversations": "تمام گفتگوئیں",
+	"mobile.home.work.all_conversations_new": "تمام گفتگوئیں، {count, plural, one {# نئی گفتگو} other {# نئی گفتگوئیں}}"
 }

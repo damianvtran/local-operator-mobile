@@ -135,7 +135,7 @@ const NAMESPACES = [
 		 *  92 with the new-chat identity picker (PR #358): 25 `identity.*` keys
 		 *  for the pill, the "Start this chat with" sheet and its refusals, and 1
 		 *  from its round-1 remediation (`refused_connecting`, F2): 66 + 26. */
-		expected: 92,
+		expected: 95,
 	},
 	{
 		name: "mobile.projects",
@@ -641,14 +641,13 @@ describe("the English catalogues", () => {
 		 * counted over all 26 English JSON catalogues (sidebar 53, home 92,
 		 * chrome 28, team_bridge 221). Keep this explicit total as an
 		 * independent guard against an accidentally dropped key. */
-		/* feat/jump-to-latest: +2 mobile.session (the chip's full and narrow
-		 * labels): 1374 + 2 = 1376, the generated catalogue's own count over
-		 * this tree. */
-		/* …plus its round-1 remediation: + mobile.session.jump_to_latest_name, the
-		 * arrow-free ACCESSIBLE name (a screen reader read the visible "↓" as
-		 * "down arrow"): 1376 + 1 = 1377. */
-		// PR #376: the chart data disclosure adds one mobile.session key.
-		expect(total).toBe(1378);
+		/* feat/jump-to-latest: +3 mobile.session (the chip's full and narrow
+		 * labels and the arrow-free accessible name): 1374 + 3 = 1377. Then the
+		 * home work list: +5 mobile.home.work.* keys, −2 pool chips
+		 * (suggestion.phone_access, suggestion.last_turn): 1377 + 3 = 1380,
+		 * home 92 → 95. */
+		// PR #376: the chart data disclosure adds one mobile.session key: 1380 + 1 = 1381.
+		expect(total).toBe(1381);
 	});
 
 	it("lists every catalogue file this suite checks", () => {
