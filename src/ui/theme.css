@@ -31,6 +31,8 @@
 	 * time; the values that actually apply are swapped per theme in the
 	 * @layer theme block below. A utility the kit does not define does not
 	 * exist, which is the point: `bg-canvas` is a role, `bg-[#f2ede3]` is a bug.
+	 *
+	 * The theme-invariant roles are in the `@theme static` block below instead.
 	 */
 	--color-canvas: #f2ede3;
 	--color-surface: #f7f5ee;
@@ -76,10 +78,6 @@
 	--color-diff-hunk: #2368a8;
 	--color-diff-hunk-surface: #e9ebef;
 	--color-diff-context: #656056;
-	--color-scrim: #0b0a08b3;
-	--color-shadow-color: #0b0a08;
-	--color-focus-ring-photo-inner: #fffefb;
-	--color-focus-ring-photo-outer: #14110c;
 
 	/* ---- type ramp: size, line height, weight and tracking per step ---- */
 	--text-display: 28px;
@@ -180,6 +178,21 @@
 	--font-sans: 'Figtree', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
 	--font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
 	--font-display: 'Fraunces', ui-serif, Georgia, serif;
+}
+
+/*
+ * Theme-invariant colour roles: one value in every theme.
+ *
+ * `static` so the variable is always emitted. Tailwind omits an unused
+ * `@theme` variable, and Uniwind's `useCSSVariable` table (read by
+ * `useTokenColor`) is built from that output; a role no class uses, such as
+ * the scrim, would otherwise log "couldn't find your variable" in dev.
+ */
+@theme static {
+	--color-scrim: #0b0a08b3;
+	--color-shadow-color: #0b0a08;
+	--color-focus-ring-photo-inner: #fffefb;
+	--color-focus-ring-photo-outer: #14110c;
 }
 
 /*

@@ -181,8 +181,10 @@ vi.mock("@/features/sessions/tags-sheet", () => ({
 vi.mock("@/features/sessions/move-sheet", () => ({
 	SessionMoveSheet: () => null,
 }));
-vi.mock("@/features/sessions/workspace-drawer", () => ({
+vi.mock("@/features/sessions/workspace-drawer-context", () => ({
 	useOptionalWorkspaceDrawer: () => null,
+}));
+vi.mock("@/features/sessions/workspace-mode-bar", () => ({
 	WorkspaceModeBar: () => null,
 }));
 vi.mock("@/features/auth/computer-entry-points", () => ({

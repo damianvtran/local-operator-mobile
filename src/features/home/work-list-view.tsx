@@ -17,7 +17,7 @@ import { countLabel } from "@/features/notifications/notifications-model";
 import { unreadBadgeCount } from "@/features/sessions/session-projection";
 import { SessionRow } from "@/features/sessions/session-row";
 import type { SidebarBasis } from "@/features/sessions/sidebar-view";
-import { useWorkspaceDrawer } from "@/features/sessions/workspace-drawer";
+import { useWorkspaceDrawer } from "@/features/sessions/workspace-drawer-context";
 import { t } from "@/i18n";
 import { ROLE, SURFACE } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";

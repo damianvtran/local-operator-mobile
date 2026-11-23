@@ -213,8 +213,15 @@ vi.mock("@/features/sessions/conversations-drawer", () => ({
 	},
 }));
 
-const { MODE_BADGE_INSET, WorkspaceDrawerProvider, useWorkspaceDrawer } =
-	await import("@/features/sessions/workspace-drawer");
+const { WorkspaceDrawerProvider } = await import(
+	"@/features/sessions/workspace-drawer"
+);
+const { useWorkspaceDrawer } = await import(
+	"@/features/sessions/workspace-drawer-context"
+);
+const { MODE_BADGE_INSET } = await import(
+	"@/features/sessions/workspace-mode-bar"
+);
 const {
 	BridgeThreadDrawerButton,
 	bridgeDrawerBadge,
