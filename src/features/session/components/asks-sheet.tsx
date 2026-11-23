@@ -1,6 +1,7 @@
 // biome-ignore-all lint/suspicious/noArrayIndexKey: the settled record's question list is regenerated whole on every render — a parsed detail, not an editable collection — so position IS the identity, the case React's own key docs exempt. A content-derived key would be recomputed every frame to produce the same value.
-import { ArrowUpRight } from "lucide-react-native";
+import { ArrowUpRight, Check } from "lucide-react-native";
 import {
+	type ReactNode,
 	useCallback,
 	useEffect,
 	useMemo,
@@ -9,6 +10,8 @@ import {
 	useState,
 } from "react";
 import {
+	AccessibilityInfo,
+	findNodeHandle,
 	Keyboard,
 	Platform,
 	Pressable,
@@ -30,12 +33,17 @@ import {
 	type AskOther,
 	answeredPairs,
 	askActions,
+	askBands,
 	askBarLabel,
+	askProgress,
 	askResponseBody,
 	askStateLine,
 	asksPopulationSignature,
 	asksReadFailureLine,
 	askToneInk,
+	DISMISS_REASONS,
+	type DismissReason,
+	dismissNeedsReason,
 	durationLabel,
 	EMPTY_OTHER,
 	hasOtherDoor,
@@ -56,9 +64,11 @@ import {
 	reduceExpansion,
 	shownExpansion,
 } from "@/features/session/asks-open-policy";
+import { type NoParamKey, t } from "@/i18n";
 import type { RelayEndpoints } from "@/relay";
 import {
 	askAnswerFieldId,
+	askDismissReasonId,
 	askFieldId,
 	askOtherFieldId,
 	askOtherId,
@@ -76,7 +86,7 @@ import { IconButton } from "@/ui/components/icon-button";
 import { Sheet } from "@/ui/components/sheet";
 import { useSheetBodyScroll } from "@/ui/components/sheet-body-scroll";
 import { TOUCH_FLOOR } from "@/ui/layout";
-import { cx } from "@/ui/variants";
+import { choiceRowClasses, cx } from "@/ui/variants";
 
 import { AnsweredValues } from "./answered-values";
 
@@ -96,7 +106,9 @@ import { AnsweredValues } from "./answered-values";
  * reliable `session_id`, so a queue stitched from frames would silently render
  * session-less rows (E2 spec §6.4).
  *
- * THE ANSWER SURFACE IS HERE. A row expands in place into the ask's own form —
+ * THE ANSWER SURFACE IS HERE. The OPEN ask is one card at the top of the sheet
+ * (the other waiting asks are one-line rows under it, settled ones under
+ * "Earlier") holding the ask's own form —
  * every question of the ask together, ONE submit — because `ask_respond` is
  * atomic per ask: the wire refuses a partial map, so a wizard would have to
  * hold the answers anyway, and a form is what makes "you have answered 2 of 3"
@@ -153,6 +165,32 @@ const OTHER_HINT = "Type your answer";
  *  consequence lines. */
 const KEPT_TEXT_HINT = "your text is kept";
 
+/** The two dismissal reasons' copy, keyed by the reason the wire carries. The
+ *  label is the reason; the note is what the agent will do, in the relay card's
+ *  own shape (a row that names the act and states its consequence). */
+const REASON_COPY = {
+	moot: {
+		label: "mobile.asks.dismiss_reason.moot",
+		note: "mobile.asks.dismiss_reason.moot_note",
+	},
+	answered_in_chat: {
+		label: "mobile.asks.dismiss_reason.chat",
+		note: "mobile.asks.dismiss_reason.chat_note",
+	},
+} as const satisfies Record<
+	DismissReason,
+	{ label: NoParamKey; note: NoParamKey }
+>;
+
+/** The start of an ask's first question, on one line, for a collapsed row: the
+ *  state sentence alone says nothing about WHICH question waits. */
+const questionStart = (row: PendingAsk): string => {
+	const first = Array.isArray(row.questions) ? row.questions[0] : undefined;
+	return String(first?.question ?? "")
+		.replace(/\s+/g, " ")
+		.trim();
+};
+
 type SettleKind = "respond" | "decline" | "dismiss";
 type PendingAction = { askId: string; kind: SettleKind } | null;
 
@@ -197,6 +235,73 @@ export type AsksSheetProps = {
 	 *  population re-read failing later - while the reader may be mid-answer - can
 	 *  never reach it. */
 	onReadFailed?: (info: { drawn: number }) => void;
+};
+
+/** The recommendation's suffix, unchanged from before this slice. A component
+ *  of its own so the literal stays on ONE line: wrapped inside the render prop
+ *  the formatter splits it, which the string scanner reads as a different (and
+ *  here absent) literal rather than the same untranslated copy. */
+const RecommendedMark = () => (
+	<Text className="text-meta text-ink-dim"> · recommended</Text>
+);
+
+/** The shared shell of an option row and the `Other` row: the tinted fill, the
+ *  accent edge and the trailing check (`choiceRowClasses` holds the rules and the
+ *  contrast numbers). Press state is read from the Pressable, so the fill steps
+ *  while a finger is down. `children` is given the ink classes the state
+ *  implies, so the label and its note never disagree with the fill under them. */
+const ChoiceRow = ({
+	selected,
+	disabled,
+	onPress,
+	accessibilityLabel,
+	accessibilityHint,
+	testID,
+	children,
+}: {
+	selected: boolean;
+	disabled: boolean;
+	onPress: () => void;
+	accessibilityLabel: string;
+	accessibilityHint?: string;
+	testID?: string;
+	children: (ink: { label: string; note: string }) => ReactNode;
+}) => {
+	/* `accent-hover`, not `accent`: the plain role is 4.22:1 on the selected
+	 *  fill in light. */
+	const checkInk = useTokenColor("accent-hover");
+	return (
+		<Pressable
+			accessibilityRole={ROLE.radio}
+			accessibilityLabel={accessibilityLabel}
+			accessibilityHint={accessibilityHint}
+			accessibilityState={state({ selected, disabled })}
+			disabled={disabled}
+			onPress={onPress}
+			testID={testID}
+		>
+			{({ pressed }) => {
+				const classes = choiceRowClasses({ selected, pressed, disabled });
+				return (
+					<View className={classes.row} style={{ minHeight: TOUCH_FLOOR }}>
+						<View className={classes.edgeSlot}>
+							<View className={classes.edge} />
+						</View>
+						<View className="min-w-0 flex-1 justify-center px-2 py-1.5">
+							{children({ label: classes.label, note: classes.note })}
+						</View>
+						{/* The mark that makes selection more than colour; decorative
+						 *  to a screen reader, which reads `selected` from the state. */}
+						{selected ? (
+							<View className="justify-center pe-2" aria-hidden>
+								<Check color={checkInk} size={16} strokeWidth={2.5} />
+							</View>
+						) : null}
+					</View>
+				);
+			}}
+		</Pressable>
+	);
 };
 
 /** One question's control: a picker of consequence-carrying options — ended by
@@ -338,12 +443,11 @@ const QuestionField = ({
 				   the wrong one. */
 				const recommended = question.recommended === index;
 				return (
-					<Pressable
+					<ChoiceRow
 						key={option.label}
-						accessibilityRole={ROLE.radio}
-						accessibilityLabel={option.label}
-						accessibilityState={state({ selected: on, disabled })}
+						selected={on}
 						disabled={disabled}
+						accessibilityLabel={option.label}
 						onPress={() => {
 							Keyboard.dismiss();
 							if (!question.multi) {
@@ -359,27 +463,20 @@ const QuestionField = ({
 							onChange(Array.from(next));
 						}}
 					>
-						<View
-							className={cx(
-								"rounded-sm border px-2 py-1.5",
-								on
-									? "border-accent-border bg-accent-muted"
-									: "border-border-control bg-surface",
-							)}
-						>
-							<Text className="text-body-sm text-ink">
-								{option.label}
-								{recommended ? (
-									<Text className="text-meta text-ink-dim"> · recommended</Text>
-								) : null}
-							</Text>
-							{(option.description ?? "").length > 0 ? (
-								<Text className="text-meta text-ink-dim">
-									{option.description}
+						{(ink) => (
+							<>
+								<Text className={cx("text-body-sm", ink.label)}>
+									{option.label}
+									{recommended ? <RecommendedMark /> : null}
 								</Text>
-							) : null}
-						</View>
-					</Pressable>
+								{(option.description ?? "").length > 0 ? (
+									<Text className={cx("text-meta", ink.note)}>
+										{option.description}
+									</Text>
+								) : null}
+							</>
+						)}
+					</ChoiceRow>
 				);
 			})}
 			{door ? (
@@ -390,8 +487,9 @@ const QuestionField = ({
 				 *  than something the reader has to know. It is the same kind of choice
 				 *  as the rows above — same mark and ground on press — not a bare
 				 *  afterthought; what it composes is `asks.ts`'s `composedAnswer`. */
-				<Pressable
-					accessibilityRole={ROLE.radio}
+				<ChoiceRow
+					selected={other.open}
+					disabled={disabled}
 					accessibilityLabel="Other"
 					/* The hint follows the row's own line: with text kept, "Type your
 					 *  answer" told a screen reader the opposite of what the row shows
@@ -399,8 +497,6 @@ const QuestionField = ({
 					accessibilityHint={
 						other.open || other.text.trim() === "" ? OTHER_HINT : KEPT_TEXT_HINT
 					}
-					accessibilityState={state({ selected: other.open, disabled })}
-					disabled={disabled}
 					onPress={() => {
 						/* A ticked multi-select `Other` unticks, as any checkbox does;
 						 *  the single-select radio re-selects rather than toggling off. */
@@ -419,28 +515,24 @@ const QuestionField = ({
 					}}
 					testID={askOtherId(String(question.id))}
 				>
-					<View
-						className={cx(
-							"rounded-sm border px-2 py-1.5",
-							other.open
-								? "border-accent-border bg-accent-muted"
-								: "border-border-control bg-surface",
-						)}
-					>
-						<Text className="text-body-sm text-ink">Other</Text>
-						{/* The consequence line stays in EVERY state — it is what holds the
-						 *  row's height: it used to unmount while the door was open, shrinking
-						 *  the row 51.1 → 34.3 pt, below the sheet's own touch floor, exactly
-						 *  as the field appeared (design D1). A kept-text row gets its own
-						 *  sentence, because a closed row otherwise looks empty (UX N1 /
-						 *  design D6). */}
-						<Text className="text-meta text-ink-dim">
-							{other.open || other.text.trim() === ""
-								? OTHER_HINT
-								: KEPT_TEXT_HINT}
-						</Text>
-					</View>
-				</Pressable>
+					{(ink) => (
+						/* The label and its hint share ONE line ("Other   Your answer"),
+						 *  as the relay page draws them. The hint stays in EVERY state —
+						 *  it is what holds the row's height: it used to unmount while the
+						 *  door was open, shrinking the row 51.1 → 34.3 pt, below the
+						 *  sheet's own touch floor, exactly as the field appeared (design
+						 *  D1). A kept-text row gets its own sentence, because a closed row
+						 *  otherwise looks empty (UX N1 / design D6). */
+						<View className="flex-row flex-wrap items-baseline gap-x-2">
+							<Text className={cx("text-body-sm", ink.label)}>Other</Text>
+							<Text className={cx("text-meta", ink.note)}>
+								{other.open || other.text.trim() === ""
+									? OTHER_HINT
+									: KEPT_TEXT_HINT}
+							</Text>
+						</View>
+					)}
+				</ChoiceRow>
 			) : null}
 			{door && other.open ? (
 				/* THE TYPED ANSWER, GROWN TO FOUR LINES (spec 3.3). Multiline so a
@@ -504,9 +596,64 @@ const emptyDraft = (ask: string | null): AnswerDraft => ({
 	others: {},
 });
 
+const TEXT_FIELD_TAG = /^(INPUT|TEXTAREA)$/;
+
+/** RN's `Text` types omit `tabIndex`; RN-web honours it. `-1` makes the line
+ *  addressable (so `focus()` lands) without making it a Tab stop, and a phone
+ *  ignores it — spread, the way the home splash does it. */
+const WEB_FOCUSABLE = { tabIndex: -1 } as const;
+
+/** Move the reader's place to a node: keyboard focus on the web (a
+ *  `tabIndex={-1}` line takes it without becoming a Tab stop), the screen
+ *  reader's cursor on a phone. NEVER while a text field has the caret — a
+ *  reader typing the next answer keeps their place, the same rule the home
+ *  screen follows after its own retry. */
+const moveReadingPlace = (node: Text) => {
+	if (Platform.OS === "web") {
+		const held = document.activeElement;
+		if (held instanceof HTMLElement && TEXT_FIELD_TAG.test(held.tagName))
+			return;
+		(node as unknown as HTMLElement).focus({ preventScroll: true });
+		return;
+	}
+	if (TextInput.State.currentlyFocusedInput() != null) return;
+	const handle = findNodeHandle(node);
+	if (handle !== null) AccessibilityInfo.setAccessibilityFocus(handle);
+};
+
+/** The open ask's card: the surface the relay page draws the same ask on, and
+ *  the unit the sheet scrolls to. Opening the sheet or walking on to the next ask
+ *  mounts a new card, which asks the sheet to put ITS top under the header —
+ *  once per ask, so a field growing under the reader's caret never drags the
+ *  page back to the top. */
+const AskCard = ({
+	askId,
+	children,
+}: {
+	askId: string;
+	children: ReactNode;
+}) => {
+	const scroll = useSheetBodyScroll();
+	const cardRef = useRef<View | null>(null);
+	const scrolledFor = useRef<string | null>(null);
+	return (
+		<View
+			ref={cardRef}
+			onLayout={() => {
+				if (scrolledFor.current === askId) return;
+				scrolledFor.current = askId;
+				scroll?.scrollToBlock(cardRef.current);
+			}}
+			className="gap-1.5 rounded-md bg-surface p-2.5"
+		>
+			{children}
+		</View>
+	);
+};
+
 /** The expanded detail of ONE ask: its questions and controls, drawn INSIDE
- *  the sheet's scroll region. THE VERBS ARE NOT HERE — `Answer`/`Decline`, and
- *  the refusal line, live in the sheet's pinned footer (`Sheet.footer`),
+ *  the sheet's scroll region. THE VERBS ARE NOT HERE — `Send answer`/`Decline`/
+ *  `Dismiss…`, the progress line and the refusal line, live in the sheet's pinned footer (`Sheet.footer`),
  *  because a control that answers the sheet must not scroll: measured on
  *  iphone-se the actions sat wholly below the fold, and the door adds ~55 pt
  *  more (design D2; the kit's three-region rule, `Sheet`'s own doc). The draft
@@ -521,6 +668,8 @@ const AskDetail = ({
 	onAnswer,
 	onOtherChange,
 	onToggleSkip,
+	focusQuestion,
+	onFocused,
 }: {
 	row: PendingAsk;
 	questions: readonly AskQuestion[];
@@ -530,6 +679,11 @@ const AskDetail = ({
 	onAnswer: (id: string, next: string[]) => void;
 	onOtherChange: (id: string, next: AskOther) => void;
 	onToggleSkip: (id: string) => void;
+	/** Move the reader's place to this ask's first question once, when it has
+	 *  just become the open one after a send — set by the sheet, cleared by
+	 *  `onFocused`. */
+	focusQuestion?: boolean;
+	onFocused?: () => void;
 }) => {
 	/* The sheet's scroll bridge: null when this list renders outside a sheet (a
 	 *  test, the settled card), in which case focus simply does not scroll. */
@@ -538,6 +692,23 @@ const AskDetail = ({
 	 *  focus can name the question it belongs to: the block is the anchor when the
 	 *  whole question fits, the field itself when it does not. */
 	const blockRefs = useRef(new Map<string, View | null>());
+	/* The first question's own text: where a screen reader's place (web: keyboard
+	 *  focus) lands when the sheet walks on to this ask after a send, so the next
+	 *  question is the next thing read instead of focus falling to the dead
+	 *  buttons the last card left behind. */
+	const firstQuestionRef = useRef<Text | null>(null);
+	useEffect(() => {
+		if (!focusQuestion) return;
+		/* A frame later: the card has only just mounted in this commit, and a
+		 *  screen reader asked to focus a node the platform has not laid out yet
+		 *  ignores the request. */
+		const frame = requestAnimationFrame(() => {
+			const node = firstQuestionRef.current;
+			if (node !== null) moveReadingPlace(node);
+			onFocused?.();
+		});
+		return () => cancelAnimationFrame(frame);
+	}, [focusQuestion, onFocused]);
 	const status = String(row.status || "open");
 	const answerable = isAnswerable(status);
 	/* `expired` draws its fields (the reader still sees what was asked) but
@@ -589,7 +760,11 @@ const AskDetail = ({
 									{position}/{questions.length}
 								</Text>
 							) : null}
-							<Text className="text-body font-medium text-ink">
+							<Text
+								ref={index === 0 ? firstQuestionRef : undefined}
+								{...WEB_FOCUSABLE}
+								className="text-body font-medium text-ink"
+							>
 								{question.question}
 							</Text>
 							<QuestionField
@@ -656,7 +831,11 @@ const AskDetail = ({
 								{index + 1}/{asked.length}
 							</Text>
 						) : null}
-						<Text className="min-w-0 flex-1 text-body-sm text-ink-muted">
+						<Text
+							ref={index === 0 ? firstQuestionRef : undefined}
+							{...WEB_FOCUSABLE}
+							className="min-w-0 flex-1 text-body-sm text-ink-muted"
+						>
 							{question.question}
 						</Text>
 					</View>
@@ -798,6 +977,16 @@ export const AsksSheet = ({
 		);
 	}, [draft, draftKey, expansionQuestions]);
 	const [pendingAction, setPendingAction] = useState<PendingAction>(null);
+	/** The ask whose dismissal is asking WHY (the reasons replace the footer's
+	 *  buttons). Keyed to the ask, so the panel can never carry over to the next
+	 *  one when the walk moves on. */
+	const [dismissingAsk, setDismissingAsk] = useState<string | null>(null);
+	/** Which reason was pressed, so the row keeps its words and gains the
+	 *  in-flight mark while its sibling dims. */
+	const [sentReason, setSentReason] = useState<DismissReason | null>(null);
+	/** The ask the screen reader's place should move to once it is the open
+	 *  card — set by a successful settle, taken by `AskDetail`. */
+	const [focusAsk, setFocusAsk] = useState<string | null>(null);
 	const [rowError, setRowError] = useState<{
 		askId: string;
 		message: string;
@@ -889,6 +1078,7 @@ export const AsksSheet = ({
 		if (opening) {
 			dispatchExpansion({ type: "opening", initial: initialOpenAsk });
 			setRowError(null);
+			setDismissingAsk(null);
 		}
 		void load().then((ok) => {
 			/* Only the read that OPENED the sheet reports its failure (see
@@ -964,10 +1154,14 @@ export const AsksSheet = ({
 
 	/* The head first, then the wire's own order — the order the bar names. */
 	const listed = useMemo(() => orderedForDisplay(shownRows), [shownRows]);
+	/* Everything that still shows a card, then the settled asks under "Earlier":
+	 *  an answered ask must never sit between the open card's options and the
+	 *  pinned buttons (ask-panel parity §2). */
+	const bands = useMemo(() => askBands(shownRows), [shownRows]);
 
 	/* The expanded ask and its form facts. Both regions read these — the body
 	 *  (`AskDetail`) draws the questions, the footer draws the verbs — so the
-	 *  `Answer` gate and the submitted body cannot disagree about the same
+	 *  `Send answer` gate and the submitted body cannot disagree about the same
 	 *  draft. */
 	const openRow = useMemo(
 		() => listed.find((row) => row.ask_id === openAsk) ?? null,
@@ -1022,6 +1216,30 @@ export const AsksSheet = ({
 	const openComplete =
 		openQuestions.length > 0 &&
 		openQuestions.every((question) => openFilled(question));
+	/* WHY Send IS GREY, said in words (2026-11-22 spec §3.4): a disabled button
+	 *  alone gives the reader no reason. Only while the form is incomplete and
+	 *  nothing is in flight — a busy button is dimmed for a different reason. */
+	const progress =
+		openAnswerable && openBusy === null
+			? askProgress({
+					total: openAllQuestions.length,
+					unfilled: openQuestions.filter((question) => !openFilled(question))
+						.length,
+					hasOptions: (openQuestions[0]?.options ?? []).length > 0,
+				})
+			: null;
+	const progressLine =
+		progress === null
+			? null
+			: progress.kind === "tally"
+				? t("mobile.asks.progress.tally", {
+						answered: progress.answered,
+						total: progress.total,
+					})
+				: progress.kind === "pick_or_type"
+					? t("mobile.asks.progress.pick_or_type")
+					: t("mobile.asks.progress.type");
+	const reasonsOpen = openRow !== null && dismissingAsk === openRow.ask_id;
 	/* The atomic submit: one body for EVERY question of the ask (the queue
 	 *  refuses a partial map), a skipped question riding as the empty list.
 	 *  Built by `asks.ts`'s ONE composition, so the `Other` door's typed text
@@ -1050,6 +1268,7 @@ export const AsksSheet = ({
 			kind: SettleKind,
 			row: PendingAsk,
 			body?: { answers: Record<string, string[]> },
+			reason?: DismissReason,
 		) => {
 			if (client === null || pendingAction !== null) return;
 			const sessionId = String(row.session_id || currentSessionId || "");
@@ -1064,6 +1283,15 @@ export const AsksSheet = ({
 			 *  hidden still leaves a path (a stale footer, a re-render race) for an
 			 *  answer the other surfaces never send (D10). */
 			if (!askActions(String(row.status || "open"))[kind]) return;
+			/* A waiting ask is dismissed WITH a reason or not at all: the agent is
+			 *  still owed an answer, and it is told why none is coming. A lapsed one
+			 *  carries none (`dismissNeedsReason`). */
+			if (
+				kind === "dismiss" &&
+				dismissNeedsReason(String(row.status || "open")) &&
+				reason === undefined
+			)
+				return;
 			setPendingAction({ askId: row.ask_id, kind });
 			setRowError(null);
 			try {
@@ -1079,9 +1307,12 @@ export const AsksSheet = ({
 						ask_id: row.ask_id,
 					});
 				} else {
+					/* The reason rides only when there is one, so a lapsed ask's body
+					 *  stays the shape every older daemon accepts. */
 					await client.command(sessionId, {
 						op: "ask_dismiss",
 						ask_id: row.ask_id,
+						...(reason === undefined ? {} : { reason }),
 					});
 				}
 				/* Recorded BEFORE the re-read: the frame that lands under it may still
@@ -1095,6 +1326,8 @@ export const AsksSheet = ({
 				 *  counts (UX r1 U1). */
 				const next = nextActionableAsk(shownRows, row.ask_id);
 				dispatchExpansion({ type: "pick", ask: next ? next.ask_id : null });
+				setDismissingAsk(null);
+				setFocusAsk(next ? next.ask_id : null);
 				await load();
 			} catch (failure) {
 				setRowError({ askId: row.ask_id, message: refusalText(failure) });
@@ -1110,10 +1343,208 @@ export const AsksSheet = ({
 	const settleFromFooter = (
 		kind: SettleKind,
 		body?: { answers: Record<string, string[]> },
+		reason?: DismissReason,
 	) => {
 		if (openRow === null || openBusy !== null) return;
-		void settle(kind, openRow, body);
+		void settle(kind, openRow, body, reason);
 	};
+
+	/* ---- the pieces the body is drawn from ---- */
+
+	/** What a row's lines are drawn from, in one place so the card and the
+	 *  collapsed row cannot read the same ask two ways. */
+	const factsOf = (row: PendingAsk) => {
+		const status = String(row.status || "open");
+		const sessionId = String(row.session_id || currentSessionId || "");
+		return {
+			status,
+			sessionId,
+			foreign: sessionId !== "" && sessionId !== currentSessionId,
+			stateLine: askStateLine(row, nowMs),
+			left: Number(row.expires_at) - nowMs,
+			urgent: Boolean(row.urgent) && isAnswerable(status),
+		};
+	};
+
+	/* The audit's `timed-out-mixed` cell proves the state from this zero-size
+	 *  anchor — an EXTRA id on the row, the `transcript-streaming` shape, so the
+	 *  row's own id stays stable as the ask changes hands with time. */
+	const timedOutAnchor = (row: PendingAsk) =>
+		String(row.status || "open") === "timed_out" ? (
+			<View testID={timedOutAskRowId(row.ask_id)} aria-hidden />
+		) : null;
+
+	const toggle = (askId: string) => {
+		setDismissingAsk(null);
+		dispatchExpansion({ type: "toggle", ask: askId });
+	};
+
+	/** The ask's own form, questions and receipt, shared by the open card and an
+	 *  expanded "Earlier" row. */
+	const detailOf = (row: PendingAsk) => (
+		<AskDetail
+			row={row}
+			questions={openAllQuestions}
+			fields={openFields}
+			draft={draft}
+			disabled={openDisabled}
+			focusQuestion={focusAsk === row.ask_id}
+			onFocused={() => setFocusAsk(null)}
+			onAnswer={(id, next) =>
+				setDraft((current) => ({
+					...current,
+					answers: { ...current.answers, [id]: next },
+				}))
+			}
+			onOtherChange={(id, next) =>
+				setDraft((current) => ({
+					...current,
+					others: { ...current.others, [id]: next },
+				}))
+			}
+			onToggleSkip={(id) =>
+				setDraft((current) => ({
+					...current,
+					skipped: current.skipped.includes(id)
+						? current.skipped.filter((value) => value !== id)
+						: [...current.skipped, id],
+				}))
+			}
+		/>
+	);
+
+	/** A collapsed ask: ONE line — the state sentence, then the start of the
+	 *  question, then the caret. Tapping opens it and closes the current one. An
+	 *  "Earlier" row expands in place into its receipt (nothing there is pinned,
+	 *  so it can never sit between a card's options and the buttons). */
+	const collapsedRow = (row: PendingAsk, expanded: boolean) => {
+		const facts = factsOf(row);
+		const asked = questionStart(row);
+		return (
+			<View key={row.ask_id} className="gap-1">
+				{facts.foreign ? (
+					<Text className="min-w-0 truncate text-meta text-ink-muted">
+						{names.get(facts.sessionId) ?? facts.sessionId}
+					</Text>
+				) : null}
+				<Pressable
+					accessibilityRole={ROLE.button}
+					accessibilityLabel={
+						asked === ""
+							? facts.stateLine.text
+							: `${facts.stateLine.text}, ${asked}`
+					}
+					accessibilityState={state({ expanded })}
+					onPress={() => toggle(row.ask_id)}
+					testID={askRowId(row.ask_id)}
+					style={{ minHeight: TOUCH_FLOOR }}
+					className="justify-center"
+				>
+					{/* NOT `flex-wrap`: the sentence is the flexible child and the caret
+					 *  never wraps away from it. The caret lives on this one line (design
+					 *  D2 / rubric U-41: its centre within ±4 pt of the line's). */}
+					<View className="flex-row items-baseline gap-x-2">
+						<Text numberOfLines={1} className="min-w-0 flex-1 text-meta">
+							<Text className={askToneInk(facts.stateLine.tone)}>
+								{facts.stateLine.text}
+							</Text>
+							{facts.urgent ? (
+								<Text className="text-ink-dim"> · urgent</Text>
+							) : null}
+							{asked === "" ? null : (
+								<Text className="text-ink-dim"> · {asked}</Text>
+							)}
+						</Text>
+						<Text className="shrink-0 text-meta text-ink-dim" aria-hidden>
+							{expanded ? "▾" : "▸"}
+						</Text>
+					</View>
+				</Pressable>
+				{timedOutAnchor(row)}
+				{expanded ? detailOf(row) : null}
+			</View>
+		);
+	};
+
+	/** The open ask: ONE card — the state line first (a status region, so a
+	 *  change of state is announced), the conversation only when it is another
+	 *  one, then the form, whose first line is the question itself. */
+	const openCard = (row: PendingAsk) => {
+		const facts = factsOf(row);
+		return (
+			<AskCard key={`card-${row.ask_id}`} askId={row.ask_id}>
+				<View
+					role={ROLE.status}
+					testID={askRowId(row.ask_id)}
+					className="flex-row flex-wrap items-baseline gap-x-2"
+				>
+					<Text className={cx("text-meta", askToneInk(facts.stateLine.tone))}>
+						{facts.stateLine.text}
+					</Text>
+					{facts.urgent ? (
+						<Text className="text-meta text-ink-dim">· urgent</Text>
+					) : null}
+				</View>
+				{timedOutAnchor(row)}
+				{facts.foreign ? (
+					<View className="flex-row items-center gap-2">
+						<Text className="min-w-0 flex-1 truncate text-meta text-ink-muted">
+							{names.get(facts.sessionId) ?? facts.sessionId}
+						</Text>
+						{/* The route from a foreign ask to its own conversation, as an
+						 *  outlined icon button with the accessible name "Open
+						 *  conversation" (design D3). A press resolves to the innermost
+						 *  control on both platforms (react-native-web runs only the first
+						 *  PressResponder ancestor's onPress). The parent owns the
+						 *  transition (clear the sheet, then navigate) so the sheet cannot
+						 *  outlive the row it opened. */}
+						{onOpenConversation ? (
+							<IconButton
+								accessibilityLabel="Open conversation"
+								outlined
+								onPress={() =>
+									onOpenConversation(
+										facts.sessionId,
+										/* The destination's asks the reader is looking at now:
+										 *  what a dismissal there is recorded against. */
+										outstandingAsks(shownRows)
+											.filter(
+												(candidate) =>
+													String(candidate.session_id || "") ===
+													facts.sessionId,
+											)
+											.map((candidate) => candidate.ask_id),
+									)
+								}
+								icon={({ color, size }) => (
+									<ArrowUpRight color={color} size={size} />
+								)}
+								testID={CONTROL.askOpenConversation}
+							/>
+						) : null}
+					</View>
+				) : null}
+				{(facts.foreign && row.cwd) || facts.left <= 0 ? (
+					<View className="flex-row flex-wrap items-center gap-x-2">
+						{facts.foreign && row.cwd ? (
+							<Text className="min-w-0 flex-1 truncate text-mono-sm text-ink-dim">
+								{row.cwd}
+							</Text>
+						) : null}
+						{facts.left <= 0 ? (
+							<Text className="font-mono text-meta text-ink-dim">
+								deadline {durationLabel(-facts.left)} ago
+							</Text>
+						) : null}
+					</View>
+				) : null}
+				{detailOf(row)}
+			</AskCard>
+		);
+	};
+
+	const waitingBand = bands.current.filter((row) => row.ask_id !== openAsk);
+	const openInBand = bands.current.find((row) => row.ask_id === openAsk);
 
 	return (
 		<Sheet
@@ -1149,66 +1580,136 @@ export const AsksSheet = ({
 						{openError !== null ? (
 							<Text className="text-body-sm text-danger">{openError}</Text>
 						) : null}
-						{/* The pair only where answering is (or was) the question: live on
-						 *  an open ask, drawn disabled on an expired one so the window's
-						 *  close reads as a state, absent on a lapsed one (D10). */}
-						{openAnswerable || openExpired ? (
-							<View className="flex-row gap-2">
-								<View className="flex-1">
-									<Button
-										label="Answer"
-										onPress={() =>
-											settleFromFooter("respond", { answers: respondBody() })
-										}
-										disabled={openDisabled || !openComplete}
-										loading={openBusy === "respond"}
-										testID={CONTROL.askRespond}
-									/>
-								</View>
-								<View className="flex-1">
-									<Button
-										label="Decline"
-										variant="danger"
-										accessibilityHint="no answer — decide yourself"
-										onPress={() => settleFromFooter("decline")}
-										disabled={openDisabled}
-										loading={openBusy === "decline"}
-										testID={CONTROL.askDecline}
-									/>
-								</View>
+						{reasonsOpen ? (
+							/* WHY, BEFORE A WAITING ASK GOES (the relay card's own door): the
+							 *  agent is still owed an answer, so it is told why none is
+							 *  coming, and nothing is sent until a reason is chosen. The
+							 *  reasons REPLACE the answering pair while they are up, so a
+							 *  reader with a drafted answer cannot read "Answered in chat"
+							 *  as "send my answer" from eight points beside Send. */
+							<View className="gap-1">
+								<Text className="text-meta text-ink-dim">
+									{t("mobile.asks.dismiss_title")}
+								</Text>
+								{DISMISS_REASONS.map((reason) => (
+									<Pressable
+										key={reason}
+										accessibilityRole={ROLE.button}
+										accessibilityState={state({
+											disabled: openBusy !== null,
+											busy: openBusy === "dismiss" && sentReason === reason,
+										})}
+										disabled={openBusy !== null}
+										onPress={() => {
+											setSentReason(reason);
+											settleFromFooter("dismiss", undefined, reason);
+										}}
+										testID={askDismissReasonId(reason)}
+										style={{ minHeight: TOUCH_FLOOR }}
+										className="justify-center rounded-sm px-2 py-1.5"
+									>
+										<Text
+											className={cx(
+												"text-body-sm",
+												openBusy !== null && sentReason !== reason
+													? "text-ink-disabled"
+													: "text-ink",
+											)}
+										>
+											{t(REASON_COPY[reason].label)}
+											{openBusy === "dismiss" && sentReason === reason
+												? " …"
+												: ""}
+										</Text>
+										<Text className="text-meta text-ink-dim">
+											{t(REASON_COPY[reason].note)}
+										</Text>
+									</Pressable>
+								))}
+								<Button
+									label={t("mobile.common.cancel")}
+									variant="quiet"
+									onPress={() => {
+										setDismissingAsk(null);
+										setRowError(null);
+									}}
+									disabled={openBusy !== null}
+									testID={CONTROL.askDismissCancel}
+								/>
 							</View>
-						) : null}
-						{/* Dismiss is a third, quieter action and deliberately not
-						 *  beside Decline: declining ANSWERS the agent ("decide
-						 *  yourself"), while dismissing answers nobody and buys no turn —
-						 *  and it is offered only on a timed-out ask, which is what keeps
-						 *  it from shadowing an in-window answer. */}
-						{openActions.dismiss ? (
-							<Button
-								label="Dismiss"
-								variant="quiet"
-								onPress={() => settleFromFooter("dismiss")}
-								/* Not `openDisabled`: that one is the ANSWER pair's gate and
-								 *  a lapsed ask is not answerable, so only the in-flight
-								 *  guard applies here. */
-								disabled={openBusy !== null}
-								loading={openBusy === "dismiss"}
-								testID={CONTROL.askDismiss}
-							/>
-						) : null}
+						) : (
+							<>
+								{progressLine !== null ? (
+									<Text className="text-meta text-ink-dim">{progressLine}</Text>
+								) : null}
+								{/* The pair only where answering is (or was) the question: live on
+								 *  an open ask, drawn disabled on an expired one so the window's
+								 *  close reads as a state, absent on a lapsed one (D10). */}
+								{openAnswerable || openExpired ? (
+									<View className="flex-row gap-2">
+										<View className="flex-1">
+											<Button
+												label={
+													openAllQuestions.length > 1
+														? t("mobile.asks.send_answers")
+														: t("mobile.asks.send_answer")
+												}
+												onPress={() =>
+													settleFromFooter("respond", {
+														answers: respondBody(),
+													})
+												}
+												disabled={openDisabled || !openComplete}
+												loading={openBusy === "respond"}
+												testID={CONTROL.askRespond}
+											/>
+										</View>
+										<View className="flex-1">
+											<Button
+												label={t("mobile.asks.decline")}
+												variant="danger"
+												accessibilityHint="no answer — decide yourself"
+												onPress={() => settleFromFooter("decline")}
+												disabled={openDisabled}
+												loading={openBusy === "decline"}
+												testID={CONTROL.askDecline}
+											/>
+										</View>
+									</View>
+								) : null}
+								{/* Dismiss is a third, quieter action and deliberately not
+								 *  beside Decline: declining ANSWERS the agent ("decide
+								 *  yourself"), while dismissing answers nobody and buys no turn.
+								 *  A WAITING ask's door asks why first (hence the ellipsis); a
+								 *  LAPSED one goes at once — the agent already walked past it. */}
+								{openActions.dismiss ? (
+									<Button
+										label={
+											dismissNeedsReason(openStatus)
+												? t("mobile.asks.dismiss_open")
+												: t("mobile.asks.dismiss")
+										}
+										variant="quiet"
+										onPress={() =>
+											dismissNeedsReason(openStatus)
+												? setDismissingAsk(openRow.ask_id)
+												: settleFromFooter("dismiss")
+										}
+										/* Not `openDisabled`: that one is the ANSWER pair's gate and
+										 *  a lapsed ask is not answerable, so only the in-flight
+										 *  guard applies here. */
+										disabled={openBusy !== null}
+										loading={openBusy === "dismiss"}
+										testID={CONTROL.askDismiss}
+									/>
+								) : null}
+							</>
+						)}
 					</View>
 				) : undefined
 			}
 		>
-			<View className="gap-1" testID={SURFACE.asksSheetBody}>
-				{/* §1.4's honesty line, ALWAYS first (§5): the app cannot alert while
-				 *  closed, and a queue surface that let a reader believe otherwise
-				 *  would be the one lie this design exists to refuse. Dim ink on
-				 *  purpose — it is context, not a warning. */}
-				<Text className="text-meta text-ink-dim">
-					This app shows queued questions while it is open. It cannot reach you
-					while it is closed.
-				</Text>
+			<View className="gap-2" testID={SURFACE.asksSheetBody}>
 				{/* The bounded read naming its own bound: a prefix must never sit
 				 *  beside a full count and read as complete. No numeral: the aggregate
 				 *  route is uncapped, so any figure here would borrow the projection
@@ -1229,14 +1730,26 @@ export const AsksSheet = ({
 				 *  the rows down by its height (and none would have moved below them) -
 				 *  accepted, because the common failure is a short seeded queue that fits
 				 *  its detent, and a line scrolled out of sight would hide the failure.
-				 *  Its copy is scoped to the list while rows are drawn (`readFailureNotice`). */}
+				 *  Its copy is scoped to the list while rows are drawn (`readFailureNotice`).
+				 *  "Try again" re-runs the same read; the rows stay where they are. */}
 				{error !== "" ? (
-					<Text
-						className="text-body-sm text-danger"
-						testID={SURFACE.asksSheetError}
-					>
-						{readFailureNotice(error, shownRows.length)}
-					</Text>
+					<View className="gap-1">
+						<Text
+							className="text-body-sm text-danger"
+							testID={SURFACE.asksSheetError}
+						>
+							{readFailureNotice(error, shownRows.length)}
+						</Text>
+						<View className="self-start">
+							<Button
+								label={t("mobile.common.try_again")}
+								variant="quiet"
+								size="sm"
+								onPress={() => void load()}
+								testID={CONTROL.asksReadRetry}
+							/>
+						</View>
+					</View>
 				) : null}
 				{/* The loading line is not decoration: without it the sheet paints
 				 *  its empty state while the read is still in flight, so "nothing
@@ -1257,151 +1770,37 @@ export const AsksSheet = ({
 						No questions are queued. The agent keeps working without you.
 					</Text>
 				) : null}
-				{listed.map((row) => {
-					const status = String(row.status || "open");
-					const sessionId = String(row.session_id || currentSessionId || "");
-					const foreign = sessionId !== "" && sessionId !== currentSessionId;
-					const stateLine = askStateLine(row, nowMs);
-					const left = Number(row.expires_at) - nowMs;
-					const urgent = row.urgent && isAnswerable(status);
-					const expanded = openAsk === row.ask_id;
-					return (
-						<View key={row.ask_id} className="gap-1">
-							{foreign ? (
-								<Text className="min-w-0 truncate text-meta text-ink-muted">
-									{names.get(sessionId) ?? sessionId}
-								</Text>
-							) : null}
-							<Pressable
-								accessibilityRole={ROLE.button}
-								accessibilityLabel={stateLine.text}
-								accessibilityState={state({ expanded })}
-								onPress={() =>
-									dispatchExpansion({ type: "toggle", ask: row.ask_id })
-								}
-								testID={askRowId(row.ask_id)}
-								style={{ minHeight: TOUCH_FLOOR }}
-								className="justify-center"
-							>
-								{/* NOT `flex-wrap`: the sentence is the flexible child and the
-								 *  caret never wraps away from it (see the caret's note). */}
-								<View className="flex-row items-baseline gap-x-2">
-									<Text
-										className={cx(
-											"min-w-0 flex-1 text-meta",
-											askToneInk(stateLine.tone),
-										)}
-									>
-										{stateLine.text}
-									</Text>
-									{urgent ? (
-										<Text className="shrink-0 text-meta text-ink-dim">
-											· urgent
-										</Text>
-									) : null}
-									{/* THE DISCLOSURE CARET LIVES ON THE FIRST LINE, trailing (design
-									 *  D2 / rubric U-41: its centre within ±4 pt of the FIRST line's).
-									 *  It used to sit on the meta line below, which for a row of THIS
-									 *  conversation has nothing else on it - so it rendered as a stray
-									 *  6x17 glyph 17 px under the sentence, alone on its own line,
-									 *  and an auto-opened sheet shows exactly such rows first. */}
-									<Text className="shrink-0 text-meta text-ink-dim" aria-hidden>
-										{expanded ? "▾" : "▸"}
-									</Text>
-								</View>
-								{/* The meta line exists only when it has something to carry; an
-								 *  empty one would add a blank 'gap' row beneath the sentence. */}
-								{(foreign && row.cwd) ||
-								left <= 0 ||
-								(foreign && onOpenConversation) ? (
-									<View className="flex-row flex-wrap items-center gap-x-2">
-										{foreign && row.cwd ? (
-											<Text className="min-w-0 flex-1 truncate text-mono-sm text-ink-dim">
-												{row.cwd}
-											</Text>
-										) : null}
-										{left <= 0 ? (
-											<Text className="font-mono text-meta text-ink-dim">
-												deadline {durationLabel(-left)} ago
-											</Text>
-										) : null}
-										{/* The route from a foreign ask to its own conversation, as the
-										 *  META line's trailing control — below the sentence that says what
-										 *  the ask is, in a real control's shape (design D3). As a bare
-										 *  "open" word it collided with the status vocabulary, sat ABOVE
-										 *  the sentence, and was transparent; an outlined icon button with
-										 *  the accessible name "Open conversation" replaces all three. A
-										 *  press resolves to the innermost control on both platforms
-										 *  (react-native-web runs only the first PressResponder
-										 *  ancestor's onPress), so this cannot also toggle the row's
-										 *  expansion. The parent owns the transition (clear the sheet,
-										 *  then navigate) so the sheet cannot outlive the row it opened. */}
-										{foreign && onOpenConversation ? (
-											<IconButton
-												accessibilityLabel="Open conversation"
-												outlined
-												onPress={() =>
-													onOpenConversation(
-														sessionId,
-														/* The destination's asks the reader is looking at
-														 *  now: what a dismissal there is recorded against. */
-														outstandingAsks(shownRows)
-															.filter(
-																(candidate) =>
-																	String(candidate.session_id || "") ===
-																	sessionId,
-															)
-															.map((candidate) => candidate.ask_id),
-													)
-												}
-												icon={({ color, size }) => (
-													<ArrowUpRight color={color} size={size} />
-												)}
-												testID={CONTROL.askOpenConversation}
-											/>
-										) : null}
-									</View>
-								) : null}
-							</Pressable>
-							{/* The audit's `timed-out-mixed` cell proves the state from
-							 *  this zero-size anchor — an EXTRA id on the row, the
-							 *  `transcript-streaming` shape, so the row's own id stays
-							 *  stable as the ask changes hands with time. */}
-							{status === "timed_out" ? (
-								<View testID={timedOutAskRowId(row.ask_id)} aria-hidden />
-							) : null}
-							{expanded ? (
-								<AskDetail
-									row={row}
-									questions={openAllQuestions}
-									fields={openFields}
-									draft={draft}
-									disabled={openDisabled}
-									onAnswer={(id, next) =>
-										setDraft((current) => ({
-											...current,
-											answers: { ...current.answers, [id]: next },
-										}))
-									}
-									onOtherChange={(id, next) =>
-										setDraft((current) => ({
-											...current,
-											others: { ...current.others, [id]: next },
-										}))
-									}
-									onToggleSkip={(id) =>
-										setDraft((current) => ({
-											...current,
-											skipped: current.skipped.includes(id)
-												? current.skipped.filter((value) => value !== id)
-												: [...current.skipped, id],
-										}))
-									}
-								/>
-							) : null}
-						</View>
-					);
-				})}
+				{/* THE OPEN ASK, FIRST: one card, whichever position the queue holds
+				 *  it in — the reader opened it to read it, and it is the one the
+				 *  pinned buttons answer. */}
+				{openInBand === undefined ? null : openCard(openInBand)}
+				{/* The other asks still waiting (or lapsed), one line each. */}
+				{waitingBand.map((row) => collapsedRow(row, false))}
+				{/* SETTLED ASKS go under their own heading, below everything that
+				 *  still waits: they used to sit between the options and the buttons. */}
+				{bands.earlier.length > 0 ? (
+					<>
+						<Text
+							accessibilityRole={ROLE.header}
+							className="pt-2 text-meta font-medium text-ink-muted"
+						>
+							{t("mobile.asks.earlier")}
+						</Text>
+						{bands.earlier.map((row) =>
+							collapsedRow(row, openAsk === row.ask_id),
+						)}
+					</>
+				) : null}
+				{/* §1.4's honesty line, now LAST (ask-panel parity, Ben 2026-11-23; it
+				 *  used to lead the sheet, per §5): the app cannot alert while closed, and a
+				 *  queue surface that let a reader believe otherwise would be the one
+				 *  lie this design exists to refuse. It stays on the sheet, but it is
+				 *  context, not the first thing a reader meets — the question is. Dim
+				 *  ink on purpose; it is not a warning. */}
+				<Text className="text-meta text-ink-dim">
+					This app shows queued questions while it is open. It cannot reach you
+					while it is closed.
+				</Text>
 			</View>
 		</Sheet>
 	);

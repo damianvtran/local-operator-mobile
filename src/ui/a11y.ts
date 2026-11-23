@@ -429,6 +429,10 @@ export const CONTROL = {
 	askRespond: "ask-respond",
 	askDecline: "ask-decline",
 	askDismiss: "ask-dismiss",
+	/** Back out of the reasons a waiting ask's dismissal asks for. */
+	askDismissCancel: "ask-dismiss-cancel",
+	/** Re-run the asks sheet's failed read. */
+	asksReadRetry: "asks-read-retry",
 	askOpenConversation: "ask-open-conversation",
 	settingsTunnelCancel: "settings-tunnel-cancel",
 	settingsBack: "settings-back",
@@ -2613,6 +2617,12 @@ export const homeIdentityRowId = (
 	band: "recent" | "main" = "main",
 ): string =>
 	`home-identity-${band === "recent" ? "recent-" : ""}${kind}-${name}`;
+
+/** One reason row of a waiting ask's dismissal (`moot` | `answered_in_chat`),
+ *  keyed by the reason the wire carries so a flow picks one without counting
+ *  rows. */
+export const askDismissReasonId = (reason: string): string =>
+	`ask-dismiss-reason-${reason}`;
 
 /** One question of a multi-question ask: `ask-question-<n>-of-<total>`. */
 export const askQuestionId = (index: number, total: number): string =>

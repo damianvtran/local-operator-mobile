@@ -445,6 +445,52 @@ export const cardClasses = (options: { inList?: boolean } = {}): string =>
 	);
 
 /**
+ * One option row of an ask's answer form (ask-panel parity N2): a tinted fill
+ * with an accent left edge, the same object on the relay page.
+ *
+ * - Rest: `accent-wash` fill, 2 pt `accent` edge. Pressed: `accent-muted`.
+ * - Selected: `accent-muted` fill, 4 pt edge — and the caller draws a trailing
+ *   check mark, because a 2 pt wider edge and a one-step fill change are
+ *   colour and weight alone (the ✓ is what makes the selection survive
+ *   greyscale; it is this slice's addition, not an existing kit rule).
+ * - Disabled is a colour change (`sunken`, `ink-disabled`), never an opacity
+ *   change (components.md § 0). A SELECTED row that goes disabled while the
+ *   answer is in flight keeps its selected look: the reader must still see
+ *   which answer is being sent.
+ * - Ink: `ink` on `accent-wash` is 14.36:1 light / 13.36:1 dark and on
+ *   `accent-muted` 12.51:1 / 10.73:1; the description's `ink-dim` is 5.40 /
+ *   5.95 on wash and 4.70 / 4.77 on muted, so every text pair clears 4.5:1.
+ *   The plain `accent` role would NOT as check ink on `accent-muted` in light
+ *   (4.22:1) — the caller reads `accent-hover` (5.75 light / 6.69 dark).
+ * - The slot is 4 pt wide in every state so the label never shifts when the
+ *   edge thickens.
+ */
+export const choiceRowClasses = (state: ControlState = {}) => {
+	const { selected = false, pressed = false, disabled = false } = state;
+	const dimmed = disabled && !selected;
+	return {
+		row: cx(
+			"flex-row items-stretch overflow-hidden rounded-sm",
+			selected
+				? "bg-accent-muted"
+				: dimmed
+					? "bg-sunken"
+					: pressed
+						? "bg-accent-muted"
+						: "bg-accent-wash",
+		),
+		edgeSlot: "w-1 self-stretch",
+		edge: cx(
+			"flex-1",
+			selected ? "w-1" : "w-0.5",
+			dimmed ? "bg-hairline-strong" : "bg-accent",
+		),
+		label: dimmed ? "text-ink-disabled" : "text-ink",
+		note: dimmed ? "text-ink-disabled" : "text-ink-dim",
+	};
+};
+
+/**
  * A tappable card that navigates or selects: a computer on Computers, the Team
  * Bridge entry. One family so the two read as the same kind of object, and both
  * as something to press (TestFlight 883, Ola: "It was not obvious that this was
