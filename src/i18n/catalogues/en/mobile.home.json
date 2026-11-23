@@ -53,9 +53,7 @@
 	"mobile.home.startup_queue.not_started": "Not started",
 	"mobile.home.startup_queue.sending": "Sending queued messages…",
 	"mobile.home.startup_queue.unconfirmed": "Start not confirmed",
-	"mobile.home.suggestion.last_turn": "Show me the last turn",
 	"mobile.home.suggestion.linear_mcp": "Set up Linear MCP",
-	"mobile.home.suggestion.phone_access": "Turn on phone access",
 	"mobile.home.suggestion.review_repo": "Review this repo",
 	"mobile.home.suggestion.team_of_agents": "Create a team of agents",
 	"mobile.home.suggestion.wake_summary": "Wake me with a summary",
@@ -90,5 +88,10 @@
 	"mobile.home.identity.refused_fallback": "{name} couldn't be started on this computer. Choose another, or use the default agent.",
 	"mobile.home.identity.refused_unlicensed": "This computer can't start a chat with {name} right now. Choose the default agent to send.",
 	"mobile.home.identity.refused_connecting": "This computer is still connecting, so nothing was started yet. Tap your message to put it back, then send it again in a moment to start with {name}.",
-	"mobile.home.identity.announce_picked": "This chat will start with {name}"
+	"mobile.home.identity.announce_picked": "This chat will start with {name}",
+	"mobile.home.work.needs_you": "Needs you",
+	"mobile.home.work.recent": "Recent",
+	"mobile.home.work.try": "Try",
+	"mobile.home.work.all_conversations": "All conversations",
+	"mobile.home.work.all_conversations_new": "All conversations, {count, plural, one {# new conversation} other {# new conversations}}"
 }

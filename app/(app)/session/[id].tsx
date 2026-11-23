@@ -1125,6 +1125,8 @@ function Session() {
 					pending={pendingRows}
 					sendMark={composer.sendMark}
 					streamingRowId={runtime.streamingRowId}
+					streamArrivalEpoch={runtime.streamArrivalEpoch}
+					streamArrivalTail={runtime.streamArrivalTail}
 					loadImage={runtime.loadImage}
 					loadFile={runtime.loadFile}
 					onOpenAgent={openAgent}
@@ -2118,7 +2120,7 @@ function Session() {
 				visible={asksOpen}
 				onClose={asksSheet.close}
 				initialOpenAsk={asksSheet.initialOpenAsk}
-				seedRows={asksSheet.seedRows}
+				frameRows={asksSheet.frameRows}
 				onReadFailed={asksSheet.readFailed}
 				client={runtime.source.endpoints}
 				currentSessionId={sessionId}

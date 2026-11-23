@@ -40,3 +40,40 @@ describe("the drawer draws the view's cues", () => {
 		expect(SHEET).toContain("titleLines={2}");
 	});
 });
+
+/**
+ * The sheet is a `Modal` INSIDE the drawer's `Modal`, so its footer link must
+ * hand off (close, wait for the sheet's own native dismissal, then leave the
+ * drawer and push) rather than close both in one tick — "More sidebar
+ * settings" left iOS holding a presented controller over Settings that way
+ * (2026-11-22; `sidebar-view-handoff.ts`).
+ *
+ * Asserted over the SOURCE for the same reason as above — rendering this file
+ * needs the `uniwind` chain — while the WIRING itself is run against emulated
+ * native modal hosts in `sidebar-view-handoff.test.tsx`.
+ */
+describe("the View options sheet hands off before it leaves the drawer", () => {
+	it("takes its open state, close, dismissal and navigation from the shared hand-off", () => {
+		expect(SHEET).toContain(
+			'import { useSidebarViewHandoff } from "@/features/sessions/sidebar-view-handoff";',
+		);
+		expect(SHEET).toContain("const sheet = useSidebarViewHandoff();");
+		expect(SHEET).toContain("onPress={sheet.openSheet}");
+		expect(SHEET).toContain("visible={sheet.open}");
+		expect(SHEET).toContain("onClose={sheet.closeSheet}");
+		expect(SHEET).toContain("onDismiss={sheet.onDismiss}");
+		expect(SHEET).toContain("onHidden={sheet.onHidden}");
+		expect(SHEET).toContain("exitInstantly={sheet.exitInstantly}");
+	});
+
+	it("runs the drawer close and the push only from the hand-off's launch", () => {
+		const more = SHEET.indexOf("sheet.moreSettings(");
+		const leave = SHEET.indexOf("onNavigate?.();", more);
+		const push = SHEET.indexOf('router.push("/settings?section=sidebar"', more);
+		expect(more).toBeGreaterThan(0);
+		expect(leave).toBeGreaterThan(more);
+		expect(push).toBeGreaterThan(leave);
+		// The old wiring kept its own open state and closed it beside the push.
+		expect(SHEET).not.toContain("setOpen(");
+	});
+});

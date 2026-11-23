@@ -58,6 +58,10 @@ import {
  */
 export type ListRowProps = {
 	title: string;
+	/** How many lines the title may take. Default 1, which is every list's
+	 *  rule; a caller that has the room opts into 2 (the home's work list at
+	 *  large text, where a one-line title cuts the thing the row is for). */
+	titleLines?: 1 | 2;
 	/** The working directory, already home-shortened by the caller. */
 	cwd?: string;
 	/** Model label, right-aligned on the second line. */
@@ -190,6 +194,7 @@ export const LIST_ROW_STATUS_PLACEMENT = "corner" as ListRowStatusPlacement;
 
 export const ListRow = ({
 	title,
+	titleLines = 1,
 	cwd,
 	model,
 	time,
@@ -534,7 +539,7 @@ export const ListRow = ({
 												? "text-ink-muted"
 												: "text-ink"
 									}`}
-									numberOfLines={1}
+									numberOfLines={titleLines}
 									ellipsizeMode="tail"
 								>
 									{title}
