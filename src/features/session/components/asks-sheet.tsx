@@ -238,6 +238,21 @@ const QuestionField = ({
 	/* One ref for whichever field this question shows: only one is ever mounted,
 	 *  and focus is what makes it the reader's position. */
 	const fieldRef = useRef<TextInput | null>(null);
+	/* A MULTILINE FIELD GROWS UNDER THE CARET, and the reveal ran before the
+	 *  growth: the first evidence frames showed line two of the answer cut by the
+	 *  pinned footer (2-line and 4-line states alike). So growth while the field
+	 *  is focused asks the sheet for the reveal again — the same anchor, measured
+	 *  against the taller field. Only growth triggers it; deleting text does not
+	 *  scroll the page under the reader. */
+	const fieldFocused = useRef(false);
+	const lastFieldHeight = useRef(0);
+	const takeGrowth = (height: number) => {
+		if (!fieldFocused.current) return;
+		if (height <= lastFieldHeight.current + 1) return;
+		lastFieldHeight.current = height;
+		if (fieldRef.current !== null)
+			onFieldFocus?.(fieldRef.current as unknown as View);
+	};
 	/* Set by the DOOR's own press, so the field it just revealed takes the caret —
 	 *  one tap, keyboard up, exactly as the approved prototype behaves (UX r1 U2).
 	 *  A draft restored on reopen arrives with this false, so it comes back
@@ -426,7 +441,16 @@ const QuestionField = ({
 				 *  (Ben, a-5712). */
 				<TextInput
 					ref={fieldRef}
-					onFocus={() => onFieldFocus?.(fieldRef.current as unknown as View)}
+					onFocus={() => {
+						fieldFocused.current = true;
+						onFieldFocus?.(fieldRef.current as unknown as View);
+					}}
+					onBlur={() => {
+						fieldFocused.current = false;
+					}}
+					onContentSizeChange={(event) =>
+						takeGrowth(event.nativeEvent.contentSize.height)
+					}
 					onLayout={takeDoorFocus}
 					autoFocus={doorFocusWanted.current}
 					multiline
