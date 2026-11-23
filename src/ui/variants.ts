@@ -342,6 +342,33 @@ export const fieldBoxStyle = (
 };
 
 /**
+ * The style of a field clipped to EXACTLY ONE text line (the composer's
+ * scroll-made pill, review R3/W3): one line tall at the reader's scale and no
+ * vertical padding. Padding is scrollable area — a box taller than the line shows
+ * the top of line two inside it (web frame: line 2 half visible at 100 %) — and a
+ * box SHORTER than the line cut the glyphs at 200 %, because `textareaContentCap`
+ * for one line (`22 × scale`) is under the line itself (`24 × scale + 16`).
+ * Min, max and height all say the same number so neither the touch floor nor the
+ * cap can move it; the caller centres it in a row sized for the line.
+ */
+export const singleLineFieldStyle = (
+	lineHeight: number,
+): {
+	height: number;
+	minHeight: number;
+	maxHeight: number;
+	paddingVertical: number;
+	overflow: "hidden";
+} => ({
+	height: lineHeight,
+	minHeight: lineHeight,
+	maxHeight: lineHeight,
+	paddingVertical: 0,
+	/* Web paints a scrollbar on a `<textarea>` whose draft is longer than its box. */
+	overflow: "hidden",
+});
+
+/**
  * Whether the field may scroll. Web keeps the content-report decision
  * (`fieldScrollsWithContent`) because it also drives the `overflow` CSS there.
  * Native cannot use it: past the cap the box stops moving, so — for the reason

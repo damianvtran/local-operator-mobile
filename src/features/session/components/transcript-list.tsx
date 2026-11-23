@@ -1420,7 +1420,11 @@ export const TranscriptList = ({
 			presence?.noteMovement(contentOffset.y);
 			/* Every offset, the tail pin's included: the signal itself shrinks only
 			 *  inside a reader's drag and records the rest as a distance. */
-			compaction?.noteOffset(contentOffset.y, distance);
+			compaction?.noteOffset(
+				contentOffset.y,
+				distance,
+				layoutMeasurement.height,
+			);
 			driveFades();
 			recompute();
 		},

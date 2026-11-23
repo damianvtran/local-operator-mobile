@@ -12,14 +12,19 @@ import {
 	COMPOSER_REST_ROW,
 	composerFieldRowAlign,
 	composerPaintedHeight,
+	composerPillRow,
 	composerPinsCard,
 	composerPresentation,
 	composerRestInsets,
 	composerShellPadding,
 	composerShellRadius,
 	controlsTrailing,
+	dictationDropsSend,
+	dockMotionStyle,
+	fieldSelectionOverride,
 	keyboardOverlap,
 	morphPillRadius,
+	pillShowsSend,
 	seedFor,
 } from "./composer-presentation";
 
@@ -370,5 +375,185 @@ describe("scroll-compacted pill", () => {
 		const dock = worklets.slice(0, worklets.indexOf("const dangerInk"));
 		expect(dock).not.toContain("composerPinsCard");
 		expect(dock).not.toContain("composerPresentation(");
+	});
+});
+
+/* PR #384 review round 1 + web frames. */
+describe("the dock's animated margins (W2)", () => {
+	it("animate marginLeft/marginRight, never the marginHorizontal shorthand", () => {
+		/* Reanimated's web driver writes the style onto the element; the shorthand
+		 *  is no CSS property, so only the first render's 12 ever painted. */
+		const style = dockMotionStyle(0, 0, COMPOSER_PILL_MARGIN);
+		expect(Object.keys(style).sort()).toEqual([
+			"marginBottom",
+			"marginLeft",
+			"marginRight",
+		]);
+		expect(style).not.toHaveProperty("marginHorizontal");
+	});
+
+	it("runs 16 -> 12 off progress, both sides equal, and carries the keyboard lift", () => {
+		expect(dockMotionStyle(0, 0, 16)).toEqual({
+			marginBottom: 8,
+			marginLeft: 16,
+			marginRight: 16,
+		});
+		expect(dockMotionStyle(1, 0, 16)).toMatchObject({
+			marginLeft: 12,
+			marginRight: 12,
+		});
+		expect(dockMotionStyle(0.5, 0, 16)).toMatchObject({ marginLeft: 14 });
+		expect(dockMotionStyle(0, 300, 16).marginBottom).toBe(308);
+		/* Short landscape's pill is its resting form: it keeps the card's 12. */
+		expect(dockMotionStyle(0, 0, COMPOSER_CARD_MARGIN)).toMatchObject({
+			marginLeft: 12,
+		});
+	});
+
+	it("is what the dock paints, and the shorthand is gone from it", () => {
+		const component = read("src/features/session/components/composer.tsx");
+		expect(component).toContain("dockMotionStyle(");
+		expect(component).not.toContain("marginHorizontal: morphHeight");
+	});
+});
+
+describe("the pill's row holds the line at large text (W3)", () => {
+	it("is the 48 resting row at 100 % on both floors", () => {
+		expect(composerPillRow(44, 1)).toBe(48);
+		expect(composerPillRow(48, 1)).toBe(48);
+	});
+
+	it("paints exactly what composerPresentation announces, at every scale", () => {
+		for (const floor of [44, 48]) {
+			for (const scale of [1, 1.15, 1.3, 1.5, 2, 3]) {
+				const row = composerPillRow(floor, scale);
+				const painted =
+					composerShellPadding(false).top +
+					row +
+					composerShellPadding(false).bottom;
+				expect(painted, `floor ${floor} scale ${scale}`).toBe(
+					composerPresentation({ ...empty, shrunk: true, floor, scale }).height,
+				);
+				/* The line (24 x scale) plus the field's 8 pt of padding above and
+				 *  below always fits: the glyphs are never cut at the bottom edge. */
+				expect(row).toBeGreaterThanOrEqual(24 * scale + 16);
+			}
+		}
+	});
+
+	it("is 64 at 200 %, so the pill is 72 (was 56 with the glyphs cut)", () => {
+		expect(composerPillRow(48, 2)).toBe(64);
+		expect(
+			composerPresentation({ ...empty, shrunk: true, scale: 2 }).height,
+		).toBe(72);
+	});
+});
+
+describe("the pill shows Send only for a draft with something in it (R6)", () => {
+	it("hides the dead disc for empty and whitespace-only drafts", () => {
+		for (const draft of ["", " ", "     ", "\n\t \n"])
+			expect(pillShowsSend(draft), JSON.stringify(draft)).toBe(false);
+	});
+
+	it("shows it for any other draft", () => {
+		for (const draft of ["a", " a ", "line one\nline two"])
+			expect(pillShowsSend(draft)).toBe(true);
+	});
+
+	it("leaves whitespace a draft for the presentation: nothing is normalised", () => {
+		expect(composerPresentation({ ...empty, draft: "   " }).expanded).toBe(
+			true,
+		);
+		expect(
+			composerPresentation({ ...empty, draft: "   ", shrunk: true }).expanded,
+		).toBe(false);
+	});
+});
+
+describe("a take that starts from the pill drops the dead Send (R2)", () => {
+	it("drops it only for a dictation-only card that began on the pill", () => {
+		expect(
+			dictationDropsSend({ openForDictationOnly: true, startedFromPill: true }),
+		).toBe(true);
+	});
+
+	it("keeps the card's own layout when the take began on the card (U2/U7 stay true)", () => {
+		expect(
+			dictationDropsSend({
+				openForDictationOnly: true,
+				startedFromPill: false,
+			}),
+		).toBe(false);
+	});
+
+	it("never drops it for a card open for its own reasons", () => {
+		for (const startedFromPill of [true, false])
+			expect(
+				dictationDropsSend({ openForDictationOnly: false, startedFromPill }),
+			).toBe(false);
+	});
+
+	it("leaves the trailing-slot rule alone: mic or finish, in the slot Send vacates", () => {
+		expect(
+			controlsTrailing({
+				openForDictationOnly: true,
+				recording: false,
+				micShown: true,
+			}),
+		).toBe("mic");
+		expect(
+			controlsTrailing({
+				openForDictationOnly: true,
+				recording: true,
+				micShown: true,
+			}),
+		).toBe("finish");
+	});
+
+	it("is wired: the mic press records where it began and the card arm honours it", () => {
+		const component = read("src/features/session/components/composer.tsx");
+		expect(component).toContain("onPress={pressMic}");
+		expect(component).toContain("dropSendForDictation ? null : actionCluster");
+	});
+});
+
+describe("the field's selection while the pill stands (R3)", () => {
+	it("holds the caret at the start so the first line is the one in view", () => {
+		expect(
+			fieldSelectionOverride({ shrunkPill: true, restoreCaretAt: null }),
+		).toEqual({ start: 0, end: 0 });
+		/* The pill wins over a pending restore: the restore is for the render that
+		 *  focuses the field, by which time the pill is gone. */
+		expect(
+			fieldSelectionOverride({ shrunkPill: true, restoreCaretAt: 9 }),
+		).toEqual({ start: 0, end: 0 });
+	});
+
+	it("puts the caret at the end of the draft for the tap that opens the card", () => {
+		expect(
+			fieldSelectionOverride({ shrunkPill: false, restoreCaretAt: 42 }),
+		).toEqual({ start: 42, end: 42 });
+		expect(
+			fieldSelectionOverride({ shrunkPill: false, restoreCaretAt: 0 }),
+		).toEqual({ start: 0, end: 0 });
+	});
+
+	it("forces nothing otherwise: the skills tray's one-shot is untouched", () => {
+		expect(
+			fieldSelectionOverride({ shrunkPill: false, restoreCaretAt: null }),
+		).toBeNull();
+	});
+
+	it("keeps ONE mounted field with a tap catcher beside it, and never alters value", () => {
+		const component = read("src/features/session/components/composer.tsx");
+		expect(component.match(/<Textarea\b/g)).toHaveLength(1);
+		expect(component).toContain("singleLine={shrunkPill}");
+		/* The skills pass-through stays the default; the override spreads after it. */
+		expect(component).toMatch(
+			/onSelectionChange=\{skills\?\.onSelectionChange\}\s*selection=\{skills\?\.selection\}/,
+		);
+		expect(component).toContain("selection: selectionOverride");
+		expect(component).toContain("CONTROL.composerPillField");
+		expect(component).toContain("value={draft}");
 	});
 });

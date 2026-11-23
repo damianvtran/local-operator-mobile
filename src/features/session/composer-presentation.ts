@@ -304,3 +304,86 @@ export const composerShellRadius = (progress: number, base: number) => {
 	"worklet";
 	return morphHeight(progress, morphPillRadius(base), 24);
 };
+
+/**
+ * The dock's animated margins (review W2). Left and right, NOT `marginHorizontal`:
+ * Reanimated's web driver writes an animated style straight onto the element, and
+ * `marginHorizontal` is a React Native shorthand with no CSS property of its own,
+ * so every frame after the first render was dropped and the pill stayed at the
+ * card's 12 pt (measured: first painted pixel at x = 24 px at 2x). The two longhand
+ * keys are real CSS and real RN, and the margin is symmetric so RTL needs nothing.
+ *
+ * `"worklet"`: called from `useAnimatedStyle` (see `morphPillRadius`).
+ */
+export const dockMotionStyle = (
+	progress: number,
+	keyboardOffset: number,
+	pillMargin: number,
+) => {
+	"worklet";
+	const side = morphHeight(progress, pillMargin, COMPOSER_CARD_MARGIN);
+	return {
+		marginBottom: keyboardOffset + 8,
+		marginLeft: side,
+		marginRight: side,
+	};
+};
+
+/**
+ * The scroll-made pill's ROW height: the 48 resting row, or the one text line at
+ * the reader's scale plus the field's own 8 pt top and bottom padding, whichever
+ * is taller (review W3). The shell's `4 + row + 4` is then exactly the
+ * `ceil(24 * scale + 24)` `composerPresentation` reports, so what is announced is
+ * what is painted. Without it the row stayed the 48 touch floor while the line
+ * doubled at 200 % and the draft was cut at the pill's bottom edge.
+ */
+export const composerPillRow = (
+	floor: number = COMPOSER_FIELD_BOX,
+	scale = 1,
+) => Math.max(composerRestRow(floor), Math.ceil(24 * scale + 16));
+
+/**
+ * Whether the pill shows its Send disc for this draft (review R6). A draft that is
+ * only whitespace has nothing to send, so the pill hides the dead disc the card
+ * keeps for layout stability. A DECISION about the control only: the draft itself
+ * is still a draft, `composerPresentation` still treats whitespace as content, and
+ * nothing here normalises what the reader typed.
+ */
+export const pillShowsSend = (draft: string) => draft.trim().length > 0;
+
+/**
+ * Whether the card that dictation opened drops its dead Send disc (review R2).
+ *
+ * The scroll-made pill has no Send beside an empty field, so its mic is the
+ * right-most control. The card that dictation then pins renders `mic · Send`, which
+ * moved the mic one disc LEFT of the finger that pressed it, over a disabled Send —
+ * and a tap-again-to-finish reader silently did nothing. When the take STARTED FROM
+ * THE PILL the card therefore drops Send, and the mic (or ✓) takes the right-most
+ * slot, the spot the finger is already on. When it started on the card the mic was
+ * already beside Send, so that layout is unchanged (`controlsTrailing`, U2/U7).
+ */
+export const dictationDropsSend = (input: {
+	openForDictationOnly: boolean;
+	startedFromPill: boolean;
+}) => input.openForDictationOnly && input.startedFromPill;
+
+/**
+ * The `selection` the composer forces on its field, or `null` for none (review R3).
+ *
+ * A native text view keeps its scroll offset, so a draft typed over several lines
+ * leaves the pill showing its LAST lines, not the first. While the dock is the pill
+ * the caret is therefore held at the start (`{0, 0}`), which brings the first line
+ * into view without touching `value`. When the reader taps the pill, `restoreCaretAt`
+ * puts the caret at the end of the draft for the one render that focuses it, which
+ * is where a reader returning to a draft expects it. `null` leaves the field the
+ * skills tray's, exactly as before (its one-shot selection, or uncontrolled).
+ */
+export const fieldSelectionOverride = (input: {
+	shrunkPill: boolean;
+	restoreCaretAt: number | null;
+}): { start: number; end: number } | null => {
+	if (input.shrunkPill) return { start: 0, end: 0 };
+	if (input.restoreCaretAt !== null)
+		return { start: input.restoreCaretAt, end: input.restoreCaretAt };
+	return null;
+};

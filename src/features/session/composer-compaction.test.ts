@@ -267,6 +267,131 @@ describe("growing back", () => {
 	});
 });
 
+/* R1 (review round 1). Shrinking hands the list the dock's 56 pt, so the same
+ *  finger position reads 56 pt closer to the tail on the next offset event. The
+ *  tail test is made in the card's frame (raw distance + the viewport growth
+ *  since the flip), so that resize alone can never grow the dock back. */
+describe("the tail test does not feed on the dock's own resize (R1)", () => {
+	const VIEWPORT = 700;
+	const DELTA = 56;
+	/** A drag AWAY from the tail from a reader parked at it, in 4 pt steps, the way
+	 *  the platform reports it. Once the dock shrank, the list is `DELTA` taller:
+	 *  an offset event at the same finger position reads `DELTA` closer. Returns
+	 *  the signal with the finger released and `after` ms elapsed. */
+	const dragAwayFromTail = (net: number, after: number) => {
+		const c = createComposerCompaction();
+		c.noteOffset(1000, 0, VIEWPORT);
+		c.beginDrag(1000);
+		let resized = false;
+		for (let y = 4; y <= net; y += 4) {
+			c.noteOffset(
+				1000 - y,
+				y - (resized ? DELTA : 0),
+				VIEWPORT + (resized ? DELTA : 0),
+			);
+			if (c.readShrunk()) resized = true;
+		}
+		/* The offset event the platform sends once the list has resized. */
+		if (resized) c.noteOffset(1000 - net, net - DELTA, VIEWPORT + DELTA);
+		c.endDrag(0);
+		vi.advanceTimersByTime(after);
+		return c;
+	};
+
+	it("keeps a drag under the shrink distance a card", () => {
+		expect(dragAwayFromTail(20, 1000).readShrunk()).toBe(false);
+	});
+
+	it("keeps a 30–72 pt drag shrunk after the post-resize event, the release and >450 ms", () => {
+		for (const net of [28, 32, 40, 60, 72]) {
+			const c = dragAwayFromTail(net, HOLD_MS + TAIL_DWELL_MS + 1);
+			expect(c.readShrunk(), `drag ${net}`).toBe(true);
+		}
+	});
+
+	it("keeps an 80 pt drag shrunk (it never read as the tail)", () => {
+		expect(dragAwayFromTail(80, 2000).readShrunk()).toBe(true);
+	});
+
+	it("emits the shrink once and no grow for the flicker drags", () => {
+		for (const net of [32, 60, 72]) {
+			const c = createComposerCompaction();
+			const seen = flips(c);
+			c.noteOffset(1000, 0, VIEWPORT);
+			c.beginDrag(1000);
+			let resized = false;
+			for (let y = 4; y <= net; y += 4) {
+				c.noteOffset(
+					1000 - y,
+					y - (resized ? DELTA : 0),
+					VIEWPORT + (resized ? DELTA : 0),
+				);
+				if (c.readShrunk()) resized = true;
+			}
+			c.noteOffset(1000 - net, net - DELTA, VIEWPORT + DELTA);
+			c.endDrag(0);
+			vi.advanceTimersByTime(2000);
+			expect(seen, `drag ${net}`).toEqual([true]);
+			c.dispose();
+		}
+	});
+
+	it("ignores offset events from the resize's own morph (the viewport grows frame by frame)", () => {
+		const c = createComposerCompaction();
+		c.noteOffset(1000, 0, VIEWPORT);
+		c.beginDrag(1000);
+		c.noteOffset(960, 40, VIEWPORT);
+		expect(c.readShrunk()).toBe(true);
+		for (const grown of [14, 28, 42, 56])
+			c.noteOffset(960, 40 - grown, VIEWPORT + grown);
+		c.endDrag(0);
+		vi.advanceTimersByTime(2000);
+		expect(c.readShrunk()).toBe(true);
+	});
+
+	it("still grows when the reader genuinely returns to the tail", () => {
+		/* Dragged 120 pt away (the list is 56 pt taller from here), then dragged
+		 *  back down to the end of the transcript: 64 -> 0 in the pill's viewport. */
+		const c = createComposerCompaction();
+		c.noteOffset(1000, 0, VIEWPORT);
+		c.beginDrag(1000);
+		c.noteOffset(940, 60, VIEWPORT);
+		c.noteOffset(880, 120 - DELTA, VIEWPORT + DELTA);
+		expect(c.readShrunk()).toBe(true);
+		c.endDrag(0);
+		vi.advanceTimersByTime(HOLD_MS);
+		c.beginDrag(880);
+		c.noteOffset(940, 64 - 60, VIEWPORT + DELTA);
+		c.noteOffset(944, 0, VIEWPORT + DELTA);
+		c.endDrag(0);
+		vi.advanceTimersByTime(TAIL_DWELL_MS - 1);
+		expect(c.readShrunk()).toBe(true);
+		vi.advanceTimersByTime(1);
+		expect(c.readShrunk()).toBe(false);
+	});
+
+	it("still grows for a return without lifting the finger, once released", () => {
+		const c = createComposerCompaction();
+		c.noteOffset(1000, 0, VIEWPORT);
+		c.beginDrag(1000);
+		c.noteOffset(900, 100, VIEWPORT);
+		expect(c.readShrunk()).toBe(true);
+		c.noteOffset(900, 100 - DELTA, VIEWPORT + DELTA);
+		c.noteOffset(1000, 0, VIEWPORT + DELTA);
+		c.endDrag(0);
+		vi.advanceTimersByTime(HOLD_MS + TAIL_DWELL_MS);
+		expect(c.readShrunk()).toBe(false);
+	});
+
+	it("reads the raw distance when no viewport is reported", () => {
+		const c = createComposerCompaction();
+		drag(c, { to: 1040 });
+		c.noteOffset(1990, 0);
+		vi.advanceTimersByTime(HOLD_MS + TAIL_DWELL_MS);
+		expect(c.readShrunk()).toBe(false);
+	});
+});
+
 describe("pins", () => {
 	it("refuse a shrink while pinned", () => {
 		const c = createComposerCompaction();
@@ -358,10 +483,15 @@ describe("wiring (source pins: the list and the screen have no renderer test)", 
 			"compaction?.endDrag(",
 			"compaction?.setCoasting(true)",
 			"compaction?.setCoasting(false)",
-			"compaction?.noteOffset(contentOffset.y, distance)",
+			"compaction?.noteOffset(",
 			"compaction?.grow()",
 		])
 			expect(list).toContain(call);
+		/* The viewport rides along: it is what keeps the tail test independent of
+		 *  the dock's own height change (R1). */
+		expect(list).toMatch(
+			/noteOffset\(\s*contentOffset\.y,\s*distance,\s*layoutMeasurement\.height,?\s*\)/,
+		);
 		/* Points per MILLISECOND from the platform, points per second to the policy. */
 		expect(list).toContain("velocity?.y ?? 0) * 1000");
 	});

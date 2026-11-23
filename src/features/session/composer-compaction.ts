@@ -31,11 +31,18 @@
  * reports into it, the Composer subscribes, and the only thing that ever reaches
  * React is the boolean flip.
  *
+ * THE TAIL TEST IS MADE IN THE CARD'S FRAME. Shrinking resizes the list, and a
+ * resize alone moves the reading the dwell rule judges (see `atTail`); the viewport
+ * rides along with every offset so that the dock's own height change can never
+ * satisfy the rule that grows it back.
+ *
  * KNOWN LIMIT — ON WEB THE DOCK NEVER SHRINKS FROM SCROLLING. react-native-web
  * emits only `onScroll` (no drag or momentum events: see `transcript-presence.ts`),
  * so every web offset reads as one the app made. Accepted: the compaction is a
  * touch behaviour. `initialShrunk` is the test seam that lets a web frame render
- * the shrunk state.
+ * the shrunk state. It works on web because the screen-reader gate is OFF there
+ * (`screenReaderSignalUsable`): react-native-web reports a screen reader as always
+ * running, which would otherwise disable the compaction, and the seam with it.
  */
 
 /** A reader's drag that nets this far from where it began, either direction,
@@ -62,8 +69,14 @@ export type ComposerCompaction = {
 	/** The reader's finger went down on the list at this offset. */
 	beginDrag(offsetY: number): void;
 	/** The list scrolled to `offsetY`, `distanceToTail` points short of its end
-	 *  (negative past it). Shrinks only while a drag holds the list. */
-	noteOffset(offsetY: number, distanceToTail: number): void;
+	 *  (negative past it), its viewport `viewportHeight` tall. Shrinks only while a
+	 *  drag holds the list. The viewport is how the tail test stays independent of
+	 *  the dock's own height change (see `atTail`); absent, it reads as unchanged. */
+	noteOffset(
+		offsetY: number,
+		distanceToTail: number,
+		viewportHeight?: number,
+	): void;
 	/** The finger lifted. `velocityPtPerS` is the release velocity (the list
 	 *  reports pt/ms; multiply by 1000), either sign. */
 	endDrag(velocityPtPerS: number): void;
@@ -118,6 +131,19 @@ export function createComposerCompaction(
 	/* Where the current drag began, overscroll removed. */
 	let dragStart: number | null = null;
 	let distance = FAR_PT;
+	/* THE TAIL TEST IN THE CARD'S FRAME (review R1). Shrinking makes the list's
+	 *  viewport taller by the dock's own height delta, so the same finger position
+	 *  reads that much closer to the tail on the next offset event: a 24–72 pt drag
+	 *  shrank the dock, the resize pulled the reading into the band, and the dock
+	 *  grew back 450 ms after release. `adjusted` is the distance the card's
+	 *  viewport would show — the raw one plus the viewport growth since the flip —
+	 *  and `peakAway` its farthest value since the flip. Settling at the tail only
+	 *  grows the dock once the reader has come back from that peak by a shrink
+	 *  distance in that frame, so the resize alone can never satisfy it. */
+	let viewport: number | null = null;
+	let flipViewport: number | null = null;
+	let adjusted = FAR_PT;
+	let peakAway = FAR_PT;
 	/* `-Infinity`: nothing held until the first flip. */
 	let lastFlipAt = Number.NEGATIVE_INFINITY;
 	let dwellTimer: ReturnType<typeof setTimeout> | null = null;
@@ -136,6 +162,10 @@ export function createComposerCompaction(
 		/* A scroll-driven flip waits out the hold; the reader's own intent does not. */
 		if (held && now() - lastFlipAt < HOLD_MS) return;
 		shrunk = next;
+		/* A new flip starts a new excursion, measured from here. */
+		flipViewport = next ? viewport : null;
+		peakAway = next ? distance : FAR_PT;
+		adjusted = distance;
 		/* Intent also resets the hold, so the next scroll-driven flip is free. */
 		lastFlipAt = held ? now() : Number.NEGATIVE_INFINITY;
 		clearDwell();
@@ -145,7 +175,9 @@ export function createComposerCompaction(
 		if (!enabled || pinned) return;
 		set(true, true);
 	};
-	const atTail = (): boolean => distance <= TAIL_BAND_PT;
+	const atTail = (): boolean =>
+		distance <= TAIL_BAND_PT &&
+		(!shrunk || peakAway - adjusted >= SHRINK_DISTANCE_PT);
 	/** Arm or drop the dwell: shrunk, inside the band, finger up, no glide. */
 	const evaluateDwell = (): void => {
 		if (!shrunk || dragging || coasting || !atTail()) {
@@ -179,8 +211,15 @@ export function createComposerCompaction(
 			dragStart = withoutOverscroll(offsetY, distance);
 			clearDwell();
 		},
-		noteOffset(offsetY, distanceToTail) {
+		noteOffset(offsetY, distanceToTail, viewportHeight) {
 			distance = distanceToTail;
+			if (viewportHeight !== undefined) viewport = viewportHeight;
+			const growth =
+				shrunk && flipViewport !== null && viewport !== null
+					? Math.max(0, viewport - flipViewport)
+					: 0;
+			adjusted = distanceToTail + growth;
+			if (shrunk) peakAway = Math.max(peakAway, adjusted);
 			if (dragging && dragStart !== null) {
 				const net = Math.abs(
 					withoutOverscroll(offsetY, distanceToTail) - dragStart,

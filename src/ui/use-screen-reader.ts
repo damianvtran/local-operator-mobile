@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { AccessibilityInfo } from "react-native";
+import { AccessibilityInfo, Platform } from "react-native";
+import { screenReaderSignalUsable } from "@/ui/screen-reader-signal";
 
 /**
  * Whether VoiceOver or TalkBack is running, live.
@@ -12,6 +13,7 @@ import { AccessibilityInfo } from "react-native";
 export function useScreenReaderEnabled(): boolean {
 	const [enabled, setEnabled] = useState(false);
 	useEffect(() => {
+		if (!screenReaderSignalUsable(Platform.OS)) return;
 		let live = true;
 		AccessibilityInfo.isScreenReaderEnabled()
 			.then((value) => {

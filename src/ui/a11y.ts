@@ -522,6 +522,9 @@ export const CONTROL = {
 	composerPasteImage: "composer-paste-image",
 	composerResume: "composer-resume",
 	composerInput: "composer-input",
+	/** The scroll-made pill's tap target over its one-line field: a tap opens the
+	 *  card with the field focused. Exists only while the pill stands. */
+	composerPillField: "composer-pill-field",
 	composerContext: "composer-context",
 	composerOpenQueue: "composer-open-queue",
 	composerContextModel: "composer-context-model",

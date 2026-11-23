@@ -30,6 +30,7 @@ import {
 	ScrollView,
 	Text,
 	type TextInput,
+	type TextInputProps,
 	useWindowDimensions,
 	View,
 } from "react-native";
@@ -96,13 +97,18 @@ import {
 	COMPOSER_PILL_MARGIN,
 	composerFieldRowAlign,
 	composerPaintedHeight,
+	composerPillRow,
 	composerPinsCard,
 	composerPresentation,
 	composerRestRow,
 	composerShellPadding,
 	composerShellRadius,
 	controlsTrailing,
+	dictationDropsSend,
+	dockMotionStyle,
+	fieldSelectionOverride,
 	morphHeight,
+	pillShowsSend,
 	seedFor,
 } from "@/features/session/composer-presentation";
 import { isSendKey } from "@/features/session/keyboard";
@@ -1060,6 +1066,15 @@ export const Composer = ({
 	const [chipZoneWidth, setChipZoneWidth] = useState(0);
 	const _window = useWindowDimensions();
 	const [focused, setFocused] = useState(false);
+	/* Where the caret goes when a tap on the scroll-made pill opens the card
+	 *  (`fieldSelection`, review R3): the end of the draft, for the one render
+	 *  that focuses it. Released by the report that confirms it, by an edit, or
+	 *  by a blur, because a permanently controlled `selection` fights the IME. */
+	const [restoreCaretAt, setRestoreCaretAt] = useState<number | null>(null);
+	useEffect(() => {
+		/* An edit moved the end: the remembered caret is stale. */
+		setRestoreCaretAt((at) => (at !== null && at !== draft.length ? null : at));
+	}, [draft]);
 	/* Offered while COMPOSING, not only while focused (`pasteOfferComposing`,
 	 *  TestFlight 753: a blur after the first paste hid the chip). */
 	const pasteOffer = useClipboardImageOffer(
@@ -1139,6 +1154,18 @@ export const Composer = ({
 	/* The pill the SCROLL made, as opposed to short landscape's own: the dock is
 	 *  shrunk, nothing pins it, and `composerPresentation` agrees. */
 	const shrunkPill = presentationFacts.shrunk && !pinsCard;
+	const selectionOverride = fieldSelectionOverride({
+		shrunkPill,
+		restoreCaretAt,
+	});
+	const releaseRestoredCaret = (
+		event: Parameters<NonNullable<TextInputProps["onSelectionChange"]>>[0],
+	) => {
+		const { start, end } = event.nativeEvent.selection;
+		if (restoreCaretAt !== null && start === end && end === restoreCaretAt)
+			setRestoreCaretAt(null);
+		skills?.onSelectionChange?.(event);
+	};
 	useEffect(() => {
 		compaction?.setEnabled(compactionOk);
 	}, [compaction, compactionOk]);
@@ -1166,6 +1193,20 @@ export const Composer = ({
 			dictation: false,
 			shrunk: false,
 		}).expanded;
+	/* Whether the take that holds the card open began on the scroll-made pill
+	 *  (`dictationDropsSend`). Set at the mic press, the one moment the pill is
+	 *  still what the finger is on; kept while a failed start leaves the card open
+	 *  for dictation only, so pressing the mic again does not slide it. */
+	const dictationFromPill = useRef(false);
+	const pressMic = () => {
+		dictationFromPill.current =
+			shrunkPill || (dictationFromPill.current && openForDictationOnly);
+		voice?.press();
+	};
+	const dropSendForDictation = dictationDropsSend({
+		openForDictationOnly,
+		startedFromPill: dictationFromPill.current,
+	});
 	const trailing = controlsTrailing({
 		openForDictationOnly,
 		recording: voice?.phase === "recording",
@@ -1362,14 +1403,11 @@ export const Composer = ({
 	 *  pill is its resting form and keeps the card's margin (`pillMargin`). */
 	const pillMargin =
 		compact === null ? COMPOSER_PILL_MARGIN : COMPOSER_CARD_MARGIN;
-	const dockMotion = useAnimatedStyle(() => ({
-		marginBottom: keyboardOffset.value + 8,
-		marginHorizontal: morphHeight(
-			progress.value,
-			pillMargin,
-			COMPOSER_CARD_MARGIN,
-		),
-	}));
+	/* Longhand margins from one worklet (`dockMotionStyle`, review W2): the
+	 *  `marginHorizontal` shorthand this was never reached the DOM on web. */
+	const dockMotion = useAnimatedStyle(() =>
+		dockMotionStyle(progress.value, keyboardOffset.value, pillMargin),
+	);
 	const dockInset = keyboardVisible ? 0 : Math.max(0, bottomInset ?? 0);
 
 	const dangerInk = useTokenColor("danger");
@@ -2159,7 +2197,7 @@ export const Composer = ({
 				accessibilityLabel={micLabel(voice.phase)}
 				accessibilityHint={MIC_HINT[voice.phase]}
 				disabled={voice.phase === "transcribing"}
-				onPress={voice.press}
+				onPress={pressMic}
 				icon={({ color, size }) => <Mic color={color} size={size} />}
 				testID={CONTROL.composerMic}
 			/>
@@ -2172,7 +2210,7 @@ export const Composer = ({
 			<IconButton
 				accessibilityLabel={t("mobile.composer_input.voice.mic_setup")}
 				accessibilityHint={t("mobile.composer_input.voice.mic_setup_hint")}
-				onPress={voice.press}
+				onPress={pressMic}
 				icon={({ color, size }) => <Mic color={color} size={size} />}
 				testID={CONTROL.composerMic}
 			/>
@@ -2313,15 +2351,17 @@ export const Composer = ({
 		</View>
 	);
 	/* The scroll-made pill's trailing action: Stop while a turn runs, Send only
-	 *  once there is a draft — never a dead Send disc beside an empty field (the
-	 *  card's cluster keeps it for layout stability). A draft keeps Send at every
-	 *  text size: the reader typed it to send it. Attachments, dictation and
+	 *  once there is something in the draft — never a dead Send disc beside an
+	 *  empty or whitespace-only field (the card's cluster keeps it for layout
+	 *  stability). A draft keeps Send at every text size: the reader typed it to
+	 *  send it. Attachments, dictation and
 	 *  notices pin the card, so this is never the pill's content for those. */
+	const pillSend = pillShowsSend(draft);
 	const pillAction =
-		stopButton !== null || draft.length > 0 ? (
+		stopButton !== null || pillSend ? (
 			<View className={COMPOSER_ACTION_CLUSTER}>
 				{stopButton}
-				{draft.length > 0 ? sendButton : null}
+				{pillSend ? sendButton : null}
 			</View>
 		) : null;
 
@@ -2430,11 +2470,24 @@ export const Composer = ({
 				style={{
 					minHeight: presentation.expanded
 						? COMPOSER_FIELD_BOX
-						: composerRestRow(TOUCH_FLOOR),
+						: shrunkPill
+							? composerPillRow(TOUCH_FLOOR, effectiveScale)
+							: composerRestRow(TOUCH_FLOOR),
 				}}
 			>
 				{presentation.expanded ? null : attach}
-				<View className="min-w-0 flex-1">
+				<View
+					className="min-w-0 flex-1"
+					/* While the pill stands the wrapper takes the row's full height (the
+					 *  field is one line, centred in it) so the tap catcher below covers
+					 *  the whole target, not just the 24 pt line. Same element in both
+					 *  states: only its style changes, so the field never remounts. */
+					style={
+						shrunkPill
+							? { alignSelf: "stretch", justifyContent: "center" }
+							: undefined
+					}
+				>
 					<Textarea
 						label="Message"
 						hideLabel
@@ -2453,6 +2506,10 @@ export const Composer = ({
 						maxLines={
 							compactSingle || shrunkPill ? 1 : COMPOSER_FIELD_MAX_LINES
 						}
+						/* The pill clips the field to exactly ONE line (review R3/W3): a
+						 *  box taller than the line showed the top of line two in its own
+						 *  padding, and a cap under the line cut the glyphs at 200 %. */
+						singleLine={shrunkPill}
 						/* The field's own box is the dock's ruler: the 48 pt resting row
 						 * and 44 pt in both open rows, so 56 = 4 + 48 + 4 and
 						 * 112 = 12 + 44 + 4 + 44 + 8 hold
@@ -2477,12 +2534,48 @@ export const Composer = ({
 						}}
 						onBlur={() => {
 							setFocused(false);
+							setRestoreCaretAt(null);
 							skills?.onBlur();
 						}}
 						onSelectionChange={skills?.onSelectionChange}
 						selection={skills?.selection}
+						/* The pill holds the caret at the start, a tap that opens the card
+						 *  puts it at the end (`fieldSelectionOverride`, review R3). Spread
+						 *  AFTER the skills pass-through so that stays the field's default;
+						 *  the override is released by the report that confirms it. */
+						{...(selectionOverride === null
+							? null
+							: {
+									selection: selectionOverride,
+									onSelectionChange: releaseRestoredCaret,
+								})}
 						testID={CONTROL.composerInput}
 					/>
+					{/* THE PILL'S TAP TARGET. The field is clipped to one line (24 pt at
+					 *  100 %), which is under the 44 pt floor, so a catcher covers the
+					 *  whole field row while the pill stands: a tap focuses the field
+					 *  (the card opens, the keyboard comes up) with the caret at the
+					 *  END of the draft. It is a sibling AFTER the one Textarea, so the
+					 *  field stays mounted across card and pill. Compaction is off for
+					 *  a screen reader, so this never stands in front of one. */}
+					{shrunkPill ? (
+						<Pressable
+							accessible={false}
+							focusable={false}
+							style={{
+								position: "absolute",
+								top: 0,
+								bottom: 0,
+								left: 0,
+								right: 0,
+							}}
+							onPress={() => {
+								setRestoreCaretAt(draft.length);
+								inputRef.current?.focus();
+							}}
+							testID={CONTROL.composerPillField}
+						/>
+					) : null}
 				</View>
 				{clearDraft}
 				{presentation.expanded ? null : (
@@ -2523,7 +2616,9 @@ export const Composer = ({
 							 *  tap-to-toggle reader taps again (UX round 2, U7). It still
 							 *  MOVES there from the dictation row, never copied. */}
 							{trailing === "finish" ? dictationFinish : mic}
-							{actionCluster}
+							{/* No dead Send under a take that began on the pill: the mic (or
+							 *  ✓) takes the right-most slot, where the finger already is. */}
+							{dropSendForDictation ? null : actionCluster}
 						</>
 					) : (
 						<>

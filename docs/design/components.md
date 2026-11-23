@@ -536,18 +536,22 @@ value, not a measurement** (`composer-compaction.ts`; tune from TestFlight).
 | Rule | Binding |
 |---|---|
 | Shrinks | a **reader's** drag that nets ≥ 24 pt from where it began (either direction), or a release at ≥ 1000 pt/s, with nothing pinning. Momentum alone, and every scroll the app makes (tail pin, history load, reveal, `snapToTail`), never flips it |
-| Grows | a tap on the pill field (focus), settling within 16 pt of the tail for 150 ms (finger up, no glide), jump-to-latest, a send, or a pin appearing. Scroll-driven flips are held 300 ms apart; the reader's own intent beats the hold |
+| Grows | a tap on the pill field (focus), settling within 16 pt of the tail for 150 ms (finger up, no glide), measured in the card's frame so the dock's own resize cannot satisfy it (a drag that shrank the dock and left the reader at the pill's tail stays shrunk until they travel away and back by ≥ 24 pt), jump-to-latest, a send, or a pin appearing. Scroll-driven flips are held 300 ms apart; the reader's own intent beats the hold |
 | Pins (always the card) | an image attachment; dictation recording / transcribing / failed or any dictation row; an error, notice or retained message; the `$` skill tray; the `/` slash sheet; field focus or a visible keyboard |
-| Not pins | a typed draft of any length (whitespace included) and Stop. The pill shows the draft's **first line** (`maxLines` 1, text never altered, ✕ clear and the model/effort row return with the card); Send stays beside it whenever there is a draft, at every text size; Stop keeps its `danger-wash` disc |
-| Pill row | attach 44 · field · mic 44 · action 44 (Send only with a draft, Stop only while a turn runs), all ≥ the platform touch floor. One mounted `Textarea` across card and pill |
-| Shape | the existing pill path: 56 (`ceil(24 × scale + 24)` at large text), R height/2, side margin **16** against the card's 12, all three off the one `progress` value over 220 ms, `cubic-bezier(0.2, 0, 0, 1)`; instant under Reduce Motion |
+| Not pins | a typed draft of any length (whitespace included) and Stop. The pill shows the draft's **first line** (the field is clipped to exactly one line, caret held at the start while the pill stands, text never altered, ✕ clear and the model/effort row return with the card); Send stays beside it whenever there is something in the draft (a whitespace-only draft has none), at every text size; Stop keeps its `danger-wash` disc |
+| Pill row | attach 44 · field · mic 44 · action 44 (Send only with a non-blank draft, Stop only while a turn runs), all ≥ the platform touch floor; a transparent catcher over the one-line field keeps the tap target the row's full height (a tap focuses the field with the caret at the end of the draft). A take that starts from the pill opens a card with no dead Send, so the mic/✓ stays under the finger. One mounted `Textarea` across card and pill |
+| Shape | the existing pill path: 56 (`ceil(24 × scale + 24)` at large text, painted from the row `composerPillRow` sizes), R height/2, side margin **16** against the card's 12 (animated as `marginLeft`/`marginRight`: the `marginHorizontal` shorthand never reached the DOM on web), all three off the one `progress` value over 220 ms, `cubic-bezier(0.2, 0, 0, 1)`; instant under Reduce Motion |
 | Off | a screen reader running (`useScreenReaderEnabled`), tablet / split layouts, short landscape (already a pill; unchanged), and Home (no signal passed) |
 
 The signal is a plain object the session screen owns (`createComposerCompaction`):
 the list reports the reader's gestures into it and the Composer subscribes to its
 one boolean, so a scroll never re-renders the screen. **Web never shrinks from
 scrolling** (react-native-web emits only `onScroll`); `initialShrunk` is the seam
-that renders the shrunk state for frames.
+that renders the shrunk state for frames. On web the screen-reader gate is **off**
+(`screenReaderSignalUsable`): react-native-web answers `isScreenReaderEnabled()`
+with a constant `true`, which would switch the compaction off for every web
+visitor, and the web has neither a reliable signal nor a reader drag that could
+shrink the dock, so the seam renders the pill there.
 
 ### Glass (iOS)
 
