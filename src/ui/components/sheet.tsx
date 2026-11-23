@@ -575,8 +575,14 @@ export const Sheet = ({
 	 *  release hands the settled size back here — and the tick fires only when the
 	 *  size actually changed, once per snap. */
 	const resizeSizeRef = useRef<SheetResizeSize>(resizeSize);
+	/* The height a RELEASE is already springing to, so the sync effect below does
+	 *  not start a second spring towards the same place (review r2-m1: the live
+	 *  height is mid-flight for the frames that matter, so comparing it never
+	 *  caught the echo). Consumed on the first pass that sees it. */
+	const snappedTarget = useRef<number | null>(null);
 	const remember = useCallback(
-		(next: SheetResizeSize) => {
+		(next: SheetResizeSize, springTarget?: number) => {
+			snappedTarget.current = springTarget ?? null;
 			rememberResizeSize(resizeKey, next);
 			if (resizeSizeRef.current === next) return;
 			resizeSizeRef.current = next;
@@ -637,9 +643,14 @@ export const Sheet = ({
 		/* Mid-drag the finger owns the height: a measurement or a keyboard frame
 		 *  landing between begin and end would otherwise jump the sheet under it. */
 		if (resizeDragging.value) return;
-		/* Already where the release's own spring left it: that spring ran WITH the
-		 *  finger's velocity, and a second one here would drop it and re-settle a
-		 *  value that is already in place (review r1 F7). */
+		/* The release's own spring is already heading here: it ran WITH the finger's
+		 *  velocity, and a second spring would drop that and re-settle the same
+		 *  place (review r1 F7 / r2-m1). One pass consumes it, so a later change
+		 *  (the keyboard going, a new drag) still animates normally. */
+		const springingTo = snappedTarget.current;
+		snappedTarget.current = null;
+		if (springingTo !== null && Math.abs(springingTo - restingBodyHeight) < 0.5)
+			return;
 		if (Math.abs(resizeBody.value - restingBodyHeight) < 0.5) return;
 		resizeBody.value = reduceMotion
 			? withTiming(restingBodyHeight, { duration: 120 })
@@ -731,7 +742,7 @@ export const Sheet = ({
 						stiffness: 300,
 						velocity: -event.velocityY,
 					});
-			runOnJS(remember)(settled);
+			runOnJS(remember)(settled, target);
 		})
 		.onFinalize(() => {
 			"worklet";
@@ -968,6 +979,13 @@ export const Sheet = ({
 							: [{ name: "increment", label: t("mobile.common.size.taller") }]
 					}
 					onAccessibilityAction={(event) => {
+						/* The same rule as the tap below: while the keyboard pins the
+						 *  body, this control does not write a size the reader cannot
+						 *  see change — it puts the keyboard away instead (UX r2 U9). */
+						if (keyboard.visible) {
+							Keyboard.dismiss();
+							return;
+						}
 						const action = event.nativeEvent.actionName;
 						if (action === "increment") remember("large");
 						if (action === "decrement") remember("medium");
@@ -987,8 +1005,16 @@ export const Sheet = ({
 					style={{
 						position: "absolute",
 						top: 0,
-						left: 0,
-						right: 0,
+						/* 44 pt tall and 120 pt wide, CENTRED on the pill: the target is
+						 *  real (design r1 D3) without making the whole header — the
+						 *  title included — a size toggle, or putting the adjustable
+						 *  control in VoiceOver's path before the heading (design r2
+						 *  D9). 120 pt keeps it ~80 pt clear of Close at 320 pt.
+						 *  No `left`/`right`: Yoga centres an absolutely positioned
+						 *  child with auto insets by `alignSelf`, which is also the
+						 *  direction-neutral spelling the physical-edge guard wants. */
+						alignSelf: "center",
+						width: 120,
 						height: 44,
 						alignItems: "center",
 						paddingTop: 6,

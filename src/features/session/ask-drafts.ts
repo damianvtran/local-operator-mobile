@@ -93,7 +93,9 @@ export const retainAskDrafts = (keys: ReadonlySet<string>): void => {
 	}
 };
 
-/** Tests only: the store is module state, and a suite must start empty. */
+/** Drop every draft. The account boundary's purge (`connection-provider.tsx`
+ *  registers it with the startup-authorization lifecycle), and the way a suite
+ *  starts from an empty store — module state outlives one test. */
 export const forgetAskDrafts = (): void => {
 	drafts.clear();
 };

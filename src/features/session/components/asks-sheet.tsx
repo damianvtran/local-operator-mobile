@@ -247,9 +247,12 @@ const QuestionField = ({
 	const fieldFocused = useRef(false);
 	const lastFieldHeight = useRef(0);
 	const takeGrowth = (height: number) => {
-		if (!fieldFocused.current) return;
-		if (height <= lastFieldHeight.current + 1) return;
+		/* The CURRENT height, recorded on shrink too: a maximum-ever figure stopped
+		 *  re-revealing after four lines were deleted and three typed again
+		 *  (review r2-m4), which is the same cut line this reveal exists to stop. */
+		const grew = height > lastFieldHeight.current + 1;
 		lastFieldHeight.current = height;
+		if (!grew || !fieldFocused.current) return;
 		if (fieldRef.current !== null)
 			onFieldFocus?.(fieldRef.current as unknown as View);
 	};
@@ -273,10 +276,13 @@ const QuestionField = ({
 	};
 	useEffect(() => {
 		if (doorFocusTick === 0 || !doorFocusWanted.current) return;
-		/* A null ref here means the field mounts in this same commit: it keeps the
-		 *  flag and its `autoFocus`/`onLayout` finishes the job. */
+		/* A null ref means the field mounts in this same commit: the flag STAYS set
+		 *  so `autoFocus` / `onLayout` takes it. Clearing it first made that
+		 *  fallback dead code (review r2 N1 / UX U10). */
+		const field = fieldRef.current;
+		if (field === null) return;
 		doorFocusWanted.current = false;
-		fieldRef.current?.focus();
+		field.focus();
 	}, [doorFocusTick]);
 	if (options.length === 0) {
 		return (
@@ -387,7 +393,12 @@ const QuestionField = ({
 				<Pressable
 					accessibilityRole={ROLE.radio}
 					accessibilityLabel="Other"
-					accessibilityHint={OTHER_HINT}
+					/* The hint follows the row's own line: with text kept, "Type your
+					 *  answer" told a screen reader the opposite of what the row shows
+					 *  (UX r2 U8). */
+					accessibilityHint={
+						other.open || other.text.trim() === "" ? OTHER_HINT : KEPT_TEXT_HINT
+					}
 					accessibilityState={state({ selected: other.open, disabled })}
 					disabled={disabled}
 					onPress={() => {
