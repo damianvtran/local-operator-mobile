@@ -103,6 +103,9 @@ env:
   # this name against what the runner actually has, prints what it chose, and
   # warns rather than failing when the image has moved on.
   IOS_SIMULATOR_DEVICE: iPhone 17
+  # fastlane reports anonymous usage from every invocation; the signed-archive job
+  # here runs lanes through it. Inert for the simulator-only jobs.
+  FASTLANE_OPT_OUT_USAGE: "1"
 
 jobs:
   signin-app-proof:

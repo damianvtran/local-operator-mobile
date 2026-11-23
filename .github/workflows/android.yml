@@ -94,6 +94,10 @@ env:
   # JDK on the `ubuntu-latest` image. Named here so the toolchain is an explicit
   # input rather than whatever the image happens to default to that week.
   JAVA_VERSION: "17"
+  # fastlane reports anonymous usage from every invocation. The `internal` job here
+  # runs a lane against a real Play key, and this is the only other place the
+  # uploader starts; the flag is inert for the jobs that never touch fastlane.
+  FASTLANE_OPT_OUT_USAGE: "1"
 
 jobs:
   oauth-callback-proof:

@@ -74,6 +74,12 @@ env:
   # dry runs included.
   FASTLANE_DISABLE_COLORS: "1"
   FASTLANE_SKIP_UPDATE_CHECK: "1"
+  # fastlane phones home (`Sending anonymous analytics information`) from every
+  # invocation, lanes and `--version` alike — including the `fastlane` job below,
+  # which exists to prove the pinned tree resolves and nothing more. A CI job whose
+  # only permitted network calls are the store endpoints it was handed should not
+  # also be filing a usage report.
+  FASTLANE_OPT_OUT_USAGE: "1"
 
 jobs:
   version:
@@ -455,12 +461,13 @@ jobs:
     # enable) not skip the Release with it: without it a skipped `needs` entry skips
     # this job. Everything `always()` would otherwise forgive is then required
     # EXPLICITLY, because `!failure()` alone is only a transitive guarantee:
-    # `credentials` and `gate` must be `success` (a gate that was skipped or never
-    # resolved must not publish), and `!failure()` still stops the Release when an
-    # enabled platform failed to build. Only a platform's own SKIP is tolerated. An
-    # enabled platform whose artefact is absent still fails loudly at its
-    # `download-artifact` step.
-    if: ${{ always() && !cancelled() && !failure() && needs.credentials.result == 'success' && needs.gate.result == 'success' && inputs.dry_run != true }}
+    # `credentials`, `fastlane` and `gate` must be `success` (a gate that was
+    # skipped or never resolved must not publish, and an uploader that never
+    # resolved must not create the Release it exists to fill), and `!failure()`
+    # still stops the Release when an enabled platform failed to build. Only a
+    # platform's own SKIP is tolerated. An enabled platform whose artefact is
+    # absent still fails loudly at its `download-artifact` step.
+    if: ${{ always() && !cancelled() && !failure() && needs.credentials.result == 'success' && needs.fastlane.result == 'success' && needs.gate.result == 'success' && inputs.dry_run != true }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
     environment: release
