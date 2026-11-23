@@ -101,10 +101,8 @@ import { ConversationsPane } from "@/features/sessions/conversations-pane";
 import { sessionLocation } from "@/features/sessions/session-navigation";
 import { inboxBadgeCount } from "@/features/sessions/session-projection";
 import { useSidebarView } from "@/features/sessions/use-sidebar-view";
-import {
-	useWorkspaceDrawer,
-	WorkspaceDrawerButton,
-} from "@/features/sessions/workspace-drawer";
+import { WorkspaceDrawerButton } from "@/features/sessions/workspace-drawer";
+import { useWorkspaceDrawer } from "@/features/sessions/workspace-drawer-context";
 import { t } from "@/i18n";
 import { listLabel } from "@/lib/route-label";
 import type { RelayError } from "@/relay/errors";

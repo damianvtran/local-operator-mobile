@@ -144,14 +144,13 @@ vi.mock("./conversations-drawer", () => ({
 }));
 
 const { forgetModeBarFit } = await import("./mode-bar-fit");
-const {
-	WorkspaceDrawerProvider,
-	WorkspaceDrawerButton,
-	useWorkspaceDrawer,
-	modeBarLayout,
-	MODE_BADGE_INSET,
-	WorkspaceModeBar,
-} = await import("./workspace-drawer");
+const { WorkspaceDrawerProvider, WorkspaceDrawerButton } = await import(
+	"./workspace-drawer"
+);
+const { useWorkspaceDrawer } = await import("./workspace-drawer-context");
+const { modeBarLayout, MODE_BADGE_INSET, WorkspaceModeBar } = await import(
+	"./workspace-mode-bar"
+);
 const { MODE_SEGMENT_CHROME, MODE_SEGMENT_GAP, MODE_TRACK_INSET } =
 	await import("./mode-bar-fit");
 let controller: ReturnType<typeof useWorkspaceDrawer>;
@@ -465,7 +464,7 @@ describe("the mode track stays one row below large text (D1-2/U1-1/Q1-2/U1-2, #3
 		expect(MODE_SEGMENT_CHROME).toBe(2 * 8 + 2 * 1);
 		/* Both segments' content boxes carry the 1 pt border the chrome counts. */
 		const source = readFileSync(
-			new URL("./workspace-drawer.tsx", import.meta.url),
+			new URL("./workspace-mode-bar.tsx", import.meta.url),
 			"utf8",
 		);
 		expect(source).toContain(
@@ -688,15 +687,15 @@ describe("the mode bar measures before it splits into equal halves (#324)", () =
  * 1,200 at tablet landscape because the mode bar used 2 / 6 / 10 pt half steps
  * (`*-0.5`, `*-1.5`, `*-2.5`); space.scale is 4 pt multiples. Node cannot
  * render, so this pins the source; the rendered U-42 proof is the audit. */
-describe("workspace-drawer.tsx spacing", () => {
+describe("workspace drawer spacing", () => {
 	it("uses on-scale padding, margin and gap only", () => {
-		const source = readFileSync(
-			new URL("./workspace-drawer.tsx", import.meta.url),
-			"utf8",
-		);
-		expect(source).not.toMatch(
-			/\b-?(?:p|px|py|pt|pb|ps|pe|pl|pr|m|mx|my|mt|mb|ms|me|ml|mr|gap|gap-x|gap-y)-\d+\.5\b/,
-		);
+		/* Both halves of the old file: the provider and the mode bar split out of it. */
+		for (const file of ["./workspace-drawer.tsx", "./workspace-mode-bar.tsx"]) {
+			const source = readFileSync(new URL(file, import.meta.url), "utf8");
+			expect(source, file).not.toMatch(
+				/\b-?(?:p|px|py|pt|pb|ps|pe|pl|pr|m|mx|my|mt|mb|ms|me|ml|mr|gap|gap-x|gap-y)-\d+\.5\b/,
+			);
+		}
 		for (const largeText of [false, true]) {
 			const layout = modeBarLayout(largeText);
 			expect(`${layout.track} ${layout.content}`).not.toMatch(/\.5\b/);

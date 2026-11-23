@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+
 import { describe, expect, it } from "vitest";
 
 import {
@@ -290,5 +292,34 @@ describe("the user bubble's fill", () => {
 					contrast(entry.colors[ground], entry.colors.canvas),
 					`${entry.id} ${ground} on canvas`,
 				).toBeLessThan(FLOOR);
+	});
+});
+
+/* Top-level for biome's useTopLevelRegex; they scan the generated stylesheet. */
+const COLOUR_DECLARATION = /--color-([\w-]+):/g;
+const STATIC_THEME_BLOCK = /@theme static \{([^}]*)\}/;
+const LIGHT_VARIANT_BLOCK = /@variant light \{([^}]*)\}/;
+
+describe("the colour variables Uniwind exposes to useCSSVariable", () => {
+	/* `useTokenColor` reads a role through `useCSSVariable`, and Uniwind builds
+	 * that table from Tailwind's OUTPUT, where an unused `@theme` variable is
+	 * dropped. A theme-varying role survives because the `@layer theme` block
+	 * spells it out per theme; a theme-invariant one (the scrim) survives only if
+	 * it sits in an `@theme static` block. A role in neither made Uniwind log
+	 * "We couldn't find your variable --color-scrim" once per JS runtime (its
+	 * `warned` flag), i.e. on every dev launch. */
+	const css = readFileSync(new URL("./theme.css", import.meta.url), "utf8");
+	const rolesIn = (block: string): Set<string> =>
+		new Set([...block.matchAll(COLOUR_DECLARATION)].map((m) => m[1] ?? ""));
+	const staticBlock = STATIC_THEME_BLOCK.exec(css)?.[1] ?? "";
+	const lightBlock = LIGHT_VARIANT_BLOCK.exec(css)?.[1] ?? "";
+
+	it("has every role in the static theme or the per-theme block", () => {
+		const exposed = new Set([...rolesIn(staticBlock), ...rolesIn(lightBlock)]);
+		expect(COLOR_ROLES.filter((role) => !exposed.has(role))).toEqual([]);
+	});
+
+	it("keeps the scrim in the static theme, where no class has to use it", () => {
+		expect(rolesIn(staticBlock).has("scrim")).toBe(true);
 	});
 });

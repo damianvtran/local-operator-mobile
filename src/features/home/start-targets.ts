@@ -28,7 +28,7 @@
  * Design: the identity-picker spec, decisions D-S1..D-S26.
  */
 import type { Capabilities, Payload } from "@/contracts";
-import { MODEL_SEARCH_THRESHOLD } from "@/features/home/picker-model";
+import { MODEL_SEARCH_THRESHOLD } from "@/features/home/picker-search-threshold";
 import { t } from "@/i18n";
 import type { StartSessionRequest } from "@/relay/endpoints";
 import { isRelayError, RelayError } from "@/relay/errors";
