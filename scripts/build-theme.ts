@@ -377,7 +377,7 @@ const css = (): string => {
 		"\t * exist, which is the point: `bg-canvas` is a role, `bg-[#f2ede3]` is a bug.",
 	);
 	out.push("\t */");
-	for (const role of roles) {
+	for (const role of varying) {
 		out.push("\t" + cssColour(role) + ": " + valueFor(role, "light") + ";");
 	}
 	out.push("");
@@ -459,6 +459,41 @@ const css = (): string => {
 				typeface.fallback +
 				";",
 		);
+	}
+	out.push("}");
+	out.push("");
+	/*
+	 * The theme-invariant roles, in a STATIC theme.
+	 *
+	 * Tailwind drops an unused `@theme` variable from its output, and Uniwind
+	 * builds the table `useCSSVariable` reads from that output. A varying role is
+	 * safe because the @layer theme block below spells it out per theme; an
+	 * invariant role has no such block, so it survived only while some class
+	 * (`bg-scrim`) happened to use it. `useTokenColor("scrim")` is the opposite
+	 * case — it reads the value precisely because no class can — so the variable
+	 * vanished and Uniwind logged "We couldn't find your variable --color-scrim"
+	 * on every dev launch. `static` keeps the variable (and its utility) whether
+	 * or not a class uses it.
+	 */
+	out.push("/*");
+	out.push(" * Theme-invariant colour roles: one value in every theme.");
+	out.push(" *");
+	out.push(
+		" * `static` so the variable is always emitted. Tailwind omits an unused",
+	);
+	out.push(
+		" * `@theme` variable, and Uniwind's `useCSSVariable` table (read by",
+	);
+	out.push(
+		" * `useTokenColor`) is built from that output; a role no class uses, such as",
+	);
+	out.push(
+		' * the scrim, would otherwise log "couldn\'t find your variable" in dev.',
+	);
+	out.push(" */");
+	out.push("@theme static {");
+	for (const role of invariant) {
+		out.push("\t" + cssColour(role) + ": " + valueFor(role, "light") + ";");
 	}
 	out.push("}");
 	out.push("");
