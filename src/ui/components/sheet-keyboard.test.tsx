@@ -219,7 +219,9 @@ const { Sheet } = await import("./sheet");
 const { SURFACE, CONTROL } = await import("@/ui/a11y");
 const { ModelPicker } = await import("@/features/home/home-pickers");
 const { modelOptionId } = await import("@/ui/a11y");
-const { MODEL_SEARCH_THRESHOLD } = await import("@/features/home/picker-model");
+const { MODEL_SEARCH_THRESHOLD } = await import(
+	"@/features/home/picker-search-threshold"
+);
 
 const node = (key: string) => host.nodes.get(key);
 const spacerHeight = () =>
