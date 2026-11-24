@@ -159,3 +159,57 @@ export const heldTimer = (
 		handle = null;
 	};
 };
+
+/**
+ * A `setTimeout` for a reconnect ATTEMPT, which must never wait out the resume
+ * window the way a failure report does (PR #369 review R3-1).
+ *
+ * WHY NOT {@link heldTimer}. The window exists so that the retries after a return
+ * get to land before anything is reported; a retry held to the end of the window
+ * comes due together with the drop report (both at `resumedAt + RESUME_GRACE_MS`)
+ * and cannot seed in the same tick, so the reader saw "The connection dropped.
+ * Reconnecting…" for a stream the plain 1 s backoff used to heal silently.
+ *
+ * What it still refuses (PR #369 review R2-2): opening a replacement stream
+ * while iOS may suspend the process. When it comes due:
+ * - the app is backgrounded: re-arm at {@link SUSPEND_SLACK_MS} (the same floor
+ *   `heldTimer` uses, one check a second, never a busy loop); the `AppState`
+ *   "active" handler reopens the stream itself on return and cancels this;
+ * - it fired more than {@link SUSPEND_SLACK_MS} late with no background signal:
+ *   the process was suspended and its "active" event may not have been delivered
+ *   yet (iOS gives no ordering between the two), so wait ONE more slack period
+ *   for that handler to take over. Only once: a JS thread so starved that every
+ *   timer runs late must still reconnect, not defer forever;
+ * - otherwise fire at the backoff delay, inside or outside a resume window.
+ *
+ * Returns the cancel function.
+ */
+export const reconnectTimer = (
+	clock: ResumeClock,
+	delayMs: number,
+	fire: () => void,
+): (() => void) => {
+	let handle: ReturnType<typeof setTimeout> | null = null;
+	let deferredLate = false;
+	const arm = (delay: number) => {
+		const due = clock.now() + delay;
+		handle = setTimeout(() => {
+			handle = null;
+			if (clock.backgrounded()) {
+				arm(SUSPEND_SLACK_MS);
+				return;
+			}
+			if (!deferredLate && clock.now() - due > SUSPEND_SLACK_MS) {
+				deferredLate = true;
+				arm(SUSPEND_SLACK_MS);
+				return;
+			}
+			fire();
+		}, delay);
+	};
+	arm(delayMs);
+	return () => {
+		if (handle !== null) clearTimeout(handle);
+		handle = null;
+	};
+};

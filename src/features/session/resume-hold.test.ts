@@ -12,6 +12,7 @@ import {
 	heldTimer,
 	RESUME_GRACE_MS,
 	type ResumeClock,
+	reconnectTimer,
 	SUSPEND_SLACK_MS,
 } from "@/features/session/resume-hold";
 import { RelayError } from "@/relay";
@@ -23,7 +24,8 @@ import { sessionResumeHandler } from "@/testing/session-appstate-source";
  * dropped. Reconnecting…" before the reconnect could land. These tests drive the
  * resume hold the way `use-session.ts` does — a drop arms ONE held report at
  * `OUTAGE_GRACE_MS`, a frame cancels it, retries follow the real
- * `reconnectDelay` curve — under fake timers.
+ * `reconnectDelay` curve through the same `reconnectTimer` the hook arms
+ * (pinned by "use-session wiring" below; #369 R3-1) — under fake timers.
  *
  * A suspension cannot be faked by `vi.setSystemTime` (it shifts pending timers
  * with the clock), so the clock reads `Date.now() + suspended`: bumping
@@ -40,7 +42,7 @@ const now = () => Date.now() + suspended;
 const runtime = (clock: ResumeClock, outcomes: ("fail" | "ok")[]) => {
 	const state = { dropped: false, reported: false, attempts: 0 };
 	let cancelReport: (() => void) | null = null;
-	let retry: ReturnType<typeof setTimeout> | null = null;
+	let cancelRetry: (() => void) | null = null;
 	let failures = 0;
 	const drop = () => {
 		if (state.dropped) return;
@@ -62,7 +64,11 @@ const runtime = (clock: ResumeClock, outcomes: ("fail" | "ok")[]) => {
 		state.attempts += 1;
 		if (outcome === "ok") return frame();
 		drop();
-		retry = setTimeout(attempt, reconnectDelay(failures++, undefined));
+		cancelRetry = reconnectTimer(
+			clock,
+			reconnectDelay(failures++, undefined),
+			attempt,
+		);
 	};
 	return {
 		state,
@@ -72,7 +78,8 @@ const runtime = (clock: ResumeClock, outcomes: ("fail" | "ok")[]) => {
 		resume: () => {
 			clock.resume();
 			failures = 0;
-			if (retry !== null) clearTimeout(retry);
+			cancelRetry?.();
+			cancelRetry = null;
 			state.dropped = false;
 			cancelReport?.();
 			cancelReport = null;
@@ -243,7 +250,10 @@ describe("a 401 on resume is not held", () => {
 
 /* Hoisted: the lint wants regex literals compiled once. */
 const HELD_TIMER_CALL = /heldTimer\(/g;
-const DEADLINE_HELD = /heldTimer\(resumeClock\.current, RECONNECT_DEADLINE_MS/;
+const RETRY_TIMER =
+	/cancelRetry = reconnectTimer\(resumeClock\.current, delay, \(\) => \{/;
+const DEADLINE_HELD =
+	/heldTimer\(\s*resumeClock\.current\s*,\s*RECONNECT_DEADLINE_MS\s*,/;
 const REFUSAL_DIRECT =
 	/if \(isTransient\(streamError\)\) \{[\s\S]*?return;\n\t{5}\}\n\t{5}sessions\.getState\(\)\.endStream\(sessionId\);\n\t{5}setError\(streamError\);/;
 
@@ -252,8 +262,13 @@ describe("use-session wiring", () => {
 		new URL("./use-session.ts", import.meta.url),
 		"utf8",
 	);
-	it("routes both report timers through the hold, and only them", () => {
+	it("holds the drop report and reconnect deadline; the retry only skips the background", () => {
+		// Two held REPORTS: the graced drop report and a reconnect's overdue
+		// deadline. The backoff retry is an attempt, not a report: it goes through
+		// `reconnectTimer` (no retry while backgrounded, #369 R2-2; no waiting out
+		// the resume window, #369 R3-1), which the runtime model above exercises.
 		expect(source.match(HELD_TIMER_CALL)?.length).toBe(2);
+		expect(source).toMatch(RETRY_TIMER);
 		expect(source).toContain("OUTAGE_GRACE_MS,");
 		expect(source).toMatch(DEADLINE_HELD);
 		// The refusal path stays direct: a typed failure is never held.
@@ -332,5 +347,72 @@ describe("heldTimer while backgrounded (PR #246 R2)", () => {
 		expect(fire).not.toHaveBeenCalled();
 		await vi.advanceTimersByTimeAsync(RESUME_GRACE_MS);
 		expect(fire).toHaveBeenCalledTimes(1);
+	});
+});
+
+/* #369 R3-1: the backoff retry is an attempt, not a report. Held like a report,
+ * it waited out the whole resume window and came due with the drop report, so
+ * a return whose first reopen failed showed the banner. These pin the timer's
+ * own contract; the runtime model above and use-session.test.tsx pin the
+ * wiring. */
+describe("reconnectTimer", () => {
+	beforeEach(() => vi.useFakeTimers());
+	afterEach(() => vi.useRealTimers());
+
+	it("fires at its backoff delay inside a resume window, not at the window's end", async () => {
+		const clock = createResumeClock(now);
+		clock.background();
+		suspended += 10 * 60_000;
+		clock.resume();
+		const fire = vi.fn();
+		reconnectTimer(clock, reconnectDelay(0, undefined), fire);
+		await vi.advanceTimersByTimeAsync(reconnectDelay(0, undefined) - 1);
+		expect(fire).not.toHaveBeenCalled();
+		await vi.advanceTimersByTimeAsync(1);
+		expect(fire).toHaveBeenCalledTimes(1);
+		// The control: a report timer armed the same way waits out the window.
+		const report = vi.fn();
+		heldTimer(clock, reconnectDelay(0, undefined), report);
+		await vi.advanceTimersByTimeAsync(reconnectDelay(0, undefined));
+		expect(report).not.toHaveBeenCalled();
+	});
+
+	it("never fires while backgrounded, re-checking once a second, then fires after the return", async () => {
+		const clock = createResumeClock(now);
+		clock.background();
+		const timers = vi.spyOn(globalThis, "setTimeout");
+		const fire = vi.fn();
+		reconnectTimer(clock, 1_000, fire);
+		await vi.advanceTimersByTimeAsync(10_000);
+		expect(fire).not.toHaveBeenCalled();
+		// The initial arm plus one re-arm per second: no busy loop.
+		expect(timers.mock.calls.length).toBeLessThanOrEqual(11);
+		timers.mockRestore();
+		clock.resume();
+		await vi.advanceTimersByTimeAsync(SUSPEND_SLACK_MS);
+		expect(fire).toHaveBeenCalledTimes(1);
+	});
+
+	it("a late fire with no background signal waits one slack period, once", async () => {
+		const clock = createResumeClock(now);
+		const fire = vi.fn();
+		reconnectTimer(clock, 1_000, fire);
+		suspended += 60_000; // frozen: the timer comes due a minute late
+		await vi.advanceTimersByTimeAsync(1_000);
+		expect(fire).not.toHaveBeenCalled();
+		// Still late on the second check (a starved thread): it fires anyway,
+		// rather than deferring a reconnect forever.
+		suspended += 60_000;
+		await vi.advanceTimersByTimeAsync(SUSPEND_SLACK_MS);
+		expect(fire).toHaveBeenCalledTimes(1);
+	});
+
+	it("cancel stops a pending retry", async () => {
+		const clock = createResumeClock(now);
+		const fire = vi.fn();
+		const cancel = reconnectTimer(clock, 1_000, fire);
+		cancel();
+		await vi.advanceTimersByTimeAsync(5_000);
+		expect(fire).not.toHaveBeenCalled();
 	});
 });
