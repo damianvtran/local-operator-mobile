@@ -1199,6 +1199,66 @@ export const maestroChecks: [string, () => void][] = [
 				);
 		},
 	],
+	[
+		"the keyboard-drag flow continues a live session and walks cancel, dismiss, raise",
+		() => {
+			const documents = read(
+				join(workspace, "keyboard-drag/keyboard-drag.yaml"),
+			);
+			const steps = commands(documents);
+			// A continuation, like rail-paint/fling.yaml: a relaunch would destroy
+			// the open session and the keyboard the drag needs.
+			assert(
+				steps.every((step) => step.launchApp === undefined),
+				"the drag flow must not relaunch the app",
+			);
+			documents.forEach(checkIdentifiers);
+			const swipes = steps.flatMap((step) =>
+				step.swipe === undefined ? [] : [mapping(step.swipe)],
+			);
+			assert.equal(swipes.length, 2, "one cancel drag and one dismiss drag");
+			for (const swipe of swipes) {
+				// 130 ms is the rail's fling; a per-frame measurement needs a drag
+				// slow enough to be recorded at 60 fps.
+				assert(
+					Number(swipe.duration) >= 1000,
+					"a keyboard drag must be slow enough to measure frame by frame",
+				);
+				assert.equal(swipe.start, "50%, 35%", "from the transcript");
+			}
+			// Down into the keyboard: the cancel stops short of the bottom edge,
+			// the dismiss goes past it.
+			const ends = swipes.map((swipe) =>
+				Number.parseInt(String(swipe.end).split(",")[1] ?? "", 10),
+			);
+			assert(
+				(ends[0] ?? 0) < (ends[1] ?? 0),
+				"the cancel drag must end above the dismiss drag",
+			);
+			assert.deepEqual(
+				steps.flatMap((step) =>
+					step.takeScreenshot === undefined ? [] : [step.takeScreenshot],
+				),
+				[
+					"kd-01-keyboard-up",
+					"kd-02-after-cancel",
+					"kd-03-after-dismiss",
+					"kd-04-keyboard-up-again",
+				],
+			);
+			// Discriminating: a relaunch added to the flow must fail the check.
+			assert.throws(
+				() =>
+					assert(
+						[...steps, { launchApp: null }].every(
+							(step) => step.launchApp === undefined,
+						),
+						"the drag flow must not relaunch the app",
+					),
+				/must not relaunch/,
+			);
+		},
+	],
 ];
 
 if (import.meta.main) {

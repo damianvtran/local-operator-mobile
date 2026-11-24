@@ -52,6 +52,17 @@ TextInput stays mounted, and an attachment, a dictation take, an error, an open
 `$`/`/` list or focus keeps the full card. It is off under a screen reader, on a
 tablet or split layout, and wherever the pill is already the resting form.
 
+Dragging the transcript down with the keyboard up makes the keyboard follow the
+finger and the composer ride its top edge frame by frame (`components.md` § 12,
+"Keyboard follows the finger"): iOS through the list's interactive dismissal,
+Android 11+ through a keyboard gesture area, older Android by closing at the start
+of the drag. The composer keeps its card shape and focus for the whole drag, the
+home-indicator inset is never undercut, and scrolling never compacts a composer
+the keyboard is pinning. The drag starts where the finger meets the keyboard's top.
+The feel, the spring-back and the transcript tail during a held drag need a real
+finger or a recorded simulator run; the unit tests prove the arithmetic and the
+state machine, not the motion.
+
 Context, costs, tasks and agents may sit behind a calm, labelled disclosure,
 but counts and destinations stay reachable. Urgent asks/approvals keep their
 arrival-open policy and cannot disappear behind an unlabelled overflow menu.
