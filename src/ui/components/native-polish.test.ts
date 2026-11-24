@@ -130,6 +130,20 @@ describe("final design audit wiring", () => {
 		);
 		// A refused change shows inside the open sheet (round 1 R2).
 		expect(session).toContain("error={chipError}");
+		/* Picks go through main's stored-model lane (#350/#353), which records
+		 *  a refusal as `settingsError`; no second command path (#335 rework). */
+		const sessionPicks = session.slice(
+			session.indexOf("<SessionRunSettingsSheet"),
+			session.indexOf("<FolderPicker"),
+		);
+		expect(sessionPicks).toContain("models={pickerModels}");
+		expect(sessionPicks).toContain("storedModel.selectModel(model)");
+		expect(sessionPicks).toContain(
+			"storedModel.selectEffort(effort, selectedModel)",
+		);
+		expect(session).not.toContain("applyRunSetting");
+		// An ended local chat chooses before reopening, so it is never "resume".
+		expect(wiring).toContain("stored: storedPicker");
 		const home = read("../../features/home/home.tsx");
 		expect(home).toContain(
 			"summary={runSettingsSummary(chips.model, chips.effort ?? null)}",

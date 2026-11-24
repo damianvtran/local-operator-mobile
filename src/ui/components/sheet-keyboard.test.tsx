@@ -6,7 +6,7 @@
  * The cause: `Sheet` lives in a native `Modal`, which is not resized for the
  * keyboard, and the sheet had no keyboard handling at all — its cap assumed the
  * column shrinks with the keyboard, which only the web does. These tests mount
- * the REAL `Sheet` (and the real `ModelPicker`) through react-dom and drive the
+ * the REAL `Sheet` (and the real `RunSettingsPicker`) through react-dom and drive the
  * keyboard through #216's keyboard store, the one boundary that is native.
  *
  * `react-native` is reduced to recording hosts: every kit node registers its
@@ -199,6 +199,8 @@ vi.mock("@/ui/direction", async () => {
 	return {
 		DirectionView: (p: Record<string, unknown>) =>
 			React.createElement(View, { ...p, testID: "column" }),
+		/* The run-settings sheet's section headings (`SectionHeader`) read it. */
+		useDirection: () => "ltr",
 	};
 });
 vi.mock("@/ui/components/modal-stack-entry", async () => {
@@ -232,7 +234,7 @@ vi.mock("@/ui/components", async () => ({
 
 const { Sheet } = await import("./sheet");
 const { SURFACE, CONTROL } = await import("@/ui/a11y");
-const { ModelPicker } = await import("@/features/home/home-pickers");
+const { RunSettingsPicker } = await import("@/features/home/home-pickers");
 const { modelOptionId, slashCommandId } = await import("@/ui/a11y");
 const { MODEL_SEARCH_THRESHOLD } = await import(
 	"@/features/home/picker-search-threshold"
@@ -469,44 +471,123 @@ const ROWS = MODELS.map((model) => ({
 	isDefault: false,
 })) as unknown as HomeModelRow[];
 
-describe("ModelPicker search (TestFlight 1295)", () => {
-	const mountPicker = async (onPick: (m: ModelEntry | null) => void) =>
+/* #335 (maintainer's ruling, 2026-11-24): the run-settings sheet leads with
+ *  the effort rungs, and the model search is pinned — #343's keyboard fix —
+ *  but only once the reader has scrolled to the model list it filters. */
+describe("RunSettingsPicker model search (TestFlight 1295, #335)", () => {
+	const MODEL_TOP = 180;
+	const mountPicker = async (
+		onPick: (m: ModelEntry | null) => void,
+		{ visible = true, models = MODELS } = {},
+	) =>
 		act(async () =>
 			root.render(
-				<ModelPicker
-					visible
+				<RunSettingsPicker
+					visible={visible}
 					onClose={() => {}}
-					models={MODELS}
-					rows={ROWS}
-					chosen={false}
-					loading={false}
-					failure={null}
-					onRetry={() => {}}
-					retrying={false}
 					editable
-					onPick={onPick}
+					summary="Model 0"
+					model={{
+						models,
+						rows: ROWS.slice(0, models.length),
+						chosen: false,
+						loading: false,
+						failure: null,
+						onRetry: () => {},
+						retrying: false,
+						onPick,
+					}}
+					effort={{
+						offer: { kind: "ladder", rungs: ["low", "high"], exact: true },
+						chosen: null,
+						defaultEffort: null,
+						onPick: () => {},
+					}}
 				/>,
 			),
 		);
+	/** The model section's place in the body, as native layout reports it. */
+	const layoutModels = (y = MODEL_TOP) =>
+		act(() => {
+			(node(CONTROL.homeModelPicker)?.props.onLayout as (e: unknown) => void)?.(
+				{ nativeEvent: { layout: { x: 0, y, width: WINDOW.width, height: 900 } } },
+			);
+		});
+	/** The body's viewport, content and offset — the three scroll facts. */
+	const scrollBody = (y: number, viewport = 400, content = 1200) =>
+		act(() => {
+			const body = node(SURFACE.sheetBody)?.props;
+			(body?.onLayout as (e: unknown) => void)?.({
+				nativeEvent: { layout: { height: viewport, width: WINDOW.width } },
+			});
+			(body?.onContentSizeChange as (w: number, h: number) => void)?.(
+				WINDOW.width,
+				content,
+			);
+			(body?.onScroll as (e: unknown) => void)?.({
+				nativeEvent: { contentOffset: { x: 0, y } },
+			});
+		});
+	const reachModels = async () => {
+		await layoutModels();
+		await scrollBody(MODEL_TOP);
+	};
 
-	it("pins the search field above the scrolling results", async () => {
+	it("leads with the effort rungs: no search field at the top of the sheet", async () => {
 		await mountPicker(() => {});
+		await layoutModels();
+		await scrollBody(0);
+		expect(node(CONTROL.homeModelSearch)).toBeUndefined();
+		expect(node(SURFACE.sheetPinned)).toBeUndefined();
+		// Effort, then the models: the rungs are above the list in the body.
+		expect(node(CONTROL.homeEffortPicker)?.path).toContain(SURFACE.sheetBody);
+	});
+
+	it("pins the search field above the scrolling results once the reader reaches the models", async () => {
+		await mountPicker(() => {});
+		await layoutModels();
+		await scrollBody(MODEL_TOP - 1);
+		expect(node(CONTROL.homeModelSearch)).toBeUndefined();
+		await scrollBody(MODEL_TOP);
 		const search = node(CONTROL.homeModelSearch);
 		expect(search).toBeDefined();
 		expect(search?.path).toContain(SURFACE.sheetPinned);
 		expect(search?.path).not.toContain(SURFACE.sheetBody);
 	});
 
-	it("picks a row in one tap with the keyboard up", async () => {
+	it("keeps the search for the visit, and starts the next visit at effort again", async () => {
+		await mountPicker(() => {});
+		await reachModels();
+		/* Scrolling back up does not pull the field out from under a query. */
+		await scrollBody(0);
+		expect(node(CONTROL.homeModelSearch)?.path).toContain(SURFACE.sheetPinned);
+		await mountPicker(() => {}, { visible: false });
+		await mountPicker(() => {});
+		await layoutModels();
+		await scrollBody(0);
+		expect(node(CONTROL.homeModelSearch)).toBeUndefined();
+	});
+
+	it("never pins a search over a list short enough to see whole", async () => {
+		await mountPicker(() => {}, {
+			models: MODELS.slice(0, MODEL_SEARCH_THRESHOLD),
+		});
+		await reachModels();
+		expect(node(CONTROL.homeModelSearch)).toBeUndefined();
+		expect(node(SURFACE.sheetPinned)).toBeUndefined();
+	});
+
+	it("picks a model row in one tap with the keyboard up", async () => {
 		const onPick = vi.fn();
 		await mountPicker(onPick);
+		await reachModels();
 		await showKeyboard();
 		expect(node(SURFACE.sheetBody)?.props.keyboardShouldPersistTaps).toBe(
 			"handled",
 		);
 		const row = [...host.nodes.entries()].find(
 			([key, r]) =>
-				key !== CONTROL.sheetScrim &&
+				MODELS.some((m) => modelOptionId(m.model_id) === key) &&
 				r.path.includes(SURFACE.sheetBody) &&
 				typeof r.props.onPress === "function",
 		);
@@ -521,6 +602,7 @@ describe("ModelPicker search (TestFlight 1295)", () => {
 
 	it("keeps the search field where it was while typing narrows the results (design D2)", async () => {
 		await mountPicker(() => {});
+		await reachModels();
 		await layout("column", WINDOW.height);
 		await layout(SURFACE.sheetPinned, PINNED);
 		await showKeyboard();

@@ -2,11 +2,11 @@ import { describe, expect, it } from "vitest";
 
 import type { ComposerChip } from "./chip-labels";
 import {
-	applyRunSetting,
 	composerControlsPlan,
 	customMarkInset,
 	folderControlLabel,
 	folderSource,
+	modelSearchReached,
 	runSettingsControl,
 	runSettingsSummary,
 	sessionFolderControl,
@@ -365,6 +365,43 @@ describe("sessionRunSettings: what the session's run-settings sheet shows", () =
 		});
 	});
 
+	it("lets an ENDED local chat choose before it reopens: loading, then the ladder or none (PR #350)", () => {
+		/* Main's stored-model lane keeps a choice on the phone until Resume/Send,
+		 *  so "resume to change" is false there. With no effort chip the stored
+		 *  catalogue is still loading, or the chosen model has no rungs. */
+		const model = value("Opus 5", "Model, Opus 5");
+		expect(
+			sessionRunSettings({
+				chips: { model, effort: null },
+				ladder: [],
+				ended: true,
+				stored: { loading: true },
+			}).effort,
+		).toStrictEqual({
+			kind: "locked",
+			lock: { reason: "Loading…", value: null },
+		});
+		expect(
+			sessionRunSettings({
+				chips: { model, effort: null },
+				ladder: [],
+				ended: true,
+				stored: { loading: false },
+			}).effort,
+		).toStrictEqual({ kind: "none" });
+		expect(
+			sessionRunSettings({
+				chips: { model, effort: value("High", "Effort, High") },
+				ladder: ["low", "high"],
+				ended: true,
+				stored: { loading: false },
+			}),
+		).toMatchObject({
+			model: { kind: "list" },
+			effort: { kind: "ladder", rungs: ["low", "high"] },
+		});
+	});
+
 	it("says a value still loading is loading, before the first frame", () => {
 		const state = sessionRunSettings({
 			chips: {
@@ -492,54 +529,32 @@ describe("sessionFolderControl: the session's folder is read-only (the relay tak
 	});
 });
 
-describe("applyRunSetting: a refused change is reported, not swallowed (R2)", () => {
-	it("sends the command to the session and clears the last error first", async () => {
-		const sent: unknown[] = [];
-		const errors: Array<string | null> = [];
-		await applyRunSetting({
-			endpoints: {
-				command: async (id: string, body: unknown) => {
-					sent.push([id, body]);
-					return {};
-				},
-			},
-			sessionId: "s1",
-			body: { op: "set_effort", effort: "high" },
-			failure: "Could not change the effort.",
-			onError: (e) => errors.push(e),
-		});
-		expect(sent).toStrictEqual([["s1", { op: "set_effort", effort: "high" }]]);
-		expect(errors).toStrictEqual([null]);
+describe("modelSearchReached: the run-settings sheet pins its model search only at the models (#335)", () => {
+	/* Effort leads the sheet (D1); the search is pinned (#343's keyboard fix)
+	 *  but only once the reader has scrolled to the model list it filters. */
+	const facts = { viewport: 400, content: 1200, modelTop: 180 };
+	it("keeps the search away while the sheet rests at the top", () => {
+		expect(modelSearchReached({ ...facts, y: 0 })).toBe(false);
+		expect(modelSearchReached({ ...facts, y: 120 })).toBe(false);
 	});
-	it("reports the refusal in the caller's words", async () => {
-		const errors: Array<string | null> = [];
-		await applyRunSetting({
-			endpoints: {
-				command: async () => {
-					throw new Error("409");
-				},
-			},
-			sessionId: "s1",
-			body: {
-				op: "set_model",
-				provider: "anthropic",
-				model_id: "claude-opus-5",
-			},
-			failure: "Could not change the model.",
-			onError: (e) => errors.push(e),
-		});
-		expect(errors).toStrictEqual([null, "Could not change the model."]);
+	it("reaches the models once their heading scrolls to the top of the body", () => {
+		expect(modelSearchReached({ ...facts, y: 180 })).toBe(true);
+		expect(modelSearchReached({ ...facts, y: 600 })).toBe(true);
 	});
-	it("reports a missing route rather than doing nothing", async () => {
-		const errors: Array<string | null> = [];
-		await applyRunSetting({
-			endpoints: null,
-			sessionId: "s1",
-			body: { op: "set_effort", effort: "low" },
-			failure: "Could not change the effort.",
-			onError: (e) => errors.push(e),
-		});
-		expect(errors).toStrictEqual([null, "Could not change the effort."]);
+	it("reaches them at the end of a body too short to bring the heading up", () => {
+		expect(
+			modelSearchReached({ viewport: 400, content: 520, modelTop: 180, y: 119 }),
+		).toBe(false);
+		expect(
+			modelSearchReached({ viewport: 400, content: 520, modelTop: 180, y: 120 }),
+		).toBe(true);
+	});
+	it("decides nothing before the body and the section are measured", () => {
+		expect(modelSearchReached({ ...facts, modelTop: null, y: 300 })).toBe(
+			false,
+		);
+		expect(modelSearchReached({ ...facts, viewport: 0, y: 300 })).toBe(false);
+		expect(modelSearchReached({ ...facts, content: 0, y: 300 })).toBe(false);
 	});
 });
 
