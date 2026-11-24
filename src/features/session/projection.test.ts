@@ -339,6 +339,22 @@ describe("visible transcript provenance", () => {
 				kind: "user",
 				text: "[session credential] why do I see this?",
 			}),
+			// Core's OTHER notices under the same head (`incidents.py`
+			// `format_credential_message`, type `session_credential`): the
+			// operator's own store/remove, kept (R1-6). The head match applies to
+			// untyped notices only.
+			entry({
+				id: "stored",
+				kind: "notice",
+				custom_type: "session_credential",
+				text: "[session credential] GITHUB_TOKEN was just stored by the operator.",
+			}),
+			entry({
+				id: "removed",
+				kind: "notice",
+				details: { custom_kind: "session_credential" },
+				text: "[session credential] GITHUB_TOKEN was removed.",
+			}),
 			entry({ id: "t2", tool_state: "failed" }),
 		];
 		const visible = visibleTranscriptEntries(rows);
@@ -346,6 +362,8 @@ describe("visible transcript provenance", () => {
 			"t1",
 			"neighbour",
 			"quote",
+			"stored",
+			"removed",
 			"t2",
 		]);
 		// Filtered before condensing: the hidden rows add nothing to a group.

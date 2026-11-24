@@ -109,7 +109,16 @@ export const SESSION_CREDENTIAL_NOTICE_TYPE =
  *  stamp. Core's own `harness/rows.py` `_HARNESS_NOTICE_HEADS` treats this head
  *  as harness-authored, so it is not the reader's words. Matched on NOTICE rows
  *  only, after leading whitespace as Core does: a user or peer quoting the
- *  words still owns them (the session_state rule above). */
+ *  words still owns them (the session_state rule above).
+ *
+ *  And only on UNTYPED notices (agent review round 1, R1-6). Core prints the
+ *  same head on its typed `session_credential` notices — "[session credential]
+ *  KEY was just stored by the operator…" / "…was removed" (`incidents.py`
+ *  `format_credential_message`, `harness/message_types.py`
+ *  `SESSION_CREDENTIAL_MESSAGE_TYPE`) — which ARE the reader's own action and
+ *  stay visible; Core's fix drops only the binding type. A typed row is
+ *  therefore judged by its type alone; the head is the fallback for rows that
+ *  carry no type at all. */
 const SESSION_CREDENTIAL_NOTICE_HEAD = "[session credential] ";
 
 const HIDDEN_NOTICE_TYPES: ReadonlySet<string> = new Set([
@@ -119,10 +128,11 @@ const HIDDEN_NOTICE_TYPES: ReadonlySet<string> = new Set([
 
 /** A notice row that is harness metadata, not a conversation event. Display
  *  only, and filtered BEFORE condensing so it adds no rows or group counts. */
-const hiddenNotice = (entry: TranscriptEntry): boolean =>
-	HIDDEN_NOTICE_TYPES.has(
-		entry.custom_type || entry.details.custom_kind || "",
-	) || entry.text.trimStart().startsWith(SESSION_CREDENTIAL_NOTICE_HEAD);
+const hiddenNotice = (entry: TranscriptEntry): boolean => {
+	const type = entry.custom_type || entry.details.custom_kind || "";
+	if (type !== "") return HIDDEN_NOTICE_TYPES.has(type);
+	return entry.text.trimStart().startsWith(SESSION_CREDENTIAL_NOTICE_HEAD);
+};
 
 /** Whether the row is one the reader wrote. Used for alignment, and for the one
  *  place the transcript puts a bubble around text. */

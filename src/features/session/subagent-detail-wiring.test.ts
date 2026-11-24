@@ -20,21 +20,14 @@ const SOURCE = readFileSync(
 	),
 	"utf8",
 );
-/** The detail read moved into `useSubagentTranscript` with the transcript's
- *  own reads; `missing` is derived there now, by the same two arms. */
-const HOOK = readFileSync(
-	fileURLToPath(new URL("./use-subagent-transcript.ts", import.meta.url)),
-	"utf8",
-);
 
 describe("subagent detail screen", () => {
 	it("hands the badge the screen's own missing flag", () => {
 		expect(SOURCE).toContain("subagentBadge(detail, missing)");
 	});
 
-	it("derives missing from the settled fetch, both an empty answer and a failure", () => {
-		expect(SOURCE).toContain("const { detail, missing } = view;");
-		expect(HOOK).toContain("setMissing(loaded === null)");
-		expect(HOOK).toContain("if (!cancelled) setMissing(true)");
-	});
+	/* How `missing` is DERIVED (an empty answer and a failed read) is pinned by
+	 * behaviour, not by source text: `subagent-screen.test.tsx`, "says the child
+	 * is no longer available, under an unavailable badge" (agent review round 1,
+	 * R1-n2 — a literal on a variable name broke on a rename and proved nothing). */
 });

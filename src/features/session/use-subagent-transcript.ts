@@ -5,8 +5,9 @@ import type {
 	SubagentDetail,
 	TranscriptEntry,
 } from "@/contracts";
-import { RelayError } from "@/relay/errors";
+import { isRelayMissing } from "@/relay/errors";
 import { HistoryWindow } from "./history-window";
+import { visibleTranscriptEntries } from "./projection";
 
 /**
  * How often an OPEN subagent screen re-reads a running child.
@@ -20,15 +21,35 @@ import { HistoryWindow } from "./history-window";
 export const SUBAGENT_POLL_MS = 1500;
 
 /**
+ * How many newest-page reads in a row must fail before a RUNNING child with rows
+ * already on screen shows the list's "latest messages could not be loaded"
+ * footer (agent review round 1, R1-2).
+ *
+ * One dropped tick on a flaky link is not news: the next tick (1.5 s later)
+ * usually lands, and `HistoryWindow.load` clears its error as each read starts,
+ * so passing every failure through made the footer blink — moving the tail and
+ * re-announcing a polite live region — every tick. Three in a row (~4.5 s) is a
+ * link that is actually down; from then on the footer holds steady until a read
+ * succeeds. A settled child is not polled, so its single failure shows at once.
+ */
+export const SUBAGENT_NEWEST_FAILURES_BEFORE_NOTICE = 3;
+
+/**
  * What the transcript body should be, beyond its rows.
  *
  * - `loading`: the first read has not answered yet.
- * - `rows`: there is something to draw (history rows, or the inline fallback).
+ * - `rows`: there is something to draw (history rows, or the inline fallback)
+ *   AFTER the list's own notice filter — a child whose only rows are hidden
+ *   harness notices has nothing to draw (R1-3).
  * - `empty`: a read SUCCEEDED and the child genuinely has no rows of its own —
  *   the only state allowed to say so.
- * - `unavailable`: the history route answered 404 (an older Core without the
- *   route, or a child whose session directory it can no longer resolve) and the
- *   detail carried no inline rows either. Terminal: retrying cannot change it.
+ * - `unavailable`: the RELAY's own 404 (`isRelayMissing`: an older Core without
+ *   the route, or a child whose session directory it can no longer resolve) for
+ *   a SETTLED child, and the detail carried no inline rows either. Terminal:
+ *   retrying cannot change it. A running or queued child that 404s is still
+ *   `loading` — Core answers 404 until the child has a session id of its own
+ *   (R1-4a) — and the gateway's unknown-tunnel 404 is a transport failure, not
+ *   absence (R1-4b).
  * - `failed`: a transport failure with nothing to draw. Retryable; never the
  *   empty line, which would tell the reader a running child did nothing.
  */
@@ -108,7 +129,10 @@ const EMPTY_ROWS: TranscriptEntry[] = [];
  * nothing to draw is `failed` and retryable.
  *
  * `key` names the child (`<session>:<job>`); a new key is a new reader, so a
- * sibling's rows can never paint under the child just opened. `source` is
+ * sibling's rows can never paint under the child just opened, and every async
+ * answer (history page, detail read) checks that its key is still the current
+ * one before it touches the shared per-child flags, so a previous child's late
+ * 404 or empty page cannot set the new child's state either. `source` is
  * `null` until the relay endpoints exist: nothing is read (and nothing is
  * declared missing or failed) before there is a link to read over, and the
  * reads run as soon as it arrives.
@@ -135,24 +159,52 @@ export function useSubagentTranscript(
 	const [notFound, setNotFound] = useState(false);
 	const [emptyRead, setEmptyRead] = useState(false);
 	const [, changed] = useState(0);
+	/** The child the hook is CURRENTLY showing. The per-child flags above are
+	 *  hook state shared across keys, while a retired reader's page (or an old
+	 *  detail read) can still be in flight when the screen is reused for a
+	 *  sibling; every async answer checks its own key against this before it
+	 *  writes anything (R1-5). Assigned during render, as `sourceRef` is. */
+	const keyRef = useRef(key);
+	keyRef.current = key;
+	/** Consecutive failed newest-page reads, and the last such failure's
+	 *  message: what lets a running child's footer wait out one dropped tick and
+	 *  then hold steady instead of blinking (R1-2). Reset on success and per child. */
+	const newestFailures = useRef(0);
+	const lastNewestError = useRef<string | null>(null);
+	/** Single-flight for the detail read (R1-1). `agentDetail` has no dedupe and a
+	 *  20 s deadline, so an unguarded 1.5 s poll kept ~13 GETs open on a stalled
+	 *  tunnel, all competing with the history read the screen needs; and answers
+	 *  could land out of order, a late "running" reviving a child that had just
+	 *  "completed". `detailPending` skips a tick while a read is open;
+	 *  `detailSeq` numbers every read so only the LATEST one may write — a new
+	 *  child, an unmount or a fresh opening read makes older answers inert. */
+	const detailSeq = useRef(0);
+	const detailPending = useRef(false);
 
 	const reader = useMemo(() => {
 		// `key` is the reader's identity: the effect below retires the old one.
-		void key;
+		const own = key;
+		const current = () => keyRef.current === own;
 		return new HistoryWindow(
 			async (before) => {
 				try {
-					const current = sourceRef.current;
-					if (current === null) throw new Error("History is unavailable.");
-					const page = await current.loadPage(before);
-					if (before === undefined) {
+					const source = sourceRef.current;
+					if (source === null) throw new Error("History is unavailable.");
+					const page = await source.loadPage(before);
+					if (before === undefined && current()) {
+						newestFailures.current = 0;
 						setNotFound(false);
-						setEmptyRead(page.entries.length === 0);
+						// Counted as the list will draw them (R1-3): a page of hidden
+						// harness notices only is, to the reader, an empty one.
+						setEmptyRead(visibleTranscriptEntries(page.entries).length === 0);
 					}
 					return page;
 				} catch (error) {
-					if (before === undefined) {
-						setNotFound(error instanceof RelayError && error.status === 404);
+					if (before === undefined && current()) {
+						newestFailures.current += 1;
+						// The relay's own 404 only: the gateway's unknown-tunnel 404 is
+						// a dead link (retryable), not proof the transcript is gone.
+						setNotFound(isRelayMissing(error));
 						setEmptyRead(false);
 					}
 					throw error;
@@ -176,31 +228,60 @@ export function useSubagentTranscript(
 		setMissing(false);
 		setNotFound(false);
 		setEmptyRead(false);
+		newestFailures.current = 0;
+		lastNewestError.current = null;
 	}, [key]);
 
-	/** The first detail read decides `missing`; a later refresh that fails keeps
-	 *  the detail already shown rather than blanking a child the reader is in. */
+	/**
+	 * One detail read. The OPENING read (`opening`) decides `missing` and always
+	 * runs, superseding whatever an earlier child left in flight; a poll refresh
+	 * is skipped while any read is still open, and one that fails keeps the
+	 * detail already shown rather than blanking a child the reader is in.
+	 */
+	const readDetail = useCallback((opening: boolean) => {
+		const source = sourceRef.current;
+		if (source === null) return;
+		if (!opening && detailPending.current) return;
+		detailSeq.current += 1;
+		const seq = detailSeq.current;
+		const latest = () => seq === detailSeq.current;
+		detailPending.current = true;
+		source
+			.loadDetail()
+			.then((loaded) => {
+				if (!latest()) return;
+				detailPending.current = false;
+				if (opening) {
+					setDetail(loaded);
+					// A `null` detail is either a transport failure or a child the daemon
+					// no longer has; both read the same to the reader, and inventing a
+					// difference they cannot act on would be noise.
+					setMissing(loaded === null);
+					return;
+				}
+				// Only the latest read writes, and at most one refresh is open, so a
+				// late "running" can no longer land after a "completed" and revive
+				// the poll; a refresh that answers nothing keeps what is shown.
+				if (loaded !== null) setDetail(loaded);
+			})
+			.catch(() => {
+				if (!latest()) return;
+				detailPending.current = false;
+				if (opening) setMissing(true);
+			});
+	}, []);
+
 	useEffect(() => {
 		void key;
 		if (!ready) return;
-		let cancelled = false;
-		sourceRef.current
-			?.loadDetail()
-			.then((loaded) => {
-				if (cancelled) return;
-				setDetail(loaded);
-				// A `null` detail is either a transport failure or a child the daemon no
-				// longer has; both read the same to the reader, and inventing a difference
-				// they cannot act on would be noise.
-				setMissing(loaded === null);
-			})
-			.catch(() => {
-				if (!cancelled) setMissing(true);
-			});
+		readDetail(true);
 		return () => {
-			cancelled = true;
+			// Unmount or a new child: whatever is still in flight is answered into
+			// nothing, and the next opening read is not blocked by it.
+			detailSeq.current += 1;
+			detailPending.current = false;
 		};
-	}, [key, ready]);
+	}, [key, ready, readDetail]);
 
 	const live = isLive(detail);
 	useEffect(() => {
@@ -209,25 +290,17 @@ export function useSubagentTranscript(
 		if (!ready) return;
 		void reader.load(true);
 		if (!live) return;
-		let cancelled = false;
 		const timer = setInterval(() => {
-			// `load(true)` joins a read already in flight, so a slow link never
-			// stacks requests; the detail read refreshes status/elapsed/result so
-			// the badge stops saying "running" once the child settles, which also
-			// ends this interval.
+			// Both reads are single-flight, so a slow link never stacks requests:
+			// `load(true)` joins a history read already in flight, and `readDetail`
+			// skips the tick while a detail read is open. The detail refreshes
+			// status/elapsed/result so the badge stops saying "running" once the
+			// child settles, which also ends this interval.
 			void reader.load(true);
-			sourceRef.current
-				?.loadDetail()
-				.then((loaded) => {
-					if (!cancelled && loaded !== null) setDetail(loaded);
-				})
-				.catch(() => undefined);
+			readDetail(false);
 		}, pollMs);
-		return () => {
-			cancelled = true;
-			clearInterval(timer);
-		};
-	}, [reader, live, pollMs, ready]);
+		return () => clearInterval(timer);
+	}, [reader, live, pollMs, ready, readDetail]);
 
 	const retry = useCallback(() => {
 		void reader.load(true);
@@ -247,20 +320,44 @@ export function useSubagentTranscript(
 			? inline
 			: EMPTY_ROWS;
 
+	// What the list will actually draw: it drops hidden harness notices before
+	// anything else (`transcript-list.tsx`), so a child whose rows are ONLY such
+	// notices must not count as "rows" — the list would show its empty slot, and
+	// with `state === "rows"` that slot is the loading skeleton, forever (R1-3).
+	const drawable = visibleTranscriptEntries(entries).length > 0;
+	// The status is known once the opening detail read has answered either way.
+	const settledKnown = !live && (detail !== null || missing);
+
 	let state: SubagentTranscriptState;
-	if (entries.length > 0) state = "rows";
-	else if (notFound) state = "unavailable";
+	if (drawable) state = "rows";
+	else if (notFound) state = settledKnown ? "unavailable" : "loading";
 	else if (emptyRead) state = "empty";
 	else if (reader.read === "failed") state = "failed";
 	else state = "loading";
+
+	// A running child keeps a newest-edge failure quiet until it is sustained,
+	// then holds the last message steady through the ticks that clear and re-set
+	// the reader's own error (R1-2). An older-page failure is the reader's own
+	// action and always shows; a settled child is not polled, so it shows as is.
+	if (reader.errorScope === "newest" && reader.error !== null)
+		lastNewestError.current = reader.error;
+	let historyError = reader.error;
+	let historyErrorScope = reader.errorScope;
+	if (live && historyErrorScope !== "older") {
+		const sustained =
+			newestFailures.current >= SUBAGENT_NEWEST_FAILURES_BEFORE_NOTICE &&
+			lastNewestError.current !== null;
+		historyError = sustained ? lastNewestError.current : null;
+		historyErrorScope = sustained ? "newest" : null;
+	}
 
 	const paging = fromHistory
 		? {
 				loadOlder,
 				hasOlder: reader.hasMore,
 				loadingOlder: reader.loading && reader.loadingScope === "older",
-				historyError: reader.error,
-				historyErrorScope: reader.errorScope,
+				historyError,
+				historyErrorScope,
 				retryHistory,
 				healHistory,
 				historyGap: reader.hasGap && reader.healState !== "healing",

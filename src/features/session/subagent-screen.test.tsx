@@ -40,23 +40,34 @@ const host = vi.hoisted(() => ({
 	presses: new Map<string, () => void>(),
 	texts: [] as string[],
 	runtime: null as null | Record<string, unknown>,
+	/** The route's params; a test reuses the mounted screen for a sibling by
+	 *  changing `jobId` and re-rendering (R1-5). */
+	params: { id: "root", jobId: "job-qa" },
 }));
 
 vi.mock("expo-router", () => ({
-	useLocalSearchParams: () => ({ id: "root", jobId: "job-qa" }),
+	useLocalSearchParams: () => host.params,
 	useRouter: () => ({ back: vi.fn(), push: vi.fn() }),
 }));
 vi.mock("@/features/session/use-session", () => ({
 	useSessionRuntime: () => host.runtime,
 }));
-vi.mock("@/features/session/components/transcript-list", () => ({
-	TranscriptList: (props: Record<string, unknown>) => {
-		host.list = props;
-		return (props.entries as unknown[]).length === 0
-			? ((props.empty as ReactNode) ?? null)
-			: null;
-	},
-}));
+vi.mock("@/features/session/components/transcript-list", async () => {
+	// The real list filters hidden harness notices BEFORE deciding it is empty
+	// (`transcript-list.tsx`, `visibleTranscriptEntries`), so the recorder does
+	// the same with the real filter: a notices-only child reaches the empty slot.
+	const { visibleTranscriptEntries } =
+		await vi.importActual<typeof import("./projection")>("./projection");
+	return {
+		TranscriptList: (props: Record<string, unknown>) => {
+			host.list = props;
+			return visibleTranscriptEntries(props.entries as TranscriptEntry[])
+				.length === 0
+				? ((props.empty as ReactNode) ?? null)
+				: null;
+		},
+	};
+});
 vi.mock("@/features/session/components/todos-panel", () => ({
 	TodosPanel: () => null,
 }));
@@ -75,7 +86,13 @@ vi.mock("@/ui/text-scale-provider", () => ({
 	useTextScale: () => ({ effectiveScale: 1 }),
 }));
 vi.mock("@/ui/components/textarea", () => ({ Textarea: () => null }));
-vi.mock("@/ui/layout", () => ({ useCompactChrome: () => false }));
+// `TOUCH_FLOOR` is read at import time by the real title module
+// (`thread-chrome.tsx` `BRIDGE_TEXT_INSET`); the real `@/ui/layout` cannot be
+// spread in, because it reads `Platform` from the stubbed react-native.
+vi.mock("@/ui/layout", async () => ({
+	useCompactChrome: () => false,
+	TOUCH_FLOOR: (await import("@/ui/variants")).touchFloorFor("other"),
+}));
 vi.mock("@/ui/components/back-icon", () => ({ BackIcon: () => null }));
 vi.mock("@/ui/components", () => ({
 	Screen: (props: Record<string, unknown> & { children: ReactNode }) => {
@@ -109,14 +126,26 @@ vi.mock("@/ui/components", () => ({
 		return null;
 	},
 }));
-vi.mock("react-native", () => ({
-	View: ({ children }: { children?: ReactNode }) => children ?? null,
-	Text: ({ children }: { children?: ReactNode }) => {
-		const flat = Array.isArray(children) ? children.join("") : children;
-		if (typeof flat === "string") host.texts.push(flat);
-		return null;
-	},
-}));
+vi.mock("react-native", async () => {
+	const { createElement: draw } = await import("react");
+	return {
+		View: ({ children }: { children?: ReactNode }) => children ?? null,
+		// Records the words AND draws a span with the caller's class, so the
+		// header test can read the real title's typographic step from markup (a
+		// null here drew the title as '' and that test could never pass).
+		Text: ({
+			children,
+			className,
+		}: {
+			children?: ReactNode;
+			className?: string;
+		}) => {
+			const flat = Array.isArray(children) ? children.join("") : children;
+			if (typeof flat === "string") host.texts.push(flat);
+			return draw("span", { className }, children);
+		},
+	};
+});
 
 const { default: Subagent } = await import(
 	"../../../app/(app)/session/[id]/agent/[jobId]"
@@ -125,7 +154,8 @@ const { BridgeThreadTitleView } = await vi.importActual<
 	typeof import("@/features/team-bridge/thread-chrome")
 >("@/features/team-bridge/thread-chrome");
 const { sessionHeaderTitle } = await import("./header");
-const { SUBAGENT_POLL_MS } = await import("./use-subagent-transcript");
+const { SUBAGENT_POLL_MS, SUBAGENT_NEWEST_FAILURES_BEFORE_NOTICE } =
+	await import("./use-subagent-transcript");
 
 const row = (id: string, text = id): TranscriptEntry => ({
 	id,
@@ -176,22 +206,40 @@ const detailOf = (over: Partial<SubagentDetail> = {}): SubagentDetail => ({
 });
 
 type Relay = {
-	detail: () => Promise<SubagentDetail | null>;
-	history: (before?: string) => Promise<HistoryResponse>;
+	detail: (job: string) => Promise<SubagentDetail | null>;
+	history: (before?: string, job?: string) => Promise<HistoryResponse>;
 };
 
 let dom: DomShim;
 let root: ReturnType<typeof createRoot>;
 let relay: Relay;
 const historyCalls: (string | undefined)[] = [];
+const detailCalls: string[] = [];
+/** A promise the test resolves or rejects by hand: a stalled relay. */
+const deferred = <T,>() => {
+	let resolve!: (value: T) => void;
+	let reject!: (error: unknown) => void;
+	const promise = new Promise<T>((ok, fail) => {
+		resolve = ok;
+		reject = fail;
+	});
+	return { promise, resolve, reject };
+};
+const tick = () =>
+	act(async () => {
+		await vi.advanceTimersByTimeAsync(SUBAGENT_POLL_MS);
+	});
 
 const mount = async () => {
 	host.runtime = {
 		projection: { conversation_name: "Add Bedrock provider" },
-		loadAgent: vi.fn(() => relay.detail()),
-		loadAgentHistory: (_job: string, before?: string) => {
+		loadAgent: vi.fn((job: string) => {
+			detailCalls.push(job);
+			return relay.detail(job);
+		}),
+		loadAgentHistory: (job: string, before?: string) => {
 			historyCalls.push(before);
-			return relay.history(before);
+			return relay.history(before, job);
 		},
 	};
 	await act(async () => root.render(createElement(Subagent)));
@@ -217,6 +265,8 @@ beforeEach(() => {
 	host.presses.clear();
 	host.texts = [];
 	historyCalls.length = 0;
+	detailCalls.length = 0;
+	host.params = { id: "root", jobId: "job-qa" };
 });
 afterEach(async () => {
 	await act(async () => root.unmount());
@@ -385,6 +435,207 @@ describe("the subagent screen's transcript", () => {
 	});
 });
 
+/** A notice row Core folds as harness metadata (hidden by the list). */
+const notice = (id: string, custom_type: string): TranscriptEntry => ({
+	...row(id, `[${custom_type}] metadata`),
+	kind: "notice",
+	custom_type,
+});
+
+/** Agent review round 1 (PR #390): the poll under a slow or flaky relay, the
+ *  404 classes, a reused screen, and rows the list will not draw. */
+describe("the subagent screen under a slow, flaky or reused link", () => {
+	it("keeps ONE detail read in flight on a stalled relay, and only its answer may write (R1-1)", async () => {
+		vi.useFakeTimers();
+		const stalled = deferred<SubagentDetail | null>();
+		relay = {
+			detail: async () =>
+				detailCalls.length === 1
+					? detailOf({ status: "running" })
+					: stalled.promise,
+			history: async () => ({ entries: [row("e1")], has_more: false }),
+		};
+		await mount();
+		await settle();
+		expect(say("badge:running")).toBe(true);
+		// Ten ticks on a tunnel that never answers: the first refresh is still
+		// open, so no further detail GETs pile up behind it (was one per tick).
+		for (let i = 0; i < 10; i += 1) await tick();
+		expect(detailCalls).toHaveLength(2);
+		// The one open refresh lands: it settles the child and ends the poll.
+		host.texts = [];
+		await act(async () => stalled.resolve(detailOf({ status: "completed" })));
+		await settle();
+		expect(say("badge:completed")).toBe(true);
+		expect(host.list?.turnLive).toBe(false);
+		const settled = detailCalls.length;
+		for (let i = 0; i < 5; i += 1) await tick();
+		expect(detailCalls).toHaveLength(settled);
+	});
+
+	it("keeps a running child's dropped tick quiet over its rows, then holds a sustained failure steady (R1-2)", async () => {
+		vi.useFakeTimers();
+		let mode: "ok" | "fail" | "stall" = "ok";
+		const stalled = deferred<HistoryResponse>();
+		relay = {
+			detail: async () => detailOf({ status: "running" }),
+			history: async () => {
+				if (mode === "fail") throw new RelayError("transport", "offline");
+				if (mode === "stall") return stalled.promise;
+				return { entries: [row("e1")], has_more: false };
+			},
+		};
+		await mount();
+		await settle();
+		expect(listIds()).toEqual(["e1"]);
+		mode = "fail";
+		// Below the threshold: no footer, no live-region announcement.
+		for (let i = 1; i < SUBAGENT_NEWEST_FAILURES_BEFORE_NOTICE; i += 1) {
+			await tick();
+			await settle();
+			expect(host.list?.historyError).toBeNull();
+		}
+		await tick();
+		await settle();
+		expect(host.list?.historyError).toEqual(expect.any(String));
+		expect(host.list?.historyErrorScope).toBe("newest");
+		// The next tick's read clears the reader's own error as it starts; the
+		// footer must not blink off while that read is in flight.
+		mode = "stall";
+		await tick();
+		expect(host.list?.historyError).toEqual(expect.any(String));
+		await act(async () =>
+			stalled.resolve({ entries: [row("e1"), row("e2")], has_more: false }),
+		);
+		await settle();
+		expect(listIds()).toEqual(["e1", "e2"]);
+		expect(host.list?.historyError).toBeNull();
+	});
+
+	it("says 'no rows' — not a skeleton forever — when every row is a hidden notice (R1-3)", async () => {
+		relay = {
+			detail: async () => detailOf({ status: "completed" }),
+			history: async () => ({
+				entries: [
+					notice("n1", "session_state"),
+					notice("n2", "session_credential_binding_notice.v1"),
+				],
+				has_more: false,
+			}),
+		};
+		await mount();
+		await settle();
+		// A fresh frame: the opening render's skeleton (read in flight) is history.
+		host.texts = [];
+		await act(async () => root.render(createElement(Subagent)));
+		expect(say("This subagent has no transcript rows of its own.")).toBe(true);
+		expect(say("skeleton:")).toBe(false);
+	});
+
+	it("keeps waiting on a running child that 404s before it has a session of its own (R1-4a)", async () => {
+		vi.useFakeTimers();
+		let started = false;
+		relay = {
+			detail: async () => detailOf({ status: "queued" }),
+			history: async () => {
+				if (!started)
+					throw new RelayError("rejected", "Not Found", { status: 404 });
+				return { entries: [row("e1")], has_more: false };
+			},
+		};
+		await mount();
+		await settle();
+		expect(say("Its transcript was not kept")).toBe(false);
+		expect(say("skeleton:")).toBe(true);
+		// Still polled: the 404 is "not yet", and the rows arrive once it starts.
+		started = true;
+		await tick();
+		await settle();
+		expect(listIds()).toEqual(["e1"]);
+	});
+
+	it("treats the gateway's unknown-tunnel 404 as a dead link with a retry, not a lost transcript (R1-4b)", async () => {
+		relay = {
+			detail: async () => detailOf({ status: "completed" }),
+			history: async () => {
+				throw new RelayError("unknown-tunnel", "Not Found", { status: 404 });
+			},
+		};
+		await mount();
+		await settle();
+		expect(say("Its transcript was not kept")).toBe(false);
+		expect(say("The latest messages could not be loaded.")).toBe(true);
+		expect(host.presses.get(CONTROL.subagentRetry)).toBeTypeOf("function");
+	});
+
+	it("never lets the previous child's late answers set a reused screen's state (R1-5)", async () => {
+		const first = {
+			detail: deferred<SubagentDetail | null>(),
+			history: deferred<HistoryResponse>(),
+		};
+		const sibling = deferred<HistoryResponse>();
+		relay = {
+			detail: async (job) =>
+				job === "job-qa"
+					? first.detail.promise
+					: detailOf({ job_id: job, label: "sibling", status: "completed" }),
+			history: async (_before, job) =>
+				job === "job-qa" ? first.history.promise : sibling.promise,
+		};
+		await mount();
+		// Reuse the mounted screen for a sibling while the first child's reads
+		// are still open; its own first page is still in flight too.
+		host.params = { id: "root", jobId: "job-sib" };
+		await act(async () => root.render(createElement(Subagent)));
+		await settle();
+		// The first child's reads land late: a relay 404 and a running detail.
+		await act(async () => {
+			first.history.reject(
+				new RelayError("rejected", "Not Found", { status: 404 }),
+			);
+			first.detail.resolve(detailOf({ status: "running" }));
+		});
+		await settle();
+		// A fresh frame, so the assertions read the hook's state as it now is.
+		host.texts = [];
+		await act(async () => root.render(createElement(Subagent)));
+		expect(say("Its transcript was not kept")).toBe(false);
+		expect(say("skeleton:")).toBe(true);
+		expect(say("badge:completed")).toBe(true);
+		expect(
+			(host.screen?.titleNode as { props: { title: string } } | undefined)
+				?.props.title,
+		).toBe("sibling");
+		// The sibling's own page then draws as usual.
+		await act(async () =>
+			sibling.resolve({ entries: [row("s1")], has_more: false }),
+		);
+		await settle();
+		expect(listIds()).toEqual(["s1"]);
+	});
+
+	it("says the child is no longer available, under an unavailable badge, for an empty answer or a failed read", async () => {
+		for (const detail of [
+			async () => null,
+			async () => {
+				throw new RelayError("transport", "offline");
+			},
+		]) {
+			host.texts = [];
+			relay = {
+				detail,
+				history: async () => ({ entries: [], has_more: false }),
+			};
+			await mount();
+			await settle();
+			expect(say("This subagent is no longer available.")).toBe(true);
+			expect(say("badge:unavailable")).toBe(true);
+			await act(async () => root.unmount());
+			root = createRoot(dom.container as Element);
+		}
+	});
+});
+
 describe("the subagent screen's header", () => {
 	it("draws the child's label at the conversation header's size, not the 28 pt display title", async () => {
 		relay = {
@@ -413,6 +664,7 @@ describe("the subagent screen's header", () => {
 		const style = sessionHeaderTitle({ compact: false, stacked: false });
 		expect(style.className).toContain("text-heading");
 		expect(markup).toContain("as481-qa");
+		expect(markup).toContain(`class="${style.className}"`);
 		expect(markup).not.toContain("text-display");
 	});
 
