@@ -543,10 +543,20 @@ describe("modelSearchReached: the run-settings sheet pins its model search only 
 	});
 	it("reaches them at the end of a body too short to bring the heading up", () => {
 		expect(
-			modelSearchReached({ viewport: 400, content: 520, modelTop: 180, y: 119 }),
+			modelSearchReached({
+				viewport: 400,
+				content: 520,
+				modelTop: 180,
+				y: 119,
+			}),
 		).toBe(false);
 		expect(
-			modelSearchReached({ viewport: 400, content: 520, modelTop: 180, y: 120 }),
+			modelSearchReached({
+				viewport: 400,
+				content: 520,
+				modelTop: 180,
+				y: 120,
+			}),
 		).toBe(true);
 	});
 	it("decides nothing before the body and the section are measured", () => {

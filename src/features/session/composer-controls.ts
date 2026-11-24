@@ -22,7 +22,6 @@
  * empty More was a control that opened nothing (the U-24 dead end).
  */
 import { t } from "@/i18n";
-import type { CommandBody } from "@/relay/endpoints";
 import { type ComposerChip, UNAVAILABLE_TEXT } from "./chip-labels";
 
 export type ControlsPlan = {
@@ -235,12 +234,17 @@ export const runSettingsSummary = (
  * while the journal still names its rung, and before the first frame the
  * ladder is `[]` while the effort is loading. Only a LIVE session whose model
  * reports no effort (the chip hidden, `null`) has none. An ended session with
- * no recorded effort says to resume — the one thing that could change it.
+ * no recorded effort says to resume — the one thing that could change it —
+ * unless it is a local chat on the stored-model lane, which chooses first.
  */
 export const sessionRunSettings = (input: {
 	chips: { model: ComposerChip; effort: ComposerChip | null };
 	ladder: readonly string[];
 	ended: boolean;
+	/** An ended LOCAL chat on main's stored-model lane (PR #350/#353): it
+	 *  chooses before it reopens, so a missing effort is the stored catalogue
+	 *  loading or a model without rungs, never "resume to change". */
+	stored?: { loading: boolean } | null;
 }): {
 	model: RunSettingSection;
 	effort: RunSettingSection;
@@ -250,12 +254,16 @@ export const sessionRunSettings = (input: {
 	const effortChip = input.chips.effort;
 	const effortLock =
 		effortChip === null
-			? input.ended
-				? {
-						reason: t("mobile.session.chip.effort_resume_hint"),
-						value: null,
-					}
-				: null
+			? input.stored
+				? input.stored.loading
+					? { reason: t("mobile.home.picker.loading"), value: null }
+					: null
+				: input.ended
+					? {
+							reason: t("mobile.session.chip.effort_resume_hint"),
+							value: null,
+						}
+					: null
 			: settingLock(effortChip);
 	return {
 		model:
@@ -297,36 +305,27 @@ export const sessionFolderControl = (
 	return { name, path: cwd, source: null, editable: false };
 };
 
-/** The command route `applyRunSetting` needs: the relay endpoints' own shape,
- *  narrowed so a test can fake it. */
-type CommandRoute = {
-	command: (sessionId: string, body: CommandBody) => Promise<unknown>;
-};
-
 /**
- * Apply a run setting to a live session (`set_model` / `set_effort`) and report
- * a refusal in the caller's words (round 1 R2). The previous error is cleared
- * first; a refusal (409 on a session that ended under the sheet, a dropped
- * route) or a missing route sets it. The run-settings sheet shows the error
- * while it stays open, so a refused tap is never silent.
+ * Whether the reader has reached the run-settings sheet's model list, so its
+ * search may be pinned (#335, maintainer's ruling 2026-11-24). Effort leads the
+ * sheet, so a search pinned from the start would sit above the rungs; pinned
+ * at all, it keeps #343's fix (the field stays above the keyboard, TestFlight
+ * 1295). Reached once the reader has scrolled and the models' heading is at the
+ * top of the body, or the body is at its end when it is too short to bring the
+ * heading up. Nothing is decided before the body and the section are measured:
+ * an unmeasured or uncapped first frame must not pin a field at the top.
  */
-export const applyRunSetting = async (input: {
-	endpoints: CommandRoute | null | undefined;
-	sessionId: string;
-	body: CommandBody;
-	failure: string;
-	onError: (error: string | null) => void;
-}): Promise<void> => {
-	input.onError(null);
-	if (!input.endpoints) {
-		input.onError(input.failure);
-		return;
-	}
-	try {
-		await input.endpoints.command(input.sessionId, input.body);
-	} catch {
-		input.onError(input.failure);
-	}
+export const modelSearchReached = (input: {
+	y: number;
+	viewport: number;
+	content: number;
+	/** The model section's top in the body's content, from its layout. */
+	modelTop: number | null;
+}): boolean => {
+	if (input.modelTop === null || input.viewport <= 0 || input.content <= 0)
+		return false;
+	if (input.y <= 0) return false;
+	return input.y >= Math.min(input.modelTop, input.content - input.viewport);
 };
 
 /**

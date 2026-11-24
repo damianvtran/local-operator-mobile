@@ -73,11 +73,11 @@ import {
 	PinnedWorkingLine,
 	WorkingLine,
 } from "@/features/session/components/working-line";
+import { createComposerCompaction } from "@/features/session/composer-compaction";
 import {
 	sessionFolderControl,
 	sessionRunSettings,
 } from "@/features/session/composer-controls";
-import { createComposerCompaction } from "@/features/session/composer-compaction";
 import { isRouteRefused } from "@/features/session/connection-view";
 import { headerHealth, healthDetailKey } from "@/features/session/health";
 import {
@@ -711,6 +711,7 @@ function Session() {
 		chips: chipLabels,
 		ladder: effortLadder,
 		ended: headerHealth(projection, runtime.link) === "ended",
+		stored: storedPicker ? { loading: storedModel.loading } : null,
 	});
 
 	/* The strip exists when it has something true to say: a context read, or a

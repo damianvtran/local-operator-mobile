@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
 import type { ModelEntry } from "@/contracts";
-import { effortRungId, modelOptionId, SURFACE } from "@/ui/a11y";
+import { CONTROL, effortRungId, modelOptionId, SURFACE } from "@/ui/a11y";
 
 /**
  * The session's run-settings sheet, as DRAWN (issue #325): ONE sheet that the
@@ -60,6 +60,14 @@ vi.mock("@/ui/components/badge", () => ({
 }));
 vi.mock("@/ui/components/alert", () => ({
 	Alert: (props: Props) => createElement("p", null, kids(props)),
+}));
+vi.mock("@/ui/components/button", () => ({
+	Button: (props: Props) =>
+		createElement(
+			"button",
+			{ type: "button", "data-testid": props.testID as string },
+			props.label as string,
+		),
 }));
 vi.mock("@/ui/components/section-header", () => ({
 	SectionHeader: (props: Props) =>
@@ -177,5 +185,11 @@ describe("the session's run-settings sheet (issue #325)", () => {
 	it("keys the list's loading and empty lines", () => {
 		expect(draw({ models: [], loading: true })).toContain("Loading…");
 		expect(draw({ models: [] })).toContain("No models available");
+	});
+
+	it("offers Retry when an ended chat's stored catalogue could not be read (PR #350)", () => {
+		const html = draw({ models: [], failed: true, onRetry: () => undefined });
+		expect(html).toContain(`data-testid="${CONTROL.sessionModelsRetry}"`);
+		expect(html).not.toContain("No models available");
 	});
 });

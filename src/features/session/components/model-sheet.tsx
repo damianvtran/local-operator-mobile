@@ -1,11 +1,12 @@
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { Pressable, Text, View } from "react-native";
 
 import type { ModelEntry } from "@/contracts";
 import { effortLabel } from "@/features/home/picker-model";
-import type {
-	RunSettingLock,
-	RunSettingSection,
+import {
+	modelSearchReached,
+	type RunSettingLock,
+	type RunSettingSection,
 } from "@/features/session/composer-controls";
 import { t } from "@/i18n";
 import {
@@ -19,8 +20,8 @@ import {
 import { Sheet } from "@/ui/components";
 import { Alert } from "@/ui/components/alert";
 import { Badge } from "@/ui/components/badge";
-import { SectionHeader } from "@/ui/components/section-header";
 import { Button } from "@/ui/components/button";
+import { SectionHeader } from "@/ui/components/section-header";
 import { CONTROL_DISABLED_INK, cx } from "@/ui/variants";
 
 /**
@@ -273,6 +274,7 @@ export const RunSettingsSheet = ({
 	preface = null,
 	model,
 	effort,
+	modelSearch = null,
 	modelTestID,
 	effortTestID,
 }: {
@@ -288,45 +290,75 @@ export const RunSettingsSheet = ({
 	preface?: ReactNode;
 	model: ReactNode;
 	effort: ReactNode;
+	/** A search over the model list (the home's long catalogue). Pinned under
+	 *  the title, but only once the reader reaches the models: see below. */
+	modelSearch?: ReactNode;
 	modelTestID: string;
 	effortTestID: string;
-}) => (
-	<Sheet
-		visible={visible}
-		onClose={onClose}
-		title={t("mobile.chrome.composer.run_settings_title")}
-		/* Two lines, not an ellipsis, at 320 pt and 200 % text (the sidebar
-		 *  view sheet's rule, QA round 1 Q2). */
-		titleLines={2}
-		testID={SURFACE.runSettingsSheet}
-	>
-		{summary !== null ? (
-			<View className="px-3 pb-2" testID={SURFACE.runSettingsSummary}>
-				<Text className="font-mono text-mono text-ink">{summary}</Text>
+}) => {
+	/* EFFORT LEADS, AND THE SEARCH STILL SURVIVES THE KEYBOARD (#335, the
+	 *  maintainer's ruling of 2026-11-24). A search in the body scrolls away
+	 *  under the keyboard (TestFlight 1295, fixed by #343's pinned slot); one
+	 *  pinned from the start sits above the rungs. So it is pinned, and appears
+	 *  once the body has scrolled to the models (`modelSearchReached`). It then
+	 *  stays for the visit — pulling it away on a scroll back up would hide the
+	 *  field that holds the reader's query — and the next visit starts clean. */
+	const [modelTop, setModelTop] = useState<number | null>(null);
+	const [searchShown, setSearchShown] = useState(false);
+	useEffect(() => {
+		if (!visible) setSearchShown(false);
+	}, [visible]);
+	const searchable = modelSearch !== null;
+	return (
+		<Sheet
+			visible={visible}
+			onClose={onClose}
+			title={t("mobile.chrome.composer.run_settings_title")}
+			/* Two lines, not an ellipsis, at 320 pt and 200 % text (the sidebar
+			 *  view sheet's rule, QA round 1 Q2). */
+			titleLines={2}
+			testID={SURFACE.runSettingsSheet}
+			pinned={searchable && searchShown ? modelSearch : undefined}
+			onBodyScroll={
+				searchable && !searchShown
+					? (facts) => {
+							if (modelSearchReached({ ...facts, modelTop }))
+								setSearchShown(true);
+						}
+					: undefined
+			}
+		>
+			{summary !== null ? (
+				<View className="px-3 pb-2" testID={SURFACE.runSettingsSummary}>
+					<Text className="font-mono text-mono text-ink">{summary}</Text>
+				</View>
+			) : null}
+			{error !== null ? (
+				<View className="px-3 pb-2">
+					<Alert severity="error">{error}</Alert>
+				</View>
+			) : null}
+			{preface}
+			<View testID={effortTestID}>
+				{/* On the rows' own 12 pt inset, so a heading and its rows share one
+				 *  leading edge. */}
+				<View className="px-3">
+					<SectionHeader label={headings.effort} />
+				</View>
+				{effort}
 			</View>
-		) : null}
-		{error !== null ? (
-			<View className="px-3 pb-2">
-				<Alert severity="error">{error}</Alert>
+			<View
+				testID={modelTestID}
+				onLayout={(event) => setModelTop(event.nativeEvent.layout.y)}
+			>
+				<View className="px-3">
+					<SectionHeader label={headings.model} />
+				</View>
+				{model}
 			</View>
-		) : null}
-		{preface}
-		<View testID={effortTestID}>
-			{/* On the rows' own 12 pt inset, so a heading and its rows share one
-			 *  leading edge. */}
-			<View className="px-3">
-				<SectionHeader label={headings.effort} />
-			</View>
-			{effort}
-		</View>
-		<View testID={modelTestID}>
-			<View className="px-3">
-				<SectionHeader label={headings.model} />
-			</View>
-			{model}
-		</View>
-	</Sheet>
-);
+		</Sheet>
+	);
+};
 
 /** The read-only form of a section: the reason, then the value, never a list of
  *  rows that are all disabled. */

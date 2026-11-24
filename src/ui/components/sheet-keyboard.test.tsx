@@ -510,7 +510,11 @@ describe("RunSettingsPicker model search (TestFlight 1295, #335)", () => {
 	const layoutModels = (y = MODEL_TOP) =>
 		act(() => {
 			(node(CONTROL.homeModelPicker)?.props.onLayout as (e: unknown) => void)?.(
-				{ nativeEvent: { layout: { x: 0, y, width: WINDOW.width, height: 900 } } },
+				{
+					nativeEvent: {
+						layout: { x: 0, y, width: WINDOW.width, height: 900 },
+					},
+				},
 			);
 		});
 	/** The body's viewport, content and offset — the three scroll facts. */

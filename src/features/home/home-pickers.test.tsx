@@ -64,6 +64,12 @@ vi.mock("react-native", () => ({
 	ScrollView: (props: Props) => createElement("div", null, kids(props)),
 }));
 vi.mock("lucide-react-native", () => ({ Folder: () => null }));
+/* The identity picker's avatar (main #358) shares the module; it reaches the
+ *  native warm store, which this Node reduction does not carry. */
+vi.mock("@/features/agent-avatar/agent-avatar-view", () => ({
+	AgentAvatarImage: () => null,
+	useAgentAvatarUri: () => null,
+}));
 vi.mock("@/ui/appearance", () => ({ useTokenColor: () => "#000" }));
 const sheet = (props: Props) =>
 	props.visible

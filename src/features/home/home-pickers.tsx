@@ -389,13 +389,12 @@ export type ModelChoicesProps = {
  * because they answer "why is my model missing"; ✓ on the model that will run; a
  * "Default" badge on the computer's default and "This chat" on a model chosen here
  * — both visible at once when they differ, so the reader can see they overrode a
- * default. A search field appears once the list is long enough to need one
- * (`MODEL_SEARCH_THRESHOLD`), with the relay SPA's token filter.
+ * default. A long list (`MODEL_SEARCH_THRESHOLD`) is filtered by the sheet's
+ * pinned search field (`RunSettingsPicker`), with the relay SPA's token filter.
  */
 const ModelChoices = ({
 	editable,
 	query,
-	onQuery,
 	models,
 	rows,
 	chosen,
@@ -406,9 +405,9 @@ const ModelChoices = ({
 	onPick,
 }: ModelChoicesProps & {
 	editable: boolean;
-	/** The search field's text, owned by the sheet so closing it clears it. */
+	/** The search field's text, owned by the sheet so closing it clears it;
+	 *  the field itself is the sheet's pinned region (`RunSettingsSheet`). */
 	query: string;
-	onQuery: (query: string) => void;
 }) => {
 	const searchable = models.length > MODEL_SEARCH_THRESHOLD;
 	const matches = useMemo(() => {
@@ -443,17 +442,6 @@ const ModelChoices = ({
 					>
 						{failure}
 					</Alert>
-				</View>
-			) : null}
-			{searchable ? (
-				<View className="px-3 pb-2">
-					<Input
-						label={t("mobile.home.picker.model_search")}
-						value={query}
-						onChangeText={onQuery}
-						autoCapitalize="none"
-						testID={CONTROL.homeModelSearch}
-					/>
 				</View>
 			) : null}
 			{/* No default named (an older daemon, or none resolved): the explicit
@@ -667,13 +655,21 @@ export const RunSettingsPicker = ({
 			preface={editable ? null : <FixedLine />}
 			modelTestID={CONTROL.homeModelPicker}
 			effortTestID={CONTROL.homeEffortPicker}
-			model={
-				<ModelChoices
-					{...model}
-					editable={editable}
-					query={query}
-					onQuery={setQuery}
-				/>
+			model={<ModelChoices {...model} editable={editable} query={query} />}
+			/* Pinned once the reader reaches the models (`RunSettingsSheet`), so
+			 *  the field stays above the keyboard (TestFlight 1295). */
+			modelSearch={
+				model.models.length > MODEL_SEARCH_THRESHOLD ? (
+					<View className="px-3 pb-2">
+						<Input
+							label={t("mobile.home.picker.model_search")}
+							value={query}
+							onChangeText={setQuery}
+							autoCapitalize="none"
+							testID={CONTROL.homeModelSearch}
+						/>
+					</View>
+				) : null
 			}
 			effort={<EffortChoices {...effort} editable={editable} />}
 		/>

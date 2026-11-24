@@ -234,6 +234,17 @@ export type SheetProps = {
 	 * (TestFlight 1295).
 	 */
 	pinned?: React.ReactNode;
+	/**
+	 * The body's three scroll facts — offset, viewport and content height — on
+	 * every change. For a sheet whose `pinned` region depends on where the reader
+	 * is: the run-settings sheet pins its model search only once the reader has
+	 * scrolled past the effort rungs to the models (#335).
+	 */
+	onBodyScroll?: (facts: {
+		y: number;
+		viewport: number;
+		content: number;
+	}) => void;
 	/** How many lines the title may wrap to. ONE by default (the app's
 	 *  truncation idiom, below); a sheet whose title IS its state — the session
 	 *  health sheet's "Not answering" — passes 2, because an ellipsis there cuts
@@ -296,6 +307,7 @@ export const Sheet = ({
 	children,
 	footer,
 	pinned,
+	onBodyScroll,
 	titleLines = 1,
 	testID,
 	resizable = false,
@@ -893,6 +905,7 @@ export const Sheet = ({
 			viewportH > 0 && contentH > viewportH + 1 && y + viewportH < contentH - 2,
 		);
 		setTopCue(y > 1);
+		onBodyScroll?.({ y, viewport: viewportH, content: contentH });
 	};
 	const fadeId = useRef("");
 	if (fadeId.current === "") {
