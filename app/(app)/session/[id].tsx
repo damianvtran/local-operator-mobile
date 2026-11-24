@@ -10,21 +10,29 @@ import {
 	View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import type { PromptImage } from "@/contracts";
+import type { PendingAsk, PromptImage } from "@/contracts";
 import { avatarRefOf } from "@/features/agent-avatar/agent-avatar";
 import { HeaderAgentAvatar } from "@/features/agent-avatar/agent-avatar-view";
 import { useListState } from "@/features/auth/connection-provider";
 import { FolderPicker } from "@/features/home/home-pickers";
+import { homeEffortChip, modelLabel } from "@/features/home/picker-model";
 import { useStartup } from "@/features/new-session/use-startup";
 import {
 	activityCounts,
 	activityCountsStack,
 } from "@/features/session/activity-counts";
+import { askChipFacts } from "@/features/session/ask-chip";
+import {
+	AskChipDrawnContext,
+	AskChipHostContext,
+	useAskChipHostValue,
+} from "@/features/session/ask-chip-host";
 import {
 	askBarLabel,
 	blockingPending,
 	outstandingAsks,
 } from "@/features/session/asks";
+import { bridgeCardBodyServed } from "@/features/session/bridge-card-body";
 import {
 	attentionRecord,
 	overlaysBlocked,
@@ -66,10 +74,10 @@ import {
 	WorkingLine,
 } from "@/features/session/components/working-line";
 import {
-	applyRunSetting,
 	sessionFolderControl,
 	sessionRunSettings,
 } from "@/features/session/composer-controls";
+import { createComposerCompaction } from "@/features/session/composer-compaction";
 import { isRouteRefused } from "@/features/session/connection-view";
 import { headerHealth, healthDetailKey } from "@/features/session/health";
 import {
@@ -101,6 +109,7 @@ import {
 import { RemoteSessionGate } from "@/features/session/remote-session-gate";
 import { sessionSupplementsAvailable } from "@/features/session/remote-supplements";
 import { sessionChipLabels } from "@/features/session/session-chips";
+import { useSkills } from "@/features/session/skills/use-skills";
 import { sessionFactsFrom } from "@/features/session/state-marker";
 import { createScrollPresence } from "@/features/session/transcript-presence";
 import { useAsksSheet } from "@/features/session/use-asks-sheet";
@@ -109,6 +118,10 @@ import { useCompletionAck } from "@/features/session/use-completion-ack";
 import { draftSlashQuery, useComposer } from "@/features/session/use-composer";
 import { useFind } from "@/features/session/use-find";
 import { useSessionRuntime } from "@/features/session/use-session";
+import {
+	storedEfforts,
+	useStoredModel,
+} from "@/features/session/use-stored-model";
 import {
 	remoteConversationOf,
 	sessionCapabilities,
@@ -150,6 +163,11 @@ import {
 	statusTrayVisible,
 } from "@/ui/size-class";
 import { useTextScale } from "@/ui/text-scale-provider";
+
+/** A chip's tap where the asks sheet cannot open. Stable at module scope so the
+ *  host's identity memo (`useAskChipHostValue`) is not broken by a new function
+ *  on every render. */
+const NO_ASK_CHIP_OPEN = () => {};
 
 /** The context-window fact, keyed as whole strings. The old inline version
  *  stitched `%` + "ctx"/"context" + "(est.)" onto a number, which no other
@@ -289,7 +307,28 @@ function Session() {
 		listRow !== undefined &&
 		!isRemoteRow(listRow) &&
 		canAssignSessionTags(capabilities);
+	const storedModel = useStoredModel({
+		client: runtime.source.endpoints,
+		sessionId,
+		ownership: remoteConversation
+			? `remote:${listRow?.owner_device ?? owner ?? "unknown"}`
+			: "local",
+		// Resume has no remote form: never route a cold remote choice through
+		// the connected computer even if it advertises live model switching.
+		enabled:
+			headerHealth(runtime.projection, runtime.link) === "ended" &&
+			ownerLabel === null,
+		ended: headerHealth(runtime.projection, runtime.link) === "ended",
+	});
+	/* The `$skill` licence for THIS conversation: the relay's top-level
+	 *  `capabilities.skill_invocation` (absent = an older relay = no `$`), already
+	 *  withheld for a remote conversation by `sessionCapabilities`. One value feeds
+	 *  the tray, the catalogue fetch and the `expand_skills` flag, so they cannot
+	 *  disagree. */
+	const skillsAvailable = capabilities.skill_invocation?.available === true;
 	const composer = useComposer({
+		expandSkills: skillsAvailable,
+		beforeSend: storedModel.prepare,
 		sessionId,
 		source: runtime.source,
 		streaming: runtime.streaming,
@@ -309,6 +348,17 @@ function Session() {
 			ownerLabel !== null && !controlPolicy.allows("slash")
 				? remoteOwnerOnlyCopy(ownerLabel)
 				: null,
+	});
+	/* The `$skill` tray: catalogue fetched once per session, caret read from the
+	 *  field, a pick rewrites only the token. A leading `/` belongs to the slash
+	 *  sheet (one caret, one list). */
+	const skills = useSkills({
+		sessionId,
+		endpoints: runtime.source.endpoints,
+		available: skillsAvailable,
+		text: composer.draft,
+		setText: composer.setDraft,
+		slashDraft: draftSlashQuery(composer.draft) !== null,
 	});
 	/* Stop is withheld when the relay does not forward `abort`: every Stop on this
 	 *  screen (composer ■, pinned line, image-gen Cancel) reads this one gate. */
@@ -370,7 +420,14 @@ function Session() {
 	 *  sheet, a dropped route) was a silent `void` (review round 1, m1): the
 	 *  chip kept its old value and nothing said why. It rides the composer's
 	 *  own error line, as home's refused abort does; the next pick clears it. */
-	const [chipError, setChipError] = useState<string | null>(null);
+	/* Owned by `useStoredModel` (PR #350 U2) so it retires when the settings it
+	 * names are applied; the screen only words it. */
+	const chipError =
+		storedModel.settingsError === "model"
+			? t("mobile.session.chip.model_change_failed")
+			: storedModel.settingsError === "effort"
+				? t("mobile.session.chip.effort_change_failed")
+				: null;
 	/** The composer's field, so the asks sheet's auto-open can READ focus at the
 	 *  moment it decides (focus is not React state). */
 	const composerFieldRef = useRef<TextInput | null>(null);
@@ -391,6 +448,12 @@ function Session() {
 	 *  a remote relay that forwards no ask op must not open a sheet of answer
 	 *  controls (R1-1/U2). */
 	const asksOpen = asksSheet.visible && asksAnswerable;
+
+	/** The asks the sheet last READ (`GET /api/asks`). Kept for the ask-id chips
+	 *  in the agent's prose: a WITHDRAWN ask leaves the frame when it settles and
+	 *  the transcript draws no row for it, so this sheet's read is the only place
+	 *  the app can learn its state (design: ask ids you can match). */
+	const [sheetAskRows, setSheetAskRows] = useState<readonly PendingAsk[]>([]);
 
 	/* The list frame's rows: names for the sheet's foreign-ask rows, which the
 	 *  aggregate route deliberately does not carry. */
@@ -428,6 +491,11 @@ function Session() {
 	 */
 	const scrollPresence = useMemo(() => createScrollPresence(), []);
 	useEffect(() => () => scrollPresence.dispose(), [scrollPresence]);
+	/* The composer's scroll compaction: the transcript reports the reader's
+	 *  gestures here and the Composer subscribes to the one boolean it yields
+	 *  (`composer-compaction.ts`) — never React state at scroll rate. */
+	const composerCompaction = useMemo(() => createComposerCompaction(), []);
+	useEffect(() => () => composerCompaction.dispose(), [composerCompaction]);
 
 	/** Whether the completion's anchor row bottom is inside the transcript's
 	 *  viewport — measured by `TranscriptList` (the list owns the geometry; this
@@ -452,6 +520,7 @@ function Session() {
 		sessionId,
 		endpoints: runtime.source.endpoints,
 		projection: runtime.projection,
+		entries: runtime.entries,
 		anchorVisible: completionVisible,
 		blocked: overlaysBlocked({
 			runSettings: runSettingsOpen,
@@ -466,14 +535,56 @@ function Session() {
 
 	const projection = runtime.projection;
 
+	/* The ids THIS conversation can answer for, in the precedence the chips
+	 *  document (`askChipFacts`): the live frame, then the transcript's own
+	 *  receipts, then the sheet's read. Recomputed per frame because the frame is
+	 *  the live reading; the CONTEXT it feeds is keyed by a signature instead, so
+	 *  a frame that changes no id's state re-renders no chip. */
+	const chipFacts = useMemo(
+		() =>
+			askChipFacts(
+				{
+					frame: projection?.asks,
+					transcript: runtime.entries,
+					settled: sheetAskRows,
+				},
+				sessionId,
+			),
+		[projection?.asks, runtime.entries, sheetAskRows, sessionId],
+	);
+	/* A chip's tap is a door only where the sheet can open (review round 1, m4a): a
+	 *  relay that forwards no `ask_respond` has no answerable sheet (`asksOpen`),
+	 *  so opening the controller would do nothing now and pop a sheet later if the
+	 *  capability flipped. The chip still RESOLVES — its state word is true and
+	 *  useful — it just does not act. */
+	const chipHost = useAskChipHostValue(
+		chipFacts,
+		asksAnswerable ? asksSheet.openAt : NO_ASK_CHIP_OPEN,
+	);
+
 	/* The effort ladder, read once: the chip's availability and the sheet's rows are
 	 * the same fact, and an empty ladder means the selected model has no effort
 	 * control — a sheet with no rows and nothing to press is the dead-end modal the
 	 * QA round found (Q3). */
-	const effortLadder = useMemo(
-		() => projection?.effort_ladder ?? [],
-		[projection?.effort_ladder],
-	);
+	const storedPicker =
+		headerHealth(projection, runtime.link) === "ended" && ownerLabel === null;
+	const pickerModels = storedPicker ? storedModel.models : runtime.models;
+	const selectedModel =
+		storedModel.pending?.model ??
+		pickerModels.find(
+			(model) =>
+				model.selector ===
+					(projection?.model_selector || listRow?.model_label) ||
+				`${model.provider}/${model.model_id}` ===
+					(projection?.model_selector || listRow?.model_label) ||
+				model.model_id === listRow?.model_label,
+		) ??
+		null;
+	const effortLadder = storedPicker
+		? selectedModel === null
+			? []
+			: storedEfforts(selectedModel)
+		: (projection?.effort_ladder ?? []);
 
 	const todos = useMemo(
 		() => projectTodos(projection?.todos ?? []),
@@ -526,14 +637,45 @@ function Session() {
 	 *  never-started conversation is served a durable fold with no model or
 	 *  effort, while the row still names what it last ran (TestFlight 578;
 	 *  `session-chips.ts` carries the whole rule, including why an ended
-	 *  session's chips are shown but disabled). */
+	 *  session's chips defer their changes until Resume/Send). */
 	const sessionChips = sessionChipLabels({
 		projection,
 		row: listRow ?? null,
-		models: runtime.models,
+		models: pickerModels,
 		connection: chipConnection,
 		ended: headerHealth(projection, runtime.link) === "ended",
 	});
+	if (storedModel.pending !== null) {
+		const name = modelLabel(storedModel.pending.model);
+		sessionChips.model = {
+			kind: "value",
+			text: name,
+			accessibilityLabel: `Model, ${name}`,
+		};
+	}
+	if (storedPicker) {
+		sessionChips.effort =
+			effortLadder.length === 0
+				? null
+				: homeEffortChip({
+						offer: {
+							kind: "ladder",
+							rungs: effortLadder,
+							exact: selectedModel?.efforts !== undefined,
+						},
+						chosenEffort:
+							storedModel.pending !== null
+								? storedModel.pending.effort
+								: effortLadder.includes(
+											projection?.effort || listRow?.effort || "",
+										)
+									? projection?.effort || listRow?.effort || null
+									: null,
+						defaultEffort: null,
+						catalogueLoading: storedModel.loading,
+						connection: chipConnection,
+					});
+	}
 	/* A remote conversation keeps its model/effort VALUE visible but disabled
 	 *  when the relay does not forward `set_model`/`set_effort` (R1-1/U2). */
 	const chipLabels =
@@ -542,7 +684,8 @@ function Session() {
 			: {
 					model: remoteChip(
 						sessionChips.model,
-						controlPolicy.allows("set_model"),
+						headerHealth(projection, runtime.link) !== "ended" &&
+							controlPolicy.allows("set_model"),
 						ownerLabel,
 					),
 					effort:
@@ -550,7 +693,8 @@ function Session() {
 							? null
 							: remoteChip(
 									sessionChips.effort,
-									controlPolicy.allows("set_effort"),
+									headerHealth(projection, runtime.link) !== "ended" &&
+										controlPolicy.allows("set_effort"),
 									ownerLabel,
 								),
 				};
@@ -650,7 +794,7 @@ function Session() {
 	 *  dot, no announcement (review M3, UX U4/U5). */
 	const health = headerHealth(projection, runtime.link);
 	const ended = health === "ended";
-	const resume = useResume(sessionId, ended);
+	const resume = useResume(sessionId, ended, storedModel.resume);
 	/* Resume is a connected-computer route with no remote form in v1; offered only
 	 *  when the relay advertises it for this conversation (always, for local). */
 	const resumeOffered = ended && controlPolicy.allows("resume");
@@ -1031,65 +1175,83 @@ function Session() {
 						: undefined
 				}
 			>
-				<TranscriptList
-					testID={SURFACE.sessionTranscript}
-					sessionId={sessionId}
-					entries={runtime.entries}
-					loadOlder={runtime.loadOlder}
-					healHistory={runtime.healHistory}
-					retryHistory={runtime.retryHistory}
-					historyErrorScope={runtime.historyErrorScope}
-					loadingOlder={runtime.loadingOlder}
-					hasOlder={runtime.hasOlder}
-					historyError={runtime.historyError}
-					historyGap={runtime.historyGap}
-					historyGapBefore={runtime.historyGapBefore}
-					footer={transcriptNotice}
-					pending={pendingRows}
-					streamingRowId={runtime.streamingRowId}
-					loadImage={runtime.loadImage}
-					loadFile={runtime.loadFile}
-					onOpenAgent={openAgent}
-					supplements={sessionSupplements}
-					projectionPid={runtime.projectionPid}
-					supplementClient={sessionSupplementClient(
-						remoteConversation,
-						supplementClient,
-						capabilities,
-					)}
-					onOpenVideo={openVideo}
-					/* The image-gen card's Cancel is the composer's OWN stop path (the
+				<AskChipDrawnContext.Provider value>
+					<AskChipHostContext.Provider value={chipHost}>
+						<TranscriptList
+							testID={SURFACE.sessionTranscript}
+							sessionId={sessionId}
+							entries={runtime.entries}
+							loadOlder={runtime.loadOlder}
+							healHistory={runtime.healHistory}
+							retryHistory={runtime.retryHistory}
+							historyErrorScope={runtime.historyErrorScope}
+							loadingOlder={runtime.loadingOlder}
+							hasOlder={runtime.hasOlder}
+							olderFillReady={runtime.olderFillReady}
+							historyError={runtime.historyError}
+							historyGap={runtime.historyGap}
+							historyGapBefore={runtime.historyGapBefore}
+							footer={transcriptNotice}
+							pending={pendingRows}
+							sendMark={composer.sendMark}
+							streamingRowId={runtime.streamingRowId}
+							streamArrivalEpoch={runtime.streamArrivalEpoch}
+							streamArrivalTail={runtime.streamArrivalTail}
+							loadImage={runtime.loadImage}
+							loadFile={runtime.loadFile}
+							onOpenAgent={openAgent}
+							supplements={sessionSupplements}
+							projectionPid={runtime.projectionPid}
+							supplementClient={sessionSupplementClient(
+								remoteConversation,
+								supplementClient,
+								capabilities,
+							)}
+							onOpenVideo={openVideo}
+							/* Inbound Team Bridge bodies: only where the relay serves the
+					   route AND can resolve this conversation — the route answers
+					   durable sessions on its own machine, so a remote conversation
+					   keeps today's receipt row rather than a guaranteed failure. */
+							loadBridgeBody={
+								!remoteConversation && bridgeCardBodyServed(capabilities)
+									? runtime.loadBridgeBody
+									: undefined
+							}
+							/* The image-gen card's Cancel is the composer's OWN stop path (the
 					   one turn-interrupt — no second mechanism). The gate is the
 					   composer's own (`stopVisible` = a turn is running), so the two
 					   controls cannot diverge about when a cancel is real: while the
 					   gate is closed the card hides the control rather than offering
 					   a dead one. */
-					onCancelTurn={
-						composerControls.stopVisible ? composer.stop : undefined
-					}
-					anchorId={attentionRecord(runtime.projection)?.anchor_id ?? null}
-					onAnchorVisible={setCompletionVisible}
-					// The scroll signal the edge fades and the transient rail both read
-					// (design items 8 and 10).
-					presence={scrollPresence}
-					// The find session's two outputs into the list: the wash on the current
-					// hit, and the jump to reveal it (opening a condensed turn on the way
-					// when one hides it).
-					highlightId={find.activeHit?.id ?? null}
-					reveal={find.reveal}
-					/* A first message in flight is not "nothing here": its pending row
-					 *  is in the footer, and the empty state beside it would contradict
-					 *  it (the relay hides its empty state on the same rule). */
-					empty={
-						pendingEchoes.length > 0 ? null : (
-							<EmptyState
-								headline={t("mobile.session.empty.headline")}
-								next={t("mobile.session.empty.next")}
-								testID={SURFACE.sessionTranscriptEmpty}
-							/>
-						)
-					}
-				/>
+							onCancelTurn={
+								composerControls.stopVisible ? composer.stop : undefined
+							}
+							anchorId={attentionRecord(runtime.projection)?.anchor_id ?? null}
+							onAnchorVisible={setCompletionVisible}
+							// The scroll signal the edge fades and the transient rail both read
+							// (design items 8 and 10).
+							presence={scrollPresence}
+							compaction={composerCompaction}
+							// The find session's two outputs into the list: the wash on the current
+							// hit, and the jump to reveal it (opening a condensed turn on the way
+							// when one hides it).
+							highlightId={find.activeHit?.id ?? null}
+							reveal={find.reveal}
+							/* A first message in flight is not "nothing here": its pending row
+							 *  is in the footer, and the empty state beside it would contradict
+							 *  it (the relay hides its empty state on the same rule). */
+							empty={
+								pendingEchoes.length > 0 ? null : (
+									<EmptyState
+										headline={t("mobile.session.empty.headline")}
+										next={t("mobile.session.empty.next")}
+										testID={SURFACE.sessionTranscriptEmpty}
+									/>
+								)
+							}
+						/>
+					</AskChipHostContext.Provider>
+				</AskChipDrawnContext.Provider>
 				<CheckpointRail
 					manifest={checkpoints.manifest}
 					readFailed={checkpoints.readFailed}
@@ -1820,6 +1982,7 @@ function Session() {
 					</View>
 
 					<Composer
+						compaction={composerCompaction}
 						glass={chromeGlass}
 						onLayout={(event) =>
 							measureRecovery("composer", event.nativeEvent.layout.height)
@@ -1853,21 +2016,33 @@ function Session() {
 						testID={SURFACE.sessionComposer}
 						controls={composerControls}
 						draft={composer.draft}
-						onDraftChange={composer.setDraft}
+						onDraftChange={skills.onChangeText}
+						skills={{
+							rows: skills.rows,
+							onPick: skills.pick,
+							onHold: skills.hold,
+							onRelease: skills.release,
+							onSelectionChange: skills.onSelectionChange,
+							selection: skills.selection,
+							onFocus: skills.onFocus,
+							onBlur: skills.onBlur,
+						}}
 						images={composer.images}
 						onRemoveImage={composer.removeImage}
 						onAttach={composer.attach}
 						onPasteFile={composer.pasteFile}
+						onPasteImages={composer.pasteImages}
 						attaching={composer.attaching}
+						onAttachOpen={composer.abandonAttach}
 						voice={composer.voice}
 						onSend={composer.send}
 						onClearDraft={() => {
 							composer.clearUnsentDraft();
-							setChipError(null);
+							storedModel.clearSettingsError();
 						}}
 						onDismissError={() => {
 							composer.dismissError();
-							setChipError(null);
+							storedModel.clearSettingsError();
 						}}
 						onStop={composer.stop}
 						stopping={composer.stopping}
@@ -1925,6 +2100,8 @@ function Session() {
 								onClose={() => undefined}
 								commands={runtime.commands}
 								query={slash ?? ""}
+								loading={runtime.commandsLoading}
+								failed={runtime.commandsFailed}
 								busy={composer.sending}
 								onPick={composer.slash}
 							/>
@@ -1971,36 +2148,36 @@ function Session() {
 			<SessionRunSettingsSheet
 				visible={runSettingsOpen}
 				onClose={() => setRunSettingsOpen(false)}
-				models={runtime.models}
-				selectedModel={projection?.model_selector ?? ""}
-				selectedEffort={projection?.effort ?? ""}
+				/* Main's stored-model lane (PR #350/#353): an ended local chat
+				 *  chooses from the stored catalogue before it reopens, and a pending
+				 *  choice leads the projection until Resume/Send applies it. */
+				models={pickerModels}
+				selectedModel={
+					storedModel.pending?.model.selector ??
+					projection?.model_selector ??
+					""
+				}
+				selectedEffort={storedModel.pending?.effort ?? projection?.effort ?? ""}
+				loading={storedPicker && storedModel.loading}
+				failed={storedPicker && storedModel.failed}
+				onRetry={storedPicker ? storedModel.retry : undefined}
 				/* Locked, ladder or none — decided once in `sessionRunSettings`
 				 *  (an ended session's recorded effort is shown, round 1 R1). */
 				{...runSettings}
 				/* A refused change shows inside the open sheet (round 1 R2). */
 				error={chipError}
-				onPickModel={(model) =>
-					void applyRunSetting({
-						endpoints: runtime.source.endpoints,
-						sessionId,
-						body: {
-							op: "set_model",
-							provider: model.provider,
-							model_id: model.model_id,
-						},
-						failure: t("mobile.session.chip.model_change_failed"),
-						onError: setChipError,
-					})
-				}
-				onPickEffort={(effort) =>
-					void applyRunSetting({
-						endpoints: runtime.source.endpoints,
-						sessionId,
-						body: { op: "set_effort", effort },
-						failure: t("mobile.session.chip.effort_change_failed"),
-						onError: setChipError,
-					})
-				}
+				onPickModel={(model) => {
+					if (composer.sending || resume.busy) return;
+					// The hook records the failure as `settingsError`; the rejection
+					// is only kept from going unhandled here.
+					void storedModel.selectModel(model).catch(() => {});
+				}}
+				onPickEffort={(effort) => {
+					if (composer.sending || resume.busy) return;
+					// The hook records the failure as `settingsError`; the rejection
+					// is only kept from going unhandled here.
+					void storedModel.selectEffort(effort, selectedModel).catch(() => {});
+				}}
 			/>
 
 			<FolderPicker
@@ -2045,8 +2222,12 @@ function Session() {
 				visible={asksOpen}
 				onClose={asksSheet.close}
 				initialOpenAsk={asksSheet.initialOpenAsk}
-				seedRows={asksSheet.seedRows}
+				frameRows={asksSheet.frameRows}
 				onReadFailed={asksSheet.readFailed}
+				/* The queue's own read, back to the screen: the ask-id chips in the
+				   prose resolve an id against what this sheet can show — the one
+				   place a WITHDRAWN ask is named at all. */
+				onRows={setSheetAskRows}
 				client={runtime.source.endpoints}
 				currentSessionId={sessionId}
 				sessions={listSessions}

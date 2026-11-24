@@ -111,6 +111,14 @@ The one action affordance. Anything that **navigates** is a link, not a button.
 | `icon` | 44 square | 0 | 20 | — | Standard icon-only control |
 | `fab` | 56 square | 0 | 24 | — | The composer's send (§ 12) |
 
+**Fill.** `fill` lets a button take the height its container gives it: the
+target and the visible box grow into it instead of keeping the size's own
+height. Use it only where a button must match a neighbour whose height follows
+the reader's type — the Past screen's Search beside its field, whose caller sizes
+the container to the measured field so the pair match at 100 % and 200 %; and
+the ask footer's Send and Decline side by side, which stay one height when only
+one label wraps. It never shrinks a button below its size or the touch floor.
+
 ### Variants and their states
 
 | Variant | rest | pressed | disabled |
@@ -285,6 +293,11 @@ sheet, and the row state belongs to the row.
 Every state occupies the **same 12×12 box**, so every title starts at the same x
 forever. Indicators change colour, never geometry.
 
+A section header in the list starts on the **title column**, not at the row
+gutter: the indicator hangs in the gutter beside the title, so a section where no
+row carries a mark still lines its titles up under its heading
+(`sectionHeaderIndentPt`).
+
 The ladder, first match wins:
 
 1. **A pending decision** — a 6px `danger` dot, pulsing (`lo-pulse`). This is the
@@ -362,7 +375,24 @@ column's clipped foot at 360×780.
   opener.** The client stores the opener before moving focus.
 - **A control that answers the sheet may not scroll out of reach** — see the
   three-region rule in § 13.
-- **No drag gesture in v1.** A drag handle with no drag is worse than no handle.
+- **A sheet has no drag gesture BY DEFAULT.** A drag handle with no drag is worse
+  than no handle, so the plain `Sheet` — every sheet that does not ask otherwise —
+  keeps no handle and no drag.
+- **The one exception: a sheet may opt into `resizable`.** Then the grab bar has
+  a drag, and it RESIZES between two heights — Medium (the `content` detent's
+  fraction, hugging shorter content) and Large (the `full` detent's) — never a
+  dismissal. Past either end the surface resists (0.35, at most 48 pt) and
+  springs back, because a downward fling must not close a sheet holding a typed
+  answer. The body's height is what moves; the pinned footer never does, so the
+  verbs cannot slide off the edge. A tap on the bar toggles the two sizes, and
+  the bar is an adjustable control ("Resize panel", value Medium/Large, the one
+  action available at the current size) so the same choice is reachable without
+  a drag. The size is remembered in memory for the app run, never on disk. With
+  the keyboard up a header drag puts the keyboard away instead of resizing, and
+  the body fills the space between the safe top and the keyboard.
+
+  The ask sheet opts in (`AsksSheet`); every other sheet keeps the plain rule
+  above, and its tree is unchanged apart from one layout-neutral wrapper.
 
 ---
 
@@ -548,6 +578,33 @@ the dock on every screen for a spacing rule. So the resting row is
 multi-line draft grows upward), so on iOS the 44 pt discs sit centred in the 48 pt
 row and disc-to-shell is 4 + 2 = 6 pt on both edges (`composerRestInsets`); on the 48 floor
 the pill drops from 60 to 56. The open card was already on-scale and is unchanged.
+
+### Scroll compaction (phone portrait)
+
+While the reader scrolls the transcript the dock yields its second row: the card
+(112) becomes the bare pill (56) and back, so more transcript shows. Design spec
+2026-11-23; the card stays the rest shape, and every number below is a **design
+value, not a measurement** (`composer-compaction.ts`; tune from TestFlight).
+
+| Rule | Binding |
+|---|---|
+| Shrinks | a **reader's** drag that nets ≥ 24 pt from where it began (either direction), or a release at ≥ 1000 pt/s (a fling **toward** the tail from inside the 16 pt band does not count; one away from it does), with nothing pinning. A transcript that fits its viewport has nothing to scroll, so a bounce on it never shrinks. Momentum alone, and every scroll the app makes (tail pin, history load, reveal, `snapToTail`), never flips it |
+| Grows | a tap on the pill field (focus), settling within 16 pt of the tail for 150 ms (finger up, no glide) **after the reader came back to it**: either their last finger run moved ≥ 6 pt toward the tail (`TOWARD_TAIL_MIN_PT`, overscroll counted; a reversal over `TOWARD_RESET_PT` (2 pt) or a new touch resets the run, and a smaller reversal costs it only what it moved), or they travelled ≥ 24 pt away and back, judged in the card's frame so the dock's own resize cannot satisfy it. A nudge up and idle stays a pill (the reader is reading); a drag up and back down returns the card. 6 pt, like every number here, is a design value to tune on TestFlight (in the UX review's traces 12 and 8 left some returning drags a pill). Jump-to-latest, a send, or a pin appearing. Scroll-driven flips are held 300 ms apart; the reader's own intent beats the hold |
+| Pins (always the card) | an image attachment; dictation recording / transcribing / failed or any dictation row; an error, notice or retained message; the `$` skill tray; the `/` slash sheet; field focus or a visible keyboard |
+| Not pins | a typed draft of any length (whitespace included) and Stop. The pill shows the draft's **first line** (the field is clipped to exactly one line, caret held at the start while the pill stands, text never altered, ✕ clear and the model/effort row return with the card). A muted **…** (`ink-dim`, ≥ 3:1 on the pill fill in both themes, `aria-hidden`, takes no taps) sits at the right end of the field when text follows a line break; it is **newline only**, because a one-line wrap cannot be measured on native, and a wrong cue is worse than none. A whitespace-only draft shows the resting placeholder over the field (value untouched); Send stays beside it whenever there is something in the draft (a whitespace-only draft has none), at every text size; Stop keeps its `danger-wash` disc |
+| Pill row | attach 44 · field · mic 44 · action 44 (Send only with a non-blank draft, Stop only while a turn runs), all ≥ the platform touch floor; a transparent catcher over the one-line field keeps the tap target the row's full height (a tap focuses the field with the caret at the end of the draft). A take that starts from the pill opens a card with no dead Send (a whitespace-only draft counts as none), so the mic/✓ stays under the finger. One mounted `Textarea` across card and pill |
+| Shape | the existing pill path: 56 (`ceil(24 × scale + 24)` at large text, painted from the row `composerPillRow` sizes), R height/2, side margin **16** against the card's 12 (animated as `marginLeft`/`marginRight`: the `marginHorizontal` shorthand never reached the DOM on web), all three off the one `progress` value over 220 ms, `cubic-bezier(0.2, 0, 0, 1)`; instant under Reduce Motion |
+| Off | a screen reader running (`useScreenReaderEnabled`), tablet / split layouts, short landscape (already a pill; unchanged), and Home (no signal passed) |
+
+The signal is a plain object the session screen owns (`createComposerCompaction`):
+the list reports the reader's gestures into it and the Composer subscribes to its
+one boolean, so a scroll never re-renders the screen. **Web never shrinks from
+scrolling** (react-native-web emits only `onScroll`); `initialShrunk` is the seam
+that renders the shrunk state for frames. On web the screen-reader gate is **off**
+(`screenReaderSignalUsable`): react-native-web answers `isScreenReaderEnabled()`
+with a constant `true`, which would switch the compaction off for every web
+visitor, and the web has neither a reliable signal nor a reader drag that could
+shrink the dock, so the seam renders the pill there.
 
 ### Glass (iOS)
 

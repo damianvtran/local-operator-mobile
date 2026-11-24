@@ -1,0 +1,110 @@
+Independent VI A audit — actual dependency-free execution
+Command argv (JSON):
+["python3", "-c", "import json,hashlib,re,unicodedata,subprocess,math\nfrom pathlib import Path\nwt=Path('/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy')\nbp=Path('/Users/damian/.local-operator/sessions/ca8720609fc7/scratchpad/translation-brief.json'); dp=Path('/Users/damian/.local-operator/sessions/f194c81e7557/scratchpad/draft-vi.json')\nb=json.loads(bp.read_text()); d=json.loads(dp.read_text()); ks=[r['key'] for r in b['keys']]\nsha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()\nassert sha(bp)=='5a72dfd72dc820b1fa8e73d78b97807581572334ee0fd25eb2eab346e759ebca'\nassert sha(dp)=='2194c4313e6d44521537042c9c4b33ab4275a08b746906691e2c003779ac1cb5'\nhead=subprocess.check_output(['git','-C',str(wt),'rev-parse','HEAD'],text=True).strip(); assert head==b['source_sha']\nfor p,v in b['authoring_files'].items(): assert sha(wt/p)==v['sha256']\nen=json.loads((wt/'src/i18n/catalogues/en/mobile.remote_sessions.json').read_text()); ctx=json.loads((wt/'src/i18n/catalogues/en/mobile.remote_sessions.context.json').read_text())\nassert set(ks)==set(d['values']) and len(ks)==7\nfor row in b['keys']: assert row['english']==en[row['key']] and row['context']==ctx[row['key']]\ndef args(s):\n    rem=re.sub(r'\\{([A-Za-z_][A-Za-z_0-9]*)\\}','',s)\n    if '{' in rem or '}' in rem: raise ValueError('outside simple-message grammar')\n    return re.findall(r'\\{([A-Za-z_][A-Za-z_0-9]*)\\}',s)\nfor k in ks:\n    assert args(en[k])==args(d['values'][k])==(['device'] if k.endswith('.cannot_reach') else [])\n    assert unicodedata.normalize('NFC',d['values'][k])==d['values'][k]\n    assert not re.search('[\\u061c\\u200e\\u200f\\u202a-\\u202e\\u2066-\\u2069]',d['values'][k])\n    assert not re.search(r'<[^>]+>|\\{[^}]*,',en[k]+d['values'][k])\nnegative={}\nfor name,text in [('missing','Không thể liên lạc'),('extra','Không thể liên lạc {device} {extra}'),('nested','{{device}}'),('renamed','Không thể {name}')]:\n    try: negative[name]=args(text)!=['device']\n    except ValueError: negative[name]=True\nassert all(negative.values())\nassert d['values'][ks[2]].count('Local Operator')==1\nusage=(wt/'src/features/sessions/move-sheet.tsx').read_text()\nassert 'session.unreachable_reason?.trim() ||' in usage and 'device: remoteDeviceLabel(session)' in usage\nnames=['Work Mac','Máy tính của An','حاسوب أمل','工作电脑','{odd} <name>']\nsubs=[d['values'][ks[0]].replace('{device}',n) for n in names]\nassert all(n in s for n,s in zip(names,subs))\nmarker=re.compile(r'\\[(?:REDACTED|MASKED)[^\\]]*\\]|<(?:REDACTED|MASKED)[^>]*>|\\b(?:REDACTED|SECRET_REDACTED)\\b',re.I)\ncopy=[r['english'] for r in b['keys']]+[r['context']['note'] for r in b['keys']]+list(d['values'].values())\ncopyhits=sum(len(marker.findall(s)) for s in copy)\nrawhits={str(p):len(marker.findall(p.read_text())) for p in [bp,dp,dp.with_name('notes-vi.md'),dp.with_name('verification-vi.json')]}\nassert copyhits==0\nwidths={k:{'english_codepoints':len(en[k]),'vi_codepoints':len(d['values'][k]),'ratio':round(len(d['values'][k])/len(en[k]),4),'pseudo': '['+d['values'][k]+'~'*math.ceil(len(d['values'][k])*.35)+']'} for k in ks}\npaths=[bp,dp,dp.with_name('notes-vi.md'),dp.with_name('verification-vi.json')]+[wt/p for p in b['authoring_files']]+[wt/f'src/i18n/catalogues/vi/{n}.json' for n in ['mobile.remote_sessions','mobile.sidebar','mobile.computers']]+[Path('/Users/damian/local-operator/i18n/style-guides/vi.md'),Path('/Users/damian/local-operator/i18n/glossary.md')]\nprint(json.dumps({'head':head,'key_count':len(ks),'hashes':{str(p):sha(p) for p in paths},'source_and_brief_and_context':'PASS','keys_missing':0,'keys_extra':0,'placeholder_check':'PASS exact device once, six noargs','negative_controls':negative,'nfc':'PASS','bidi_controls':0,'icu':'simple-message grammar only; no full ICU parser','CLDR':'N/A no plural/select/count/number/date','RTL':'N/A vi LTR; arbitrary-name checks are literal not rendering','product':'Local Operator exact','server_reason':'source-read only, trimmed reason wins, not executed','opaque_name_substitution':subs,'redaction_copy_hits':copyhits,'redaction_raw_metadata_hits':rawhits,'widths':widths},ensure_ascii=False,indent=2))\n"]
+Exit: 0
+STDOUT:
+{
+  "head": "9362cce8a631791b676b2d2c9eda90c43fc7e11c",
+  "key_count": 7,
+  "hashes": {
+    "/Users/damian/.local-operator/sessions/ca8720609fc7/scratchpad/translation-brief.json": "5a72dfd72dc820b1fa8e73d78b97807581572334ee0fd25eb2eab346e759ebca",
+    "/Users/damian/.local-operator/sessions/f194c81e7557/scratchpad/draft-vi.json": "2194c4313e6d44521537042c9c4b33ab4275a08b746906691e2c003779ac1cb5",
+    "/Users/damian/.local-operator/sessions/f194c81e7557/scratchpad/notes-vi.md": "a565d617aeab1250d03c7912ba0f00ccffcff2c61761555c874b21470d14c3d1",
+    "/Users/damian/.local-operator/sessions/f194c81e7557/scratchpad/verification-vi.json": "e19200bb53f459bb47399f4cb1d3875f0d9e0ed5489ad8e2830d309766aa006c",
+    "/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/i18n/catalogues/en/mobile.remote_sessions.json": "436f8ec3bda274431146e7e7cb82b2add418f598bd2a7a6d7426f561a4312984",
+    "/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/i18n/catalogues/en/mobile.remote_sessions.context.json": "c703dff07b634d3d2d4b7c789e6a4a1eecf192a57618ea8e9e72197d325d08eb",
+    "/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/features/sessions/move-sheet.tsx": "6a3f7126eb2fefc5ad0138a1731e3898d66d333ea8ca1b4ac99321da18d495aa",
+    "/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/i18n/catalogues/vi/mobile.remote_sessions.json": "97394e3bb4277d3d4b134f4df4ade4c95d21c355c43b78eaf0118c96ffc6b6e4",
+    "/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/i18n/catalogues/vi/mobile.sidebar.json": "3efb7dad6da33c182ef8dc59a6ce8f02a455a33df86ccf67760860e76f0f8286",
+    "/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/i18n/catalogues/vi/mobile.computers.json": "866a0bdb97785892899824912ed20e9ac95f81a124094573c08c04d888de74ca",
+    "/Users/damian/local-operator/i18n/style-guides/vi.md": "e4901497ed553e2b2ae4a2660bf776adb787b89e11d7eb0f8d08f3da4b227888",
+    "/Users/damian/local-operator/i18n/glossary.md": "0eb34437a8c3d6f564f278ef957a603b1d9f51bb07d5ddae5ea8f37deba962f8"
+  },
+  "source_and_brief_and_context": "PASS",
+  "keys_missing": 0,
+  "keys_extra": 0,
+  "placeholder_check": "PASS exact device once, six noargs",
+  "negative_controls": {
+    "missing": true,
+    "extra": true,
+    "nested": true,
+    "renamed": true
+  },
+  "nfc": "PASS",
+  "bidi_controls": 0,
+  "icu": "simple-message grammar only; no full ICU parser",
+  "CLDR": "N/A no plural/select/count/number/date",
+  "RTL": "N/A vi LTR; arbitrary-name checks are literal not rendering",
+  "product": "Local Operator exact",
+  "server_reason": "source-read only, trimmed reason wins, not executed",
+  "opaque_name_substitution": [
+    "Không thể liên lạc với Work Mac",
+    "Không thể liên lạc với Máy tính của An",
+    "Không thể liên lạc với حاسوب أمل",
+    "Không thể liên lạc với 工作电脑",
+    "Không thể liên lạc với {odd} <name>"
+  ],
+  "redaction_copy_hits": 0,
+  "redaction_raw_metadata_hits": {
+    "/Users/damian/.local-operator/sessions/ca8720609fc7/scratchpad/translation-brief.json": 0,
+    "/Users/damian/.local-operator/sessions/f194c81e7557/scratchpad/draft-vi.json": 0,
+    "/Users/damian/.local-operator/sessions/f194c81e7557/scratchpad/notes-vi.md": 0,
+    "/Users/damian/.local-operator/sessions/f194c81e7557/scratchpad/verification-vi.json": 2
+  },
+  "widths": {
+    "mobile.remote_sessions.move_pick.cannot_reach": {
+      "english_codepoints": 20,
+      "vi_codepoints": 31,
+      "ratio": 1.55,
+      "pseudo": "[Không thể liên lạc với {device}~~~~~~~~~~~]"
+    },
+    "mobile.remote_sessions.move_pick.destination_heading": {
+      "english_codepoints": 15,
+      "vi_codepoints": 27,
+      "ratio": 1.8,
+      "pseudo": "[Di chuyển hoặc sao chép tới~~~~~~~~~~]"
+    },
+    "mobile.remote_sessions.move_pick.discovery_help": {
+      "english_codepoints": 178,
+      "vi_codepoints": 219,
+      "ratio": 1.2303,
+      "pseudo": "[Ứng dụng chỉ cho chọn những thiết bị có cuộc trò chuyện đang hiển thị. Chưa thể chọn thiết bị không có cuộc trò chuyện nào hiển thị — hãy mở Local Operator trên máy tính kia rồi kéo danh sách cuộc trò chuyện để làm mới.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]"
+    },
+    "mobile.remote_sessions.move_pick.no_answer": {
+      "english_codepoints": 43,
+      "vi_codepoints": 51,
+      "ratio": 1.186,
+      "pseudo": "[Máy tính đó không phản hồi yêu cầu từ máy tính này.~~~~~~~~~~~~~~~~~~]"
+    },
+    "mobile.remote_sessions.move_pick.no_devices": {
+      "english_codepoints": 29,
+      "vi_codepoints": 29,
+      "ratio": 1.0,
+      "pseudo": "[Không thấy thiết bị nào khác.~~~~~~~~~~~]"
+    },
+    "mobile.remote_sessions.move_pick.on_this_computer": {
+      "english_codepoints": 16,
+      "vi_codepoints": 17,
+      "ratio": 1.0625,
+      "pseudo": "[Trên máy tính này~~~~~~]"
+    },
+    "mobile.remote_sessions.move_pick.right_now": {
+      "english_codepoints": 9,
+      "vi_codepoints": 8,
+      "ratio": 0.8889,
+      "pseudo": "[Hiện tại~~~]"
+    }
+  }
+}
+
+STDERR:
+
+Follow-up metadata inspection command argv:
+["python3", "-c", "from pathlib import Path; import re; p=Path('/Users/damian/.local-operator/sessions/f194c81e7557/scratchpad/verification-vi.json'); print('\\n'.join(f'{i}: {s}' for i,s in enumerate(p.read_text().splitlines(),1) if re.search('REDACTED|MASKED',s,re.I)))"]
+Exit: 0
+STDOUT:
+94:       "pattern": "\\[\\s*redacted\\s*\\]|<\\s*redacted\\s*>|\\bREDACTED\\b|\\[\\s*MASKED\\s*\\]|<\\s*MASKED\\s*>|\\*{3,}",
+
+STDERR:
+
+Bundle readback: initial literal assertion expected the capitalized wording "Fresh independent B audit remains pending"; actual report says "fresh B pending". Inspected report bytes; corrected only the verification assertion, no deliverable copy changed. Re-read all three files; JSON identity, seven per-key notes, 0 blocker/major, pending B, open source-hook gap, logged exit and unchanged draft hash checks PASS.

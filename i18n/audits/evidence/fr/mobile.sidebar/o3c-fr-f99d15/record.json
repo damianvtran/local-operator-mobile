@@ -1,0 +1,120 @@
+{
+ "record_kind": "i18n-audit",
+ "audit_id": "o3c-fr-f99d15",
+ "slice": "O3-c",
+ "locale": "fr",
+ "namespace": "mobile.sidebar",
+ "audit_date": "2026-11-18",
+ "key_count": 9,
+ "keys_audited": [
+  "mobile.sidebar.row_status.approval",
+  "mobile.sidebar.row_status.question",
+  "mobile.sidebar.row_status.not_reachable",
+  "mobile.sidebar.row_status.ended",
+  "mobile.sidebar.row_status.not_answering",
+  "mobile.sidebar.row_label.waiting",
+  "mobile.sidebar.row_label.working",
+  "mobile.sidebar.row_label.on_device",
+  "mobile.sidebar.row_label.open"
+ ],
+ "translator_session": "0942405d8cd5",
+ "auditor": {
+  "agent": "i18n-auditor (team lopdev)",
+  "session": "f99d15fd59f3",
+  "model": "anthropic/claude-opus-5-5",
+  "actual_model_source": "harness system prompt 'Model:' line for this session; no fallback observed",
+  "independent_from_translator_session": true
+ },
+ "draft": {
+  "path": "/Users/damian/.local-operator/sessions/0942405d8cd5/scratchpad/o3c/draft-fr.json",
+  "sha256": "8512afaa45e9c5735e1d41b491627a146e73ffc2738f395d7b0fd2c0ad3df547",
+  "sha256_verified": true
+ },
+ "brief": {
+  "path": "/Users/damian/.local-operator/sessions/162198c78bcb/scratchpad/o3c-translation-brief.json",
+  "sha256": "e88beb09366b9ff795bf0ac916f30cef1c9a93c35fa4617575e904c7a6f5fd17",
+  "sha256_verified": true
+ },
+ "brief_sha256": "e88beb09366b9ff795bf0ac916f30cef1c9a93c35fa4617575e904c7a6f5fd17",
+ "source_commit": "e7ebc3917537d83cc772148fc5b2fc2ad3f43a41",
+ "source_branch": "feat/i18n-o3c-rows-headers",
+ "read_route": "ordinary file reads (shell cat / tsx readFileSync) of the draft, brief, worktree catalogues and source; read_public_copy not used. Repo not modified.",
+ "input_hashes": {
+  "en": {
+   "path": "src/i18n/catalogues/en/mobile.sidebar.json",
+   "sha256": "beaba7baeffe546ce65430d6cb18213da2fbb88d23128c071c286fb32a08ecdf"
+  },
+  "context": {
+   "path": "src/i18n/catalogues/en/mobile.sidebar.context.json",
+   "sha256": "858f7c51c595862306120be7833c4274439b436bb8bd1f547b88139f8d0f2fd3"
+  },
+  "fr_shipped": {
+   "path": "local-operator-mobile@e7ebc391:src/i18n/catalogues/fr/mobile.sidebar.json",
+   "sha256": "b5a442345da677e12ff7caca461f94193f3d267908671b2627b9deb49694cd04"
+  },
+  "fr_shipped_reference": {
+   "path": "local-operator-mobile@e7ebc391:src/i18n/catalogues/fr/relay.chrome.json",
+   "sha256": "092846834cd5200dfec2b47332a94a6f26aecc482cf4bac5f5afbd0ae88154d0"
+  },
+  "style_guide": {
+   "path": "~/local-operator/i18n/style-guides/fr.md",
+   "sha256": "ae1519ab7617d19aa826918d607de1d018595094166edbc18aa58f6a8f0a4226"
+  },
+  "glossary": {
+   "path": "~/local-operator/i18n/glossary.md",
+   "sha256": "0eb34437a8c3d6f564f278ef957a603b1d9f51bb07d5ddae5ea8f37deba962f8"
+  }
+ },
+ "checks": {
+  "keys_missing": 0,
+  "keys_extra": 0,
+  "brief_vs_en_mismatches": 0,
+  "parse_message": "9/9 parse with repo parseMessage (src/i18n/messages.ts); params and select arms identical to en (kind: approval|other; device: text)",
+  "negative_controls": "parseMessage rejected missing-other and unterminated select; renamed placeholder parses but the params comparator flags it",
+  "nfc": "pass",
+  "lowercase": "pass",
+  "edge_punctuation": "none",
+  "width_over_hint": [
+   "mobile.sidebar.row_status.approval 'approbation' 11/10"
+  ],
+  "repo_validator": "not run (draft is outside the repo; repo read-only for this audit)"
+ },
+ "redaction_marker_hits": {
+  "draft": 0,
+  "english_sources": 0,
+  "brief_excluding_redaction_scan_pattern": 0
+ },
+ "verdict": "passed",
+ "current_report_verdict": {
+  "status": "passed",
+  "unresolved_blocker_major_count": 0,
+  "finding_ids": [
+   "FR-C1",
+   "FR-C2"
+  ]
+ },
+ "findings": [
+  {
+   "id": "FR-C1",
+   "severity": "MINOR",
+   "key": "mobile.sidebar.row_status.approval",
+   "current": "approbation",
+   "proposed": "Keep « approbation »; correct the translator note (« à approuver » is also 11 chars, not 10).",
+   "reason": "11 chars vs ~10 hint (+1). Glossary term (approvals → approbations) and noun pairing with « question » are right. The note's fallback « à approuver » is 11 chars too, so it buys nothing; « validation » (10) would break the glossary. Chip is shrink-0 (list-row.tsx L285-293); a design call only if the strip measures tight."
+  },
+  {
+   "id": "FR-C2",
+   "severity": "NIT",
+   "key": "mobile.sidebar.row_label.open",
+   "current": "ouverte",
+   "proposed": "affichée (optional)",
+   "reason": "Spoken last for the conversation currently on screen. « ouverte » is idiomatic but, after « terminée » (« Paiements, terminée, ouverte »), can be heard as a lifecycle state (not closed). « affichée » names the on-screen sense unambiguously. English has the same ambiguity, so not gating."
+  }
+ ],
+ "artifacts": {
+  "report": "report.md",
+  "audit_log": "audit.log"
+ },
+ "audit_notes_not_execution_log": "report.md is the auditor's notes; audit.log carries the commands and their printed output",
+ "ledger_appended": false
+}

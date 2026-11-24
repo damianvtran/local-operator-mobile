@@ -1,4 +1,11 @@
 {
+	"mobile.remote_sessions.move_pick.right_now": "Right now",
+	"mobile.remote_sessions.move_pick.cannot_reach": "Can't reach {device}",
+	"mobile.remote_sessions.move_pick.no_answer": "It did not answer when this computer asked.",
+	"mobile.remote_sessions.move_pick.on_this_computer": "On this computer",
+	"mobile.remote_sessions.move_pick.no_devices": "No other devices are visible.",
+	"mobile.remote_sessions.move_pick.discovery_help": "This app can offer the devices your sessions show. A device with no visible session cannot be picked yet — open Local Operator on the other computer and pull the list to refresh.",
+	"mobile.remote_sessions.move_pick.destination_heading": "Move or copy to",
 	"mobile.remote_sessions.title": "Remote conversation",
 	"mobile.remote_sessions.loading": "Checking this computer’s remote-session support…",
 	"mobile.remote_sessions.unsupported": "This action isn’t available in remote conversations yet. Use it on the owner computer.",

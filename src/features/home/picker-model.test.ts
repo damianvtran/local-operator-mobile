@@ -14,9 +14,9 @@ import {
 	homeChips,
 	homeFolderControl,
 	homeRunSettingsCustom,
-	MODEL_SEARCH_THRESHOLD,
 	typedFolder,
 } from "@/features/home/picker-model";
+import { MODEL_SEARCH_THRESHOLD } from "@/features/home/picker-search-threshold";
 
 /**
  * The three pickers' rules, asserted on the values that reach the chip and the

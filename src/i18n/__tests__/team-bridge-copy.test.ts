@@ -82,6 +82,37 @@ describe("Team Bridge copy", () => {
 		},
 	);
 
+	it.each(SHIPPED_LOCALES)(
+		"owns the card_body key contract in %s",
+		(locale) => {
+			// The inbound card body (#344, local-operator #4238): the relay's
+			// stated states, the untrusted framing, the clamp and the more count.
+			expect(
+				Object.keys(CATALOGUES[locale])
+					.filter((key) => key.startsWith("mobile.team_bridge.card_body."))
+					.sort(),
+			).toEqual([
+				"mobile.team_bridge.card_body.deleted",
+				"mobile.team_bridge.card_body.held",
+				"mobile.team_bridge.card_body.held_transient",
+				"mobile.team_bridge.card_body.loading",
+				"mobile.team_bridge.card_body.more_messages",
+				"mobile.team_bridge.card_body.not_admitted",
+				"mobile.team_bridge.card_body.not_member",
+				"mobile.team_bridge.card_body.offline",
+				"mobile.team_bridge.card_body.other_account",
+				"mobile.team_bridge.card_body.pending",
+				"mobile.team_bridge.card_body.refused",
+				"mobile.team_bridge.card_body.show_less",
+				"mobile.team_bridge.card_body.show_more",
+				"mobile.team_bridge.card_body.signed_out",
+				"mobile.team_bridge.card_body.thread_reply",
+				"mobile.team_bridge.card_body.unavailable",
+				"mobile.team_bridge.card_body.untrusted",
+			]);
+		},
+	);
+
 	it.each(SHIPPED_LOCALES)("covers the entire namespace in %s", (locale) => {
 		const keys = Object.keys(CATALOGUES[locale]).filter((k) =>
 			k.startsWith("mobile.team_bridge."),
@@ -89,8 +120,15 @@ describe("Team Bridge copy", () => {
 		// Exact merged attachment + consent + established key union; +2:
 		// `thread.jump_newest` and `thread.anchor_missing` (feat/bridge-last-target's
 		// anchored open); +1: `list.catching_up`; +10: `reply_thread.*`;
-		// +9 `mentions.*` (@-mention suggestions, #305): 170 + 9 = 179.
-		expect(keys).toHaveLength(179);
+		// +9 `mentions.*` (@-mention suggestions, #305): 170 + 9 = 179;
+		// +5 `actions.*` (the message-actions sheet, #339): 184.
+		// +16 `card_body.*` (inbound card bodies, #344), merged: 184 + 16 = 200.
+		// +11 reactions (#345): `actions.a11y_react` + ten `reactions.*`: 211.
+		// +9 inspection/thread keys (#348): reactions.details, hint_inspect,
+		// sample, sample_none, sample_notice, show_less, show_more, you_reacted;
+		// reply_thread.last_reply. Counted in all eight merged JSON catalogues:
+		// 211 + 9 = 220. Keep the literal count so unrelated additions still fail.
+		expect(keys).toHaveLength(221);
 		expect(keys.sort()).toEqual(
 			Object.keys(CATALOGUES.en)
 				.filter((key) => key.startsWith("mobile.team_bridge."))
@@ -215,14 +253,12 @@ describe("Team Bridge copy", () => {
 	it("wires scanner-blind row, composer and preference copy through the runtime", () => {
 		for (const [file, keys] of [
 			["navigation", ["navigation.entry", "navigation.caption"]],
+			// The org switcher sheet moved out of the list (community review round
+			// 1, R1-3) so a community can open it too; its row label went with it.
+			["org-switcher-sheet", ["list.organization_label", "list.organization"]],
 			[
 				"list-screen",
-				[
-					"list.organization_label",
-					"list.organization_selected",
-					"unread",
-					"list.person_unavailable",
-				],
+				["list.organization_selected", "unread", "list.person_unavailable"],
 			],
 			[
 				"thread-screen",

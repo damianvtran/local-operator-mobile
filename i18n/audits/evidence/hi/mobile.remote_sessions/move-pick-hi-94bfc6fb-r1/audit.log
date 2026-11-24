@@ -1,0 +1,32 @@
+Independent audit actual dependency-free execution log
+Tool: functions.eval, Python stdlib; assertions and actual outputs, not repository tests
+UTC 2026-11-22T05:09:31.043935+00:00
+PASS brief and draft SHA-256 match delegated pins
+PASS git rev-parse HEAD = 9362cce8a631791b676b2d2c9eda90c43fc7e11c
+PASS source hash src/i18n/catalogues/en/mobile.remote_sessions.json 436f8ec3bda274431146e7e7cb82b2add418f598bd2a7a6d7426f561a4312984
+PASS source hash src/i18n/catalogues/en/mobile.remote_sessions.context.json c703dff07b634d3d2d4b7c789e6a4a1eecf192a57618ea8e9e72197d325d08eb
+PASS source hash src/features/sessions/move-sheet.tsx 6a3f7126eb2fefc5ad0138a1731e3898d66d333ea8ca1b4ac99321da18d495aa
+PASS exact key set: 7; missing=0 extra=0
+PASS 7/7 brief English values and nested contexts match frozen authoring JSON
+PASS mobile.remote_sessions.move_pick.cannot_reach: tokens=['{device}']; NFC; no bidi controls; width_proxy={'english_codepoints': 20, 'hindi_codepoints': 33, 'ratio': 1.65, 'measurement': 'Unicode codepoints only; NOT cells, glyphs, graphemes, pixels or rendered/native fit'}
+PASS mobile.remote_sessions.move_pick.destination_heading: tokens=[]; NFC; no bidi controls; width_proxy={'english_codepoints': 15, 'hindi_codepoints': 27, 'ratio': 1.8, 'measurement': 'Unicode codepoints only; NOT cells, glyphs, graphemes, pixels or rendered/native fit'}
+PASS mobile.remote_sessions.move_pick.discovery_help: tokens=[]; NFC; no bidi controls; width_proxy={'english_codepoints': 178, 'hindi_codepoints': 221, 'ratio': 1.2416, 'measurement': 'Unicode codepoints only; NOT cells, glyphs, graphemes, pixels or rendered/native fit'}
+PASS mobile.remote_sessions.move_pick.no_answer: tokens=[]; NFC; no bidi controls; width_proxy={'english_codepoints': 43, 'hindi_codepoints': 45, 'ratio': 1.0465, 'measurement': 'Unicode codepoints only; NOT cells, glyphs, graphemes, pixels or rendered/native fit'}
+PASS mobile.remote_sessions.move_pick.no_devices: tokens=[]; NFC; no bidi controls; width_proxy={'english_codepoints': 29, 'hindi_codepoints': 30, 'ratio': 1.0345, 'measurement': 'Unicode codepoints only; NOT cells, glyphs, graphemes, pixels or rendered/native fit'}
+PASS mobile.remote_sessions.move_pick.on_this_computer: tokens=[]; NFC; no bidi controls; width_proxy={'english_codepoints': 16, 'hindi_codepoints': 14, 'ratio': 0.875, 'measurement': 'Unicode codepoints only; NOT cells, glyphs, graphemes, pixels or rendered/native fit'}
+PASS mobile.remote_sessions.move_pick.right_now: tokens=[]; NFC; no bidi controls; width_proxy={'english_codepoints': 9, 'hindi_codepoints': 3, 'ratio': 0.3333, 'measurement': 'Unicode codepoints only; NOT cells, glyphs, graphemes, pixels or rendered/native fit'}
+PASS redaction marker hits in seven draft copy values = 0; seven English values = 0
+Metadata marker regex matches = 0 (metadata is not displayed copy)
+PASS exact ICU map: cannot_reach {device} once; six argument-free; plural/select/number/date/markup N/A; no repo ICU parser executed
+PASS negative controls: malformed/nested braces rejected, missing/renamed argument differs, extra key differs, U+2067 detected
+PASS six synthetic opaque names preserved via literal substitution; not ICU runtime or direction/layout proof
+PASS static source: opaque device passed to t; trimmed server reason wins over client fallback; remote on_device reused (NOT runtime execution)
+PASS synthetic pseudolocalization: bracketed English + ceil(35% codepoint length) tilde padding for 7/7, arguments preserved; NOT repository pseudolocalizer or rendering
+PSEUDO mobile.remote_sessions.move_pick.cannot_reach = ⟦Can't reach {device}~~~~~~~⟧
+PSEUDO mobile.remote_sessions.move_pick.destination_heading = ⟦Move or copy to~~~~~~⟧
+PSEUDO mobile.remote_sessions.move_pick.discovery_help = ⟦This app can offer the devices your sessions show. A device with no visible session cannot be picked yet — open Local Operator on the other computer and pull the list to refresh.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~⟧
+PSEUDO mobile.remote_sessions.move_pick.no_answer = ⟦It did not answer when this computer asked.~~~~~~~~~~~~~~~~⟧
+PSEUDO mobile.remote_sessions.move_pick.no_devices = ⟦No other devices are visible.~~~~~~~~~~~⟧
+PSEUDO mobile.remote_sessions.move_pick.on_this_computer = ⟦On this computer~~~~~~⟧
+PSEUDO mobile.remote_sessions.move_pick.right_now = ⟦Right now~~~~⟧
+NOT RUN: hooks, suites, compiler, build, dependency installs, browser/native rendering, ICU runtime. Human-native review waived; source-hook evidence GAP OPEN; fresh high-visibility B PENDING.

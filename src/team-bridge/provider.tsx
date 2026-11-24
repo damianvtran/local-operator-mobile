@@ -25,6 +25,10 @@ import {
 	teamBridgeWanted,
 } from "@/notifications/notification-preferences";
 import { addPushTokenChangeListener } from "@/notifications/push-token-changes";
+import {
+	enableAndroidBridgePresentation,
+	retireAndroidBridgePresentation,
+} from "@/team-bridge/android-presentation";
 import { type AvatarCache, createAvatarCache } from "@/team-bridge/avatars";
 import {
 	backgroundUnreadScope,
@@ -142,12 +146,16 @@ export function TeamBridgeProvider({ children }: { children: ReactNode }) {
 			void pushes.register().catch(() => undefined);
 		});
 		const pushes = createPushLifecycle({
+			closePresentation: () => retireAndroidBridgePresentation(owner),
 			register: async (isCurrent) => {
 				/* The Team Bridge switch (Settings → Notifications) is app-only:
 				 * the hub has no per-type filter, so "off" means this phone is not
 				 * registered with it at all. Checked here, after the stored choice
 				 * is read, so launch and foreground re-registration honour it too. */
-				if (!teamBridgeWanted(await loadNotificationPreferences())) return;
+				if (!teamBridgeWanted(await loadNotificationPreferences())) {
+					if (isCurrent()) retireAndroidBridgePresentation(owner);
+					return;
+				}
 				const bound = await bindAccount();
 				if (!bound || !isCurrent()) return;
 				registeredHub = bound;
@@ -156,7 +164,10 @@ export function TeamBridgeProvider({ children }: { children: ReactNode }) {
 					isCurrent,
 					registration,
 				);
-				if (outcome === "backoff" && isCurrent()) backoffRetry.arm();
+				if (!isCurrent()) return;
+				if (owner && (outcome === "registered" || outcome === "unchanged"))
+					enableAndroidBridgePresentation(owner);
+				if (outcome === "backoff") backoffRetry.arm();
 			},
 			unregister: async () => {
 				// Withdraw and sign-out: nothing may re-register this account.

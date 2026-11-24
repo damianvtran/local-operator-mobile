@@ -6,9 +6,11 @@ import {
 	FlatList,
 	Pressable,
 	RefreshControl,
+	ScrollView,
 	Text,
 	View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import type { NotificationItem } from "@/contracts";
 import {
@@ -33,6 +35,7 @@ import {
 	conversationName,
 	DISMISS_LABEL,
 	dismissableTargets,
+	dismissReceiptShowing,
 	EMPTY_ALL_BODY,
 	FILTER_ALL,
 	FILTER_UNREAD,
@@ -61,6 +64,7 @@ import {
 } from "@/features/notifications/notifications-model";
 import { useConversationDismiss } from "@/features/notifications/use-conversation-dismiss";
 import {
+	type InboxFilter,
 	skippedSentence,
 	useNotifications,
 } from "@/features/notifications/use-notifications";
@@ -385,6 +389,22 @@ export default function Notifications() {
 
 	const selectedCount = selectionTargets(selection, rows).length;
 	const skipped = skippedSentence(inbox.skipped);
+	/* `scroll={false}` leaves the bottom inset to the bottom-most child (`Screen`'s
+	 *  `bottomInset="child"`). The pinned footer pays it, but only while it holds
+	 *  something: an idle list keeps scrolling under the home indicator (#321). */
+	const insets = useSafeAreaInsets();
+	/* One empty region serves both tabs, so a tab change would keep the other
+	 *  tab's offset: at 320 pt / 200 %, "Show all notifications" pressed after
+	 *  scrolling down opened All mid-sentence, with the Unread/All control above
+	 *  the viewport (design review D1). Both of the region's tab controls scroll
+	 *  it back to the top first; not a remount, so the indicator still slides. */
+	const emptyScrollRef = useRef<ScrollView>(null);
+	const setEmptyFilter = (next: InboxFilter) => {
+		emptyScrollRef.current?.scrollTo({ y: 0, animated: false });
+		inbox.setFilter(next);
+	};
+	const receiptShowing = dismissReceiptShowing(dismissAll.phase);
+	const footerShowing = selecting || receiptShowing;
 
 	/* --------------------------------------------------------------- render -- */
 
@@ -468,26 +488,44 @@ export default function Notifications() {
 			/* Two different sentences for the same empty answer: "all caught up" is
 			 * the unread pile's verdict, and the All view saying it would claim the
 			 * store holds nothing when it holds read history. */
-			return inbox.filter === "unread" ? (
-				<View className="gap-2 px-4 pt-3">
-					<SegmentedFilter value={inbox.filter} onChange={inbox.setFilter} />
-					<EmptyState
-						headline={ALL_CAUGHT_UP_TITLE}
-						next={ALL_CAUGHT_UP_BODY}
-						action={{
-							label: "Show all notifications",
-							onPress: () => inbox.setFilter("all"),
-							testID: CONTROL.inboxFilterAll,
-						}}
-						testID={EMPTY.notifications}
-					/>
-				</View>
-			) : (
-				<EmptyState
-					headline="Nothing here yet"
-					next={EMPTY_ALL_BODY}
-					testID={EMPTY.notificationsAll}
-				/>
+			return (
+				/* THE REGION OWNS THE HEIGHT (#321). The old wrapper sized to its
+				 *  content, so iOS offered the `flex-1` empty state zero height and its
+				 *  centred block spilled up over the filter, with the receipt riding up
+				 *  under it. Now the region fills the screen above the footer, its
+				 *  content grows to that height so the state centres, and the state
+				 *  keeps its own height as a floor (`scrolling`) so a 320 pt phone at
+				 *  200 % scrolls to it instead (a fixed region overlapped the filter
+				 *  there). The filter sits above BOTH sentences: the All tab is reached
+				 *  from "Show all notifications", and without the control there was no
+				 *  way back to Unread but leaving the screen. */
+				<ScrollView
+					ref={emptyScrollRef}
+					className="flex-1"
+					contentContainerClassName="grow gap-2 px-4 pt-3"
+				>
+					<SegmentedFilter value={inbox.filter} onChange={setEmptyFilter} />
+					{inbox.filter === "unread" ? (
+						<EmptyState
+							headline={ALL_CAUGHT_UP_TITLE}
+							next={ALL_CAUGHT_UP_BODY}
+							action={{
+								label: "Show all notifications",
+								onPress: () => setEmptyFilter("all"),
+								testID: CONTROL.inboxFilterAll,
+							}}
+							testID={EMPTY.notifications}
+							scrolling
+						/>
+					) : (
+						<EmptyState
+							headline="Nothing here yet"
+							next={EMPTY_ALL_BODY}
+							testID={EMPTY.notificationsAll}
+							scrolling
+						/>
+					)}
+				</ScrollView>
 			);
 		}
 		/* The populated case is the FlatList below. Rows never report reads on
@@ -698,58 +736,70 @@ export default function Notifications() {
 				{/* Receipts live in the pinned footer, never in the scrolled-away
 				 * list header: a one-click dismiss at the bottom of the reel must still
 				 * show its sentence and Undo (ND3). */}
-				<DismissReceipt dismissAll={dismissAll} />
-				{selecting ? (
-					<View
-						/* In the layout, not over it: an absolute bar covers the last rows,
-						 *  and a control that covers content is an overlap the reader pays
-						 *  for (the audit scores it, and it hid the very items the
-						 *  selection was made from). */
-						/* WRAPS rather than widening the screen. At 200 % text on a 320 pt
-						 *  phone the count plus two outline buttons is 367 pt in one row;
-						 *  the document grew past the viewport, mobile Chrome widened the
-						 *  layout viewport to fit, and the screen's own ground stopped
-						 *  covering it (CI run 40229891769: canvas measured transparent on
-						 *  S18/multi-select at iphone-se 200 %, with U-06 +47 pt on the
-						 *  same frames). The count keeps its natural width; the verbs are
-						 *  one group that drops to its own line, and wraps inside it, when
-						 *  they cannot share the count's. */
-						className="flex-row flex-wrap items-center gap-2 border-hairline border-t bg-canvas px-4 py-3"
-						testID={SURFACE.inboxSelectionBar}
-					>
-						<Text className="grow text-meta text-ink-dim">
-							{selectedCountLabel(selectedCount)}
-						</Text>
-						<View className="shrink flex-row flex-wrap items-center gap-2">
-							<Button
-								label={MARK_READ_LABEL}
-								onPress={() => void onWrite("read")}
-								variant="outline"
-								size="sm"
-								disabled={selectedCount === 0 || writing}
-								testID={CONTROL.inboxMarkRead}
-							/>
-							{inbox.filter === "all" ? (
+				<View style={{ paddingBottom: footerShowing ? insets.bottom : 0 }}>
+					{receiptShowing ? (
+						<View
+							/* THE SELECTION BAR'S TREATMENT, so the two read as one footer: this
+							 *  screen gets no gutter from `Screen`, and the receipt ran edge to
+							 *  edge under the empty state (#321). `DismissReceipt` stays
+							 *  unpadded because the detail places it inside its own column. */
+							className="border-hairline border-t bg-canvas px-4 py-3"
+						>
+							<DismissReceipt dismissAll={dismissAll} />
+						</View>
+					) : null}
+					{selecting ? (
+						<View
+							/* In the layout, not over it: an absolute bar covers the last rows,
+							 *  and a control that covers content is an overlap the reader pays
+							 *  for (the audit scores it, and it hid the very items the
+							 *  selection was made from). */
+							/* WRAPS rather than widening the screen. At 200 % text on a 320 pt
+							 *  phone the count plus two outline buttons is 367 pt in one row;
+							 *  the document grew past the viewport, mobile Chrome widened the
+							 *  layout viewport to fit, and the screen's own ground stopped
+							 *  covering it (CI run 40229891769: canvas measured transparent on
+							 *  S18/multi-select at iphone-se 200 %, with U-06 +47 pt on the
+							 *  same frames). The count keeps its natural width; the verbs are
+							 *  one group that drops to its own line, and wraps inside it, when
+							 *  they cannot share the count's. */
+							className="flex-row flex-wrap items-center gap-2 border-hairline border-t bg-canvas px-4 py-3"
+							testID={SURFACE.inboxSelectionBar}
+						>
+							<Text className="grow text-meta text-ink-dim">
+								{selectedCountLabel(selectedCount)}
+							</Text>
+							<View className="shrink flex-row flex-wrap items-center gap-2">
 								<Button
-									label={MARK_UNREAD_LABEL}
-									onPress={() => void onWrite("unread")}
+									label={MARK_READ_LABEL}
+									onPress={() => void onWrite("read")}
 									variant="outline"
 									size="sm"
 									disabled={selectedCount === 0 || writing}
-									testID={CONTROL.inboxMarkUnread}
+									testID={CONTROL.inboxMarkRead}
 								/>
-							) : null}
-							<Button
-								label={DISMISS_LABEL}
-								onPress={onDismissSelection}
-								variant="outline"
-								size="sm"
-								disabled={selectedCount === 0 || writing}
-								testID={CONTROL.inboxDismiss}
-							/>
+								{inbox.filter === "all" ? (
+									<Button
+										label={MARK_UNREAD_LABEL}
+										onPress={() => void onWrite("unread")}
+										variant="outline"
+										size="sm"
+										disabled={selectedCount === 0 || writing}
+										testID={CONTROL.inboxMarkUnread}
+									/>
+								) : null}
+								<Button
+									label={DISMISS_LABEL}
+									onPress={onDismissSelection}
+									variant="outline"
+									size="sm"
+									disabled={selectedCount === 0 || writing}
+									testID={CONTROL.inboxDismiss}
+								/>
+							</View>
 						</View>
-					</View>
-				) : null}
+					) : null}
+				</View>
 			</View>
 			<AsksSheet
 				visible={answerSession !== null}

@@ -204,11 +204,12 @@ export const useKeyboardAppearance = (): "light" | "dark" =>
  * chrome such as the status bar. Everything else uses `className`, which is
  * cheaper and cannot drift out of theme.
  *
- * The value comes from the live CSS variable so it tracks a theme change; the
- * active palette from the generated catalogue is the fallback for the frame before the variable resolves
- * and for a role that no `className` currently uses — Uniwind only exposes the
- * variables it has seen in a class, and an icon painted with `undefined` is
- * invisible rather than merely wrong.
+ * The value comes from the live CSS variable so it tracks a theme change. No
+ * colour role depends on a class using it: theme-varying roles are spelt out per
+ * theme and theme-invariant ones sit in an `@theme static` block (both in the
+ * generated `theme.css`). The active palette from the generated catalogue is the
+ * fallback for the frame before the variable resolves; an icon painted with
+ * `undefined` is invisible rather than merely wrong.
  */
 export const useTokenColor = (role: ColorRole): string => {
 	const { active } = useTheme();
@@ -224,8 +225,8 @@ export const useTokenColor = (role: ColorRole): string => {
  * can be folded into the same flag rather than consulted separately at every
  * animation (`tokens.json § motion.reducedMotion.detect`).
  */
-export const useReducedMotion = (): boolean => {
-	const [reduce, setReduce] = useState(false);
+export const useReducedMotion = (initial = false): boolean => {
+	const [reduce, setReduce] = useState(initial);
 
 	useEffect(() => {
 		let cancelled = false;
@@ -234,9 +235,8 @@ export const useReducedMotion = (): boolean => {
 				if (!cancelled) setReduce(enabled);
 			})
 			.catch(() => {
-				// A platform without the API keeps motion on. Reduced motion is a
-				// preference the reader opts into; failing closed would remove
-				// feedback nobody asked to lose.
+				// Keep the caller's initial policy if the platform has no reading.
+				// An optional reveal can stay off; control feedback defaults on.
 			});
 		const subscription = AccessibilityInfo.addEventListener(
 			"reduceMotionChanged",

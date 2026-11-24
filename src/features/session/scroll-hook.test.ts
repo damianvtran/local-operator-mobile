@@ -9,8 +9,9 @@ import { scrollAnchorFromValue } from "@/features/session/scroll-hook";
  * frame that lies about what a reader sees.
  */
 describe("scrollAnchorFromValue", () => {
-	it("accepts exactly `top`", () => {
+	it("accepts exactly `top` and `away`", () => {
 		expect(scrollAnchorFromValue("top")).toBe("top");
+		expect(scrollAnchorFromValue("away")).toBe("away");
 	});
 
 	it("resolves everything else to the default anchor", () => {

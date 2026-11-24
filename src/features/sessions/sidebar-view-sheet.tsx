@@ -4,11 +4,12 @@ import {
 	ChevronRight,
 	SlidersHorizontal,
 } from "lucide-react-native";
-import { useState } from "react";
 import { Pressable, Text } from "react-native";
-
+import { useListState } from "@/features/auth/connection-provider";
 import { isCustomSidebarView } from "@/features/sessions/sidebar-view";
 import { SidebarViewControls } from "@/features/sessions/sidebar-view-controls";
+import { useSidebarViewHandoff } from "@/features/sessions/sidebar-view-handoff";
+import { canAssignSessionTags } from "@/features/sessions/tags";
 import { useSidebarView } from "@/features/sessions/use-sidebar-view";
 import { t } from "@/i18n";
 import { CONTROL, ROLE, SURFACE } from "@/ui/a11y";
@@ -32,7 +33,13 @@ import { TOUCH_FLOOR } from "@/ui/layout";
  * name; a sheet is the phone's popover.
  *
  * Self-contained (button + sheet + navigation) so the conversations pane
- * mounts it with ONE line and owns none of its state.
+ * mounts it with ONE line and owns none of its state. The tag controls follow
+ * the relay, so the sheet reads the capability itself, as the pane does.
+ *
+ * A footer link leaves the drawer for Settings, which is a hand-off, not a
+ * plain close: this sheet is a `Modal` INSIDE the drawer's `Modal`, and
+ * closing both in one tick left iOS holding one presented over Settings
+ * (`sidebar-view-handoff.ts` has the report and the rule).
  */
 export const SidebarViewButton = ({
 	onNavigate,
@@ -42,14 +49,16 @@ export const SidebarViewButton = ({
 }) => {
 	const router = useRouter();
 	const { view, setView } = useSidebarView();
-	const [open, setOpen] = useState(false);
+	const capabilities = useListState((state) => state.capabilities);
+	const tagsAvailable = canAssignSessionTags(capabilities);
+	const sheet = useSidebarViewHandoff();
 	const chevron = useTokenColor("ink-dim");
 	const rtl = useIsRTL();
 	return (
 		<>
 			<IconButton
 				accessibilityLabel={t("mobile.sidebar.view_options")}
-				onPress={() => setOpen(true)}
+				onPress={sheet.openSheet}
 				icon={({ color, size }) => (
 					<SlidersHorizontal color={color} size={size} />
 				)}
@@ -58,12 +67,15 @@ export const SidebarViewButton = ({
 				 *  the sheet being open — so content withheld by an option has a visible
 				 *  cause in the drawer (design review round 1, D2; the desktop's
 				 *  `viewIsCustom` trigger). */
-				active={isCustomSidebarView(view)}
+				active={isCustomSidebarView(view, tagsAvailable)}
 				testID={CONTROL.sidebarViewOptions}
 			/>
 			<Sheet
-				visible={open}
-				onClose={() => setOpen(false)}
+				visible={sheet.open}
+				onClose={sheet.closeSheet}
+				onDismiss={sheet.onDismiss}
+				onHidden={sheet.onHidden}
+				exitInstantly={sheet.exitInstantly}
 				title={t("mobile.sidebar.view_options")}
 				// Two lines, not an ellipsis, at 320 pt and 200 % text (QA round 1, Q2).
 				titleLines={2}
@@ -73,11 +85,12 @@ export const SidebarViewButton = ({
 					<Pressable
 						accessibilityRole={ROLE.link}
 						accessibilityLabel={t("mobile.sidebar.more_settings")}
-						onPress={() => {
-							setOpen(false);
-							onNavigate?.();
-							router.push("/settings?section=sidebar" as never);
-						}}
+						onPress={() =>
+							sheet.moreSettings(() => {
+								onNavigate?.();
+								router.push("/settings?section=sidebar" as never);
+							})
+						}
 						testID={CONTROL.sidebarViewMore}
 						className="flex-row items-center gap-2"
 						style={{ minHeight: TOUCH_FLOOR }}
@@ -94,7 +107,12 @@ export const SidebarViewButton = ({
 					</Pressable>
 				}
 			>
-				<SidebarViewControls view={view} onChange={setView} scope="sheet" />
+				<SidebarViewControls
+					view={view}
+					onChange={setView}
+					scope="sheet"
+					tagsAvailable={tagsAvailable}
+				/>
 			</Sheet>
 		</>
 	);

@@ -18,6 +18,8 @@ import { renderFor } from "@/i18n";
  */
 /** The first strong character `dir="auto"` resolves the base from. */
 const STARTS_LATIN = /^[A-Za-z]/;
+/** Any Arabic-script letter: the Urdu frame around a Latin name. */
+const HAS_ARABIC_SCRIPT = /[\u0600-\u06FF]/;
 /** A `style` prop on a JSX element. */
 const STYLE_PROP = /\bstyle=/;
 
@@ -67,6 +69,61 @@ describe("sentences that start with a Latin token state the page's base", () => 
 		).toContain("{...composedDir}");
 		expect(
 			textOpeningBefore(source, '{t("mobile.computers.added.stays_listed")}'),
+		).toContain("{...composedDir}");
+	});
+});
+
+/* On-device slice (audit ondev-ur-5a0f53, A-ur-1/R-ur-1): the remote row's
+ * device line composes the Urdu frame with a reader-chosen name, usually Latin
+ * (`ڈیوائس Studio Mac پر`). The shipped ur value leads with an Urdu word, so
+ * first-strong detection happens to land RTL today; the shorter, equally valid
+ * `{device} پر` would not. The line states the page's base so it never depends
+ * on which word the catalogue puts first. */
+describe("the remote row's device line states the page's base", () => {
+	it("the Urdu line really mixes scripts around the name (the premise)", () => {
+		const line = renderFor(
+			"mobile.sidebar.row.on_device",
+			{ device: "Studio Mac" },
+			"ur",
+		);
+		expect(line).toContain("Studio Mac");
+		expect(line).toMatch(HAS_ARABIC_SCRIPT);
+	});
+
+	it("ListRow: the device-line Text spreads useComposedDir()", () => {
+		const source = read("../../ui/components/list-row.tsx");
+		expect(source).toContain("const composedDir = useComposedDir();");
+		expect(
+			textOpeningBefore(source, '{t("mobile.sidebar.row.on_device"'),
+		).toContain("{...composedDir}");
+	});
+});
+
+/* Move picker (PR #365 design round 1, D1): the "where it is now" line renders
+ * either `cannot_reach` or `on_device` around the same device label, usually a
+ * Latin name and always Latin in its fallbacks (`device …<last6>`, `another
+ * device`). The shipped ur `cannot_reach` LEADS with `{device}`, so without a
+ * stated base first-strong detection sets the line LTR and the Urdu tail sits
+ * on the wrong edge. One spread on the shared Text covers both branches. */
+describe("the move picker's device line states the page's base", () => {
+	it("the Urdu unreachable line really starts with the Latin name (the premise)", () => {
+		const line = renderFor(
+			"mobile.remote_sessions.move_pick.cannot_reach",
+			{ device: "Studio Mac" },
+			"ur",
+		);
+		expect(line).toMatch(STARTS_LATIN);
+		expect(line).toMatch(HAS_ARABIC_SCRIPT);
+	});
+
+	it("PickBody: the device-line Text spreads useComposedDir()", () => {
+		const source = read("../../features/sessions/move-sheet.tsx");
+		expect(source).toContain("const composedDir = useComposedDir();");
+		expect(
+			textOpeningBefore(
+				source,
+				't("mobile.remote_sessions.move_pick.cannot_reach"',
+			),
 		).toContain("{...composedDir}");
 	});
 });

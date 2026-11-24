@@ -63,9 +63,10 @@ describe("the MIME type sniffed from the payload's own bytes", () => {
 });
 
 describe("the attach sheet's rows", () => {
-	it("offers the photo picker, the document picker and the clipboard on native", () => {
+	it("offers the photo picker, the camera, the document picker and the clipboard on native", () => {
 		expect(attachActions("native").map((action) => action.source)).toEqual([
 			"library",
+			"camera",
 			"files",
 			"paste",
 		]);

@@ -66,7 +66,11 @@ import { useTextScale } from "@/ui/text-scale-provider";
  * `ended` going false is the signal that the session came back, so it clears
  * the state.
  */
-export function useResume(sessionId: string, ended: boolean) {
+export function useResume(
+	sessionId: string,
+	ended: boolean,
+	resumeAction?: () => Promise<void>,
+) {
 	const { relay } = useConnection();
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState<string | null>(null);
@@ -94,7 +98,8 @@ export function useResume(sessionId: string, ended: boolean) {
 		setError(null);
 		setNotice(null);
 		try {
-			await client.resumeSession(sessionId);
+			if (resumeAction) await resumeAction();
+			else await client.resumeSession(sessionId);
 			/* The notice lands BEFORE busy clears, in one batch, so the button
 			   never reads "Resume" again while the line under it says the reopen
 			   is under way (design round 1, N1). Busy still clears on success: a
@@ -116,7 +121,7 @@ export function useResume(sessionId: string, ended: boolean) {
 			);
 			setBusy(false);
 		}
-	}, [busy, relay, sessionId]);
+	}, [busy, relay, sessionId, resumeAction]);
 
 	useEffect(() => {
 		if (notice !== healthResumeCopy().reopening) return;
@@ -408,7 +413,10 @@ export function SessionHealthControl({
 				titleLines={2}
 				testID={CONTROL.sessionHealthSheet}
 			>
-				<View className="gap-3 px-4 pb-4">
+				{/* No horizontal inset here: the Sheet's body already pads 16 pt, the
+				    title's own inset, and a second `px-4` put this text 16 pt right
+				    of the title (`session-health-inset.test.ts`). */}
+				<View className="gap-3 pb-4">
 					<Text className="text-body-sm text-ink-muted">
 						{detail ?? healthCopy()[healthDetailKey(health, projection)]}
 					</Text>
@@ -543,7 +551,8 @@ export function SessionHeaderActions({
 				title={t("mobile.session_health.menu_title")}
 				testID={CONTROL.sessionHeaderMenuSheet}
 			>
-				<View className="gap-2 px-4 pb-4">
+				{/* The Sheet's body inset only, as in the health sheet above. */}
+				<View className="gap-2 pb-4">
 					{onTags !== undefined ? (
 						<Button
 							testID={CONTROL.sessionMenuTags}

@@ -610,6 +610,57 @@ describe("the projection store fences per connection and keeps the last snapshot
 		expect(readEntry(store.getState(), "s1").awaitingSnapshot).toBe(false);
 	});
 
+	it("stamps newly accepted snapshots locally even when reconnect repeats a version", () => {
+		const store = createProjectionStore();
+		const epoch = () => readEntry(store.getState(), "s1").streamEpoch;
+		const apply = (version: number) =>
+			store.getState().applyFrame("s1", { ...projection(), version });
+		store.getState().hydrate("s1", projection());
+		expect(epoch()).toBeUndefined();
+		store.getState().beginStream("s1");
+		apply(10);
+		const first = epoch();
+		expect(first).toEqual(expect.any(Number));
+		apply(11);
+		apply(9);
+		expect(epoch()).toBe(first);
+		store.getState().endStream("s1");
+		store.getState().beginStream("s1");
+		expect(apply(11)).toBe("accepted-snapshot");
+		expect(epoch()).not.toBe(first);
+	});
+
+	it("stamps the first accepted HTTP reopen frame without resetting the wire fence", () => {
+		const store = createProjectionStore();
+		const id = "reopen";
+		const read = () => readEntry(store.getState(), id);
+		const apply = (version: number, startsAttempt = false) =>
+			store
+				.getState()
+				.applyFrame(id, { ...projection(), version }, startsAttempt);
+		store.getState().beginStream(id);
+		expect(apply(10, true)).toBe("accepted-snapshot");
+		expect(apply(11)).toBe("accepted-newer");
+		const initial = read().streamEpoch;
+		// An automatic HTTP reopen does not call beginStream again. Its older
+		// seed still drops, and cannot mark the painted text as a new baseline.
+		expect(apply(9, true)).toBe("dropped-older");
+		expect(read()).toMatchObject({
+			version: 11,
+			streamEpoch: initial,
+			droppedFrames: 1,
+		});
+		expect(apply(12, true)).toBe("accepted-newer");
+		const reopened = read().streamEpoch;
+		expect(reopened).not.toBe(initial);
+		expect(apply(13)).toBe("accepted-newer");
+		expect(read()).toMatchObject({
+			version: 13,
+			streamEpoch: reopened,
+			droppedFrames: 1,
+		});
+	});
+
 	it("drops an older frame inside one connection and counts it", () => {
 		const store = createProjectionStore();
 		const frame = projection();

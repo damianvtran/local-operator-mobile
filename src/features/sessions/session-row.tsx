@@ -41,10 +41,23 @@ export type SessionRowProps = {
 	surfaceClassName?: string;
 	homeDirectory?: string | null;
 	tagsAssignable: boolean;
+	/** Whether the row paints its tag line. The drawer's "Show tags" option;
+	 *  default ON so every other caller keeps the line. Assignment is untouched:
+	 *  the long-press menu still reaches the Tags sheet. */
+	showTags?: boolean;
 	/** STABLE across renders (the pane hands out ref-backed callbacks): an
 	 *  inline closure here would defeat the memo this component exists for. */
 	onActivate: (session: SessionSummary) => void;
-	onLongPress: (session: SessionSummary) => void;
+	/** Absent where the row has no menu to open (the home's work list: the
+	 *  drawer's menu is state of the pane, which Home does not own). The row then
+	 *  neither handles nor announces a long press. */
+	onLongPress?: (session: SessionSummary) => void;
+	/** Title lines (default 1). Only the home's work list passes 2 at large
+	 *  text; the drawer passes nothing, so its rows are unchanged. */
+	titleLines?: 1 | 2;
+	/** Leave the folder line out (default shown). Only the home's work list
+	 *  passes false, at the largest text; the row's approval word stays. */
+	showFolder?: boolean;
 };
 
 /**
@@ -85,8 +98,11 @@ export const SessionRow = memo(function SessionRow({
 	surfaceClassName,
 	homeDirectory,
 	tagsAssignable,
+	showTags = true,
 	onActivate,
 	onLongPress,
+	titleLines,
+	showFolder = true,
 }: SessionRowProps) {
 	/* A late backend language frame must repaint this row's keyed copy (PR #302
 	 *  R1/Q2): the "new" marker, the count chips and their accessible names, and
@@ -100,7 +116,11 @@ export const SessionRow = memo(function SessionRow({
 	 *  connection-provider.tsx; proved by `session-row-locale-frame.test.tsx`). */
 	useLocaleFrame();
 	const remote = isRemoteRow(session);
-	const tagged = (session.tags?.length ?? 0) > 0;
+	/* `showTags` is the drawer's option, and it gates BOTH the line and the
+	 *  row's announcement: a line withheld from the screen must not be spoken
+	 *  either, or the view would lie to a screen-reader reader in the other
+	 *  direction. */
+	const tagged = showTags && (session.tags?.length ?? 0) > 0;
 	/* The outbox indicator (`outbox.ts`): a send this phone is still delivering
 	 *  to this conversation, so leaving it never hides that the message has not
 	 *  landed yet. A primitive subscription, so only THIS row re-renders when
@@ -139,8 +159,9 @@ export const SessionRow = memo(function SessionRow({
 			reserveLeading={reserveLeading}
 			surfaceClassName={surfaceClassName}
 			title={session.conversation_name.trim() || "untitled"}
+			titleLines={titleLines}
 			cwd={
-				remote
+				remote || !showFolder
 					? undefined
 					: homeDirectory
 						? homeShortened(session.cwd, homeDirectory)
@@ -172,13 +193,15 @@ export const SessionRow = memo(function SessionRow({
 					: undefined
 			}
 			onPress={() => onActivate(session)}
-			onLongPress={() => onLongPress(session)}
+			onLongPress={onLongPress ? () => onLongPress(session) : undefined}
 			longPressAccessibilityHint={
-				remote
-					? t("mobile.remote_sessions.row_long_press_hint")
-					: tagsAssignable
-						? "Pin, tag, or open"
-						: "Pin or open"
+				onLongPress === undefined
+					? undefined
+					: remote
+						? t("mobile.remote_sessions.row_long_press_hint")
+						: tagsAssignable
+							? "Pin, tag, or open"
+							: "Pin or open"
 			}
 			/* Read-only on a remote row: its tags live in the other device's
 			 *  store, and this phone has no route to write them. Today the relay

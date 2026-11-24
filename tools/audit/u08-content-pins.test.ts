@@ -19,6 +19,11 @@
  * instrument files the proof loads must match INSTRUMENT_PINS, and the table
  * keys must match the drivers' import closure.
  *
+ * `app` and `src` are past even that: no committed digest exists for them
+ * (RUN_DERIVED_ROOTS), so the dispatch preflight cannot go stale on an app merge
+ * and no PR re-pins for one. The cases below prove an app edit is admitted AND
+ * recorded, and that two sibling app PRs merge without touching this table.
+ *
  * The last case walks the drivers' real import graph. Without it the pin table
  * only claims to cover what the proof loads; with it, a module added to either
  * driver fails the suite until it is pinned.
@@ -54,6 +59,8 @@ import {
 	pinTablesFrom,
 	RENDER_FILE_PINS,
 	RENDER_TREE_PINS,
+	RUN_DERIVED_ROOTS,
+	renderedSource,
 	snapshotContent,
 	treeDigest,
 } from "./u08-content-pins.ts";
@@ -244,20 +251,15 @@ describe("U08 content-identity admission", () => {
 		);
 	});
 
-	it("refuses an edited app source file and an edited relay input together, naming each root and both hashes", () => {
+	it("admits an edited app source file but records it, while still refusing an edited relay input", () => {
+		const before = renderedSource(snapshotContent(fixture));
 		append("src/ui/theme.css", "\n/* repaint */\n");
 		append("fixtures/relay/http/checkpoints-deep.json", "\n");
 		execFileSync("git", ["add", "-A"], { cwd: fixture });
 		const content = snapshotContent(fixture);
-		const src = treeDigest(content, "src");
 		const relay = treeDigest(content, "fixtures/relay");
+		// Only the scene input refuses; the app is what the proof measures.
 		expect(contentDrift(content, baseline)).toEqual([
-			{
-				kind: "render-tree",
-				scope: "src",
-				pinned: baseline.renderTree.src,
-				actual: src,
-			},
 			{
 				kind: "input-tree",
 				scope: "fixtures/relay",
@@ -266,11 +268,10 @@ describe("U08 content-identity admission", () => {
 			},
 		]);
 		expect(() => assertPinnedContent(content, baseline)).toThrow(
-			`render-tree src pinned=${baseline.renderTree.src} actual=${src}`,
-		);
-		expect(() => assertPinnedContent(content, baseline)).toThrow(
 			`input-tree fixtures/relay pinned=${baseline.inputTree["fixtures/relay"]} actual=${relay}`,
 		);
+		expect(renderedSource(content).src).not.toBe(before.src);
+		expect(renderedSource(content).app).toBe(before.app);
 	});
 
 	it("judges against the table it is given, and defaults to the committed tables", () => {
@@ -289,14 +290,17 @@ describe("U08 content-identity admission", () => {
 		// the parameter is honoured, so the baseline cases above are not vacuous.
 		const shifted: PinTables = {
 			...baseline,
-			renderTree: { ...baseline.renderTree, src: "0".repeat(64) },
+			renderTree: {
+				...baseline.renderTree,
+				"design/tokens": "0".repeat(64),
+			},
 		};
 		expect(contentDrift(content, shifted)).toEqual([
 			{
 				kind: "render-tree",
-				scope: "src",
+				scope: "design/tokens",
 				pinned: "0".repeat(64),
-				actual: baseline.renderTree.src,
+				actual: baseline.renderTree["design/tokens"],
 			},
 		]);
 		// No argument means the committed trust root — what the proof calls.
@@ -323,16 +327,75 @@ describe("U08 content-identity admission", () => {
 		).toEqual([]);
 	});
 
-	it("refuses an edited app source file through the render-tree digest", () => {
-		const path = "src/ui/theme.css";
-		append(path, "\n/* repaint */\n");
+	it("admits an edited app source file and returns its digest for the receipt", () => {
+		// The regression this file exists to prevent: an app edit used to refuse
+		// here unless the PR re-pinned `src`, which serialized every app PR.
+		const before = renderedSource(snapshotContent(fixture));
+		append("src/ui/theme.css", "\n/* repaint */\n");
+		mkdirSync(resolve(fixture, "app/(new)"), { recursive: true });
+		writeFileSync(resolve(fixture, "app/(new)/route.tsx"), "export {};\n");
 		execFileSync("git", ["add", "-A"], { cwd: fixture });
 		const content = snapshotContent(fixture);
-		const actual = treeDigest(content, "src");
-		expect(actual).not.toBe(baseline.renderTree.src);
-		expect(() => assertPinnedContent(content, baseline)).toThrow(
-			`render-tree src pinned=${baseline.renderTree.src} actual=${actual}`,
-		);
+		expect(contentDrift(content, baseline)).toEqual([]);
+		// Same snapshot, same digest function as a historical pin: the receipt
+		// names exactly the bytes that were rendered.
+		expect(assertPinnedContent(content, baseline)).toEqual({
+			app: treeDigest(content, "app"),
+			src: treeDigest(content, "src"),
+		});
+		// And the recorded identity really moved with the edit, for both roots.
+		expect(treeDigest(content, "src")).not.toBe(before.src);
+		expect(treeDigest(content, "app")).not.toBe(before.app);
+	});
+
+	it("still refuses a tracked app source file deleted without staging", () => {
+		const path = "src/ui/theme.css";
+		rmSync(resolve(fixture, path));
+		const content = snapshotContent(fixture);
+		expect(contentDrift(content, baseline)).toEqual([
+			{ kind: "missing", scope: path, pinned: "tracked", actual: "absent" },
+		]);
+		expect(renderedSource(content).src).toBe("absent");
+	});
+
+	it("merges two sibling app-source branches without a conflict or a re-pin", () => {
+		// Before: each branch had to paste its own `src:` digest on the same line
+		// of u08-content-pins.ts, so whichever merged second was CONFLICTING.
+		// After: neither touches the table, git merges the two, and the merged
+		// tree is admitted with its own recorded digest.
+		const git = (...args: string[]) =>
+			execFileSync(
+				"git",
+				[
+					"-c",
+					"user.name=fixture",
+					"-c",
+					"user.email=fixture@example.invalid",
+					...args,
+				],
+				{ cwd: fixture, encoding: "utf8" },
+			);
+		const sibling = (branch: string, path: string) => {
+			git("checkout", "-q", "-b", branch, "main");
+			writeFileSync(resolve(fixture, path), `// ${branch}\n`);
+			git("add", "-A");
+			git("commit", "-qm", branch);
+			const content = snapshotContent(fixture);
+			expect(contentDrift(content, baseline)).toEqual([]);
+			return renderedSource(content).src;
+		};
+		try {
+			const a = sibling("feat-a", "src/feat-a.ts");
+			const b = sibling("feat-b", "src/feat-b.ts");
+			git("checkout", "-q", "feat-a");
+			git("merge", "-q", "--no-edit", "feat-b");
+			const merged = snapshotContent(fixture);
+			expect(contentDrift(merged, baseline)).toEqual([]);
+			expect(new Set([a, b, renderedSource(merged).src]).size).toBe(3);
+		} finally {
+			git("checkout", "-q", "-f", "main");
+			git("branch", "-q", "-D", "feat-a", "feat-b");
+		}
 	});
 
 	it("refuses an edited design token and an edited dependency-input file", () => {
@@ -416,12 +479,15 @@ describe("U08 content-identity admission", () => {
 		// Exact roots: a key dropped by an edit must fail here, not just shrink
 		// the loop below.
 		expect(Object.keys(RENDER_TREE_PINS).sort()).toEqual([
-			"app",
 			"design/fonts",
 			"design/tokens",
 			"public",
-			"src",
 		]);
+		// The app is run-derived: a committed digest of it is what made every app
+		// PR conflict with every other. Re-adding one must fail here.
+		expect([...RUN_DERIVED_ROOTS]).toEqual(["app", "src"]);
+		for (const derived of RUN_DERIVED_ROOTS)
+			expect(Object.keys(RENDER_TREE_PINS)).not.toContain(derived);
 		expect(Object.keys(INPUT_TREE_PINS).sort()).toEqual([
 			"fixtures/relay",
 			"fixtures/supplements",
@@ -449,6 +515,7 @@ describe("U08 content-identity admission", () => {
 			...Object.keys(RENDER_TREE_PINS),
 			...Object.keys(INPUT_TREE_PINS),
 			...Object.keys(RENDER_FILE_PINS),
+			...RUN_DERIVED_ROOTS,
 			"e2e/fixtures/audit-canary/index.html",
 			"tools/lib/chrome.ts",
 			"tools/mock-relay/scenarios.ts",
@@ -470,6 +537,26 @@ describe("U08 content-identity admission", () => {
 		expect(gate).toBeLessThan(source.indexOf("createRelay("));
 		expect(gate).toBeLessThan(source.indexOf("launchChrome("));
 		expect(source).not.toContain("git diff --exit-code");
+	});
+
+	it("records the admitted app identity in every receipt the drivers write", () => {
+		// The guarantee the old `src` pin gave — these frames came from exactly
+		// these bytes — now lives in the receipt; a receipt without it is the gap.
+		const proof = readFileSync(
+			resolve(root, "tools/audit/u08-geometry-proof.ts"),
+			"utf8",
+		);
+		expect(proof).toContain("const renderedSource = assertPinnedContent();");
+		// geometry.json, NOT-REPRODUCED.json, and the hand-off to verifyFragments.
+		expect(proof.match(/^\t+renderedSource,$/gm)?.length).toBe(3);
+		const fragments = readFileSync(
+			resolve(root, "tools/audit/u08-fragment-verification.ts"),
+			"utf8",
+		);
+		// failure.json, each partial cell, and the final receipt.
+		expect(
+			fragments.match(/renderedSource: ctx\.renderedSource,/g)?.length,
+		).toBe(3);
 	});
 });
 
@@ -582,7 +669,7 @@ function resolveSpecifier(spec: string, from: string): string {
 			if (
 				!TRUSTED.has(module) &&
 				INSTRUMENT_PINS[module] === undefined &&
-				!(module.startsWith("src/") && RENDER_TREE_PINS.src)
+				!(module.startsWith("src/") && RUN_DERIVED_ROOTS.includes("src"))
 			)
 				throw new Error(`Unpinned module: ${spec} from ${from}`);
 			return module;
@@ -702,7 +789,8 @@ describe("the pin table covers what the drivers load", () => {
 		expect(Object.keys(INSTRUMENT_PINS).sort()).toEqual(
 			[...instrument, "e2e/fixtures/audit-canary/index.html"].sort(),
 		);
-		// App modules the harness imports are covered by the render tree, and
+		// App modules the harness imports are recorded in the run-derived `src`
+		// digest (RUN_DERIVED_ROOTS explains why they are not pinned), and
 		// nothing may load from outside tools/ and src/.
 		expect([...seen].filter((module) => !REPO_SCOPE.test(module))).toEqual([]);
 		expect([...TRUSTED]).toEqual(["tools/audit/u08-content-pins.ts"]);

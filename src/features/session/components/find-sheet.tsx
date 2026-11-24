@@ -8,11 +8,11 @@ import {
 	FIND_HINT_COPY,
 	FIND_QUERY_MAX,
 	FIND_TIER_HINT,
-	FIND_TITLE,
 	type FindHit,
 	findCountLabel,
 	findRoleLabel,
 	findScopeLines,
+	findTitle,
 	findTruncatedLabel,
 	splitRanges,
 } from "@/features/session/find";
@@ -95,7 +95,7 @@ export const FindSheet = ({
 		<Sheet
 			visible={visible}
 			onClose={onClose}
-			title={FIND_TITLE}
+			title={findTitle()}
 			detent="full"
 			testID={SURFACE.findSheet}
 			footer={

@@ -1,0 +1,280 @@
+{
+  "schema_version": 1,
+  "audit_pass": "B",
+  "audit_id": "move-pick-vi-ed2b92df1f95-B-r1",
+  "locale": "vi",
+  "namespace": "mobile.remote_sessions",
+  "scope": "mobile.remote_sessions.move_pick.* ONLY",
+  "key_count": 7,
+  "source_commit": "9362cce8a631791b676b2d2c9eda90c43fc7e11c",
+  "worktree": "/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy",
+  "brief_sha256": "5a72dfd72dc820b1fa8e73d78b97807581572334ee0fd25eb2eab346e759ebca",
+  "draft_sha256": "2194c4313e6d44521537042c9c4b33ab4275a08b746906691e2c003779ac1cb5",
+  "input_hashes_sha256": {
+    "/Users/damian/.local-operator/sessions/ca8720609fc7/scratchpad/translation-brief.json": "5a72dfd72dc820b1fa8e73d78b97807581572334ee0fd25eb2eab346e759ebca",
+    "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/move-picker-locale-ledger.json": "aa77a6933f2519ee1d5d625b3e063e94a5bab33a81f679a7680f2d8a2ef5899f",
+    "/Users/damian/.local-operator/sessions/f194c81e7557/scratchpad/draft-vi.json": "2194c4313e6d44521537042c9c4b33ab4275a08b746906691e2c003779ac1cb5",
+    "/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/i18n/catalogues/en/mobile.remote_sessions.json": "436f8ec3bda274431146e7e7cb82b2add418f598bd2a7a6d7426f561a4312984",
+    "/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/i18n/catalogues/en/mobile.remote_sessions.context.json": "c703dff07b634d3d2d4b7c789e6a4a1eecf192a57618ea8e9e72197d325d08eb",
+    "/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/features/sessions/move-sheet.tsx": "6a3f7126eb2fefc5ad0138a1731e3898d66d333ea8ca1b4ac99321da18d495aa",
+    "/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/AGENTS.md": "84021f7c9df58bfe01376669c187cbdf777c680d918f9f001201faeae2a14ad7",
+    "/Users/damian/local-operator/AGENTS.md": "c8c66d86f7603dd4cfbcfc9beb887b369450004f3d9695a7d6e91e0fd58dba44",
+    "/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/i18n/catalogues/vi/mobile.remote_sessions.json": "97394e3bb4277d3d4b134f4df4ade4c95d21c355c43b78eaf0118c96ffc6b6e4",
+    "/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/i18n/catalogues/vi/mobile.sidebar.json": "3efb7dad6da33c182ef8dc59a6ce8f02a455a33df86ccf67760860e76f0f8286",
+    "/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/i18n/catalogues/vi/mobile.computers.json": "866a0bdb97785892899824912ed20e9ac95f81a124094573c08c04d888de74ca",
+    "/Users/damian/local-operator/i18n/style-guides/vi.md": "e4901497ed553e2b2ae4a2660bf776adb787b89e11d7eb0f8d08f3da4b227888",
+    "/Users/damian/local-operator/i18n/glossary.md": "0eb34437a8c3d6f564f278ef957a603b1d9f51bb07d5ddae5ea8f37deba962f8"
+  },
+  "actors": {
+    "author": {
+      "session": "f194c81e7557",
+      "model_source": "draft self-report and manager ledger; not independently serving-verified here",
+      "reported_actual_model": "openai/gpt-6.1-sol"
+    },
+    "A": {
+      "session": "73adcbd87dfe",
+      "model_source": "manager ledger provenance only; conclusions not relied upon"
+    },
+    "B": {
+      "session": "ed2b92df1f95",
+      "actual_model_verified_receipt": "UNKNOWN",
+      "visible_fallback_model": "openai/gpt-6.1-sol",
+      "qualification": "Explicit [model switch] message in this session says anthropic/claude-opus-5-5 -> openai/gpt-6.1-sol, provider failure: quota. Independent serving-model receipt unavailable; no role/default/tool changes."
+    }
+  },
+  "independence": "Three distinct session IDs verified; human-native waived by task; this is an independent LLM language judgment, not a human-native certification.",
+  "read_route": "Ordinary approved filesystem copy/context reads and dependency-free UTF-8 JSON parsing. Nested context metadata is not routable copy. No public keyed-reader receipt exists or is claimed.",
+  "per_key": [
+    {
+      "key": "mobile.remote_sessions.move_pick.cannot_reach",
+      "english": "Can't reach {device}",
+      "current_text": "Không thể liên lạc với {device}",
+      "linguistic_verdict": "PASS",
+      "reasoning": "Không thể liên lạc với is natural neutral status language and matches mobile.remote_sessions.unreachable; the opaque computer name is neither translated nor given an added classifier.",
+      "findings": [
+        "VI-B1"
+      ]
+    },
+    {
+      "key": "mobile.remote_sessions.move_pick.destination_heading",
+      "english": "Move or copy to",
+      "current_text": "Di chuyển hoặc sao chép tới",
+      "linguistic_verdict": "PASS",
+      "reasoning": "Di chuyển and sao chép exactly match row_long_press_hint. Hoặc preserves the alternatives, and tới naturally introduces destination radio choices without claiming an operation is underway.",
+      "findings": [
+        "VI-B2"
+      ]
+    },
+    {
+      "key": "mobile.remote_sessions.move_pick.discovery_help",
+      "english": "This app can offer the devices your sessions show. A device with no visible session cannot be picked yet — open Local Operator on the other computer and pull the list to refresh.",
+      "current_text": "Ứng dụng chỉ cho chọn những thiết bị có cuộc trò chuyện đang hiển thị. Chưa thể chọn thiết bị không có cuộc trò chuyện nào hiển thị — hãy mở Local Operator trên máy tính kia rồi kéo danh sách cuộc trò chuyện để làm mới.",
+      "linguistic_verdict": "PASS",
+      "reasoning": "The first sentence limits choices to devices with visible conversations, not all network devices. Chưa thể preserves not yet; máy tính kia explicitly means the other computer. Mở Local Operator and kéo danh sách ... để làm mới retain both ordered recovery actions. Cuộc trò chuyện follows the app’s user-facing conversation framing; it does not redefine technical session identifiers.",
+      "findings": [
+        "VI-B3"
+      ]
+    },
+    {
+      "key": "mobile.remote_sessions.move_pick.no_answer",
+      "english": "It did not answer when this computer asked.",
+      "current_text": "Máy tính đó không phản hồi yêu cầu từ máy tính này.",
+      "linguistic_verdict": "PASS",
+      "reasoning": "Máy tính đó is explicitly the remote computer; yêu cầu từ máy tính này retains the connected computer as requester, not the phone. Không phản hồi is established in sidebar and computer reachability copy. The missing past marker does not change the contextual status meaning in Vietnamese.",
+      "findings": []
+    },
+    {
+      "key": "mobile.remote_sessions.move_pick.no_devices",
+      "english": "No other devices are visible.",
+      "current_text": "Không thấy thiết bị nào khác.",
+      "linguistic_verdict": "PASS",
+      "reasoning": "Không thấy ... nào khác reports visibility, not nonexistence or offline status. Thiết bị agrees with the device glossary.",
+      "findings": []
+    },
+    {
+      "key": "mobile.remote_sessions.move_pick.on_this_computer",
+      "english": "On this computer",
+      "current_text": "Trên máy tính này",
+      "linguistic_verdict": "PASS",
+      "reasoning": "Trên máy tính này matches the computer catalogue framing and remote Trên {device}; it avoids calling the relay a phone.",
+      "findings": []
+    },
+    {
+      "key": "mobile.remote_sessions.move_pick.right_now",
+      "english": "Right now",
+      "current_text": "Hiện tại",
+      "linguistic_verdict": "PASS",
+      "reasoning": "Hiện tại is an idiomatic section heading for present location, not an imperative meaning act immediately.",
+      "findings": []
+    }
+  ],
+  "findings": [
+    {
+      "id": "VI-B1",
+      "severity": "minor",
+      "key": "mobile.remote_sessions.move_pick.cannot_reach",
+      "current_text": "Không thể liên lạc với {device}",
+      "proposed_text": "Không thể liên lạc với {device}",
+      "recommendation": "Retain current wording pending rendered narrow-phone wrapping check; do not edit solely on this proxy. Collect all B reports before any edits.",
+      "reason": "Source template expands from 20 English to 31 Vietnamese Unicode codepoints (1.55x). This is an overflow RISK proxy, not a demonstrated clipping defect or native-fit result.",
+      "disposition": "deferred — rendered/native width validation outside this audit"
+    },
+    {
+      "id": "VI-B2",
+      "severity": "minor",
+      "key": "mobile.remote_sessions.move_pick.destination_heading",
+      "current_text": "Di chuyển hoặc sao chép tới",
+      "proposed_text": "Di chuyển hoặc sao chép tới",
+      "recommendation": "Retain current wording pending rendered narrow-phone wrapping check; do not edit solely on this proxy. Collect all B reports before any edits.",
+      "reason": "Source template expands from 15 English to 27 Vietnamese Unicode codepoints (1.8x). This is an overflow RISK proxy, not a demonstrated clipping defect or native-fit result.",
+      "disposition": "deferred — rendered/native width validation outside this audit"
+    },
+    {
+      "id": "VI-B3",
+      "severity": "minor",
+      "key": "mobile.remote_sessions.move_pick.discovery_help",
+      "current_text": "Ứng dụng chỉ cho chọn những thiết bị có cuộc trò chuyện đang hiển thị. Chưa thể chọn thiết bị không có cuộc trò chuyện nào hiển thị — hãy mở Local Operator trên máy tính kia rồi kéo danh sách cuộc trò chuyện để làm mới.",
+      "proposed_text": "Ứng dụng chỉ cho chọn những thiết bị có cuộc trò chuyện đang hiển thị. Chưa thể chọn thiết bị không có cuộc trò chuyện nào hiển thị — hãy mở Local Operator trên máy tính kia rồi kéo danh sách cuộc trò chuyện để làm mới.",
+      "recommendation": "Retain current wording pending rendered narrow-phone wrapping check; do not edit solely on this proxy. Collect all B reports before any edits.",
+      "reason": "Source template expands from 178 English to 219 Vietnamese Unicode codepoints (1.23x). This is an overflow RISK proxy, not a demonstrated clipping defect or native-fit result.",
+      "disposition": "deferred — rendered/native width validation outside this audit"
+    }
+  ],
+  "measurements": [
+    {
+      "key": "mobile.remote_sessions.move_pick.cannot_reach",
+      "en_codepoints": 20,
+      "vi_codepoints": 31,
+      "ratio": 1.55
+    },
+    {
+      "key": "mobile.remote_sessions.move_pick.destination_heading",
+      "en_codepoints": 15,
+      "vi_codepoints": 27,
+      "ratio": 1.8
+    },
+    {
+      "key": "mobile.remote_sessions.move_pick.discovery_help",
+      "en_codepoints": 178,
+      "vi_codepoints": 219,
+      "ratio": 1.23
+    },
+    {
+      "key": "mobile.remote_sessions.move_pick.no_answer",
+      "en_codepoints": 43,
+      "vi_codepoints": 51,
+      "ratio": 1.186
+    },
+    {
+      "key": "mobile.remote_sessions.move_pick.no_devices",
+      "en_codepoints": 29,
+      "vi_codepoints": 29,
+      "ratio": 1.0
+    },
+    {
+      "key": "mobile.remote_sessions.move_pick.on_this_computer",
+      "en_codepoints": 16,
+      "vi_codepoints": 17,
+      "ratio": 1.062
+    },
+    {
+      "key": "mobile.remote_sessions.move_pick.right_now",
+      "en_codepoints": 9,
+      "vi_codepoints": 8,
+      "ratio": 0.889
+    }
+  ],
+  "checks": {
+    "executed_dependency_free_results": [
+      "frozen HEAD: PASS",
+      "approved brief hash: PASS",
+      "vi draft hash: PASS",
+      "brief source hash src/i18n/catalogues/en/mobile.remote_sessions.json: PASS",
+      "brief source hash src/i18n/catalogues/en/mobile.remote_sessions.context.json: PASS",
+      "brief source hash src/features/sessions/move-sheet.tsx: PASS",
+      "draft input hash /Users/damian/.local-operator/sessions/ca8720609fc7/scratchpad/translation-brief.json: PASS",
+      "draft input hash /Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/i18n/catalogues/en/mobile.remote_sessions.json: PASS",
+      "draft input hash /Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/i18n/catalogues/en/mobile.remote_sessions.context.json: PASS",
+      "draft input hash /Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/features/sessions/move-sheet.tsx: PASS",
+      "draft input hash /Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/i18n/catalogues/vi/mobile.remote_sessions.json: PASS",
+      "draft input hash /Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/i18n/catalogues/vi/mobile.sidebar.json: PASS",
+      "draft input hash /Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/i18n/catalogues/vi/mobile.computers.json: PASS",
+      "draft input hash /Users/damian/local-operator/i18n/style-guides/vi.md: PASS",
+      "draft input hash /Users/damian/local-operator/i18n/glossary.md: PASS",
+      "seven exact scoped keys: PASS",
+      "actor independence: PASS",
+      "mobile.remote_sessions.move_pick.cannot_reach English equals approved brief: PASS",
+      "mobile.remote_sessions.move_pick.cannot_reach context equals approved brief: PASS",
+      "mobile.remote_sessions.move_pick.cannot_reach placeholder equality: PASS",
+      "mobile.remote_sessions.move_pick.cannot_reach NFC: PASS",
+      "mobile.remote_sessions.move_pick.cannot_reach no bidi controls: PASS",
+      "mobile.remote_sessions.move_pick.cannot_reach one textual translation call: PASS",
+      "mobile.remote_sessions.move_pick.destination_heading English equals approved brief: PASS",
+      "mobile.remote_sessions.move_pick.destination_heading context equals approved brief: PASS",
+      "mobile.remote_sessions.move_pick.destination_heading placeholder equality: PASS",
+      "mobile.remote_sessions.move_pick.destination_heading NFC: PASS",
+      "mobile.remote_sessions.move_pick.destination_heading no bidi controls: PASS",
+      "mobile.remote_sessions.move_pick.destination_heading one textual translation call: PASS",
+      "mobile.remote_sessions.move_pick.discovery_help English equals approved brief: PASS",
+      "mobile.remote_sessions.move_pick.discovery_help context equals approved brief: PASS",
+      "mobile.remote_sessions.move_pick.discovery_help placeholder equality: PASS",
+      "mobile.remote_sessions.move_pick.discovery_help NFC: PASS",
+      "mobile.remote_sessions.move_pick.discovery_help no bidi controls: PASS",
+      "mobile.remote_sessions.move_pick.discovery_help one textual translation call: PASS",
+      "mobile.remote_sessions.move_pick.no_answer English equals approved brief: PASS",
+      "mobile.remote_sessions.move_pick.no_answer context equals approved brief: PASS",
+      "mobile.remote_sessions.move_pick.no_answer placeholder equality: PASS",
+      "mobile.remote_sessions.move_pick.no_answer NFC: PASS",
+      "mobile.remote_sessions.move_pick.no_answer no bidi controls: PASS",
+      "mobile.remote_sessions.move_pick.no_answer one textual translation call: PASS",
+      "mobile.remote_sessions.move_pick.no_devices English equals approved brief: PASS",
+      "mobile.remote_sessions.move_pick.no_devices context equals approved brief: PASS",
+      "mobile.remote_sessions.move_pick.no_devices placeholder equality: PASS",
+      "mobile.remote_sessions.move_pick.no_devices NFC: PASS",
+      "mobile.remote_sessions.move_pick.no_devices no bidi controls: PASS",
+      "mobile.remote_sessions.move_pick.no_devices one textual translation call: PASS",
+      "mobile.remote_sessions.move_pick.on_this_computer English equals approved brief: PASS",
+      "mobile.remote_sessions.move_pick.on_this_computer context equals approved brief: PASS",
+      "mobile.remote_sessions.move_pick.on_this_computer placeholder equality: PASS",
+      "mobile.remote_sessions.move_pick.on_this_computer NFC: PASS",
+      "mobile.remote_sessions.move_pick.on_this_computer no bidi controls: PASS",
+      "mobile.remote_sessions.move_pick.on_this_computer one textual translation call: PASS",
+      "mobile.remote_sessions.move_pick.right_now English equals approved brief: PASS",
+      "mobile.remote_sessions.move_pick.right_now context equals approved brief: PASS",
+      "mobile.remote_sessions.move_pick.right_now placeholder equality: PASS",
+      "mobile.remote_sessions.move_pick.right_now NFC: PASS",
+      "mobile.remote_sessions.move_pick.right_now no bidi controls: PASS",
+      "mobile.remote_sessions.move_pick.right_now one textual translation call: PASS",
+      "opaque device exactly once: PASS",
+      "six argument-free: PASS",
+      "product name exactly once Latin: PASS",
+      "server reason wins over fallback (source only): PASS",
+      "opaque device source handoff: PASS",
+      "copy redaction markers absent: PASS",
+      "context metadata redaction markers absent: PASS"
+    ],
+    "icu_cldr": "N/A for all seven simple messages: one simple {device} argument, six argument-free; no plural/select branches, counts, number/date skeletons or markup. Vietnamese other-only plural rule has no application here.",
+    "rtl": "N/A: Vietnamese is LTR; no bidi controls found.",
+    "redaction": "Explicit marker-pattern scan on English/draft copy and nested context metadata separately: zero matches. This is not a repository secret scan.",
+    "source_usage": "Static source inspected; server trimmed reason still wins; device label passed verbatim. Not runtime proof.",
+    "width": "Actual Unicode codepoint measurements only; no pixels, pseudo-render or native fit claimed."
+  },
+  "current_report_verdict": {
+    "namespace": "PASS_WITH_MINOR_WIDTH_RISKS",
+    "overall": "PASS_WITH_MINOR_WIDTH_RISKS",
+    "unresolved_blocker_major_count": 0,
+    "minor_count": 3,
+    "linguistic_keys_read": 7
+  },
+  "not_shipping": true,
+  "pair_status": "AWAITING_PARENT_VERIFICATION; this B report alone does not close the high-visibility paired gate.",
+  "source_hook_gap": "OPEN — per manager ledger, unauthorized local commit-hook disabling remains unresolved; this audit neither fixes nor validates it.",
+  "non_goals_unverified": [
+    "whole 1374-key catalogue/programme approval",
+    "render/native fit",
+    "runtime localization",
+    "source hook gap",
+    "build/compiler/testsuite",
+    "shipping/release clearance"
+  ]
+}

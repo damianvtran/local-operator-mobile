@@ -1,4 +1,28 @@
 {
+	"mobile.team_bridge.actions.a11y_react": {
+		"role": "button",
+		"note": "Screen-reader action on a Team Bridge message (VoiceOver rotor, TalkBack actions menu) that opens the message-actions sheet with its quick-reaction row. Also the hint on each quick-reaction emoji in that sheet. Imperative verb, like Slack's \"React\"."
+	},
+	"mobile.team_bridge.actions.copied": {
+		"role": "status",
+		"note": "Brief confirmation shown after Copy text put the message on the clipboard. Past participle, no object."
+	},
+	"mobile.team_bridge.actions.copy_text": {
+		"role": "button",
+		"note": "Row in the message-actions sheet that copies the whole message, as plain text without formatting, to the clipboard. Also a screen-reader action on the message."
+	},
+	"mobile.team_bridge.actions.reply_in_thread": {
+		"role": "button",
+		"note": "Row in the message-actions sheet that opens this message's reply thread (starting one if it has no replies yet) with the reply box focused. Same wording as mobile.team_bridge.reply_thread.reply; keep them identical."
+	},
+	"mobile.team_bridge.actions.select_text": {
+		"role": "button",
+		"note": "Row in the message-actions sheet that lets the reader select part of the message with drag handles, then copy or share it. Slack's label for the same action. Also a screen-reader action on the message."
+	},
+	"mobile.team_bridge.actions.title": {
+		"role": "heading",
+		"note": "Accessible name and title of the sheet that rises when a Team Bridge message is long-pressed (Slack-style message menu). Names the menu, not an action."
+	},
 	"mobile.team_bridge.attachment.add": {
 		"role": "button",
 		"note": "Team Bridge image attachments: add. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. "
@@ -170,6 +194,74 @@
 	"mobile.team_bridge.back": {
 		"role": "button",
 		"note": "Team Bridge mobile UI: back. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state."
+	},
+	"mobile.team_bridge.card_body.deleted": {
+		"role": "status",
+		"note": "Inbound Team Bridge card in a conversation transcript: a message another person or agent sent to the user's agent. The sender or an admin deleted the message."
+	},
+	"mobile.team_bridge.card_body.held": {
+		"role": "status",
+		"note": "Inbound Team Bridge card in a conversation transcript: a message another person or agent sent to the user's agent. Content screening held the message for review; it was not shown to the agent and may still be released or refused later. Never mention a reason or category; only the outcome."
+	},
+	"mobile.team_bridge.card_body.held_transient": {
+		"role": "status",
+		"note": "Inbound Team Bridge card in a conversation transcript: a message another person or agent sent to the user's agent. A delay, not a decision: screening has not run yet. Do not say 'moderation' or imply anyone decided anything."
+	},
+	"mobile.team_bridge.card_body.loading": {
+		"role": "status",
+		"note": "Inbound Team Bridge card in a conversation transcript: a message another person or agent sent to the user's agent. Shown while the message body is being fetched."
+	},
+	"mobile.team_bridge.card_body.more_messages": {
+		"role": "meta",
+		"note": "Inbound Team Bridge card in a conversation transcript: a message another person or agent sent to the user's agent. One card can group several messages; only the first ones are listed. {count} is how many more are not shown. Preserve the ICU plural."
+	},
+	"mobile.team_bridge.card_body.not_admitted": {
+		"role": "status",
+		"note": "Inbound Team Bridge card in a conversation transcript: a message another person or agent sent to the user's agent. The message was never handed to the agent. No moderation decision is implied; do not imply one."
+	},
+	"mobile.team_bridge.card_body.not_member": {
+		"role": "status",
+		"note": "Inbound Team Bridge card in a conversation transcript: a message another person or agent sent to the user's agent. The body cannot be loaded because the user left the conversation."
+	},
+	"mobile.team_bridge.card_body.offline": {
+		"role": "status",
+		"note": "Inbound Team Bridge card in a conversation transcript: a message another person or agent sent to the user's agent. Radient could not be reached while loading the body. The card retries by itself while it is on screen, so the sentence states that a retry is under way; it asks nothing of the reader. 'Radient' is a product name; do not translate it."
+	},
+	"mobile.team_bridge.card_body.other_account": {
+		"role": "status",
+		"note": "Inbound Team Bridge card in a conversation transcript: a message another person or agent sent to the user's agent. The message arrived while a different account was signed in, so its body is not shown now. 'Radient' is a product name; do not translate it."
+	},
+	"mobile.team_bridge.card_body.pending": {
+		"role": "status",
+		"note": "Inbound Team Bridge card in a conversation transcript: a message another person or agent sent to the user's agent. The message passed screening but the agent has not been handed it yet. Not an error."
+	},
+	"mobile.team_bridge.card_body.refused": {
+		"role": "status",
+		"note": "Inbound Team Bridge card in a conversation transcript: a message another person or agent sent to the user's agent. Radient's moderation rejected the message for the agent. Never mention a reason or category; only the outcome. "
+	},
+	"mobile.team_bridge.card_body.show_less": {
+		"role": "button",
+		"note": "Inbound Team Bridge card in a conversation transcript: a message another person or agent sent to the user's agent. Toggle that collapses a long message back to its first lines."
+	},
+	"mobile.team_bridge.card_body.show_more": {
+		"role": "button",
+		"note": "Inbound Team Bridge card in a conversation transcript: a message another person or agent sent to the user's agent. Toggle under a long message that is cut off after a few lines; opens the full message."
+	},
+	"mobile.team_bridge.card_body.signed_out": {
+		"role": "status",
+		"note": "Inbound Team Bridge card in a conversation transcript: a message another person or agent sent to the user's agent. The body is shown only while signed in. 'Radient' is a product name; do not translate it."
+	},
+	"mobile.team_bridge.card_body.unavailable": {
+		"role": "status",
+		"note": "Inbound Team Bridge card in a conversation transcript: a message another person or agent sent to the user's agent. Generic fallback when the body cannot be shown and no more specific sentence applies."
+	},
+	"mobile.team_bridge.card_body.thread_reply": {
+		"role": "meta",
+		"note": "Inbound card context beside its receipt time and existing sender/conversation caption. This message replies within a conversation thread, not a new top-level message. Short label, no trailing period. Non-English translations are drafts pending independent copy audit."
+	},
+	"mobile.team_bridge.card_body.untrusted": {
+		"role": "meta",
+		"note": "Inbound Team Bridge card in a conversation transcript: a message another person or agent sent to the user's agent. Framing line directly above the message body. The body below is text someone else wrote and is NOT vetted: it must read as a caution, not an endorsement. Keep 'untrusted' strong. Same wording as the desktop and terminal apps."
 	},
 	"mobile.team_bridge.conversation": {
 		"role": "heading",
@@ -519,6 +611,46 @@
 		"role": "heading",
 		"note": "Profile sheet title for either a person or software agent, not their user-provided job title. No parameters; profile names, titles, descriptions and timezones remain untranslated user data."
 	},
+	"mobile.team_bridge.reactions.add": {
+		"role": "button",
+		"note": "Accessible name of the \"+\" control that adds an emoji reaction to a message: the last cell of the quick-reaction row (opens the system emoji keyboard) and the small \"+\" after a message's reaction pills."
+	},
+	"mobile.team_bridge.reactions.added": {
+		"role": "status",
+		"note": "Polite screen-reader announcement after the reader's reaction was saved."
+	},
+	"mobile.team_bridge.reactions.failed": {
+		"role": "status",
+		"note": "Shown in small red text under a message, and announced, when adding or removing a reaction failed; the previous reactions are restored. Tapping again retries."
+	},
+	"mobile.team_bridge.reactions.hint_add": {
+		"role": "help",
+		"note": "Screen-reader hint on a reaction pill the reader has not reacted with: double-tapping adds the same emoji as their own reaction."
+	},
+	"mobile.team_bridge.reactions.hint_remove": {
+		"role": "help",
+		"note": "Screen-reader hint on a reaction pill the reader has reacted with: double-tapping removes their reaction."
+	},
+	"mobile.team_bridge.reactions.keyboard_hint": {
+		"role": "help",
+		"note": "One line shown above the system keyboard after tapping \"+\" to add a reaction: the reader picks any emoji from their phone's emoji keyboard. Letters typed are ignored."
+	},
+	"mobile.team_bridge.reactions.pill": {
+		"role": "button",
+		"note": "Screen-reader name of one reaction pill under a message, when the reader has NOT reacted with it. {emoji} is the emoji itself; VoiceOver/TalkBack speak its system name (e.g. \"thumbs up\"). {count} is how many people reacted with it. Keep the order natural for your language."
+	},
+	"mobile.team_bridge.reactions.pill_mine": {
+		"role": "button",
+		"note": "Screen-reader name of one reaction pill when the reader HAS reacted with it (the pill is highlighted). Same as mobile.team_bridge.reactions.pill plus \"you reacted\". Example: \"thumbs up, 3 reactions, you reacted\"."
+	},
+	"mobile.team_bridge.reactions.removed": {
+		"role": "status",
+		"note": "Polite screen-reader announcement after the reader's reaction was removed."
+	},
+	"mobile.team_bridge.reactions.summary": {
+		"role": "status",
+		"note": "Spoken once before a message's reaction pills: the total number of reactions across all emoji on that message."
+	},
 	"mobile.team_bridge.reply_thread.count": {
 		"role": "meta",
 		"note": "Reply-thread affordance on a Team Bridge message: how many replies the thread under this message has. Served by the hub, never counted on the phone. Preserve {count}."
@@ -714,5 +846,41 @@
 	"mobile.team_bridge.unread": {
 		"role": "status",
 		"note": "Team Bridge mobile UI: unread. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state. Parameters are caller-supplied names/counts or protocol selects; do not translate their identifiers. Preserve ICU plural/select syntax and all variants; names are not translated."
+	},
+	"mobile.team_bridge.reactions.details": {
+		"role": "heading",
+		"note": "Read-only reaction summary sheet heading; never implies verified identities."
+	},
+	"mobile.team_bridge.reactions.sample": {
+		"role": "meta",
+		"note": "Sample labels in original hub order, joined by locale list formatting. count is total minus sample length; ownership is independent. Zero must omit others suffix."
+	},
+	"mobile.team_bridge.reactions.sample_notice": {
+		"role": "meta",
+		"note": "Explicitly explains that sample labels are not a full reactor roster."
+	},
+	"mobile.team_bridge.reactions.you_reacted": {
+		"role": "meta",
+		"note": "Independent reacted_by_me boolean. Never replace or reorder sample labels with this string."
+	},
+	"mobile.team_bridge.reactions.show_more": {
+		"role": "button",
+		"note": "Expand collapsed reaction types; count counts hidden emoji pills, not people."
+	},
+	"mobile.team_bridge.reactions.show_less": {
+		"role": "button",
+		"note": "Collapse to three measured lines of pills."
+	},
+	"mobile.team_bridge.reply_thread.last_reply": {
+		"role": "meta",
+		"note": "Served last_reply_at formatted as an absolute local date/time; never infer from visible replies."
+	},
+	"mobile.team_bridge.reactions.hint_inspect": {
+		"role": "help",
+		"note": "Read-only reaction pill: tap inspects the summary, never mutates it."
+	},
+	"mobile.team_bridge.reactions.sample_none": {
+		"role": "meta",
+		"note": "The summary includes a total count but no sample labels. Do not imply missing actors or a full roster endpoint."
 	}
 }

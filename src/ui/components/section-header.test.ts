@@ -1,9 +1,13 @@
+import { readFileSync } from "node:fs";
 import { createElement as h, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import { renderFor } from "@/i18n";
-import { SectionHeader } from "@/ui/components/section-header";
+import {
+	SECTION_HEADER_LABEL_CLASS,
+	SectionHeader,
+} from "@/ui/components/section-header";
 import { DirectionProvider, useComposedDir } from "@/ui/direction";
 
 /**
@@ -50,5 +54,69 @@ describe("SectionHeader: a composed label states its paragraph direction", () =>
 	it("a caller that passes no labelDir keeps the inferred base: the opt-in is real", () => {
 		const markup = render(h(SectionHeader, { label: "Connection" }), "rtl");
 		expect(markup).toContain('dir="auto"');
+	});
+});
+
+describe("SectionHeader: RTL cursive tracking", () => {
+	it("removes tracking from an Urdu label without requiring labelDir", () => {
+		const markup = render(h(SectionHeader, { label: "ترتیبات" }), "rtl");
+		expect(markup).toContain("letter-spacing:0");
+		expect(markup).toContain('dir="auto"');
+	});
+
+	it("also removes tracking when composed copy begins in Latin", () => {
+		const markup = render(h(ComposedHeading, null), "rtl");
+		expect(markup).toContain("letter-spacing:0");
+		expect(markup).toContain('dir="rtl"');
+	});
+
+	it("preserves a native caller's writingDirection while removing tracking", () => {
+		const markup = render(
+			h(SectionHeader, {
+				label: HEADER,
+				labelDir: { style: { writingDirection: "rtl" } },
+			}),
+			"rtl",
+		);
+		expect(markup).toContain("letter-spacing:0");
+		expect(markup).toContain("direction:rtl");
+	});
+
+	it("keeps LTR headings and Latin-only RTL headings on the original token", () => {
+		for (const label of ["Connection", "Connexion", "कनेक्शन", "ترتیبات"]) {
+			expect(render(h(SectionHeader, { label }), "ltr")).not.toContain(
+				"letter-spacing:0",
+			);
+		}
+		expect(
+			render(h(SectionHeader, { label: "Connection" }), "rtl"),
+		).not.toContain("letter-spacing:0");
+		expect(SECTION_HEADER_LABEL_CLASS).toBe(
+			"text-mono-label uppercase text-ink-muted",
+		);
+	});
+});
+
+/* The heading's ink (UX pass, settings): the all-caps mono label was painted
+ * `ink-dim`, the CAPTION ink, so at 11 pt it read fainter than the body text it
+ * heads. The token source names the role for it — `ink-muted`'s role note lists
+ * "panel headers" — so the test reads the kit rather than restating a class. */
+describe("SectionHeader: the label paints the kit's panel-header ink", () => {
+	const tokens = JSON.parse(
+		readFileSync(
+			new URL("../../../design/tokens/tokens.json", import.meta.url),
+			"utf8",
+		),
+	) as { color: { ink: Record<string, { role: string }> } };
+	const panelHeaderInk = Object.entries(tokens.color.ink).find(([, token]) =>
+		token.role.includes("panel headers"),
+	)?.[0];
+
+	it("names the role the token source assigns to panel headers", () => {
+		expect(panelHeaderInk).toBe("ink-muted");
+		expect(SECTION_HEADER_LABEL_CLASS.split(" ")).toContain(
+			`text-${panelHeaderInk}`,
+		);
+		expect(SECTION_HEADER_LABEL_CLASS).not.toContain("text-ink-dim");
 	});
 });

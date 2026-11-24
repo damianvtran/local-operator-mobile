@@ -26,7 +26,7 @@
  * the PR).
  */
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 interface AudioModeInput {
 	allowsRecording?: boolean;
@@ -41,6 +41,8 @@ const calls = vi.hoisted(() => ({
 	modes: [] as unknown[],
 	options: [] as unknown[],
 	recorded: 0,
+	/** When set, `prepareToRecordAsync` rejects with it (issue #323's log). */
+	prepareFailure: null as Error | null,
 }));
 
 vi.mock("react-native", () => ({ Platform: platform }));
@@ -82,7 +84,9 @@ vi.mock("expo-audio", () => ({
 				calls.options.push(options);
 			}
 			uri: string | null = "file:///tmp/take.m4a";
-			prepareToRecordAsync = async () => undefined;
+			prepareToRecordAsync = async () => {
+				if (calls.prepareFailure !== null) throw calls.prepareFailure;
+			};
 			record = () => {
 				calls.recorded += 1;
 			};
@@ -161,5 +165,63 @@ describe("startRecording on Android", () => {
 		]);
 		expect(active).not.toBeNull();
 		expect(calls.recorded).toBe(1);
+	});
+});
+
+describe("a start that throws leaves a development diagnostic (issue #323)", () => {
+	/* The catch turns every failure into `null` — the reader's "Couldn’t start
+	 * recording" line — which is right for the reader and left a developer with
+	 * nothing: #323's report could not say WHICH step failed. A development build
+	 * now names the step and the error, with any file path redacted. */
+	const dev = globalThis as { __DEV__?: boolean };
+	beforeEach(() => {
+		platform.OS = "ios";
+		calls.modes.length = 0;
+		calls.options.length = 0;
+		calls.recorded = 0;
+		calls.prepareFailure = new Error(
+			"Failed to prepare recorder at file:///var/mobile/Containers/Data/Application/0000/Library/Caches/take.m4a",
+		);
+	});
+	afterEach(() => {
+		calls.prepareFailure = null;
+		delete dev.__DEV__;
+		vi.restoreAllMocks();
+	});
+
+	it("names the failing step in a development build, without the path", async () => {
+		dev.__DEV__ = true;
+		const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+		const { startRecording } = await import("@/stt/recorder");
+		expect(await startRecording({ permission: "granted" })).toBeNull();
+		expect(warn).toHaveBeenCalledTimes(1);
+		expect(warn).toHaveBeenCalledWith("[stt] recorder did not start", {
+			stage: "prepare",
+			name: "Error",
+			message: "Failed to prepare recorder at <path>",
+		});
+	});
+
+	it("redacts a whole path, spaces and non-ASCII segments included (round 1, n1)", async () => {
+		dev.__DEV__ = true;
+		calls.prepareFailure = new Error(
+			"Cannot open /var/mobile/Library/Application Support/rec/prise de son é.m4a (code 2)",
+		);
+		const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+		const { startRecording } = await import("@/stt/recorder");
+		expect(await startRecording({ permission: "granted" })).toBeNull();
+		expect(warn).toHaveBeenCalledWith("[stt] recorder did not start", {
+			stage: "prepare",
+			name: "Error",
+			message: "Cannot open <path>",
+		});
+	});
+
+	it("stays silent in a release build", async () => {
+		dev.__DEV__ = false;
+		const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+		const { startRecording } = await import("@/stt/recorder");
+		expect(await startRecording({ permission: "granted" })).toBeNull();
+		expect(warn).not.toHaveBeenCalled();
 	});
 });

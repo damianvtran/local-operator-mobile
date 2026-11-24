@@ -129,20 +129,23 @@ export const suggestionCharBudget = (locale: ShippedLocale): number =>
 	SUGGESTION_CHAR_BUDGET[locale];
 
 /**
- * The mobile suggestion pool's KEYS, pinned head first: the first screen shows
- * the head deterministically (a reproducible frame — the desktop's own device),
- * and a sampler over the tail is a follow-up rather than a reason for the first
- * frame to differ per run.
+ * The mobile suggestion pool's KEYS, pinned head first: a brand-new account's
+ * TRY rows are the head, deterministically (a reproducible frame — the
+ * desktop's own device), and a sampler over the tail is a follow-up rather than
+ * a reason for the first frame to differ per run.
  *
  * The KEYS are what is exported as the pool (with `homeSuggestions()` rendering
  * them) because the pool is asserted per SHIPPED locale, not only in English:
  * a check that could only see the active language would call a French row fine
  * until someone ran the app in French.
+ *
+ * Two chips left the pool when the work list landed. "Turn on phone access" only
+ * pasted words into the composer and could not turn anything on (setup is
+ * desktop-side, and a phone with access off never reaches this screen); "Show me
+ * the last turn" is what the work list's rows now do.
  */
 export const HOME_SUGGESTION_KEYS = [
-	"mobile.home.suggestion.phone_access",
 	"mobile.home.suggestion.team_of_agents",
-	"mobile.home.suggestion.last_turn",
 	"mobile.home.suggestion.linear_mcp",
 	"mobile.home.suggestion.review_repo",
 	"mobile.home.suggestion.wake_summary",
@@ -151,44 +154,6 @@ export const HOME_SUGGESTION_KEYS = [
 /** The pool as the reader's language renders it, resolved per call. */
 export const homeSuggestions = (): readonly string[] =>
 	HOME_SUGGESTION_KEYS.map((key) => t(key));
-
-/** How many rows the splash shows: 3 at 390 pt, 2 at 320 (`>=` keeps the
- *  spec's own pair exact; a 375 pt phone is nearer the 320 case's pressure). */
-export const suggestionCountFor = (viewportWidth: number): number =>
-	viewportWidth >= 390 ? 3 : 2;
-
-/**
- * What occupies the suggestions' slot under the greeting.
- *
- * `suggestions` renders the pool's head while the draft is empty; `connect`
- * fills the slot with the one move that changes a no-route state; and `none`
- * is review B1's fix: the slot empties while a draft is held — spec decision
- * 6, "suggestions render only while the draft is empty" (§3.5 `draft exists` →
- * "suggestions hidden"), because a suggestion's tap REPLACES the field's text
- * and a chip that overwrites typed text is a data-loss control (P-4).
- *
- * The connect row is not a text-overwriter (its row navigates instead of
- * staging a draft), so it stays reachable in the no-route state; only the
- * suggestions themselves hide. A whitespace-only draft counts as empty
- * (`draftExistsFor`), so the tip, the marker and this slot read one state.
- */
-export type SuggestionSlot =
-	| { kind: "suggestions"; rows: readonly string[] }
-	| { kind: "connect" }
-	| { kind: "none" };
-
-export const suggestionSlotFor = (input: {
-	connected: boolean;
-	draft: string;
-	width: number;
-}): SuggestionSlot => {
-	if (!input.connected) return { kind: "connect" };
-	if (draftExistsFor(input.draft)) return { kind: "none" };
-	return {
-		kind: "suggestions",
-		rows: homeSuggestions().slice(0, suggestionCountFor(input.width)),
-	};
-};
 
 /** The tip's own character ceiling — the phone row is ~288 pt of `text-meta`
  *  at its narrowest, which is about 48 characters. Asserted, not felt. */

@@ -1,8 +1,12 @@
-import { Folder } from "lucide-react-native";
+import { Bot, Folder, Users } from "lucide-react-native";
 import { useMemo, useState } from "react";
 import { Pressable, Text, View } from "react-native";
 
 import type { ModelEntry } from "@/contracts";
+import {
+	AgentAvatarImage,
+	useAgentAvatarUri,
+} from "@/features/agent-avatar/agent-avatar-view";
 import type { HomeFolders, HomeModelRow } from "@/features/home/home-defaults";
 import {
 	type EffortOffer,
@@ -11,9 +15,15 @@ import {
 	filterModels,
 	folderName,
 	folderRows,
-	MODEL_SEARCH_THRESHOLD,
 	typedFolder,
 } from "@/features/home/picker-model";
+import { MODEL_SEARCH_THRESHOLD } from "@/features/home/picker-search-threshold";
+import {
+	type IdentityRoster,
+	type IdentityRow,
+	identitySheet,
+	type StartTarget,
+} from "@/features/home/start-targets";
 import {
 	EffortRungGroup,
 	EffortRungRow,
@@ -21,14 +31,22 @@ import {
 	ModelOptionRow,
 	RunSettingsSheet,
 } from "@/features/session/components/model-sheet";
+import { HEADER_AVATAR_PT } from "@/features/session/header";
 import { t } from "@/i18n";
-import { CONTROL, homeFolderRowId, ROLE, state } from "@/ui/a11y";
+import {
+	CONTROL,
+	homeFolderRowId,
+	homeIdentityRowId,
+	ROLE,
+	state,
+} from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
 import { Alert } from "@/ui/components/alert";
 import { Badge } from "@/ui/components/badge";
 import { Button } from "@/ui/components/button";
 import { Input } from "@/ui/components/input";
 import { Sheet } from "@/ui/components/sheet";
+import { cx } from "@/ui/variants";
 
 /**
  * The home's three pickers — Folder, Model, Effort — each its own sheet with its
@@ -659,5 +677,363 @@ export const RunSettingsPicker = ({
 			}
 			effort={<EffortChoices {...effort} editable={editable} />}
 		/>
+	);
+};
+
+/**
+ * The 28 pt leading mark of an identity row (D-S14): the agent's picture
+ * through the existing `/v1/agents/{id}/avatar` path when the relay names one,
+ * else a `Bot` (agent) or `Users` (team) glyph on a `surface` disc. Decorative:
+ * the row's spoken label already names the kind and the name.
+ */
+export const IdentityMark = ({
+	kind,
+	agentId,
+	avatarSha256,
+	size = HEADER_AVATAR_PT,
+}: {
+	kind: "agent" | "team" | "default";
+	agentId?: string | null;
+	avatarSha256?: string | null;
+	size?: number;
+}) => {
+	const glyph = useTokenColor("ink-muted");
+	const uri = useAgentAvatarUri(
+		kind === "agent" && agentId && avatarSha256
+			? { agentId, sha256: avatarSha256 }
+			: null,
+		size,
+	);
+	if (uri !== null) return <AgentAvatarImage uri={uri} size={size} />;
+	const Glyph = kind === "team" ? Users : Bot;
+	return (
+		<View
+			accessible={false}
+			accessibilityElementsHidden
+			importantForAccessibility="no-hide-descendants"
+			className="items-center justify-center rounded-full bg-surface"
+			style={{ width: size, height: size }}
+		>
+			<Glyph size={Math.round(size * 0.57)} color={glyph} />
+		</View>
+	);
+};
+
+/** A team row's second line: "Led by {manager} · N members", dropping any
+ *  part the relay did not send (D-S14). */
+const teamSubtitle = (row: IdentityRow): string | null => {
+	if (row.manager !== null && row.memberCount !== null)
+		return t("mobile.home.identity.team_subtitle", {
+			manager: row.manager,
+			count: row.memberCount,
+		});
+	if (row.manager !== null)
+		return t("mobile.home.identity.team_led_by", { manager: row.manager });
+	if (row.memberCount !== null)
+		return t("mobile.home.identity.team_members", { count: row.memberCount });
+	return null;
+};
+
+/** What a row says to a screen reader (D-S22): name, kind, then the subtitle. */
+const rowSpoken = (row: IdentityRow): string =>
+	row.kind === "team"
+		? row.manager !== null
+			? t("mobile.home.identity.row_team_led", {
+					name: row.label,
+					manager: row.manager,
+				})
+			: t("mobile.home.identity.row_team", { name: row.label })
+		: row.description !== ""
+			? t("mobile.home.identity.row_agent_described", {
+					name: row.label,
+					description: row.description,
+				})
+			: t("mobile.home.identity.row_agent", { name: row.label });
+
+const IdentityOptionRow = ({
+	row,
+	band,
+	disabled,
+	onPress,
+}: {
+	row: IdentityRow;
+	band: "recent" | "main";
+	disabled: boolean;
+	onPress: () => void;
+}) => {
+	const subtitle =
+		row.kind === "team"
+			? teamSubtitle(row)
+			: row.description !== ""
+				? row.description
+				: null;
+	return (
+		<Pressable
+			accessibilityRole={ROLE.button}
+			accessibilityLabel={rowSpoken(row)}
+			accessibilityState={state({ selected: row.selected, disabled })}
+			disabled={disabled}
+			onPress={onPress}
+			testID={homeIdentityRowId(row.kind, row.name, band)}
+		>
+			{/* `min-h-14` with a subtitle, the kit's `min-h-11` single line without
+			 *  one (D-S14), so a row never pads out an empty second line. */}
+			<View
+				className={cx(
+					"flex-row items-center gap-3 px-3 py-1.5",
+					subtitle !== null ? "min-h-14" : "min-h-11",
+				)}
+			>
+				<IdentityMark
+					kind={row.kind}
+					agentId={row.agentId}
+					avatarSha256={row.avatarSha256}
+				/>
+				<View className="min-w-0 flex-1">
+					<Text
+						className={cx(
+							"text-body-sm",
+							disabled ? "text-ink-disabled" : "text-ink",
+						)}
+						numberOfLines={2}
+					>
+						{row.label}
+					</Text>
+					{subtitle !== null ? (
+						/* Steps down with the title when the row is inert (D10), and one
+						 *  line so rows keep one rhythm (D9); the title keeps two, which is
+						 *  what tells two long names with one prefix apart. */
+						<Text
+							className={cx(
+								"text-meta",
+								disabled ? "text-ink-disabled" : "text-ink-muted",
+							)}
+							numberOfLines={1}
+						>
+							{subtitle}
+						</Text>
+					) : null}
+				</View>
+				{row.selected ? (
+					<Text className="shrink-0 text-accent" aria-hidden>
+						✓
+					</Text>
+				) : null}
+			</View>
+		</Pressable>
+	);
+};
+
+const BandHeading = ({ label }: { label: string }) => (
+	<Text
+		accessibilityRole={ROLE.header}
+		className="px-3 pt-2 pb-1 text-meta text-ink-dim"
+	>
+		{label}
+	</Text>
+);
+
+export type IdentityPickerProps = {
+	visible: boolean;
+	onClose: () => void;
+	/** The relay licenses `agent`/`team` starts. `false` (an older Local
+	 *  Operator) shows ONLY the explanation (D-S15). */
+	supported: boolean;
+	/** The roster read, `null` while it is pending or after it failed. */
+	roster: IdentityRoster | null;
+	loading: boolean;
+	/** The read failed (transport or `degraded`): its sentence, with Retry. */
+	failure: string | null;
+	onRetry: () => void;
+	retrying: boolean;
+	recents: readonly StartTarget[];
+	chosen: StartTarget | null;
+	/** `false` once the start is in flight or done: rows go inert (D-S20). */
+	editable: boolean;
+	/** `null` is "Default agent": the start then names no target. */
+	onPick: (target: StartTarget | null) => void;
+	/** The control that opened the sheet, which takes focus back on close; a
+	 *  list is a fallback order (`Sheet`). */
+	returnFocusTestID?: string | readonly string[];
+};
+
+/**
+ * "Start this chat with" — one sheet, one list, commit on tap (D-S11): Default
+ * agent, Recent, Teams, Agents. What it offers and in which order is
+ * `identitySheet`'s decision (tested in `start-targets.test.ts`); this lays it
+ * out with the model picker's language — pinned search above
+ * `START_TARGET_SEARCH_THRESHOLD`, the same loading line, the same Alert+Retry.
+ */
+export const IdentityPicker = ({
+	visible,
+	onClose,
+	supported,
+	roster,
+	loading,
+	failure,
+	onRetry,
+	retrying,
+	recents,
+	chosen,
+	editable,
+	onPick,
+	returnFocusTestID,
+}: IdentityPickerProps) => {
+	const [query, setQuery] = useState("");
+	const close = () => {
+		setQuery("");
+		onClose();
+	};
+	const sheet = useMemo(
+		() => identitySheet({ roster, query, recents, chosen }),
+		[roster, query, recents, chosen],
+	);
+	const pick = (target: StartTarget | null) => {
+		onPick(target);
+		close();
+	};
+	const toTarget = (row: IdentityRow): StartTarget => ({
+		kind: row.kind,
+		name: row.name,
+		label: row.label,
+	});
+	const searchable = supported && sheet.searchable;
+	const defaultRow = (selected: boolean) => (
+		<Pressable
+			accessibilityRole={ROLE.button}
+			accessibilityLabel={t("mobile.home.identity.default_agent")}
+			accessibilityState={state({
+				selected: selected,
+				disabled: !editable,
+			})}
+			disabled={!editable}
+			onPress={() => pick(null)}
+			testID={CONTROL.homeIdentityDefault}
+		>
+			<View className="min-h-11 flex-row items-center gap-3 px-3 py-1.5">
+				<IdentityMark kind="default" />
+				<Text
+					className={cx(
+						"min-w-0 flex-1 text-body-sm",
+						editable ? "text-ink" : "text-ink-disabled",
+					)}
+				>
+					{t("mobile.home.identity.default_agent")}
+				</Text>
+				{selected ? (
+					<Text className="shrink-0 text-accent" aria-hidden>
+						✓
+					</Text>
+				) : null}
+			</View>
+		</Pressable>
+	);
+	const lead = (
+		<>
+			{!editable ? <FixedLine /> : null}
+			{failure !== null ? (
+				<View className="px-3 pb-2">
+					<Alert
+						severity="warning"
+						action={{
+							label: t("mobile.computers.retry"),
+							onPress: onRetry,
+							loading: retrying,
+							testID: CONTROL.homeIdentityRetry,
+						}}
+					>
+						{failure}
+					</Alert>
+				</View>
+			) : null}
+			{searchable ? (
+				<View className="px-3 pb-2">
+					<Input
+						label={t("mobile.home.identity.search")}
+						value={query}
+						onChangeText={setQuery}
+						autoCapitalize="none"
+						testID={CONTROL.homeIdentitySearch}
+					/>
+				</View>
+			) : null}
+		</>
+	);
+	return (
+		<Sheet
+			visible={visible}
+			onClose={close}
+			title={t("mobile.home.identity.sheet_title")}
+			testID={CONTROL.homeIdentityPicker}
+			pinned={searchable ? lead : undefined}
+			returnFocusTestID={returnFocusTestID}
+		>
+			{!supported ? (
+				<>
+					<Text className="px-3 pb-2 text-body-sm text-ink-muted">
+						{t("mobile.home.identity.unsupported")}
+					</Text>
+					{/* A pick held from before the relay stopped licensing it (an older
+					 *  build restarted mid-draft, a restored record) is refused at Send
+					 *  with "choose the default agent" — so this sheet must offer that
+					 *  way out (PR #358 U2). With no pick there is nothing to clear. */}
+					{chosen !== null ? defaultRow(false) : null}
+				</>
+			) : (
+				<>
+					{searchable ? null : lead}
+					{sheet.defaultRow !== null
+						? defaultRow(sheet.defaultRow.selected)
+						: null}
+					{sheet.recent.length > 0 ? (
+						<View>
+							<BandHeading label={t("mobile.home.identity.band_recent")} />
+							{sheet.recent.map((row) => (
+								<IdentityOptionRow
+									key={`recent-${row.kind}-${row.name}`}
+									row={row}
+									band="recent"
+									disabled={!editable}
+									onPress={() => pick(toTarget(row))}
+								/>
+							))}
+						</View>
+					) : null}
+					{sheet.bands.map((band) => (
+						<View key={band.kind}>
+							{sheet.showHeadings || sheet.recent.length > 0 ? (
+								<BandHeading
+									label={
+										band.kind === "teams"
+											? t("mobile.home.identity.band_teams")
+											: t("mobile.home.identity.band_agents")
+									}
+								/>
+							) : null}
+							{band.rows.map((row) => (
+								<IdentityOptionRow
+									key={`${row.kind}-${row.name}`}
+									row={row}
+									band="main"
+									disabled={!editable}
+									onPress={() => pick(toTarget(row))}
+								/>
+							))}
+						</View>
+					))}
+					{loading ? (
+						<LoadingLine />
+					) : sheet.empty ? (
+						<Text className="px-3 py-2 text-body-sm text-ink-dim">
+							{t("mobile.home.identity.empty")}
+						</Text>
+					) : sheet.noMatches ? (
+						<Text className="px-3 py-2 text-body-sm text-ink-dim">
+							{t("mobile.home.identity.no_matches", { query: query.trim() })}
+						</Text>
+					) : null}
+				</>
+			)}
+		</Sheet>
 	);
 };

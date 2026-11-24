@@ -534,7 +534,20 @@ export const mergeTranscript = (
 		const claimed = pageSlots.get(rowIdentity(row))?.shift();
 		if (claimed !== undefined) {
 			live.set(claimed, row);
-			anchor = claimed;
+			// The HIGHEST page index claimed so far, not the latest: a held row the
+			// frame has moved must not pull the rows after it upward. Held rows keep
+			// their screen slot, so when the frame orders two held rows differently
+			// from the screen, anchoring on the last one claimed dropped the frame's
+			// next new rows BETWEEN the moved row and the rows shown after it — the
+			// reply landing above a steer `adoptPageOrder` had just seated in
+			// journal order, while the next live frame still painted it at send
+			// time. The same rule unblocks the core follow-up that moves a
+			// delivered steer from its send-time slot to its journal position in the
+			// live frame (probe: job b653d62f56e1): without it every reply after the
+			// move landed above the work already shown below the steer. Every new
+			// row follows every held row the frame showed before it, which is the
+			// append-only reading of a frame that disagrees with the screen.
+			anchor = Math.max(anchor, claimed);
 			continue;
 		}
 		const bucket = insertedAfter.get(anchor);

@@ -11,6 +11,7 @@ import {
 	middleTruncate,
 	projectSubagents,
 	projectTodos,
+	SESSION_CREDENTIAL_NOTICE_TYPE,
 	streamingRowId,
 	subagentRowView,
 	toLines,
@@ -302,6 +303,83 @@ describe("visible transcript provenance", () => {
 		expect(JSON.stringify(rows)).toBe(before);
 		const visible = rows.slice(2);
 		expect(visibleTranscriptEntries(visible)).toBe(visible);
+	});
+
+	/* Operator (TestFlight): "[session credential] This session is now using
+	 * damian@… on damians-MacBook-Pro." "shouldn't be shown on mobile … Even on
+	 * a remote session it still should be a hidden message". */
+	it("hides the credential-binding notice, typed or by its legacy head, and keeps its neighbours", () => {
+		const rows = [
+			entry({ id: "t1" }),
+			entry({
+				id: "typed",
+				kind: "notice",
+				custom_type: SESSION_CREDENTIAL_NOTICE_TYPE,
+				text: "[session credential] This session is now using a@b on host.",
+			}),
+			entry({
+				id: "legacy-kind",
+				kind: "notice",
+				details: { custom_kind: SESSION_CREDENTIAL_NOTICE_TYPE },
+				text: "This session is now using a@b on host.",
+			}),
+			entry({
+				id: "legacy-head",
+				kind: "notice",
+				text: "  [session credential] This session is now using a@b on host.",
+			}),
+			entry({
+				id: "neighbour",
+				kind: "notice",
+				custom_type: "session_incident",
+				text: "[session incident] Runtime disconnected",
+			}),
+			entry({
+				id: "quote",
+				kind: "user",
+				text: "[session credential] why do I see this?",
+			}),
+			// Core's OTHER notices under the same head (`incidents.py`
+			// `format_credential_message`, type `session_credential`): the
+			// operator's own store/remove, kept (R1-6). The head match applies to
+			// untyped notices only.
+			entry({
+				id: "stored",
+				kind: "notice",
+				custom_type: "session_credential",
+				text: "[session credential] GITHUB_TOKEN was just stored by the operator.",
+			}),
+			entry({
+				id: "removed",
+				kind: "notice",
+				details: { custom_kind: "session_credential" },
+				text: "[session credential] GITHUB_TOKEN was removed.",
+			}),
+			entry({ id: "t2", tool_state: "failed" }),
+		];
+		const visible = visibleTranscriptEntries(rows);
+		expect(visible.map((row) => row.id)).toEqual([
+			"t1",
+			"neighbour",
+			"quote",
+			"stored",
+			"removed",
+			"t2",
+		]);
+		// Filtered before condensing: the hidden rows add nothing to a group.
+		const plan = groupPlan({
+			items: visible
+				.filter((row) => row.kind === "tool")
+				.map(
+					(row): TranscriptItem => ({ kind: "entry", id: row.id, entry: row }),
+				),
+			expanded: new Set(),
+			latch: new Map(),
+		});
+		for (const { group } of plan.groups) {
+			expect(group.rowIds).not.toContain("typed");
+			expect(group.rowIds).not.toContain("legacy-head");
+		}
 	});
 });
 

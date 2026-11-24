@@ -31,5 +31,6 @@
 	"mobile.chrome.composer.run_settings": "{model}, {effort}",
 	"mobile.chrome.composer.run_settings_hint": "Elige el modelo y el esfuerzo",
 	"mobile.chrome.composer.run_settings_title": "Modelo y esfuerzo",
-	"mobile.chrome.composer.row_folder": "Carpeta"
+	"mobile.chrome.composer.row_folder": "Carpeta",
+	"mobile.chrome.composer.row_identity": "Agente o equipo"
 }

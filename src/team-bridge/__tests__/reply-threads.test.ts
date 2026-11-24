@@ -27,6 +27,7 @@ import {
 	isReplyRootGone,
 	isReplyThreadPageFor,
 	newestDisplayedReplySeq,
+	protectHeldThreadCursors,
 	replierLabel,
 	replyThreadKey,
 	replyThreadPath,
@@ -143,6 +144,7 @@ describe("reply-thread rules", () => {
 	it("summarises a root as served, and nothing for a reply or an empty thread", () => {
 		expect(replyThreadSummary(root())).toEqual({
 			count: 3,
+			lastReplyAt: "2026-11-17T10:05:00Z",
 			participants: [
 				{ label: "Ada", accountId: ADA, kind: "human" },
 				{ label: "Ben's agent", accountId: "acct_ben", kind: "agent" },
@@ -153,6 +155,18 @@ describe("reply-thread rules", () => {
 		expect(replyThreadSummary(root({ reply_count: 0 }))).toBeNull();
 		expect(
 			replyThreadSummary(message(1, ADA, "2026-11-17T09:00:00Z")),
+		).toBeNull();
+	});
+
+	it("never manufactures a last-reply time from missing or invalid rollups", () => {
+		expect(
+			replyThreadSummary(root({ last_reply_at: undefined }))?.lastReplyAt,
+		).toBeUndefined();
+		expect(
+			replyThreadSummary(root({ last_reply_at: "not-a-time" }))?.lastReplyAt,
+		).toBeUndefined();
+		expect(
+			replyThreadSummary(reply(5, { last_reply_at: "2026-11-17T10:05:00Z" })),
 		).toBeNull();
 	});
 
@@ -230,6 +244,19 @@ describe("reply-thread rules", () => {
 		const fresh = root({ thread_last_read_seq: 9, thread_unread_count: 1 });
 		expect(rootFromServedPage(held, fresh)).toBe(fresh);
 		expect(rootFromServedPage(null, stale)).toBe(stale);
+		// The timeline form: only held roots with a cursor are touched, and a
+		// page needing no protection comes back as the same array.
+		const other = message(1, ADA, "2026-11-17T09:00:00Z");
+		const freshPage = [other, fresh];
+		expect(protectHeldThreadCursors([held], freshPage)).toBe(freshPage);
+		expect(protectHeldThreadCursors([other], [stale])).toEqual([stale]);
+		const guarded = protectHeldThreadCursors([held], [other, stale]);
+		expect(guarded[0]).toBe(other);
+		expect(guarded[1]).toMatchObject({
+			thread_last_read_seq: held.thread_last_read_seq,
+			thread_unread_count: held.thread_unread_count,
+			reply_count: stale.reply_count,
+		});
 	});
 
 	it("only a missing root is final; other failures stay retryable (UX U3)", () => {
@@ -689,6 +716,209 @@ describe("reply-thread store", () => {
 			// Everything else the late page carried still lands.
 			expect(held?.reply_count).toBe(4);
 		}
+	});
+
+	/*
+	 * The same race as R1, on the two other routes that carry the root: the
+	 * conversation timeline's refresh and its older-page read. Both GETs leave
+	 * holding cursor 0 / unread 2, a thread read lands 3 / 0 meanwhile, and the
+	 * page answers afterwards with a changed reply count. The held pair must
+	 * survive; the count must not be lost with it.
+	 */
+	function deferredTimeline() {
+		let release: (() => void) | null = null;
+		const page = (overrides: Record<string, unknown>) => ({
+			messages: [
+				message(1, ADA, "2026-11-17T09:00:00Z"),
+				root({ thread_last_read_seq: 0, thread_unread_count: 2, ...overrides }),
+			],
+			has_more: false,
+		});
+		const listMessages = vi
+			.fn()
+			.mockResolvedValueOnce(page({}))
+			.mockImplementationOnce(
+				() =>
+					new Promise((resolve) => {
+						release = () => resolve(page({ reply_count: 4 }));
+					}),
+			);
+		const markThreadRead = vi.fn(async () => ({
+			thread_unread_count: 0,
+			thread_last_read_seq: 3,
+		}));
+		return {
+			listMessages,
+			markThreadRead,
+			release: () => (release as unknown as () => void)(),
+			started: () => release !== null,
+		};
+	}
+	const timelineRoot = (store: ReturnType<typeof storeWith>["store"]) =>
+		store
+			.getState()
+			.threads[threadKey(TENANT, CONV)]?.messages.find((m) => m.id === ROOT);
+
+	it("a timeline refresh that answers after a thread read keeps the read's cursor and unread", async () => {
+		const rig = deferredTimeline();
+		const { store, actions } = storeWith({
+			listMessages: rig.listMessages,
+			markThreadRead: rig.markThreadRead,
+		});
+		await actions.checkStatus();
+		await actions.loadThread(TENANT, CONV);
+		expect(timelineRoot(store)?.thread_last_read_seq).toBe(0);
+
+		const refresh = actions.loadThread(TENANT, CONV);
+		await vi.waitFor(() => expect(rig.started()).toBe(true));
+		await expect(actions.markReplyThreadRead(target, 3)).resolves.toBe(true);
+		expect(timelineRoot(store)).toMatchObject({
+			thread_unread_count: 0,
+			thread_last_read_seq: 3,
+		});
+		rig.release();
+		await refresh;
+
+		// Observed before the fix: unread 0 -> 2, cursor 3 -> 0.
+		expect(timelineRoot(store)).toMatchObject({
+			thread_unread_count: 0,
+			thread_last_read_seq: 3,
+			reply_count: 4,
+		});
+	});
+
+	it("an older page that answers after a thread read keeps the read's cursor and unread", async () => {
+		let release: (() => void) | null = null;
+		const listMessages = vi
+			.fn()
+			// Newest page: only the root, more history behind it.
+			.mockResolvedValueOnce({
+				messages: [
+					root({ seq: 5, thread_last_read_seq: 0, thread_unread_count: 2 }),
+				],
+				has_more: true,
+			})
+			// The older page overlaps the root (an edit/rollup restated).
+			.mockImplementationOnce(
+				() =>
+					new Promise((resolve) => {
+						release = () =>
+							resolve({
+								messages: [
+									message(1, ADA, "2026-11-17T09:00:00Z"),
+									root({
+										seq: 5,
+										thread_last_read_seq: 0,
+										thread_unread_count: 2,
+										reply_count: 4,
+									}),
+								],
+								has_more: false,
+							});
+					}),
+			);
+		const markThreadRead = vi.fn(async () => ({
+			thread_unread_count: 0,
+			thread_last_read_seq: 3,
+		}));
+		const { store, actions } = storeWith({ listMessages, markThreadRead });
+		await actions.checkStatus();
+		await actions.loadThread(TENANT, CONV);
+
+		const older = actions.loadOlder(TENANT, CONV);
+		await vi.waitFor(() => expect(release).not.toBeNull());
+		await expect(actions.markReplyThreadRead(target, 3)).resolves.toBe(true);
+		(release as unknown as () => void)();
+		await older;
+
+		expect(timelineRoot(store)).toMatchObject({
+			thread_unread_count: 0,
+			thread_last_read_seq: 3,
+			reply_count: 4,
+		});
+		expect(
+			store
+				.getState()
+				.threads[threadKey(TENANT, CONV)]?.messages.map((m) => m.seq),
+		).toEqual([1, 5]);
+	});
+
+	it("a timeline page at an equal or newer cursor takes the served unread", async () => {
+		const listMessages = vi
+			.fn()
+			.mockResolvedValueOnce({
+				messages: [root({ thread_last_read_seq: 3, thread_unread_count: 0 })],
+				has_more: false,
+			})
+			.mockResolvedValueOnce({
+				// Same cursor, a new reply arrived: the served count is the truth.
+				messages: [root({ thread_last_read_seq: 3, thread_unread_count: 1 })],
+				has_more: false,
+			})
+			.mockResolvedValueOnce({
+				messages: [root({ thread_last_read_seq: 6, thread_unread_count: 0 })],
+				has_more: false,
+			})
+			.mockResolvedValueOnce({
+				// No cursor served: the held pair stays.
+				messages: [
+					root({
+						thread_last_read_seq: undefined,
+						thread_unread_count: 4,
+					}),
+				],
+				has_more: false,
+			});
+		const { store, actions } = storeWith({ listMessages });
+		await actions.checkStatus();
+		await actions.loadThread(TENANT, CONV);
+		await actions.loadThread(TENANT, CONV);
+		expect(timelineRoot(store)).toMatchObject({
+			thread_last_read_seq: 3,
+			thread_unread_count: 1,
+		});
+		await actions.loadThread(TENANT, CONV);
+		expect(timelineRoot(store)).toMatchObject({
+			thread_last_read_seq: 6,
+			thread_unread_count: 0,
+		});
+		await actions.loadThread(TENANT, CONV);
+		expect(timelineRoot(store)).toMatchObject({
+			thread_last_read_seq: 6,
+			thread_unread_count: 0,
+		});
+	});
+
+	it("an unchanged timeline poll behind a held cursor keeps the held array", async () => {
+		const rig = deferredTimeline();
+		rig.listMessages.mockResolvedValue({
+			messages: [
+				message(1, ADA, "2026-11-17T09:00:00Z"),
+				root({
+					thread_last_read_seq: 0,
+					thread_unread_count: 2,
+					reply_count: 4,
+				}),
+			],
+			has_more: false,
+		});
+		const { store, actions } = storeWith({
+			listMessages: rig.listMessages,
+			markThreadRead: rig.markThreadRead,
+		});
+		await actions.checkStatus();
+		await actions.loadThread(TENANT, CONV);
+		const refresh = actions.loadThread(TENANT, CONV);
+		await vi.waitFor(() => expect(rig.started()).toBe(true));
+		await actions.markReplyThreadRead(target, 3);
+		rig.release();
+		await refresh;
+		const before = store.getState().threads[threadKey(TENANT, CONV)]?.messages;
+		// A stale-cursor poll that otherwise restates what is held changes nothing.
+		await actions.loadThread(TENANT, CONV);
+		expect(store.getState().threads[threadKey(TENANT, CONV)]?.messages).toBe(
+			before,
+		);
 	});
 
 	it("reply 501 is reachable: the capped cursor is kept and continued (review R2)", async () => {

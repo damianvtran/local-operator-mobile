@@ -79,6 +79,14 @@
 		"role": "meta",
 		"note": "Name of an Android notification channel, shown in the system's app notification settings. It is the name of one of Local Operator's built-in notification sounds; use the same translation as the desktop app's sound picker (wire.notification_sound.sound.*). Sentence case, no final full stop."
 	},
+	"mobile.notifications.channel.team_bridge": {
+		"role": "meta",
+		"note": "Name of the Team Bridge notification channel in Android's notification settings. Product name; keep it untranslated unless the product name is localised elsewhere."
+	},
+	"mobile.notifications.channel.team_bridge_description": {
+		"role": "help",
+		"note": "Description under the Team Bridge channel in Android's notification settings. Teammates are people; agents are their AI agents."
+	},
 	"mobile.notifications.channel.two_note_chime": {
 		"role": "meta",
 		"note": "Name of an Android notification channel, shown in the system's app notification settings. It is the name of one of Local Operator's built-in notification sounds; use the same translation as the desktop app's sound picker (wire.notification_sound.sound.*). Sentence case, no final full stop."
@@ -227,6 +235,14 @@
 		"role": "help",
 		"note": "Directions to existing per-conversation notification controls for DMs, groups and channels; use the same option names as the Team Bridge bell menu."
 	},
+	"mobile.notifications.preferences.bridge_system_off": {
+		"role": "help",
+		"note": "Shown under the Team Bridge switch in Settings when the reader has switched off the Team Bridge channel in Android's system settings. States the consequence; the app cannot turn it back on itself."
+	},
+	"mobile.notifications.preferences.bridge_system_open": {
+		"role": "button",
+		"note": "Button that opens Android's system settings page for the Team Bridge notification channel."
+	},
 	"mobile.notifications.preferences.completions": {
 		"role": "button",
 		"note": "Settings › Notifications, a switch row: notify when an AI agent on the computer finishes its turn. Short, past tense."
@@ -282,6 +298,10 @@
 	"mobile.notifications.priority_high": {
 		"role": "status",
 		"note": "Badge on a notification the sender marked high priority. One word."
+	},
+	"mobile.notifications.team_bridge.self_name": {
+		"role": "meta",
+		"note": "The reader's own name in an Android conversation notification (the 'me' person of a message thread). One short pronoun."
 	},
 	"mobile.notifications.title": {
 		"role": "heading",

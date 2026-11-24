@@ -30,6 +30,14 @@ inputs:
     description: Artefact name to upload under.
     required: false
     default: android-release
+outputs:
+  artifact-id:
+    # Passed through so a caller can name the exact artefact THIS upload created:
+    # ci.yml's `release-staging` wait polls for it by ID, because on a job rerun
+    # the run's listing still holds the previous attempt's artefact of the same
+    # name. Additive; release.yml does not read it.
+    description: ID of the artefact this upload created (empty if the upload failed).
+    value: ${{ steps.upload.outputs.artifact-id }}
 runs:
   using: composite
   steps:
@@ -43,7 +51,8 @@ runs:
         cp "${{ inputs.aab }}" "$staging/app-release.aab"
         cp "${{ inputs.apk }}" "$staging/app-release.apk"
         ls -l "$staging"
-    - uses: actions/upload-artifact@v7
+    - id: upload
+      uses: actions/upload-artifact@v7
       with:
         name: ${{ inputs.name }}
         # A glob rather than the bare directory: with one directory path the root

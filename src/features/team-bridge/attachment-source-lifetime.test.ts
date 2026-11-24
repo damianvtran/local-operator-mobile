@@ -4,6 +4,7 @@ import {
 	prepareTeamBridgeImage,
 	type RawImage,
 	releaseTeamBridgeSource,
+	takeTeamBridgePhoto,
 } from "./attachment-source";
 
 // Real production preparation/finally blocks; only the native module boundary
@@ -11,11 +12,13 @@ import {
 const native = vi.hoisted(() => ({
 	manipulate: vi.fn(),
 	deleted: vi.fn(),
+	capture: vi.fn(),
 }));
 vi.mock("react-native", () => ({ Platform: { OS: "ios" } }));
 vi.mock("@/testing/team-bridge-attachment-source", () => ({
 	syntheticAttachmentSource: () => null,
 }));
+vi.mock("expo-image-picker", () => ({ launchCameraAsync: native.capture }));
 vi.mock("expo-image-manipulator", () => ({
 	ImageManipulator: { manipulate: native.manipulate },
 	SaveFormat: { PNG: "png", JPEG: "jpeg" },
@@ -119,4 +122,36 @@ describe("disposed draft native preparation settlement", () => {
 			expect(draft.chips()).toEqual([]);
 		},
 	);
+});
+
+/** The new Team Bridge row uses camera acquisition but retains its URI-based
+ * bounding/upload pipeline, not the session composer's base64 pipeline. */
+describe("Team Bridge camera acquisition", () => {
+	it("returns the captured URI and dimensions for the existing preparation path", async () => {
+		native.capture.mockResolvedValue({
+			canceled: false,
+			assets: [
+				{
+					uri: "file:///capture.jpg",
+					width: 640,
+					height: 480,
+					mimeType: "image/jpeg",
+				},
+			],
+		});
+		expect(await takeTeamBridgePhoto()).toEqual({
+			uri: "file:///capture.jpg",
+			width: 640,
+			height: 480,
+			isPng: false,
+		});
+		expect(native.capture).toHaveBeenCalledWith({
+			mediaTypes: ["images"],
+			quality: 1,
+		});
+	});
+	it("returns null on camera cancellation", async () => {
+		native.capture.mockResolvedValue({ canceled: true });
+		expect(await takeTeamBridgePhoto()).toBeNull();
+	});
 });

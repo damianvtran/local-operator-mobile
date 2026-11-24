@@ -130,6 +130,23 @@ const BUNDLE_ID = "com.localoperator.mobile";
 const MICROPHONE_USAGE =
 	"Record a voice message and transcribe it on your own computer. The recording is sent for one transcription and not kept.";
 
+/* The camera usage string — the sentence iOS shows in its consent prompt the
+ * first time the reader presses Camera in the composer's add-image sheet (never
+ * at launch: `prepareCamera` in `src/features/session/attach.ts` asks at the
+ * moment of use). Declared through the image-picker plugin's `cameraPermission`
+ * option, which writes `NSCameraUsageDescription` AND stops the plugin blocking
+ * `android.permission.CAMERA`; one source, the way `MICROPHONE_USAGE` is.
+ * `scripts/ci/native-config.ts` requires the key on the built plist, because a
+ * missing string is a crash on first use rather than a prompt.
+ *
+ * English only, like the microphone string: no `locales` entry or
+ * InfoPlist.strings exists in this app (see `LAUNCHER_LABEL`), and adding the
+ * first one is its own change across every usage string at once. The sentence
+ * says what is true: the photo goes to the reader's own computer with the
+ * message, and the app does not save it to their library. */
+const CAMERA_USAGE =
+	"Take a photo to attach to your message. The photo is sent to your own computer and not saved to your library.";
+
 /* THE HOME-SCREEN LABEL, deliberately shorter than the app's name.
  *
  * The operator's decision (2026-11-11): the label under the icon reads
@@ -317,14 +334,18 @@ const config: ExpoConfig = {
 		// instead slide the whole window up under the header, and should the window
 		// ever resize, the overlap reads 0 against an already-shortened window, so
 		// the ceiling stays right either way.
+		// `react-native-keyboard-controller` (the composer's per-frame lift) also
+		// requires `adjustResize`: it reads the IME's inset animation and sets the
+		// same mode itself. It ships no config plugin, so nothing else is declared.
 		softwareKeyboardLayoutMode: "resize",
 		// FCM for Team Bridge push; absent unless a config file exists (see
 		// `resolveGoogleServicesFile` for why absence is the safe default).
 		...(googleServicesFile ? { googleServicesFile } : {}),
 		// The permissions that may NEVER reach the manifest, whatever a dependency's
-		// library manifest declares. `expo-image-picker` ships CAMERA /
+		// library manifest declares. `expo-image-picker` ships
 		// READ_EXTERNAL_STORAGE / WRITE_EXTERNAL_STORAGE for camera-roll flows this
-		// app does not use (camera is denied through the plugin's own option), and
+		// app does not use (CAMERA is no longer blocked: the composer's Camera row
+		// uses it, see `CAMERA_USAGE` and `permissions` below), and
 		// the media-library pair is the Google Play-documented "approved core use
 		// case" permission this app deliberately does not need: attachments are
 		// picked through the system PHOTO pickers (iOS 14+ `PHPickerViewController`,
@@ -359,7 +380,20 @@ const config: ExpoConfig = {
 		// Settings. expo-notifications' library manifest already declares it and
 		// the manifest merger carries it; declared here for the same visibility
 		// reason as RECORD_AUDIO (Android 12 and below grant it at install).
-		permissions: ["RECORD_AUDIO", "ACCESS_LOCAL_NETWORK", "POST_NOTIFICATIONS"],
+		//
+		// CAMERA is the composer's Camera row (take one photo and attach it). It is
+		// a runtime permission requested at the press, never at launch
+		// (`prepareCamera`); declaring it is what makes it grantable at all, and
+		// once declared, Android also requires it for the system camera intent the
+		// picker launches. Declared here for the same visibility reason as
+		// RECORD_AUDIO; `scripts/ci/native-config.ts` requires it on the release
+		// manifest.
+		permissions: [
+			"RECORD_AUDIO",
+			"ACCESS_LOCAL_NETWORK",
+			"POST_NOTIFICATIONS",
+			"CAMERA",
+		],
 		adaptiveIcon: {
 			foregroundImage:
 				"./design/app-icon/android/ic_launcher_foreground-432.png",
@@ -424,20 +458,29 @@ const config: ExpoConfig = {
 		[
 			"expo-image-picker",
 			{
-				// CONFIGURED TO DECLARE NOTHING, and that is the point. The library
-				// picker is `PHPickerViewController` on iOS 14+ and the Android Photo
-				// Picker: both grant picker-only access without any photo-library
-				// permission, so `photosPermission: false` keeps
-				// `NSPhotoLibraryUsageDescription` OUT of the built plist (the plugin's
-				// default would add an "access your photos" string the app does not
-				// need) and the Android storage permissions are blocked in the
-				// `android.blockedPermissions` list above. The camera is not a feature
-				// of this app, so `cameraPermission: false` drops its plist string and
-				// blocks `android.permission.CAMERA`. `microphonePermission` receives
-				// the SAME sentence as `ios.infoPlist` — see `MICROPHONE_USAGE` for why
-				// neither the default nor `false` is acceptable there.
+				// CONFIGURED TO DECLARE ONLY WHAT IS USED. The library picker is
+				// `PHPickerViewController` on iOS 14+ and the Android Photo Picker:
+				// both grant picker-only access without any photo-library permission,
+				// so `photosPermission: false` keeps `NSPhotoLibraryUsageDescription`
+				// OUT of the built plist (the plugin's default would add an "access
+				// your photos" string the app does not need) and the Android storage
+				// permissions are blocked in the `android.blockedPermissions` list
+				// above. That half is unchanged.
+				//
+				// THE CAMERA DECISION WAS REVERSED (2026-11-15, the operator asked for
+				// "take a picture" in the composer). This option used to be `false`,
+				// which dropped the plist string and blocked `android.permission.CAMERA`
+				// because the camera was not a feature. It is one now, so the option
+				// carries `CAMERA_USAGE` — the plist string the iOS prompt shows — and
+				// CAMERA reaches the Android manifest (`permissions` above). The app
+				// still never asks at launch: `prepareCamera` asks when the reader
+				// presses Camera, and a refusal is answered with Open Settings.
+				//
+				// `microphonePermission` receives the SAME sentence as `ios.infoPlist`
+				// — see `MICROPHONE_USAGE` for why neither the default nor `false` is
+				// acceptable there.
 				photosPermission: false,
-				cameraPermission: false,
+				cameraPermission: CAMERA_USAGE,
 				microphonePermission: MICROPHONE_USAGE,
 			},
 		],
@@ -479,10 +522,21 @@ const config: ExpoConfig = {
 		// would promise something the platform refuses. Its comment has the why of
 		// the shape (app-wide; a user-typed host cannot be narrowed at build time).
 		"./plugins/with-android-local-network.js",
+		// CAMERA (the composer's Take Photo row) implies a REQUIRED back camera on
+		// Google Play unless the feature is declared optional; this plugin declares
+		// android.hardware.camera and .autofocus with required="false" so camera-
+		// less devices keep the app. Its comment has the why; CI asserts both.
+		"./plugins/with-android-optional-camera.js",
 		// The Android half of `LAUNCHER_LABEL`: Expo has no Android label separate
 		// from `name`, so this plugin rewrites the `app_name` string the template's
 		// `<application android:label>` points at. Its comment has the ordering why.
 		["./plugins/with-android-launcher-label.js", { label: LAUNCHER_LABEL }],
+		// ADR 0010 S2: swap Expo's notification receiver for
+		// `modules/lop-team-bridge-push`'s subclass, which draws Team Bridge
+		// pushes as conversations with the sender's face, groups them, hides the
+		// sender on a private lock screen, shows the foreground banner Expo drops,
+		// and routes session pushes to the HIGH `alert.*` channels.
+		"./plugins/with-android-team-bridge-push.js",
 	],
 	experiments: {
 		typedRoutes: true,

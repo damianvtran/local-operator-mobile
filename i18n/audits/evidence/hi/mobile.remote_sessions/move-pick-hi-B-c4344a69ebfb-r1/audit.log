@@ -1,0 +1,64 @@
+Dependency-free Python 3 audit; script: /Users/damian/.local-operator/sessions/c4344a69ebfb/scratchpad/hi-b-audit.py
+PASS frozen HEAD 9362cce8a631791b676b2d2c9eda90c43fc7e11c
+PASS approved brief sha256 5a72dfd72dc820b1fa8e73d78b97807581572334ee0fd25eb2eab346e759ebca
+PASS draft sha256 eedec3de1f87567b35790e88eb62109718fa268fd7654b7592d33ff509cd7f8d
+PASS frozen authoring src/i18n/catalogues/en/mobile.remote_sessions.json 436f8ec3bda274431146e7e7cb82b2add418f598bd2a7a6d7426f561a4312984
+PASS frozen authoring src/i18n/catalogues/en/mobile.remote_sessions.context.json c703dff07b634d3d2d4b7c789e6a4a1eecf192a57618ea8e9e72197d325d08eb
+PASS frozen authoring src/features/sessions/move-sheet.tsx 6a3f7126eb2fefc5ad0138a1731e3898d66d333ea8ca1b4ac99321da18d495aa
+PASS seven exact scoped keys
+PASS independent B session author=6b48875431ee A=94bfc6fb7b61 B=c4344a69ebfb; author/A identities from supplied ledger
+PASS English/context alignment mobile.remote_sessions.move_pick.cannot_reach
+PASS exact placeholder/markup mobile.remote_sessions.move_pick.cannot_reach
+PASS NFC mobile.remote_sessions.move_pick.cannot_reach
+PASS no bidi controls mobile.remote_sessions.move_pick.cannot_reach
+PASS no redaction markers in copy/context mobile.remote_sessions.move_pick.cannot_reach
+PASS one textual render call mobile.remote_sessions.move_pick.cannot_reach
+MEASURE {"key": "mobile.remote_sessions.move_pick.cannot_reach", "english_codepoints": 20, "hindi_codepoints": 33, "ratio": 1.65}
+PASS English/context alignment mobile.remote_sessions.move_pick.destination_heading
+PASS exact placeholder/markup mobile.remote_sessions.move_pick.destination_heading
+PASS NFC mobile.remote_sessions.move_pick.destination_heading
+PASS no bidi controls mobile.remote_sessions.move_pick.destination_heading
+PASS no redaction markers in copy/context mobile.remote_sessions.move_pick.destination_heading
+PASS one textual render call mobile.remote_sessions.move_pick.destination_heading
+MEASURE {"key": "mobile.remote_sessions.move_pick.destination_heading", "english_codepoints": 15, "hindi_codepoints": 27, "ratio": 1.8}
+PASS English/context alignment mobile.remote_sessions.move_pick.discovery_help
+PASS exact placeholder/markup mobile.remote_sessions.move_pick.discovery_help
+PASS NFC mobile.remote_sessions.move_pick.discovery_help
+PASS no bidi controls mobile.remote_sessions.move_pick.discovery_help
+PASS no redaction markers in copy/context mobile.remote_sessions.move_pick.discovery_help
+PASS one textual render call mobile.remote_sessions.move_pick.discovery_help
+MEASURE {"key": "mobile.remote_sessions.move_pick.discovery_help", "english_codepoints": 178, "hindi_codepoints": 221, "ratio": 1.242}
+PASS English/context alignment mobile.remote_sessions.move_pick.no_answer
+PASS exact placeholder/markup mobile.remote_sessions.move_pick.no_answer
+PASS NFC mobile.remote_sessions.move_pick.no_answer
+PASS no bidi controls mobile.remote_sessions.move_pick.no_answer
+PASS no redaction markers in copy/context mobile.remote_sessions.move_pick.no_answer
+PASS one textual render call mobile.remote_sessions.move_pick.no_answer
+MEASURE {"key": "mobile.remote_sessions.move_pick.no_answer", "english_codepoints": 43, "hindi_codepoints": 45, "ratio": 1.047}
+PASS English/context alignment mobile.remote_sessions.move_pick.no_devices
+PASS exact placeholder/markup mobile.remote_sessions.move_pick.no_devices
+PASS NFC mobile.remote_sessions.move_pick.no_devices
+PASS no bidi controls mobile.remote_sessions.move_pick.no_devices
+PASS no redaction markers in copy/context mobile.remote_sessions.move_pick.no_devices
+PASS one textual render call mobile.remote_sessions.move_pick.no_devices
+MEASURE {"key": "mobile.remote_sessions.move_pick.no_devices", "english_codepoints": 29, "hindi_codepoints": 30, "ratio": 1.034}
+PASS English/context alignment mobile.remote_sessions.move_pick.on_this_computer
+PASS exact placeholder/markup mobile.remote_sessions.move_pick.on_this_computer
+PASS NFC mobile.remote_sessions.move_pick.on_this_computer
+PASS no bidi controls mobile.remote_sessions.move_pick.on_this_computer
+PASS no redaction markers in copy/context mobile.remote_sessions.move_pick.on_this_computer
+PASS one textual render call mobile.remote_sessions.move_pick.on_this_computer
+MEASURE {"key": "mobile.remote_sessions.move_pick.on_this_computer", "english_codepoints": 16, "hindi_codepoints": 14, "ratio": 0.875}
+PASS English/context alignment mobile.remote_sessions.move_pick.right_now
+PASS exact placeholder/markup mobile.remote_sessions.move_pick.right_now
+PASS NFC mobile.remote_sessions.move_pick.right_now
+PASS no bidi controls mobile.remote_sessions.move_pick.right_now
+PASS no redaction markers in copy/context mobile.remote_sessions.move_pick.right_now
+PASS one textual render call mobile.remote_sessions.move_pick.right_now
+MEASURE {"key": "mobile.remote_sessions.move_pick.right_now", "english_codepoints": 9, "hindi_codepoints": 3, "ratio": 0.333}
+PASS Latin product name exactly once
+PASS server reason remains opaque and preferred
+N/A ICU/CLDR: seven simple messages, no numeric/date arguments, no plural/select/skeleton branches; cannot_reach has one opaque device argument, six messages argument-free.
+N/A RTL locale: hi is LTR; no added bidi controls. No pseudo catalogue exists in inspected locale directory (en/fr/es/zh-CN/ru/vi/hi/ur); pseudo measurement NOT RUN.
+LIMIT width measurements are source codepoints, not glyph/grapheme/native fit. No browser/native/build/compiler/test/hook run. SOURCEHOOKGAPOPEN remains OPEN. Redaction scan covers scoped copy/context, not provenance metadata or repository secrets.
+PASS targeted current-catalogue glossary lookup mobile.composer_input.attach.camera_unavailable = इस डिवाइस पर कोई कैमरा उपलब्ध नहीं है।; source sha256 c8c8bb1b0dcf40ca1d8a5ddce5eae7ba1b86baeb8bc819ff4c61c4c6a7deb35a

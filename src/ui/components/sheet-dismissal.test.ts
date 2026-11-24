@@ -60,6 +60,7 @@ describe("Sheet dismissal platform contract", () => {
 		runInNewContext(expression, {
 			Platform: { OS: "web" },
 			visible: false,
+			shown: false,
 			returnFocusTestID,
 			document: host.document,
 			dismissed: () => host.events.push("ledger"),
@@ -98,5 +99,23 @@ describe("Sheet dismissal platform contract", () => {
 		const host = dom({});
 		dismiss(["home-chip", "session-back"], host);
 		expect(host.events).toEqual(["ledger", "caller"]);
+	});
+
+	/* PR #339 round 2 (U1/D1/Q2): RNW reports a dismissal for the one commit the
+	 *  Modal sees `visible=false` before `exiting` lands, while the sheet stays in
+	 *  the DOM. That blip must settle nothing — no focus return, no ledger, no
+	 *  caller. The full ordering against RNW is `sheet-dismiss-timing.test.tsx`. */
+	it("ignores a dismissal reported while the Modal is still shown", () => {
+		const host = dom({ "home-chip": [{ focusable: true }] });
+		runInNewContext(expression, {
+			Platform: { OS: "web" },
+			visible: false,
+			shown: true,
+			returnFocusTestID: "home-chip",
+			document: host.document,
+			dismissed: () => host.events.push("ledger"),
+			onDismiss: () => host.events.push("caller"),
+		})();
+		expect(host.events).toEqual([]);
 	});
 });

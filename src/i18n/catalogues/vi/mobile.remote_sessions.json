@@ -1,4 +1,11 @@
 {
+	"mobile.remote_sessions.move_pick.right_now": "Hiện tại",
+	"mobile.remote_sessions.move_pick.cannot_reach": "Không thể liên lạc với {device}",
+	"mobile.remote_sessions.move_pick.no_answer": "Máy tính đó không phản hồi yêu cầu từ máy tính này.",
+	"mobile.remote_sessions.move_pick.on_this_computer": "Trên máy tính này",
+	"mobile.remote_sessions.move_pick.no_devices": "Không thấy thiết bị nào khác.",
+	"mobile.remote_sessions.move_pick.discovery_help": "Ứng dụng chỉ cho chọn những thiết bị có cuộc trò chuyện đang hiển thị. Chưa thể chọn thiết bị không có cuộc trò chuyện nào hiển thị — hãy mở Local Operator trên máy tính kia rồi kéo danh sách cuộc trò chuyện để làm mới.",
+	"mobile.remote_sessions.move_pick.destination_heading": "Di chuyển hoặc sao chép tới",
 	"mobile.remote_sessions.title": "Cuộc trò chuyện từ xa",
 	"mobile.remote_sessions.loading": "Đang kiểm tra khả năng hỗ trợ phiên từ xa…",
 	"mobile.remote_sessions.unsupported": "Thao tác này chưa khả dụng trong cuộc trò chuyện từ xa. Hãy dùng nó trên máy chủ sở hữu.",

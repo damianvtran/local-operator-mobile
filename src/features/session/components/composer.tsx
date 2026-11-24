@@ -31,11 +31,15 @@ import {
 	ScrollView,
 	Text,
 	type TextInput,
+	type TextInputProps,
 	useWindowDimensions,
 	View,
 } from "react-native";
 
+import { useKeyboardHandler } from "react-native-keyboard-controller";
 import Animated, {
+	cancelAnimation,
+	Easing,
 	interpolate,
 	runOnJS,
 	useAnimatedReaction,
@@ -44,16 +48,21 @@ import Animated, {
 	useSharedValue,
 	withTiming,
 } from "react-native-reanimated";
-import type { PromptImage } from "@/contracts";
+import type { PromptImage, SkillEntry } from "@/contracts";
 import { useClipboardImageOffer } from "@/features/session/attach-clipboard";
 import { createAttachmentSheetHandoff } from "@/features/session/attach-handoff";
+import { attachLocksWhilePicking } from "@/features/session/attach-latch";
 import {
 	type AttachSource,
-	attachActions,
 	type PasteVia,
 	pasteOfferComposing,
 } from "@/features/session/attach-rule";
 import type { ComposerChip } from "@/features/session/chip-labels";
+import { AttachSheet } from "@/features/session/components/attach-sheet";
+import {
+	SkillTray,
+	type SkillTrayProps,
+} from "@/features/session/components/skill-tray";
 import { ComposerStateMarkers } from "@/features/session/components/state-markers";
 import {
 	attachmentLabel,
@@ -62,6 +71,7 @@ import {
 	composerFeedback,
 	noticeActionName,
 } from "@/features/session/composer";
+import type { ComposerCompaction } from "@/features/session/composer-compaction";
 import {
 	composerControlsPlan,
 	customMarkInset,
@@ -84,17 +94,30 @@ import {
 	queuedChipWidthEstimate,
 } from "@/features/session/composer-layout";
 import {
+	COMPOSER_CARD_MARGIN,
 	COMPOSER_CONTROLS_GAP,
 	COMPOSER_FIELD_BOX,
 	COMPOSER_GLASS_LAYER_RADIUS,
+	COMPOSER_MORPH_EASING,
+	COMPOSER_MORPH_MS,
+	COMPOSER_PILL_MARGIN,
 	composerFieldRowAlign,
 	composerPaintedHeight,
+	composerPillRow,
+	composerPinsCard,
 	composerPresentation,
 	composerRestRow,
 	composerShellPadding,
 	composerShellRadius,
-	controlsTrailing,
+	dictationSlots,
+	dockMotionStyle,
+	fieldSelectionOverride,
 	morphHeight,
+	openOnlyForDictation,
+	PILL_ELLIPSIS_CUE_PT,
+	pillShowsEllipsis,
+	pillShowsPlaceholder,
+	pillShowsSend,
 	seedFor,
 } from "@/features/session/composer-presentation";
 import { isSendKey } from "@/features/session/keyboard";
@@ -103,12 +126,23 @@ import {
 	subscribeKeyboardFrame,
 	useKeyboardFrame,
 } from "@/features/session/keyboard-frame";
+import {
+	frameAction,
+	keyboardMotionHandlers,
+	SETTLE_SNAP_LIMIT,
+	settleDecision,
+} from "@/features/session/keyboard-motion";
+import {
+	type SkillTrayFrame,
+	shouldRevealSkillTray,
+	trayHeightCanChange,
+} from "@/features/session/skills/skill-state";
+import { useComposerShrunk } from "@/features/session/use-composer-shrunk";
 import type { DictationState } from "@/features/session/use-dictation";
 import { t } from "@/i18n";
 import { formatDuration } from "@/stt/dictation";
 import { MIC_HINT, micLabel } from "@/stt/dictation-machine";
 import {
-	attachOptionId,
 	CONTROL,
 	composerAttachmentId,
 	LIVE_REGION,
@@ -126,8 +160,10 @@ import {
 	Textarea,
 } from "@/ui/components";
 import { ChromeSurface } from "@/ui/components/chrome-surface";
+import type { TextareaProps } from "@/ui/components/textarea";
 import { TEXT_END_CLASS, useIsRTL } from "@/ui/direction";
-import { TOUCH_FLOOR } from "@/ui/layout";
+import { TOUCH_FLOOR, useLayout } from "@/ui/layout";
+import { parseCubicBezier } from "@/ui/motion";
 import {
 	composerAtHostCap,
 	composerBudget,
@@ -135,6 +171,7 @@ import {
 } from "@/ui/size-class";
 import { LARGE_TEXT_SCALE } from "@/ui/text-scale";
 import { useTextScale } from "@/ui/text-scale-provider";
+import { useScreenReaderEnabled } from "@/ui/use-screen-reader";
 import {
 	COMPOSER_FIELD_MAX_LINES,
 	CONTROL_DISABLED_INK,
@@ -162,6 +199,9 @@ const VISUALLY_HIDDEN = {
  *  measured 50 against 48 at 100 % (design round 1, D1's own figures). Adding the
  *  border to the floor makes every state the same box at the default scale. */
 const DICTATION_ROW_BORDER_PX = 2;
+/** The scroll-driven morph's curve, built once from the spec's CSS string by the
+ *  same adapter the sheets use. */
+const MORPH_EASING = Easing.bezier(...parseCubicBezier(COMPOSER_MORPH_EASING));
 
 /** One line of the row's status text (body-sm, 14 px at 1.45), in px at scale 1.
  *
@@ -257,6 +297,21 @@ type WebListener =
  * navigation, and the only path that clears it is a definitive acknowledgement of
  * the bytes it actually shows.
  */
+/** What the session screen hands the composer for the `$skill` tray. `rows` is
+ *  the tray's content (empty = closed); the rest is the field's caret reporting,
+ *  which the hook needs to know WHICH token the caret is in. */
+export type ComposerSkills = Pick<
+	SkillTrayProps,
+	"onPick" | "onHold" | "onRelease"
+> & {
+	rows: readonly SkillEntry[];
+	onSelectionChange: TextareaProps["onSelectionChange"];
+	/** A ONE-SHOT caret placement after a pick, else undefined. */
+	selection: TextareaProps["selection"];
+	onFocus: () => void;
+	onBlur: () => void;
+};
+
 export type ComposerProps = {
 	controls: ComposerControls;
 	draft: string;
@@ -270,7 +325,16 @@ export type ComposerProps = {
 	/** A web paste event's image file. Only the web build can raise the event;
 	 *  the listener that reads it lives here, the read lives with the host. */
 	onPasteFile: (file: File) => void;
+	/** Images pasted INTO the message field on iOS/Android: `file://` copies the
+	 *  field's native wrapper wrote (`paste-image-field.tsx`). The read lives with
+	 *  the host, like `onAttach`'s. */
+	onPasteImages: (uris: string[]) => void;
 	attaching?: boolean;
+	/** Called on every Attach press, before the sheet opens. The owner abandons
+	 *  a pick still in flight: on native Attach stays pressable while picking,
+	 *  because a press that lands means the picker is not on screen
+	 *  (`attachLocksWhilePicking`, PR #354 R1). */
+	onAttachOpen?: () => void;
 	/** The voice mic's state. `null`/absent means this surface shows no mic. Both
 	 *  hosts pass one now — the session view and the home (TestFlight 578: the
 	 *  new-conversation page had no mic). A relay without `capabilities.stt`
@@ -375,9 +439,29 @@ export type ComposerProps = {
 	 *  default: the control wears the non-default mark. The home knows this; a
 	 *  running session has no default to compare with and passes nothing. */
 	runSettingsCustom?: boolean;
+	/** The home's "Agent or team" row, FIRST in More (identity-picker spec
+	 *  D-S2): the second door to the start-target sheet, the one that still
+	 *  works when the hero pill has scrolled away at large text, and the place an
+	 *  older relay explains itself (D-S15). A session composer passes nothing —
+	 *  re-addressing a running chat stays `/agent` and `/team`. */
+	identityRow?: {
+		value: string;
+		accessibilityLabel: string;
+		disabled: boolean;
+		onPress: () => void;
+	} | null;
 	/** A leading `/` opens the sheet; `null` keeps it shut. */
 	slashQuery: string | null;
 	slashSheet: React.ReactNode;
+	/** The scroll-compaction signal the session screen owns and its transcript
+	 *  reports into (`composer-compaction.ts`). Absent — Home, any host with no
+	 *  transcript — keeps the dock exactly as it was: never shrunk. */
+	compaction?: ComposerCompaction;
+	/** The `$skill` list and the field plumbing it needs (`use-skills.ts`).
+	 *  Absent keeps the field exactly as before: the HOME composer passes nothing,
+	 *  because a new chat has no session id to ask `GET /api/skills` about yet;
+	 *  Team Bridge has its own composer and its own `@` strip. */
+	skills?: ComposerSkills;
 	/** A handle to the field, for the one caller that focuses it by name (the
 	 *  home's New chat). The third mechanical prop beyond the spec's two chips:
 	 *  § 4.3 requires New chat to focus the composer, and focus needs a ref. */
@@ -628,7 +712,9 @@ export const Composer = ({
 	onRemoveImage,
 	onAttach,
 	onPasteFile,
+	onPasteImages,
 	attaching = false,
+	onAttachOpen,
 	voice = null,
 	onSend,
 	onClearDraft,
@@ -657,8 +743,11 @@ export const Composer = ({
 	effortChip,
 	onOpenRunSettings,
 	runSettingsCustom = false,
+	identityRow = null,
 	slashQuery,
 	slashSheet,
+	compaction,
+	skills,
 	fieldRef,
 	compact = null,
 	limit = null,
@@ -927,6 +1016,15 @@ export const Composer = ({
 	const [zoneWidth, setZoneWidth] = useState(0);
 	const _window = useWindowDimensions();
 	const [focused, setFocused] = useState(false);
+	/* Where the caret goes when a tap on the scroll-made pill opens the card
+	 *  (`fieldSelection`, review R3): the end of the draft, for the one render
+	 *  that focuses it. Released by the report that confirms it, by an edit, or
+	 *  by a blur, because a permanently controlled `selection` fights the IME. */
+	const [restoreCaretAt, setRestoreCaretAt] = useState<number | null>(null);
+	useEffect(() => {
+		/* An edit moved the end: the remembered caret is stale. */
+		setRestoreCaretAt((at) => (at !== null && at !== draft.length ? null : at));
+	}, [draft]);
 	/* Offered while COMPOSING, not only while focused (`pasteOfferComposing`,
 	 *  TestFlight 753: a blur after the first paste hid the chip). */
 	const pasteOffer = useClipboardImageOffer(
@@ -939,6 +1037,19 @@ export const Composer = ({
 	const ownField = useRef<TextInput>(null);
 	const inputRef = fieldRef ?? ownField;
 	const reducedMotion = useReducedMotion();
+	/* SCROLL COMPACTION (`composer-compaction.ts`): the dock yields its second row
+	 *  while the reader scrolls the transcript. It is a PHONE-PORTRAIT behaviour:
+	 *  short landscape is already a pill, a tablet or split layout has room, and a
+	 *  screen reader's focus must not chase a dock that changes shape. `compact`
+	 *  here is the host's short-landscape fact, the same one `restsAsCard` reads. */
+	const layout = useLayout();
+	const screenReader = useScreenReaderEnabled();
+	const compactionOk =
+		compact === null &&
+		layout.sizeClass === "compact" &&
+		!layout.split &&
+		!screenReader;
+	const shrunkSignal = useComposerShrunk(compaction);
 	const elevated = useTokenColor("elevated");
 	/* The shell's FOCUS edge, and only that (visual audit D8). At rest the card
 	 *  is separated by its `elevated` fill alone, as the relay's is: the operator
@@ -953,6 +1064,18 @@ export const Composer = ({
 	 *  not morph in from a pill on every mount. */
 	const progress = useSharedValue(compact === null ? 1 : 0);
 	const keyboardOffset = useSharedValue(0);
+	/* True from the library's `onStart` to its `onEnd`: the keyboard's own frames
+	 *  are writing `keyboardOffset`, so the store's timed lift must not start a
+	 *  second tween over them. */
+	const motionActive = useSharedValue(false);
+	/* A store frame arrived while a library motion ran (`frameAction` -> hold) and
+	 *  is not yet applied: the end of the motion brings the offset to it
+	 *  (`settleDecision`). JS thread only, like both of its writers. */
+	const frameSeenDuringMotion = useRef(false);
+	/* For `settleLift`, which the library's handlers call from a registration
+	 *  made once (`[]` deps) and so cannot see a later render's value. */
+	const reducedMotionRef = useRef(reducedMotion);
+	reducedMotionRef.current = reducedMotion;
 	/* The overlap the lift is heading for (the latest keyboard frame's). A box
 	 *  measured while the offset is anywhere else is a mid-lift layout and is not
 	 *  published (`publishBox`), so the screen keeps the last SETTLED box and can
@@ -977,6 +1100,11 @@ export const Composer = ({
 		stop: controls.stopVisible,
 		error: !!error || !!retainedMessage || !!notice,
 		keyboard: keyboardVisible,
+		/* Pins only: `composerPinsCard` keeps a card under the `$` tray and the `/`
+		 *  sheet, which the other facts do not already say. */
+		skillTray: !!skills && skills.rows.length > 0,
+		slashSheet: slashQuery !== null,
+		shrunk: compactionOk && shrunkSignal,
 		inset: bottomInset ?? 0,
 		scale: effectiveScale,
 		/* The composer paints on the platform's touch floor, so its presentation
@@ -984,6 +1112,33 @@ export const Composer = ({
 		 *  (28 announced over a 30 pt paint). */
 		floor: TOUCH_FLOOR,
 	};
+	const pinsCard = composerPinsCard(presentationFacts);
+	/* The pill the SCROLL made, as opposed to short landscape's own: the dock is
+	 *  shrunk, nothing pins it, and `composerPresentation` agrees. */
+	const shrunkPill = presentationFacts.shrunk && !pinsCard;
+	/* The pill's two cues over its one-line field (`pillShowsEllipsis`,
+	 *  `pillShowsPlaceholder`): there is more after the first line, or the draft is
+	 *  only whitespace and the resting placeholder stands in for it. */
+	const pillCue = shrunkPill && pillShowsEllipsis(draft);
+	const pillBlank = shrunkPill && pillShowsPlaceholder(draft);
+	const selectionOverride = fieldSelectionOverride({
+		shrunkPill,
+		restoreCaretAt,
+	});
+	const releaseRestoredCaret = (
+		event: Parameters<NonNullable<TextInputProps["onSelectionChange"]>>[0],
+	) => {
+		const { start, end } = event.nativeEvent.selection;
+		if (restoreCaretAt !== null && start === end && end === restoreCaretAt)
+			setRestoreCaretAt(null);
+		skills?.onSelectionChange?.(event);
+	};
+	useEffect(() => {
+		compaction?.setEnabled(compactionOk);
+	}, [compaction, compactionOk]);
+	useEffect(() => {
+		compaction?.setPinned(pinsCard);
+	}, [compaction, pinsCard]);
 	/* What the dock would be on ITS OWN facts — focus, a draft, an attachment, a
 	 *  take, a live turn or a notice. `onEditingChange` and the dictation slot
 	 *  rule below read this one: the host's "is the reader editing" must not turn
@@ -994,15 +1149,29 @@ export const Composer = ({
 	 *  controls row then keeps the mic in that trailing slot, so the press that
 	 *  expands the card does not slide Send under the finger that just pressed the
 	 *  mic (UX review round 1, U2). Send is disabled in this state anyway: a card
-	 *  with a draft, an attachment or focus is open for its own reasons. */
-	const openForDictationOnly =
-		activePresentation.expanded &&
-		!composerPresentation({ ...presentationFacts, dictation: false }).expanded;
-	const trailing = controlsTrailing({
-		openForDictationOnly,
-		recording: voice?.phase === "recording",
-		micShown,
+	 *  with a draft, an attachment or focus is open for its own reasons.
+	 *
+	 *  A whitespace-only draft counts as no draft here (`blankIsEmpty`), which is
+	 *  what the pill's Send already does (`pillShowsSend`): a take that began on
+	 *  the pill beside a blank draft opens a card with no dead Send either, and
+	 *  the mic does not slide (review R2-2). Stop, focus, an attachment and an
+	 *  error still keep the actions. */
+	const openForDictationOnly = openOnlyForDictation(presentationFacts, {
+		blankIsEmpty: true,
 	});
+	/* Whether the take that holds the card open began on the scroll-made pill
+	 *  (`dictationDropsSend`). Set at the mic press, the one moment the pill is
+	 *  still what the finger is on; kept while a failed start leaves the card open
+	 *  for dictation only, so pressing the mic again does not slide it. State, not
+	 *  a ref: the draw reads it, and a ref read during render depends on the voice
+	 *  state change that follows the press to re-render at all (review R2-4). */
+	const [dictationFromPill, setDictationFromPill] = useState(false);
+	const pressMic = () => {
+		setDictationFromPill(
+			shrunkPill || (dictationFromPill && openForDictationOnly),
+		);
+		voice?.press();
+	};
 	/* Physical orientation is supplied by the caller, not the keyboard-shortened
 	 * window. Narrow splits retain two rows rather than clipping a control. */
 	const compactSingle =
@@ -1026,6 +1195,17 @@ export const Composer = ({
 	const presentation = restsAsCard
 		? composerPresentation({ ...presentationFacts, card: true })
 		: activePresentation;
+	/* The trailing slot and the dead-Send drop come from ONE decision
+	 *  (`dictationSlots`): on the card a blank draft is no draft for both; short
+	 *  landscape keeps its Send, so ' ' stays a draft there. They cannot disagree,
+	 *  which left an empty slot and a ✓ sliding off the finger (review R4-1). */
+	const { trailing, dropSend: dropSendForDictation } = dictationSlots({
+		facts: presentationFacts,
+		restsAsCard,
+		startedFromPill: dictationFromPill,
+		recording: voice?.phase === "recording",
+		micShown,
+	});
 	/* The lift. One keyboard source (`keyboard-frame.ts`); this subscription runs
 	 * in the native event itself, so the lift starts with the keyboard. iOS follows
 	 * the native frame/duration; safe-area clearance belongs OUTSIDE the shell.
@@ -1048,7 +1228,16 @@ export const Composer = ({
 		const unsubscribe = subscribeKeyboardFrame((frame) => {
 			keyboardDuration.current = frame.duration;
 			liftTarget.current = frame.visible ? frame.overlap : 0;
-			if (!frame.visible) {
+			/* While the keyboard's own frames drive the lift, a SHOW frame must not
+			 *  tween over them: it is remembered and `onEnd` settles on it. A hide
+			 *  frame always applies, which also frees a motion that never ended
+			 *  (`frameAction`). This subscriber stays the whole driver when no motion
+			 *  runs (a frame the library never reports, a platform without the
+			 *  native module). */
+			const action = frameAction(frame.visible, motionActive.value);
+			if (action === "snap") {
+				motionActive.value = false;
+				frameSeenDuringMotion.current = false;
 				keyboardOffset.value = 0;
 				remeasure();
 				return;
@@ -1059,6 +1248,10 @@ export const Composer = ({
 			) {
 				lifting.current = true;
 				onLiftRef.current?.(true);
+			}
+			if (action === "hold") {
+				frameSeenDuringMotion.current = true;
+				return;
 			}
 			keyboardOffset.value = withTiming(
 				frame.overlap,
@@ -1080,14 +1273,82 @@ export const Composer = ({
 		keyboardOffset.value = liftTarget.current;
 		if (present.visible) remeasure();
 		return unsubscribe;
-	}, [keyboardOffset]);
+	}, [keyboardOffset, motionActive]);
+	const publishSoon = useCallback(() => {
+		requestAnimationFrame(() => publishBoxRef.current());
+	}, []);
+	const settleLift = useCallback(() => {
+		const current = keyboardOffset.value;
+		const settled = settleDecision({
+			current,
+			target: liftTarget.current,
+			frameSeenDuringMotion: frameSeenDuringMotion.current,
+		});
+		frameSeenDuringMotion.current = false;
+		if (settled === current) {
+			publishSoon();
+			return;
+		}
+		/* A repair of a real divergence (iPad floating / split view) is moved, not
+		 *  jumped, on the store's own duration; the box is published when it
+		 *  lands. Reduced motion, and a sub-2 pt rounding snap, assign. */
+		if (
+			!reducedMotionRef.current &&
+			Math.abs(settled - current) >= SETTLE_SNAP_LIMIT
+		) {
+			keyboardOffset.value = withTiming(
+				settled,
+				{ duration: keyboardDuration.current },
+				(finished) => {
+					if (finished) runOnJS(publishSoon)();
+				},
+			);
+			return;
+		}
+		keyboardOffset.value = settled;
+		publishSoon();
+	}, [keyboardOffset, publishSoon]);
+	/* A motion that will move the offset is a lift: the screen freezes its slack
+	 *  until `publishBox` ends it. Raised from `onStart` because on Android the
+	 *  store's frame comes after `onEnd`, when the offset already equals it
+	 *  (`shouldHoldLift`). `publishBox` clears it, as for a store-driven lift. */
+	const holdLift = useCallback(() => {
+		if (lifting.current) return;
+		lifting.current = true;
+		onLiftRef.current?.(true);
+	}, []);
+	/* The lift rides the keyboard frame by frame (`react-native-keyboard-controller`)
+	 *  instead of a fixed-duration tween started when the event lands. On iOS that
+	 *  is the same motion, now exact to the keyboard's frame; on Android the lift
+	 *  used to start after `keyboardDidShow` and now moves in step with the IME.
+	 *
+	 *  Each handler carries its own `"worklet"` directive: the library does not
+	 *  workletize them, and a plain callback is a launch crash on the UI runtime
+	 *  (`composer-worklets.test.ts` pins the directive). `[]` deps: the handlers
+	 *  touch only shared values, `holdLift` and `settleLift`, all stable (the last
+	 *  reads `reducedMotion` through a ref). The handlers themselves live in
+	 *  `keyboard-motion.ts`, where a Node test drives them. */
+	useKeyboardHandler(
+		keyboardMotionHandlers({
+			keyboardOffset,
+			motionActive,
+			cancelAnimation,
+			runOnJS,
+			holdLift,
+			settleLift,
+		}),
+		[],
+	);
 	useEffect(() => {
 		progress.value = withTiming(presentation.expanded ? 1 : 0, {
 			duration: reducedMotion
 				? 0
 				: keyboardVisible
 					? keyboardDuration.current
-					: 200,
+					: COMPOSER_MORPH_MS,
+			/* The keyboard's own timing keeps the library curve it always had; the
+			 *  scroll-driven morph takes the spec's. Reduced motion is instant. */
+			...(keyboardVisible ? {} : { easing: MORPH_EASING }),
 		});
 	}, [presentation.expanded, reducedMotion, keyboardVisible, progress]);
 	useEffect(() => {
@@ -1186,9 +1447,16 @@ export const Composer = ({
 	 *  20 pt-inset tablet) as an off-scale step — the same split `dialog.tsx`
 	 *  makes. The painted position is unchanged: carrier padding + this margin is
 	 *  the old `inset + 8`, and with the keyboard up the carrier pays nothing. */
-	const dockMotion = useAnimatedStyle(() => ({
-		marginBottom: keyboardOffset.value + 8,
-	}));
+	/* The side margin rides the shell's `progress`: the scroll-made pill is inset
+	 *  `COMPOSER_PILL_MARGIN`, the card `COMPOSER_CARD_MARGIN`. Short landscape's
+	 *  pill is its resting form and keeps the card's margin (`pillMargin`). */
+	const pillMargin =
+		compact === null ? COMPOSER_PILL_MARGIN : COMPOSER_CARD_MARGIN;
+	/* Longhand margins from one worklet (`dockMotionStyle`, review W2): the
+	 *  `marginHorizontal` shorthand this was never reached the DOM on web. */
+	const dockMotion = useAnimatedStyle(() =>
+		dockMotionStyle(progress.value, keyboardOffset.value, pillMargin),
+	);
 	const dockInset = keyboardVisible ? 0 : Math.max(0, bottomInset ?? 0);
 
 	const dangerInk = useTokenColor("danger");
@@ -1445,6 +1713,24 @@ export const Composer = ({
 		if (noticeKey === "|") return;
 		extrasScrollRef.current?.scrollTo({ y: 0, animated: false });
 	}, [noticeKey]);
+	/* The `$skill` tray is the extras' LAST child, so in the capped (compact)
+	 *  scroller it can open below the fold. Declared AFTER the notice reset so a
+	 *  commit that does both ends on the tray: the reader is typing into it. The
+	 *  decision is `shouldRevealSkillTray`; a rows-grew commit also arms
+	 *  `revealOnGrowth`, because the scroller has not laid the new rows out yet
+	 *  when this effect runs and would scroll to the OLD end. */
+	const trayRows = skills?.rows.length ?? 0;
+	const trayCapped = extrasMaxHeight !== undefined;
+	const trayFrame = useRef<SkillTrayFrame>({ rows: 0, capped: false });
+	const revealOnGrowth = useRef(false);
+	useEffect(() => {
+		const next = { rows: trayRows, capped: trayCapped };
+		const reveal = shouldRevealSkillTray(trayFrame.current, next);
+		revealOnGrowth.current =
+			reveal && trayHeightCanChange(trayFrame.current.rows, trayRows);
+		trayFrame.current = next;
+		if (reveal) extrasScrollRef.current?.scrollToEnd({ animated: false });
+	}, [trayRows, trayCapped]);
 	const failureNotice =
 		feedback.retainedText !== null || feedback.errorText !== null ? (
 			<View
@@ -1535,7 +1821,14 @@ export const Composer = ({
 			    is read before the control that is pressed. */}
 			{images.length > 0 ? (
 				<View className="pb-2">
-					<ScrollView horizontal showsHorizontalScrollIndicator={false}>
+					{/* "handled": with the keyboard up (a field paste leaves it up) the
+					    first tap on a chip's remove badge dismissed the keyboard and only
+					    the second removed the chip (QA round 2, Q1). */}
+					<ScrollView
+						horizontal
+						showsHorizontalScrollIndicator={false}
+						keyboardShouldPersistTaps="handled"
+					>
 						<View className="flex-row gap-1.5">
 							{images.map((image, index) => (
 								<View key={`${index}-${image.mime_type}`} className="relative">
@@ -1647,6 +1940,17 @@ export const Composer = ({
 				>
 					{controls.disabledReason}
 				</Text>
+			) : null}
+			{/* The `$skill` list sits LAST in the extras, directly above the field it
+			    edits, and inside the card so the composer's geometry budget already
+			    accounts for its height (`extrasHeight`). */}
+			{skills && skills.rows.length > 0 ? (
+				<SkillTray
+					rows={skills.rows}
+					onPick={skills.onPick}
+					onHold={skills.onHold}
+					onRelease={skills.onRelease}
+				/>
 			) : null}
 		</>
 	);
@@ -1852,8 +2156,10 @@ export const Composer = ({
 	 *  resting height in one press (the operator: "shrinks back once cleared").
 	 *  The host's `onClearDraft` clears the unsent editor only — never a
 	 *  retained instruction, an uncertainty row or the queue (#206). */
+	/* Not in the scroll-made pill, whose field row is attach · text · mic · action:
+	 *  the ✕ returns with the card. */
 	const clearDraft =
-		onClearDraft && (draft.length > 0 || images.length > 0) ? (
+		!shrunkPill && onClearDraft && (draft.length > 0 || images.length > 0) ? (
 			<IconButton
 				accessibilityLabel={t("mobile.composer_input.clear_draft")}
 				accessibilityHint={t("mobile.composer_input.clear_draft_hint")}
@@ -1911,7 +2217,7 @@ export const Composer = ({
 				accessibilityLabel={micLabel(voice.phase)}
 				accessibilityHint={MIC_HINT[voice.phase]}
 				disabled={voice.phase === "transcribing"}
-				onPress={voice.press}
+				onPress={pressMic}
 				icon={({ color, size }) => <Mic color={color} size={size} />}
 				testID={CONTROL.composerMic}
 			/>
@@ -1924,7 +2230,7 @@ export const Composer = ({
 			<IconButton
 				accessibilityLabel={t("mobile.composer_input.voice.mic_setup")}
 				accessibilityHint={t("mobile.composer_input.voice.mic_setup_hint")}
-				onPress={voice.press}
+				onPress={pressMic}
 				icon={({ color, size }) => <Mic color={color} size={size} />}
 				testID={CONTROL.composerMic}
 			/>
@@ -1958,17 +2264,21 @@ export const Composer = ({
 			testID={CONTROL.composerPasteImage}
 		/>
 	) : null;
+	/* Web only: a native press on Attach proves the pick in flight is not on
+	 *  screen, and recovers it (`attachLocksWhilePicking`). */
+	const attachLocked = attaching && attachLocksWhilePicking(Platform.OS);
 	const attach = (
 		<Pressable
 			style={{ minWidth: TOUCH_FLOOR, minHeight: TOUCH_FLOOR }}
 			className="items-center justify-center"
 			accessibilityRole={ROLE.button}
 			accessibilityLabel="Attach an image"
-			accessibilityState={state({ busy: attaching, disabled: attaching })}
-			disabled={attaching}
+			accessibilityState={state({ busy: attaching, disabled: attachLocked })}
+			disabled={attachLocked}
 			/* Explicit reopen is the only re-admission point for a fresh choice;
 			 *  a stale latch from the previous open must not survive it. */
 			onPress={() => {
+				onAttachOpen?.();
 				attachmentHandoff.cancel();
 				setAttachSheetOpen(true);
 			}}
@@ -1982,60 +2292,59 @@ export const Composer = ({
 			</View>
 		</Pressable>
 	);
-	const actionCluster = (
-		<View className={COMPOSER_ACTION_CLUSTER}>
-			{controls.stopVisible ? (
-				<Pressable
-					accessibilityRole={ROLE.button}
-					accessibilityLabel="Stop the running turn"
-					accessibilityState={state({ busy: stopping })}
-					style={{ minWidth: TOUCH_FLOOR, minHeight: TOUCH_FLOOR }}
-					onPress={onStop}
-					testID={CONTROL.composerStop}
-				>
-					{/* A 44 pt `danger-wash` DISC one `gap-1` step from send (D-S5, the
-					 *  relay's stop): 4 pt disc to disc on iOS, 8 pt on the 48 pt floor
-					 *  where each 44 pt disc is centred in its 48 pt target (U-42).
-					 *  the bare "■" glyph floated ~30 pt from send and read as decoration.
-					 *  The wash is quiet enough not to compete with the accent send disc. */}
-					<View
-						className={cx(COMPOSER_DISC, "bg-danger-wash")}
-						style={{ opacity: stopping ? 0.6 : 1 }}
-					>
-						<Square size={14} color={dangerInk} fill={dangerInk} aria-hidden />
-					</View>
-				</Pressable>
-			) : null}
-			{/* The width is PINNED, whatever the label: a control that grows when it
-			    morphs moves everything after it, which on a phone means it moves under
-			    the thumb about to press it. */}
-			<Pressable
-				accessibilityRole={ROLE.button}
-				accessibilityLabel={controls.primary.accessibilityLabel}
-				/* Why the primary is dead, on the control itself: the visible
-				 *  sentence yields to the retained notice (D6), and a screen reader
-				 *  landing on a disabled Send should still hear the reason. */
-				accessibilityHint={
-					controls.primary.disabled
-						? (controls.disabledReason ?? undefined)
-						: undefined
-				}
-				style={{ minWidth: TOUCH_FLOOR, minHeight: TOUCH_FLOOR }}
-				accessibilityState={state({
-					disabled: controls.primary.disabled,
-					busy: controls.sending,
-				})}
-				disabled={controls.primary.disabled}
-				onPress={onSend}
-				testID={CONTROL.composerSend}
+	const stopButton = controls.stopVisible ? (
+		<Pressable
+			accessibilityRole={ROLE.button}
+			accessibilityLabel="Stop the running turn"
+			accessibilityState={state({ busy: stopping })}
+			style={{ minWidth: TOUCH_FLOOR, minHeight: TOUCH_FLOOR }}
+			onPress={onStop}
+			testID={CONTROL.composerStop}
+		>
+			{/* A 44 pt `danger-wash` DISC one `gap-1` step from send (D-S5, the
+			 *  relay's stop): 4 pt disc to disc on iOS, 8 pt on the 48 pt floor
+			 *  where each 44 pt disc is centred in its 48 pt target (U-42).
+			 *  the bare "■" glyph floated ~30 pt from send and read as decoration.
+			 *  The wash is quiet enough not to compete with the accent send disc. */}
+			<View
+				className={cx(COMPOSER_DISC, "bg-danger-wash")}
+				style={{ opacity: stopping ? 0.6 : 1 }}
 			>
-				<View
-					className={cx(
-						COMPOSER_DISC,
-						controls.primary.disabled ? "bg-sunken" : "bg-accent",
-					)}
-				>
-					{/* The disabled ink is the kit's own constant, not a local choice: this
+				<Square size={14} color={dangerInk} fill={dangerInk} aria-hidden />
+			</View>
+		</Pressable>
+	) : null;
+	/* The width is PINNED, whatever the label: a control that grows when it
+			    morphs moves everything after it, which on a phone means it moves under
+			    the thumb about to press it. */
+	const sendButton = (
+		<Pressable
+			accessibilityRole={ROLE.button}
+			accessibilityLabel={controls.primary.accessibilityLabel}
+			/* Why the primary is dead, on the control itself: the visible
+			 *  sentence yields to the retained notice (D6), and a screen reader
+			 *  landing on a disabled Send should still hear the reason. */
+			accessibilityHint={
+				controls.primary.disabled
+					? (controls.disabledReason ?? undefined)
+					: undefined
+			}
+			style={{ minWidth: TOUCH_FLOOR, minHeight: TOUCH_FLOOR }}
+			accessibilityState={state({
+				disabled: controls.primary.disabled,
+				busy: controls.sending,
+			})}
+			disabled={controls.primary.disabled}
+			onPress={onSend}
+			testID={CONTROL.composerSend}
+		>
+			<View
+				className={cx(
+					COMPOSER_DISC,
+					controls.primary.disabled ? "bg-sunken" : "bg-accent",
+				)}
+			>
+				{/* The disabled ink is the kit's own constant, not a local choice: this
 				    control is the only one in the app that hand-rolls the primary's
 				    disabled treatment instead of going through `Button`, and it was the
 				    one place still painting a disabled label in `ink-disabled` — 2.42:1 on
@@ -2044,20 +2353,37 @@ export const Composer = ({
 				    own stricter rule being missed: a label NAMES the action, so
 				    `CONTROL_DISABLED_INK` is `ink-dim` and `variants.test.ts` pins it. That
 				    is 5.02:1 light, 6.59:1 dark. */}
-					<Text
-						className={cx(
-							"text-body-sm font-medium",
-							controls.primary.disabled
-								? CONTROL_DISABLED_INK
-								: "text-on-accent",
-						)}
-					>
-						{controls.primary.label}
-					</Text>
-				</View>
-			</Pressable>
+				<Text
+					className={cx(
+						"text-body-sm font-medium",
+						controls.primary.disabled ? CONTROL_DISABLED_INK : "text-on-accent",
+					)}
+				>
+					{controls.primary.label}
+				</Text>
+			</View>
+		</Pressable>
+	);
+	const actionCluster = (
+		<View className={COMPOSER_ACTION_CLUSTER}>
+			{stopButton}
+			{sendButton}
 		</View>
 	);
+	/* The scroll-made pill's trailing action: Stop while a turn runs, Send only
+	 *  once there is something in the draft — never a dead Send disc beside an
+	 *  empty or whitespace-only field (the card's cluster keeps it for layout
+	 *  stability). A draft keeps Send at every text size: the reader typed it to
+	 *  send it. Attachments, dictation and
+	 *  notices pin the card, so this is never the pill's content for those. */
+	const pillSend = pillShowsSend(draft);
+	const pillAction =
+		stopButton !== null || pillSend ? (
+			<View className={COMPOSER_ACTION_CLUSTER}>
+				{stopButton}
+				{pillSend ? sendButton : null}
+			</View>
+		) : null;
 
 	/* The dictation row (design §2.5): a line that SPANS the composer, holding
 	    one height across recording, transcribing and the three outcome states, so
@@ -2126,44 +2452,23 @@ export const Composer = ({
 	/* One attach sheet instance, rendered once by the shell: the dock's two rows
 	 *  are layout, so the sheet must not be mounted twice. */
 	const attachSheet = (
-		<Sheet
+		<AttachSheet
 			visible={attachSheetOpen}
 			onClose={() => setAttachSheetOpen(false)}
 			onDismiss={attachmentHandoff.dismissed}
-			/* Keyed with the lower-case English it already shipped; Title-casing it
-			 * like the other `sheet_title.*` keys (visual audit D14) is a copy
-			 * decision left to design, not part of keying it. */
+			onHidden={attachmentHandoff.hidden}
+			/* Title case, like the Model and Effort sheets (#248; visual audit D14). */
 			title={t("mobile.session.sheet_title.attach")}
-			testID={SURFACE.attachSheet}
-		>
-			<View className="py-1">
-				{attachActions(Platform.OS === "web" ? "web" : "native").map(
-					(action) => (
-						<Pressable
-							key={action.source}
-							accessibilityRole={ROLE.button}
-							accessibilityLabel={action.label}
-							onPress={() => {
-								/* Closed first: the picker opens over a dismissed sheet, never
-								 *  under one — a system picker presented from behind a modal is
-								 *  how a cancel lands back on a sheet nobody reopened. */
-								setAttachSheetOpen(false);
-								// The handoff waits for native dismissal; state alone is not that acknowledgement.
-								attachmentHandoff.choose(
-									() => onAttach(action.source),
-									Platform.OS,
-								);
-							}}
-							testID={attachOptionId(action.source)}
-						>
-							<View className="min-h-11 flex-row items-center px-3">
-								<Text className="text-body-sm text-ink">{action.label}</Text>
-							</View>
-						</Pressable>
-					),
-				)}
-			</View>
-		</Sheet>
+			onChoose={(source) => {
+				/* Closed first: the picker opens over a dismissed sheet, never
+				 *  under one — a system picker presented from behind a modal is
+				 *  how a cancel lands back on a sheet nobody reopened. The sheet
+				 *  marks this close as a hand-off (no iOS exit animation). */
+				setAttachSheetOpen(false);
+				// The handoff waits for native dismissal; state alone is not that acknowledgement.
+				attachmentHandoff.choose(() => onAttach(source), Platform.OS);
+			}}
+		/>
 	);
 
 	const main = (
@@ -2185,11 +2490,37 @@ export const Composer = ({
 				style={{
 					minHeight: presentation.expanded
 						? COMPOSER_FIELD_BOX
-						: composerRestRow(TOUCH_FLOOR),
+						: shrunkPill
+							? composerPillRow(TOUCH_FLOOR, effectiveScale)
+							: composerRestRow(TOUCH_FLOOR),
 				}}
 			>
 				{presentation.expanded ? null : attach}
-				<View className="min-w-0 flex-1">
+				<View
+					className="min-w-0 flex-1"
+					/* While the pill stands the wrapper takes the row's full height (the
+					 *  field is one line, centred in it) so the tap catcher below covers
+					 *  the whole target, not just the 24 pt line. Same element in both
+					 *  states: only its style changes, so the field never remounts. */
+					style={
+						shrunkPill
+							? {
+									alignSelf: "stretch",
+									justifyContent: "center",
+									/* The room the "…" cue takes, so the first line wraps short of
+									 *  it instead of running under it. Only while the cue stands:
+									 *  a pill's draft cannot change without the card opening. */
+									...(pillCue
+										? {
+												paddingEnd: Math.ceil(
+													PILL_ELLIPSIS_CUE_PT * effectiveScale,
+												),
+											}
+										: null),
+								}
+							: undefined
+					}
+				>
 					<Textarea
 						label="Message"
 						hideLabel
@@ -2205,7 +2536,13 @@ export const Composer = ({
 						/* Eight body lines when the screen has them (TestFlight 836: the
 						 * old six-on-a-22-pt-ruler showed ~4); `maxHeightPx` below holds
 						 * it under the header/keyboard budget. */
-						maxLines={compactSingle ? 1 : COMPOSER_FIELD_MAX_LINES}
+						maxLines={
+							compactSingle || shrunkPill ? 1 : COMPOSER_FIELD_MAX_LINES
+						}
+						/* The pill clips the field to exactly ONE line (review R3/W3): a
+						 *  box taller than the line showed the top of line two in its own
+						 *  padding, and a cap under the line cut the glyphs at 200 %. */
+						singleLine={shrunkPill}
 						/* The field's own box is the dock's ruler: the 48 pt resting row
 						 * and 44 pt in both open rows, so 56 = 4 + 48 + 4 and
 						 * 112 = 12 + 44 + 4 + 44 + 8 hold
@@ -2223,14 +2560,120 @@ export const Composer = ({
 							if (canSendRef.current) sendRef.current();
 						}}
 						fieldRef={inputRef}
-						onFocus={() => setFocused(true)}
-						onBlur={() => setFocused(false)}
+						onPasteImages={onPasteImages}
+						onFocus={() => {
+							setFocused(true);
+							skills?.onFocus();
+						}}
+						onBlur={() => {
+							setFocused(false);
+							setRestoreCaretAt(null);
+							skills?.onBlur();
+						}}
+						onSelectionChange={skills?.onSelectionChange}
+						selection={skills?.selection}
+						/* The pill holds the caret at the start, a tap that opens the card
+						 *  puts it at the end (`fieldSelectionOverride`, review R3). Spread
+						 *  AFTER the skills pass-through so that stays the field's default;
+						 *  the override is released by the report that confirms it. */
+						{...(selectionOverride === null
+							? null
+							: {
+									selection: selectionOverride,
+									onSelectionChange: releaseRestoredCaret,
+								})}
 						testID={CONTROL.composerInput}
 					/>
+					{/* THE PILL'S CUES (design D1/D5). Both are painted OVER the one field
+					 *  and touch nothing of it: not its value (a native input shows its
+					 *  placeholder only for an empty one, and the draft is never
+					 *  normalised), not its mount. `pointerEvents: "none"` (a style:
+					 *  react-native-web warns on the prop) so a tap goes to
+					 *  the catcher below, `aria-hidden` because the field already carries
+					 *  the draft and the "…" is a typographic glyph, not copy. */}
+					{pillCue ? (
+						<View
+							aria-hidden
+							style={{
+								pointerEvents: "none",
+								position: "absolute",
+								top: 0,
+								bottom: 0,
+								end: 0,
+								/* The glyph sits at the LEADING edge of its reserve, beside the
+								 *  line it cuts off, not at the far end beside Send (D2-1). The
+								 *  box is as wide as the room the field keeps clear, so the
+								 *  glyph can never reach past it. */
+								width: Math.ceil(PILL_ELLIPSIS_CUE_PT * effectiveScale),
+								alignItems: "flex-start",
+								justifyContent: "center",
+							}}
+						>
+							<Text className="text-body text-ink-dim" numberOfLines={1}>
+								{"\u2026"}
+							</Text>
+						</View>
+					) : null}
+					{pillBlank ? (
+						<View
+							aria-hidden
+							style={{
+								pointerEvents: "none",
+								position: "absolute",
+								top: 0,
+								bottom: 0,
+								start: 0,
+								end: 0,
+								justifyContent: "center",
+							}}
+						>
+							{/* The field's own placeholder colour and line, so a blank draft
+							 *  reads as the resting field. */}
+							<Text className="text-body text-ink-muted" numberOfLines={1}>
+								{composerCopy().placeholder}
+							</Text>
+						</View>
+					) : null}
+					{/* THE PILL'S TAP TARGET. The field is clipped to one line (24 pt at
+					 *  100 %), which is under the 44 pt floor, so a catcher covers the
+					 *  whole field row while the pill stands: a tap focuses the field
+					 *  (the card opens, the keyboard comes up) with the caret at the
+					 *  END of the draft. It is a sibling AFTER the one Textarea, so the
+					 *  field stays mounted across card and pill. Compaction is off for
+					 *  a screen reader, so this never stands in front of one. Its edges are
+					 *  logical (`start`/`end`): it is a full-bleed cover, not an anchor, so it
+					 *  spans the field row in either direction. */}
+					{shrunkPill ? (
+						<Pressable
+							accessible={false}
+							focusable={false}
+							style={{
+								position: "absolute",
+								top: 0,
+								bottom: 0,
+								start: 0,
+								end: 0,
+							}}
+							onPress={() => {
+								setRestoreCaretAt(draft.length);
+								inputRef.current?.focus();
+							}}
+							testID={CONTROL.composerPillField}
+						/>
+					) : null}
 				</View>
 				{clearDraft}
 				{presentation.expanded ? null : (
-					<View className="flex-row items-center">{mic ?? actionCluster}</View>
+					<View className="flex-row items-center">
+						{shrunkPill ? (
+							<>
+								{mic}
+								{pillAction}
+							</>
+						) : (
+							(mic ?? actionCluster)
+						)}
+					</View>
 				)}
 			</View>
 			{dictationRow}
@@ -2258,7 +2701,9 @@ export const Composer = ({
 							 *  tap-to-toggle reader taps again (UX round 2, U7). It still
 							 *  MOVES there from the dictation row, never copied. */}
 							{trailing === "finish" ? dictationFinish : mic}
-							{actionCluster}
+							{/* No dead Send under a take that began on the pill: the mic (or
+							 *  ✓) takes the right-most slot, where the finger already is. */}
+							{dropSendForDictation ? null : actionCluster}
 						</>
 					) : (
 						<>
@@ -2307,7 +2752,7 @@ export const Composer = ({
 	const dock = (
 		<Animated.View
 			ref={rootRef}
-			style={[{ marginHorizontal: 12 }, dockMotion]}
+			style={dockMotion}
 			onLayout={(event) => {
 				onLayout?.(event);
 				/* The dock's own width, for the short-landscape fit: the strip that
@@ -2403,9 +2848,13 @@ export const Composer = ({
 						style={{ flexGrow: 0, flexShrink: 0, maxHeight: extrasMaxHeight }}
 						showsVerticalScrollIndicator={Platform.OS !== "web"}
 						scrollEnabled={extrasMaxHeight !== undefined}
-						onContentSizeChange={(_width, height) =>
-							setExtrasHeight(Math.round(height))
-						}
+						onContentSizeChange={(_width, height) => {
+							setExtrasHeight(Math.round(height));
+							if (revealOnGrowth.current) {
+								revealOnGrowth.current = false;
+								extrasScrollRef.current?.scrollToEnd({ animated: false });
+							}
+						}}
 						nestedScrollEnabled
 						keyboardShouldPersistTaps="handled"
 					>
@@ -2464,6 +2913,19 @@ export const Composer = ({
 				title={t("mobile.chrome.composer.more")}
 				testID={CONTROL.composerContextSheet}
 			>
+				{identityRow ? (
+					<ContextRow
+						label={t("mobile.chrome.composer.row_identity")}
+						value={identityRow.value}
+						accessibilityLabel={identityRow.accessibilityLabel}
+						disabled={identityRow.disabled}
+						onPress={() => {
+							setContextOpen(false);
+							identityRow.onPress();
+						}}
+						testID={CONTROL.composerContextIdentity}
+					/>
+				) : null}
 				{/* The folder and run-settings controls are icons on the card's row
 				 *  (issue #325); each is a row HERE only while it is not on the row —
 				 *  the zone was too short, or short landscape's strip has no zone — so

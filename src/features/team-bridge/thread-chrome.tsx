@@ -172,6 +172,9 @@ export type BridgeComposerFieldProps = {
 	sendLabel: string;
 	sendDisabled: boolean;
 	onSend: () => void;
+	/** Focus the field when it mounts: the reply thread opened from the
+	 *  actions sheet's "Reply in thread" lands ready to type. */
+	autoFocus?: boolean;
 	/** The shell's fill: the host's `useChromeGlass()` (iOS 26, Reduce
 	 *  Transparency off), as the agent composer takes it. Absent is solid —
 	 *  exactly the shell as it was before glass. */
@@ -228,6 +231,7 @@ export function BridgeComposerFieldView({
 	sendDisabled,
 	onSend,
 	glass = false,
+	autoFocus = false,
 }: BridgeComposerFieldProps & {
 	focused: boolean;
 	onFocus?: () => void;
@@ -376,6 +380,7 @@ export function BridgeComposerFieldView({
 					selection={selection}
 					disabled={sending}
 					onFocus={onFocus}
+					autoFocus={autoFocus}
 					onBlur={onBlur}
 					testID={CONTROL.teamBridgeMessageInput}
 				/>

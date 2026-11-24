@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { TYPE_STEPS } from "@/ui/tokens.gen";
+import { PALETTE, TYPE_STEPS } from "@/ui/tokens.gen";
 import {
 	alertActionClasses,
 	alertActionLayout,
@@ -11,7 +11,9 @@ import {
 	buttonClasses,
 	COMPOSER_FIELD_MAX_LINES,
 	chipClasses,
+	choiceRowClasses,
 	emptyStateClasses,
+	emptyStateScrollingClasses,
 	FIELD_BORDER_Y,
 	fieldBoxHeight,
 	fieldClasses,
@@ -21,6 +23,7 @@ import {
 	segmentedItemClasses,
 	segmentedLabelClasses,
 	segmentedLabelWeight,
+	singleLineFieldStyle,
 	skeletonBarClasses,
 	skeletonClasses,
 	TEXTAREA_MAX_PX,
@@ -259,9 +262,32 @@ describe("segmented control", () => {
 	});
 });
 
+/** Formatting-tolerant: the component's choice, not its line breaks. */
+const PICKS_SCROLLING = /scrolling\s*\?\s*emptyStateScrollingClasses/;
+
 describe("empty state", () => {
 	it("is not an error: no semantic danger binding anywhere in it", () => {
 		expect(emptyStateClasses).not.toMatch(/danger|warning/);
+	});
+
+	it("inside a scrolling body, grows without a zero basis (#321)", () => {
+		/* `flex-1` is a ZERO basis: a content-sized parent (a scroll body is one)
+		 *  offers it nothing, and its centred block spills over its neighbours.
+		 *  `grow` keeps the content height as the floor. */
+		expect(emptyStateScrollingClasses.split(" ")).toContain("grow");
+		expect(emptyStateScrollingClasses.split(" ")).not.toContain("flex-1");
+		/* A tighter vertical pad than the default: the pad is part of the floor,
+		 *  and at 320 x 568 / 100 % `py-10` made the block 276.6 pt in a 233.1 pt
+		 *  region, so it stopped centring and "Show all" slid 3.5 pt under the
+		 *  footer rule (design review D2). `py-4` makes it 228.6 pt. */
+		expect(emptyStateScrollingClasses).toBe(
+			emptyStateClasses.replace("flex-1", "grow").replace("py-10", "py-4"),
+		);
+		const component = readFileSync(
+			new URL("./components/empty-state.tsx", import.meta.url),
+			"utf8",
+		);
+		expect(PICKS_SCROLLING.test(component)).toBe(true);
 	});
 });
 
@@ -459,5 +485,109 @@ describe("icon button", () => {
 		expect(
 			iconButtonClasses({ disabled: true }, { active: true }),
 		).not.toContain("bg-row-selected");
+	});
+});
+
+describe("a field clipped to one line (composer pill, R3/W3)", () => {
+	it("is one line tall at the reader's scale, flush, and nothing else moves it", () => {
+		for (const scale of [1, 1.5, 2]) {
+			const line = 24 * scale;
+			expect(singleLineFieldStyle(line)).toEqual({
+				height: line,
+				minHeight: line,
+				maxHeight: line,
+				paddingVertical: 0,
+				overflow: "hidden",
+			});
+		}
+	});
+
+	it("exists because the one-line cap is under the line it must hold", () => {
+		/* maxLines 1 caps the box at 22 x scale; the line is 24 x scale plus 16 of
+		 *  padding. At 200 % that is 44 against 64: the cut the web frame showed. */
+		const cap = textareaContentCap({
+			maxLines: 1,
+			scale: 2,
+			bodyLine: 24,
+			pad: 16,
+		});
+		expect(cap).toBe(44);
+		expect(cap).toBeLessThan(24 * 2 + 16);
+	});
+});
+
+describe("ask option row (ask-panel parity N2)", () => {
+	it("steps the fill and thickens the edge on selection, and never fades by opacity", () => {
+		const rest = choiceRowClasses();
+		const pressed = choiceRowClasses({ pressed: true });
+		const selected = choiceRowClasses({ selected: true });
+		const disabled = choiceRowClasses({ disabled: true });
+		expect(rest.row).toContain("bg-accent-wash");
+		expect(rest.edge).toContain("w-0.5");
+		expect(pressed.row).toContain("bg-accent-muted");
+		expect(selected.row).toContain("bg-accent-muted");
+		expect(selected.edge).toContain("w-1");
+		/* An empty ring at rest (a square for multi-select) that fills when
+		 * selected, and a semibold label: selection is shape and weight too. */
+		expect(rest.indicator).toContain("rounded-full");
+		expect(rest.indicator).not.toContain("bg-accent");
+		expect(choiceRowClasses({ multi: true }).indicator).toContain("rounded-sm");
+		expect(selected.indicator).toContain("bg-accent");
+		expect(selected.label).toContain("font-semibold");
+		expect(rest.label).not.toContain("font-semibold");
+		/* Disabled is a colour change (components.md § 0), never opacity. */
+		expect(disabled.row).toContain("bg-sunken");
+		expect(disabled.label).toBe("text-ink-disabled");
+		for (const state of [rest, pressed, selected, disabled]) {
+			expect(`${state.row} ${state.edge} ${state.label}`).not.toContain(
+				"opacity",
+			);
+		}
+		/* A selected row that goes disabled mid-send still shows the choice. */
+		const selectedBusy = choiceRowClasses({ selected: true, disabled: true });
+		expect(selectedBusy.row).toContain("bg-accent-muted");
+		expect(selectedBusy.edge).toContain("bg-accent");
+	});
+
+	it("keeps every text pair on the row at 4.5:1 or better, in both themes", () => {
+		/* The numbers the PR states: ink on the two tints, the description's
+		 * `ink-dim`, the ring, and the filled disc with its check. */
+		const channel = (hex: string, at: number) => {
+			const c = Number.parseInt(hex.slice(at, at + 2), 16) / 255;
+			return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+		};
+		const luminance = (hex: string) =>
+			0.2126 * channel(hex, 1) +
+			0.7152 * channel(hex, 3) +
+			0.0722 * channel(hex, 5);
+		const ratio = (a: string, b: string) => {
+			const hi = Math.max(luminance(a), luminance(b));
+			const lo = Math.min(luminance(a), luminance(b));
+			return (hi + 0.05) / (lo + 0.05);
+		};
+		for (const theme of ["light", "dark"] as const) {
+			const palette = PALETTE[theme];
+			for (const ground of ["accent-wash", "accent-muted"] as const) {
+				expect(ratio(palette.ink, palette[ground])).toBeGreaterThanOrEqual(4.5);
+				expect(
+					ratio(palette["ink-dim"], palette[ground]),
+				).toBeGreaterThanOrEqual(4.5);
+			}
+			/* The empty ring against both fills (3:1 non-text floor; muted is the
+			 * pressed state), the selected disc against the selected fill, and the
+			 * check on the disc. */
+			expect(
+				ratio(palette["border-control"], palette["accent-wash"]),
+			).toBeGreaterThanOrEqual(3);
+			expect(
+				ratio(palette["border-control"], palette["accent-muted"]),
+			).toBeGreaterThanOrEqual(3);
+			expect(
+				ratio(palette.accent, palette["accent-muted"]),
+			).toBeGreaterThanOrEqual(3);
+			expect(
+				ratio(palette["on-accent"], palette.accent),
+			).toBeGreaterThanOrEqual(4.5);
+		}
 	});
 });

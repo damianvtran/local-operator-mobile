@@ -1,0 +1,88 @@
+{
+ "record_kind": "i18n-audit",
+ "audit_id": "ondev-es-cf2fe6",
+ "slice": "on-device",
+ "locale": "es",
+ "namespace": "mobile.sidebar",
+ "audit_date": "2026-11-21",
+ "key_count": 2,
+ "keys_audited": [
+  "mobile.sidebar.row.on_device",
+  "mobile.sidebar.row_label.join"
+ ],
+ "translator_session": "6029da975dc7",
+ "auditor": {
+  "agent": "translation-auditor (team lopdev)",
+  "session": "cf2fe68da622",
+  "model": "anthropic/claude-opus-5-5",
+  "actual_model_source": "harness system prompt 'Model:' line for this session; no fallback observed",
+  "independent_from_translator_session": true
+ },
+ "draft": {
+  "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/on-device/draft-es.json",
+  "sha256": "997a975747dbf81930803af8890f648c5a714ea0f4d271dc76f836c215169d9f",
+  "sha256_verified": true
+ },
+ "brief": {
+  "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/on-device-brief.json",
+  "sha256": "8ca29c50fb6cca5f329510b0ae209e2dd1372562b9ecb330307dc1de22df2bc2",
+  "sha256_verified": true
+ },
+ "brief_sha256": "8ca29c50fb6cca5f329510b0ae209e2dd1372562b9ecb330307dc1de22df2bc2",
+ "source_commit": "d1ed0e2a82615f53ee18fd3ea2ad6d51a8308a35",
+ "source_branch": "feat/i18n-on-device-label",
+ "read_route": "ordinary git/worktree file reads (python open/json, shell cat) of the draft, brief and worktree catalogues/source; the core read_public_copy route refuses mobile src/i18n/** paths and the context sidecars are nested JSON and not routable, so it was not used; no receipt claimed. Repo not modified.",
+ "input_hashes": {
+  "en": {
+   "path": "src/i18n/catalogues/en/mobile.sidebar.json",
+   "sha256": "fa75c73f7477ebedc0b22f8aa05b9470d874c5284d558f3864a0464e531734b9"
+  },
+  "context": {
+   "path": "src/i18n/catalogues/en/mobile.sidebar.context.json",
+   "sha256": "71e6533736c8accd336298da920d83f777933b1d4b5cc30dacf9fa11818e01e1"
+  },
+  "es_shipped": {
+   "path": "local-operator-mobile@d1ed0e2a:src/i18n/catalogues/es/mobile.sidebar.json",
+   "sha256": "79b571f0e5f695c2e29988161257c834fc58505afa81f5c57e927a34ea91d068"
+  },
+  "es_shipped_reference": {
+   "path": "local-operator-mobile@d1ed0e2a:src/i18n/catalogues/es/mobile.session.json",
+   "sha256": "b269c4831fa3979435e24f96b990fdf8455081f08e01bc2607d65d8ebf4e5f07"
+  }
+ },
+ "checks": {
+  "keys_missing": 0,
+  "keys_extra": 0,
+  "brief_vs_en_mismatches": 0,
+  "placeholder_brace_sets": "exact for both keys",
+  "parse_message": "2/2 parse with repo parseMessage (src/i18n/messages.ts @ d1ed0e2a) and formatMessage renders the sample",
+  "negative_controls": "parseMessage rejected unterminated 'Sur {device'",
+  "nfc": "pass",
+  "bidi_control_chars": 0,
+  "trailing_full_stop": "none",
+  "join_order_first_before_second": true,
+  "join_separator": ", ",
+  "consistency_row_label_on_device": "row.on_device equals shipped row_label.on_device modulo sentence-case first letter",
+  "consistency_withheld_reasons_join": "byte-identical",
+  "width_over_hint": [],
+  "repo_validator": "not run (draft is outside the repo; repo read-only for this audit)"
+ },
+ "redaction_marker_hits": {
+  "draft": 0,
+  "english_sources": 0
+ },
+ "verdict": "passed",
+ "current_report_verdict": {
+  "status": "passed",
+  "unresolved_blocker_major_count": 0,
+  "finding_ids": [],
+  "verdict_reason": "both keys accurate, idiomatic, consistent with shipped fragments; placeholders exact; no findings"
+ },
+ "findings": [],
+ "artifacts": {
+  "report": "report.md",
+  "audit_log": "audit.log"
+ },
+ "audit_notes_not_execution_log": "report.md is the auditor's notes; audit.log carries the commands and their printed output",
+ "ledger_appended": false
+}

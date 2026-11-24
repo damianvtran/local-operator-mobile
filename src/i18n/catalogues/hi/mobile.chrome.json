@@ -31,5 +31,6 @@
 	"mobile.chrome.composer.run_settings": "{model}, {effort}",
 	"mobile.chrome.composer.run_settings_hint": "मॉडल और प्रयास चुनें",
 	"mobile.chrome.composer.run_settings_title": "मॉडल और प्रयास",
-	"mobile.chrome.composer.row_folder": "फ़ोल्डर"
+	"mobile.chrome.composer.row_folder": "फ़ोल्डर",
+	"mobile.chrome.composer.row_identity": "एजेंट या टीम"
 }

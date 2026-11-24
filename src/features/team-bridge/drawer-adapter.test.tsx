@@ -213,8 +213,15 @@ vi.mock("@/features/sessions/conversations-drawer", () => ({
 	},
 }));
 
-const { MODE_BADGE_INSET, WorkspaceDrawerProvider, useWorkspaceDrawer } =
-	await import("@/features/sessions/workspace-drawer");
+const { WorkspaceDrawerProvider } = await import(
+	"@/features/sessions/workspace-drawer"
+);
+const { useWorkspaceDrawer } = await import(
+	"@/features/sessions/workspace-drawer-context"
+);
+const { MODE_BADGE_INSET } = await import(
+	"@/features/sessions/workspace-mode-bar"
+);
 const {
 	BridgeThreadDrawerButton,
 	bridgeDrawerBadge,
@@ -580,8 +587,13 @@ describe("the mode row: one row at normal text, wraps at large text, shares the 
 		/* U2-1/U2-2: the count is an out-of-flow corner overlay, a sibling of
 		 *  the segment's Pressable inside its group — never in the segment's
 		 *  content row, where its 36 pt wrapped "Team Bridge" at 320 pt. */
+		/* The badge overlay, not the invisible label measurer (#324), which
+		 *  is the track's other out-of-flow, untouchable child. */
 		const overlay = host.views.find(
-			(v) => v.pointerEvents === "none" && classes(v).includes("absolute"),
+			(v) =>
+				v.pointerEvents === "none" &&
+				classes(v).includes("absolute") &&
+				classes(v).includes("rounded-full"),
 		);
 		expect(classes(overlay)).toEqual(
 			expect.arrayContaining(["absolute", "rounded-full", "border-2"]),
@@ -628,7 +640,10 @@ describe("the mode row: one row at normal text, wraps at large text, shares the 
 		await press(CONTROL.workspaceDrawerTeamBridge);
 		const overlay = host.views
 			.filter(
-				(v) => v.pointerEvents === "none" && classes(v).includes("absolute"),
+				(v) =>
+					v.pointerEvents === "none" &&
+					classes(v).includes("absolute") &&
+					classes(v).includes("rounded-full"),
 			)
 			.at(-1);
 		expect(classes(overlay)).toContain("border-elevated");

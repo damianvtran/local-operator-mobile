@@ -31,5 +31,6 @@
 	"mobile.chrome.composer.run_settings": "{model}, {effort}",
 	"mobile.chrome.composer.run_settings_hint": "Choisir le modèle et l’effort",
 	"mobile.chrome.composer.run_settings_title": "Modèle et effort",
-	"mobile.chrome.composer.row_folder": "Dossier"
+	"mobile.chrome.composer.row_folder": "Dossier",
+	"mobile.chrome.composer.row_identity": "Agent ou équipe"
 }

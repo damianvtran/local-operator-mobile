@@ -31,5 +31,6 @@
 	"mobile.chrome.composer.run_settings": "{model}، {effort}",
 	"mobile.chrome.composer.run_settings_hint": "ماڈل اور استدلال کی شدت منتخب کریں",
 	"mobile.chrome.composer.run_settings_title": "ماڈل اور استدلال کی شدت",
-	"mobile.chrome.composer.row_folder": "فولڈر"
+	"mobile.chrome.composer.row_folder": "فولڈر",
+	"mobile.chrome.composer.row_identity": "ایجنٹ یا ٹیم"
 }

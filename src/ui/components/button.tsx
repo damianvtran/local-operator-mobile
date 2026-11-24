@@ -51,6 +51,17 @@ export type ButtonProps = {
 	trailingIcon?: (props: { color: string; size: number }) => ReactNode;
 	loading?: boolean;
 	disabled?: boolean;
+	/** Take the height the CONTAINER gives, instead of hugging its own label:
+	 *  the target and the visible box grow into it. Two callers need this: two
+	 *  buttons side by side must read as one pair even when one label wraps and
+	 *  the other does not (the ask footer), and a button must match a neighbour
+	 *  whose height follows the reader's type — the Past screen's Search beside
+	 *  its field, whose caller sizes the container to the measured field (design
+	 *  review round 1, D2). `docs/design/components.md` § 2, "Fill". Opt-in;
+	 *  every other button keeps its own height. The floor box grows too: on
+	 *  Android and the web the touch floor (48) exceeds `md`'s 44, so an `md`
+	 *  button's target IS that box. */
+	fill?: boolean;
 	/** Short visual labels may need a more descriptive screen-reader name. */
 	accessibilityLabel?: string;
 	accessibilityHint?: string;
@@ -65,6 +76,9 @@ export type ButtonProps = {
 	 * and a shared default would put the same one on every button of a screen. */
 	testID: string;
 };
+
+/** `fill`: grow along the container's main axis (a column, so its height). */
+const FILL = { flexGrow: 1 } as const;
 
 const ICON_SIZE: Record<ButtonSize, number> = {
 	sm: 14,
@@ -85,6 +99,7 @@ export const Button = ({
 	trailingIcon,
 	loading = false,
 	disabled = false,
+	fill = false,
 	accessibilityLabel,
 	accessibilityHint,
 	expanded,
@@ -131,8 +146,14 @@ export const Button = ({
 			 *  hit areas must not overlap (`docs/design/components.md` § 0.1). */
 			style={
 				visualHeight < TOUCH_FLOOR
-					? { minHeight: TOUCH_FLOOR, justifyContent: "center" }
-					: undefined
+					? {
+							minHeight: TOUCH_FLOOR,
+							justifyContent: "center",
+							...(fill ? FILL : undefined),
+						}
+					: fill
+						? FILL
+						: undefined
 			}
 			testID={testID}
 			disabled={disabled}
@@ -145,7 +166,10 @@ export const Button = ({
 			}}
 		>
 			{({ pressed }) => (
-				<View className={buttonClasses(variant, size, { pressed, disabled })}>
+				<View
+					className={buttonClasses(variant, size, { pressed, disabled })}
+					style={fill ? FILL : undefined}
+				>
 					{loading ? (
 						<ActivityIndicator
 							size="small"

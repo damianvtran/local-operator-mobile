@@ -110,4 +110,91 @@ describe("native picker cache ownership", () => {
 			"new owner's image",
 		);
 	});
+	/* PR #327 review M1: an unbounded drain let ONE never-settling picker hold
+	 *  every startup admission behind it for the life of the process. */
+	it("bounds the drain on a picker that never settles, once per operation", async () => {
+		vi.useFakeTimers();
+		try {
+			const privacy = new PickerPrivacy(100);
+			void privacy.run(() => new Promise<never>(() => {}));
+			let drained = false;
+			const draining = privacy.drain().then(() => {
+				drained = true;
+			});
+			await vi.advanceTimersByTimeAsync(99);
+			expect(drained).toBe(false);
+			await vi.advanceTimersByTimeAsync(1);
+			await draining;
+			expect(drained).toBe(true);
+			// Abandoned: a later drain does not pay the bound again.
+			let again = false;
+			const next = privacy.drain().then(() => {
+				again = true;
+			});
+			await vi.advanceTimersByTimeAsync(0);
+			expect(again).toBe(true);
+			await next;
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+	it("still waits, within the bound, for a picker started after an abandoned one", async () => {
+		vi.useFakeTimers();
+		try {
+			const privacy = new PickerPrivacy(100);
+			void privacy.run(() => new Promise<never>(() => {}));
+			const first = privacy.drain();
+			await vi.advanceTimersByTimeAsync(100);
+			await first;
+			let release = () => {};
+			const picked = privacy.run(
+				() =>
+					new Promise<string>((resolve) => {
+						release = () => resolve("image");
+					}),
+			);
+			let drained = false;
+			const draining = privacy.drain().then(() => {
+				drained = true;
+			});
+			await vi.advanceTimersByTimeAsync(50);
+			expect(drained).toBe(false);
+			release();
+			await draining;
+			expect(await picked).toBe("image");
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+	it("refuses a withdrawn picker's result that lands after the bound, and still removes its cache copy", async () => {
+		vi.useFakeTimers();
+		try {
+			const privacy = new PickerPrivacy(100);
+			let land = () => {};
+			const remove = vi.fn(async () => {});
+			const selected = privacy.run(async () => {
+				await new Promise<void>((resolve) => {
+					land = resolve;
+				});
+				// The real native path: every result is consumed, and consuming
+				// deletes this operation's own copy in `finally`.
+				return consumePickerAsset(
+					{ uri: `${cache}ImagePicker/late.jpg`, base64: "/9j/late" },
+					remove,
+				);
+			});
+			const refused = expect(selected).rejects.toThrow("could not be read");
+			privacy.withdraw();
+			const draining = privacy.drain();
+			await vi.advanceTimersByTimeAsync(100);
+			await draining;
+			expect(remove).not.toHaveBeenCalled();
+			privacy.reopen();
+			land();
+			await refused;
+			expect(remove).toHaveBeenCalledWith(`${cache}ImagePicker/late.jpg`);
+		} finally {
+			vi.useRealTimers();
+		}
+	});
 });

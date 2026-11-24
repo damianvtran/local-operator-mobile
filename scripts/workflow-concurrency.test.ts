@@ -958,3 +958,92 @@ describe("e2e.yml: the manual lane carries its proof", () => {
 		).toBe(false);
 	});
 });
+
+/* -------------------------------------------------------------------------- */
+/* Reusable workflow caller/callee/sibling lane distinctness                  */
+/* -------------------------------------------------------------------------- */
+
+describe("reusable workflow concurrency distinctness (merge-gate & release)", () => {
+	it("keeps merge-gate.yml and its ios/android/e2e callees in disjoint groups on PR and dispatch refs", () => {
+		/* Under `workflow_call`, GitHub evaluates `github.workflow` inside EVERY
+		 * callee to the CALLER's workflow name ("Merge Gate") and `github.event_name`
+		 * to the caller's event (`pull_request` or `workflow_dispatch`). `lookup()`
+		 * above already models `github.workflow` as the single constant `"WORKFLOW"`,
+		 * so rendering caller and callees at the same RunIdentity directly tests
+		 * whether any pair would deadlock (caller == callee) or cancel a sibling
+		 * mid-flight (callee A == callee B). */
+		const names = ["merge-gate.yml", "ios.yml", "android.yml", "e2e.yml"];
+		const byName = new Map(
+			names.map((file) => {
+				const found = workflows.find((workflow) => workflow.file === file);
+				if (!found?.group) {
+					throw new Error(`${file} is missing its concurrency group`);
+				}
+				return [file, found] as const;
+			}),
+		);
+
+		const caller = byName.get("merge-gate.yml");
+		expect(
+			isFalsy(
+				cancelValue(caller?.cancelInProgress ?? "", {
+					event: "pull_request",
+					ref: "refs/pull/42/merge",
+					proof: null,
+				}),
+			),
+		).toBe(true);
+
+		for (const run of [
+			{
+				event: "pull_request",
+				ref: "refs/pull/42/merge",
+				proof: null,
+			},
+			{
+				event: "workflow_dispatch",
+				ref: MAIN_REF,
+				proof: null,
+			},
+		] satisfies RunIdentity[]) {
+			const rendered = names.map((file) => ({
+				file,
+				group: lane(byName.get(file)?.group ?? "", run),
+			}));
+			const distinct = new Set(rendered.map((entry) => entry.group));
+			expect(
+				distinct.size,
+				`collision under ${run.event}@${run.ref}: ${JSON.stringify(rendered)}`,
+			).toBe(names.length);
+		}
+
+		// Negative control: if two callees keyed on `github.workflow` instead of
+		// their literal prefix, they would render to the exact same lane when
+		// called by `merge-gate.yml` (`github.workflow === "WORKFLOW"`).
+		const expr = (body: string) => ["${{", body, "}}"].join(" ");
+		const brokenIos = `${expr("github.workflow")}-${expr("github.event_name")}-${expr("github.ref")}`;
+		const brokenAndroid = `${expr("github.workflow")}-${expr("github.event_name")}-${expr("github.ref")}`;
+		const sampleRun: RunIdentity = {
+			event: "pull_request",
+			ref: "refs/pull/42/merge",
+			proof: null,
+		};
+		expect(lane(brokenIos, sampleRun)).toBe(lane(brokenAndroid, sampleRun));
+	});
+
+	it("keeps release.yml distinct from its ci.yml callee on tag push and dispatch", () => {
+		const release = workflows.find(
+			(workflow) => workflow.file === "release.yml",
+		);
+		const ci = workflows.find((workflow) => workflow.file === "ci.yml");
+		if (!release?.group || !ci?.group) {
+			throw new Error("release.yml or ci.yml is missing its concurrency group");
+		}
+		for (const run of [
+			{ event: "push", ref: "refs/tags/v0.1.0", proof: null },
+			{ event: "workflow_dispatch", ref: MAIN_REF, proof: null },
+		] satisfies RunIdentity[]) {
+			expect(lane(release.group, run)).not.toBe(lane(ci.group, run));
+		}
+	});
+});

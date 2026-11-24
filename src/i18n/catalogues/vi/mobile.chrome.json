@@ -31,5 +31,6 @@
 	"mobile.chrome.composer.run_settings": "{model}, {effort}",
 	"mobile.chrome.composer.run_settings_hint": "Chọn mô hình và mức suy luận",
 	"mobile.chrome.composer.run_settings_title": "Mô hình và mức suy luận",
-	"mobile.chrome.composer.row_folder": "Thư mục"
+	"mobile.chrome.composer.row_folder": "Thư mục",
+	"mobile.chrome.composer.row_identity": "Tác nhân hoặc nhóm"
 }

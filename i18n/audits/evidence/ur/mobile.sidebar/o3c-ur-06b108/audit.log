@@ -1,0 +1,115 @@
+# o3c-ur-06b108 mobile.sidebar (ur): actual printed output of checks run in session 06b10865ce7b, 2026-11-18T06:59:00Z
+
+## $ git -C <worktree> rev-parse HEAD
+e7ebc3917537d83cc772148fc5b2fc2ad3f43a41
+
+## $ shasum -a 256 brief draft
+e88beb09366b9ff795bf0ac916f30cef1c9a93c35fa4617575e904c7a6f5fd17  /Users/damian/.local-operator/sessions/162198c78bcb/scratchpad/o3c-translation-brief.json
+ee2cda121c47eddc644c11f141c9511287a43b7efb56aadfb6d2c3d1bd67155e  /Users/damian/.local-operator/sessions/5703a7a23771/scratchpad/o3c/draft-ur.json
+
+## $ shasum -a 256 inputs
+beaba7baeffe546ce65430d6cb18213da2fbb88d23128c071c286fb32a08ecdf  src/i18n/catalogues/en/mobile.sidebar.json
+858f7c51c595862306120be7833c4274439b436bb8bd1f547b88139f8d0f2fd3  src/i18n/catalogues/en/mobile.sidebar.context.json
+ce997b4f316176cbf42e7855dfa97bf3c1c05defc90ff7f0a43063c6e832ade2  src/i18n/catalogues/ur/mobile.sidebar.json
+0c5a8921e7f3abd21732de4a5bf68eaec4d4a6abf19ee93cfd71a9926db7a5c9  src/i18n/catalogues/ur/relay.chrome.json
+c49b1ac702a58d224129f8f3097332a8d810f7028c2d71cb90aa6acae6506d57  src/i18n/catalogues/ur/mobile.remote_sessions.json
+c1831406332e907c9a914b3db0ec35fc9fd2cddd44c18cd2861b77667c5bdba0  src/i18n/messages.ts
+0eb34437a8c3d6f564f278ef957a603b1d9f51bb07d5ddae5ea8f37deba962f8  /Users/damian/local-operator/i18n/glossary.md
+c0eecf7f7b5e89956b7de9ab7a9eb647ff1a7ef701ccf2a7f0264d5eea15ca60  /Users/damian/local-operator/i18n/style-guides/ur.md
+b74476f0d0e889aaa01792d4882ae7c2ece114bad98f00b6f8a69925d14ca973  /Users/damian/.local-operator/sessions/06b10865ce7b/scratchpad/o3c-work/values-ur.json
+
+## python (ordinary reads): authored value copy == draft.values; redaction scan
+authored copy == draft.values: True
+redaction hits: draft 0 | brief excluding redaction_scan.pattern 0 | brief raw (pattern self-match) 2
+
+## $ tsx check.ts (worktree src/i18n/messages.ts parseMessage/formatMessage, read-only import)
+missing [] extra []
+{"k":"mobile.sidebar.row_status.approval","params_match":true,"params":"[]","arms_match":true,"arms":[],"nfc":true,"bidi_controls":false,"edge_ws":false,"latin_punct":false,"trailing_punct":false,"chars":[6],"hint":10,"latin_initial":[false],"out":["منظوری"]}
+{"k":"mobile.sidebar.row_status.question","params_match":true,"params":"[]","arms_match":true,"arms":[],"nfc":true,"bidi_controls":false,"edge_ws":false,"latin_punct":false,"trailing_punct":false,"chars":[4],"hint":10,"latin_initial":[false],"out":["سوال"]}
+{"k":"mobile.sidebar.row_status.not_reachable","params_match":true,"params":"[]","arms_match":true,"arms":[],"nfc":true,"bidi_controls":false,"edge_ws":false,"latin_punct":false,"trailing_punct":false,"chars":[12],"hint":14,"latin_initial":[false],"out":["پہنچ سے باہر"]}
+{"k":"mobile.sidebar.row_status.ended","params_match":true,"params":"[]","arms_match":true,"arms":[],"nfc":true,"bidi_controls":false,"edge_ws":false,"latin_punct":false,"trailing_punct":false,"chars":[7],"hint":10,"latin_initial":[false],"out":["ختم شدہ"]}
+{"k":"mobile.sidebar.row_status.not_answering","params_match":true,"params":"[]","arms_match":true,"arms":[],"nfc":true,"bidi_controls":false,"edge_ws":false,"latin_punct":false,"trailing_punct":false,"chars":[16],"hint":14,"latin_initial":[false],"out":["جواب نہیں دے رہی"]}
+{"k":"mobile.sidebar.row_label.waiting","params_match":true,"params":"[[\"kind\",\"select\"]]","arms_match":true,"arms":["kind:approval|other"],"nfc":true,"bidi_controls":false,"edge_ws":false,"latin_punct":true,"trailing_punct":false,"chars":[17,15],"hint":24,"latin_initial":[false,false],"out":["منظوری زیرِ التوا","سوال زیرِ التوا"]}
+{"k":"mobile.sidebar.row_label.working","params_match":true,"params":"[]","arms_match":true,"arms":[],"nfc":true,"bidi_controls":false,"edge_ws":false,"latin_punct":false,"trailing_punct":false,"chars":[8],"hint":24,"latin_initial":[false],"out":["کام جاری"]}
+{"k":"mobile.sidebar.row_label.on_device","params_match":true,"params":"[[\"device\",\"text\"]]","arms_match":true,"arms":[],"nfc":true,"bidi_controls":false,"edge_ws":false,"latin_punct":false,"trailing_punct":false,"chars":[20],"hint":24,"latin_initial":[false],"out":["ڈیوائس Studio Mac پر"]}
+{"k":"mobile.sidebar.row_label.open","params_match":true,"params":"[]","arms_match":true,"arms":[],"nfc":true,"bidi_controls":false,"edge_ws":false,"latin_punct":false,"trailing_punct":false,"chars":[9],"hint":24,"latin_initial":[false],"out":["کھلی ہوئی"]}
+NEG threw: {kind, select, approval {x}} -> Invalid message "{kind, select, approval {x}}": select is missing its 'other' branch (at o
+NEG threw: {kind, select, approval {x} other {y} -> Invalid message "{kind, select, approval {x} other {y}": unterminated select (at offset 37
+NEG parsed (params differ check): ڈیوائس {devise} پر [["devise","text"]]
+
+## $ swift measure.swift (CoreText typographic width, 12pt, regular weight)
+.AppleSystemUIFont	System Font Regular	en approval	48.45
+.AppleSystemUIFont	System Font Regular	en question	48.81
+.AppleSystemUIFont	System Font Regular	en not reachable	77.36
+.AppleSystemUIFont	System Font Regular	en ended	35.46
+.AppleSystemUIFont	System Font Regular	en not answering	79.32
+.AppleSystemUIFont	System Font Regular	en new	23.15
+.AppleSystemUIFont	System Font Regular	ur approval	37.13
+.AppleSystemUIFont	System Font Regular	ur question	24.66
+.AppleSystemUIFont	System Font Regular	ur not_reachable	57.23
+.AppleSystemUIFont	System Font Regular	ur ended	44.13
+.AppleSystemUIFont	System Font Regular	ur not_answering	88.85
+.AppleSystemUIFont	System Font Regular	ur alt جواب نہیں	49.85
+.AppleSystemUIFont	System Font Regular	ur alt خاموش	36.02
+.AppleSystemUIFont	System Font Regular	ur new	15.35
+NotoNastaliqUrdu	Noto Nastaliq Urdu	en approval	46.03
+NotoNastaliqUrdu	Noto Nastaliq Urdu	en question	45.37
+NotoNastaliqUrdu	Noto Nastaliq Urdu	en not reachable	70.97
+NotoNastaliqUrdu	Noto Nastaliq Urdu	en ended	33.37
+NotoNastaliqUrdu	Noto Nastaliq Urdu	en not answering	72.96
+NotoNastaliqUrdu	Noto Nastaliq Urdu	en new	22.01
+NotoNastaliqUrdu	Noto Nastaliq Urdu	ur approval	34.67
+NotoNastaliqUrdu	Noto Nastaliq Urdu	ur question	25.00
+NotoNastaliqUrdu	Noto Nastaliq Urdu	ur not_reachable	47.50
+NotoNastaliqUrdu	Noto Nastaliq Urdu	ur ended	32.46
+NotoNastaliqUrdu	Noto Nastaliq Urdu	ur not_answering	89.00
+NotoNastaliqUrdu	Noto Nastaliq Urdu	ur alt جواب نہیں	48.37
+NotoNastaliqUrdu	Noto Nastaliq Urdu	ur alt خاموش	32.10
+NotoNastaliqUrdu	Noto Nastaliq Urdu	ur new	11.64
+SFArabic-Regular	Helvetica	en approval	46.03
+SFArabic-Regular	Helvetica	en question	45.37
+SFArabic-Regular	Helvetica	en not reachable	72.72
+SFArabic-Regular	Helvetica	en ended	33.37
+SFArabic-Regular	Helvetica	en not answering	74.71
+SFArabic-Regular	Helvetica	en new	22.01
+SFArabic-Regular	Helvetica	ur approval	33.16
+SFArabic-Regular	Helvetica	ur question	21.88
+SFArabic-Regular	Helvetica	ur not_reachable	56.54
+SFArabic-Regular	Helvetica	ur ended	38.23
+SFArabic-Regular	Helvetica	ur not_answering	79.33
+SFArabic-Regular	Helvetica	ur alt جواب نہیں	44.31
+SFArabic-Regular	Helvetica	ur alt خاموش	30.91
+SFArabic-Regular	Helvetica	ur new	15.11
+
+## shipped-term consistency (grep, mobile worktree ur catalogues + core ~/local-operator ur catalogues @ b42471d3935c)
+mobile.remote_sessions.json:15:	"mobile.remote_sessions.subtitle_owner": "{state} · {owner} پر",
+mobile.remote_sessions.json:19:	"mobile.remote_sessions.health_dropped": "{owner} پر یہ گفتگو ابھی پہنچ سے باہر ہے، اور کنکشن کوشش کر رہا ہے۔ تب تک بھیجنا فوراً ناکام ہوگا اور آپ کا متن پیغام کے خانے میں رہے گا۔",
+mobile.remote_sessions.json:20:	"mobile.remote_sessions.health_quiet": "{owner} پر یہ گفتگو جواب نہیں دے رہی — یہ مصروف یا اٹکی ہو سکتی ہے۔ بھیجنے پر ناکامی دکھ سکتی ہے پھر بھی پیغام بعد میں پہنچ سکتا ہے۔ دوبارہ کوشش کرنے سے یہ دو بار نہیں جائے گا۔",
+mobile.settings.json:54:	"mobile.settings.status.not_answering": "جواب نہیں دے رہا",
+mobile.sidebar.json:13:	"mobile.sidebar.show_ended": "ختم شدہ سیشن دکھائیں",
+mobile.sidebar.json:39:	"mobile.sidebar.row.new": "نئی",
+relay.chrome.json:2:	"relay.chrome.session.subtitle.not_answering": "جواب نہیں دے رہا",
+relay.chrome.json:3:	"relay.chrome.session.subtitle.ended": "ختم ہو گیا",
+relay.chrome.json:7:	"relay.chrome.session.subtitle.working_plain": "کام جاری",
+relay.chrome.json:8:	"relay.chrome.session.subtitle.waiting": "آپ کا انتظار",
+cli.services_status.json:4:  "cli.services_status.restart_supervision_limit": "`lop services restart` اسے دوبارہ لوڈ کر سکتا ہے، مگر اسے زیرِ نگرانی نہیں لا سکتا",
+relay.asks.json:42:  "relay.asks.pending.kind_approval": "منظوری درکار",
+wire.errors.desktop.json:62:  "wire.errors.desktop.question_no_longer_pending": "یہ سوال یا منظوری اب زیر التوا نہیں",
+wire.settings.json:411:  "wire.settings.proactive_patience_max_pending.help": "ایک سیشن کے لیے ایک وقت میں کتنے پوشیدہ انتظار زیر التوا ہوسکتے ہیں۔",
+wire.settings.json:412:  "wire.settings.proactive_patience_max_pending.label": "فی سیشن زیر التوا انتظار",
+
+## code context (list-row.tsx L285-293 status slot, L356 remote device line; list-row-meta.ts L504-505 join)
+			{statusWord ? (
+				<Text
+					testID={statusTestID}
+					className={`shrink-0 text-meta ${
+						pending ? "text-danger" : "text-ink-dim"
+					}`}
+				>
+					{t(ROW_STATUS_KEY[statusWord])}
+				</Text>
+				On {remote.device}
+	if (options.selected) parts.push(t("mobile.sidebar.row_label.open"));
+	return parts.join(", ");
+
+## guard note (not a check output): first tsx run that passed the two sibling-session files as argv was REFUSED by guard 0.107.0 (dangerous-delete review); nothing ran. Re-run used an authored copy of the 9 values in this session's scratchpad, proven equal to draft.values above.

@@ -214,6 +214,44 @@ export const attachmentDescriptorSchema = z.looseObject({
 });
 export type AttachmentDescriptor = z.infer<typeof attachmentDescriptorSchema>;
 
+/*
+ * REACTIONS (lop-dev spec "Mobile Team Bridge: reactions and start-a-thread",
+ * §2.1, slice PR b). One row per emoji: the hub's summary FOR THIS READER —
+ * how many reacted, whether I did, and up to three display names. No reactor
+ * ids exist on the wire (spec gap G1), so none are parsed or kept.
+ *
+ * Mirrors the desktop's parse (`local-operator-ui`
+ * `src/shared/team-bridge-contract.ts` `teamBridgeReactionSchema` and its
+ * history variant), including its bounds: a history read TRIMS to ≤ 50 rows and
+ * ≤ 3 labels rather than failing, because a future server cap must not make a
+ * whole page unreadable; the toggle answer below is strict, so an incompatible
+ * write answer stays a visible failure instead of silently replacing rows.
+ */
+export const reactionSchema = z.looseObject({
+	emoji: z.string().min(1),
+	count: z.number().int().positive(),
+	reacted_by_me: z.boolean(),
+	sample_labels: z.array(z.string().max(256)).max(3),
+});
+export type Reaction = z.infer<typeof reactionSchema>;
+
+const historyReactionsSchema = z
+	.array(
+		reactionSchema.extend({
+			sample_labels: z
+				.array(z.string().max(256))
+				.transform((labels) => labels.slice(0, 3)),
+		}),
+	)
+	.transform((rows) => rows.slice(0, 50));
+
+/** The PUT/DELETE answer: the message's FULL summary for the caller. */
+export const reactionsAnswerSchema = z.looseObject({
+	message_id: id,
+	reactions: z.array(reactionSchema).max(50),
+});
+export type ReactionsAnswer = z.infer<typeof reactionsAnswerSchema>;
+
 export const messageSchema = z
 	.looseObject({
 		id,
@@ -299,6 +337,12 @@ export const messageSchema = z
 			.nonnegative()
 			.optional()
 			.catch(undefined),
+		/*
+		 * Additive, like every field above: a hub older than reactions sends none
+		 * and a malformed list costs the pills, never the message. ABSENT and []
+		 * render the same (no pill row, zero added height).
+		 */
+		reactions: historyReactionsSchema.optional().catch(undefined),
 	})
 	.transform((message) => {
 		// A malformed non-array projection is absence, not an authorized empty

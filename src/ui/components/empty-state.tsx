@@ -3,7 +3,7 @@ import { Text, View } from "react-native";
 import { useTokenColor } from "@/ui/appearance";
 import { BrandMark } from "@/ui/components/brand-mark";
 import { Button } from "@/ui/components/button";
-import { emptyStateClasses } from "@/ui/variants";
+import { emptyStateClasses, emptyStateScrollingClasses } from "@/ui/variants";
 
 /**
  * The empty state (docs/design/components.md § 20).
@@ -40,6 +40,11 @@ export type EmptyStateProps = {
 	 *  line — the sentence a reader needs — sat under the fold at 200 %. The
 	 *  compact form takes its own natural height, in reading order. */
 	compact?: boolean;
+	/** Full-surface, inside a scroll body whose content grows to the viewport.
+	 *  Fills and centres like the default, but never below its own content
+	 *  height, so a short screen at large text scrolls to the second line
+	 *  rather than the block overflowing its neighbours (#321). */
+	scrolling?: boolean;
 };
 
 export const EmptyState = ({
@@ -49,6 +54,7 @@ export const EmptyState = ({
 	testID,
 	mark = true,
 	compact = false,
+	scrolling = false,
 }: EmptyStateProps) => {
 	const markColor = useTokenColor("ink-dim");
 	return (
@@ -59,7 +65,13 @@ export const EmptyState = ({
 			 *  on one line and hanging "yet." on a second (round 3). The tightened
 			 *  gap/pad is the same correction for the vertical axis, where the pinned
 			 *  footer took the room the sentence needed. */
-			className={compact ? "items-center gap-1 py-1" : emptyStateClasses}
+			className={
+				compact
+					? "items-center gap-1 py-1"
+					: scrolling
+						? emptyStateScrollingClasses
+						: emptyStateClasses
+			}
 			testID={testID}
 		>
 			{mark ? <BrandMark size={48} color={markColor} /> : null}

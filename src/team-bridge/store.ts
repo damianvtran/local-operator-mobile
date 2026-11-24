@@ -36,8 +36,13 @@ import type {
 	MentionRow,
 	Message,
 	Notify,
+	Reaction,
 	StatusConsent,
 } from "@/team-bridge/contract";
+import {
+	clearTeamBridgeEmoji,
+	recordTeamBridgeEmoji,
+} from "@/team-bridge/emoji-usage";
 import { clearTeamBridgeTargets } from "@/team-bridge/last-target";
 import {
 	type DefaultOnNotice,
@@ -51,8 +56,10 @@ import {
 	type StatusRead,
 	sameValue,
 } from "@/team-bridge/model";
+import { reactionAdds, toggleReaction } from "@/team-bridge/reactions";
 import {
 	isReplyThreadPageFor,
+	protectHeldThreadCursors,
 	type ReplyThreadTarget,
 	replyThreadKey,
 	rootAfterThreadRead,
@@ -165,6 +172,25 @@ export interface TeamBridgeState {
 	/** A failed Turn off. The notice stays so the person can retry. */
 	defaultOnNoticeError: HubError | null;
 	defaultOnNoticeBusy: boolean;
+	/**
+	 * REACTIONS (spec §4.8). The optimistic rows of a message whose toggle is
+	 * in flight, keyed by `reactionKey`. Kept BESIDE the held messages rather
+	 * than written into them, which is the poll-vs-pending guard: a 20 s poll
+	 * that lands mid-write replaces the held message freely, the pills keep
+	 * showing these rows until the write settles, and the poll's answer is
+	 * what shows afterwards (spec step 5: "applies after the write settles").
+	 * One entry per message is also the in-flight guard (the desktop rule).
+	 */
+	reactionPending: Record<string, { rows: Reaction[]; emoji: string }>;
+	/** Messages whose last toggle was refused: they draw the error line. */
+	reactionFailed: Record<string, true>;
+	/**
+	 * The hub answered a reaction write with an UNCODED 404/405: it does not
+	 * serve the route (spec gap G4 — there is no capability flag to ask up
+	 * front). Every reaction control hides for this session, with no error, as
+	 * core does for typing on an outdated hub. Reset with the account.
+	 */
+	reactionsUnserved: boolean;
 }
 
 /**
@@ -218,7 +244,36 @@ export const initialTeamBridgeState = (): TeamBridgeState => ({
 	defaultOnNotice: null,
 	defaultOnNoticeError: null,
 	defaultOnNoticeBusy: false,
+	reactionPending: {},
+	reactionFailed: {},
+	reactionsUnserved: false,
 });
+
+/** One message, wherever it is held (`reactionPending`, `reactionFailed`). */
+export interface ReactionTarget {
+	tenantId: string;
+	conversationId: string;
+	messageId: string;
+}
+export const reactionKey = (target: ReactionTarget): string =>
+	`${target.tenantId}/${target.conversationId}/${target.messageId}`;
+
+/** What one tap did, so the screen can pick the haptic and announcement. */
+export type ReactionOutcome =
+	| "added"
+	| "removed"
+	| "failed"
+	/** A toggle for this message was already in flight (double tap). */
+	| "ignored"
+	/** The hub does not serve reactions; the controls are now hidden. */
+	| "unserved";
+
+/** An uncoded 404/405: the ROUTE is missing, not the message (a missing
+ *  message comes back coded, e.g. `message_not_found`). */
+const routeMissing = (error: unknown): boolean =>
+	isHubError(error) &&
+	(error.status === 404 || error.status === 405) &&
+	!error.code;
 
 const emptyReplyThread = (): ReplyThreadData => ({
 	root: null,
@@ -494,6 +549,7 @@ export function createTeamBridgeStore(deps: {
 		const client = deps.hub();
 		if (!client) return;
 		const key = replyThreadKey(target);
+		const readRevision = reactionRevision;
 		if (store.getState().replyThreads[key]?.state !== "ready")
 			patchReplyThread(key, { state: "loading", error: null });
 		try {
@@ -532,7 +588,15 @@ export function createTeamBridgeStore(deps: {
 			}
 			if (!root) return;
 			const held = store.getState().replyThreads[key];
-			const merged = mergeMessages(held?.replies ?? [], replies);
+			const merged = mergeMessages(
+				held?.replies ?? [],
+				protectReactions(
+					target.tenantId,
+					target.conversationId,
+					replies,
+					readRevision,
+				),
+			);
 			/* A refresh re-reads from the top, so on a capped thread its own cursor
 			 * would point back at reply ~500 even when the reader already continued
 			 * further. Resume from the furthest of the two: the newest reply held
@@ -543,7 +607,13 @@ export function createTeamBridgeStore(deps: {
 			);
 			// A load that ended on the hub's own "no more" leaves nothing outstanding.
 			const moreAfterSeq = more === null ? null : Math.max(more, newestHeld);
-			const servedRoot = root;
+			const servedRoot =
+				protectReactions(
+					target.tenantId,
+					target.conversationId,
+					[root],
+					readRevision,
+				)[0] ?? root;
 			const nextRoot = rootFromServedPage(held?.root, servedRoot);
 			patchReplyThread(key, {
 				root:
@@ -572,6 +642,69 @@ export function createTeamBridgeStore(deps: {
 		}
 	}
 
+	/**
+	 * Apply `change` to one message in every place it is held: the timeline,
+	 * and any reply thread of the same conversation (as its root or a reply).
+	 * The same message can be on screen twice (the timeline stays mounted under
+	 * the reply thread), and both copies must agree (spec §4.8 step 6).
+	 */
+	function patchMessage(
+		target: ReactionTarget,
+		change: (message: Message) => Message,
+	): void {
+		const map = (list: Message[]) => {
+			let hit = false;
+			const next = list.map((m) => {
+				if (m.id !== target.messageId) return m;
+				hit = true;
+				return change(m);
+			});
+			return hit ? next : list;
+		};
+		store.setState((s) => {
+			const key = threadKey(target.tenantId, target.conversationId);
+			const held = s.threads[key];
+			const messages = held ? map(held.messages) : null;
+			const threads =
+				held && messages && messages !== held.messages
+					? { ...s.threads, [key]: { ...held, messages } }
+					: s.threads;
+			const prefix = `${key}/`;
+			let replyThreads = s.replyThreads;
+			for (const [replyKey, reply] of Object.entries(s.replyThreads)) {
+				if (!replyKey.startsWith(prefix)) continue;
+				const root =
+					reply.root?.id === target.messageId ? change(reply.root) : reply.root;
+				const replies = map(reply.replies);
+				if (root === reply.root && replies === reply.replies) continue;
+				replyThreads = {
+					...replyThreads,
+					[replyKey]: { ...reply, root, replies },
+				};
+			}
+			return { threads, replyThreads };
+		});
+	}
+
+	/** The reactions currently held for a message, from whichever copy has it. */
+	function heldReactions(target: ReactionTarget): Reaction[] {
+		const s = store.getState();
+		const key = threadKey(target.tenantId, target.conversationId);
+		const inTimeline = s.threads[key]?.messages.find(
+			(m) => m.id === target.messageId,
+		);
+		if (inTimeline) return inTimeline.reactions ?? [];
+		for (const [replyKey, reply] of Object.entries(s.replyThreads)) {
+			if (!replyKey.startsWith(`${key}/`)) continue;
+			const found =
+				reply.root?.id === target.messageId
+					? reply.root
+					: reply.replies.find((m) => m.id === target.messageId);
+			if (found) return found.reactions ?? [];
+		}
+		return [];
+	}
+
 	function patchThread(key: string, change: Partial<ThreadData>): void {
 		store.setState((s) => ({
 			threads: {
@@ -587,6 +720,28 @@ export function createTeamBridgeStore(deps: {
 	 * stale answer can never overwrite a newer one.
 	 */
 	let generation = 0;
+	// History has no server revision. A GET started before a confirmed write
+	// must not undo it, including copies in reply roots and older pages. Only
+	// reactions are protected: the rest of that history answer still merges.
+	let reactionRevision = 0;
+	const reactionSettled = new Map<string, number>();
+	function protectReactions(
+		tenantId: string,
+		conversationId: string,
+		messages: Message[],
+		readRevision: number,
+	): Message[] {
+		return messages.map((message) => {
+			const target = { tenantId, conversationId, messageId: message.id };
+			const key = reactionKey(target);
+			if (
+				store.getState().reactionPending[key] ||
+				(reactionSettled.get(key) ?? 0) > readRevision
+			)
+				return { ...message, reactions: heldReactions(target) };
+			return message;
+		});
+	}
 	// Reset is recoverable within a live provider; retirement is permanent even
 	// if the same account logs in again. Retained closures cannot regain grants.
 	let closed = false;
@@ -648,6 +803,7 @@ export function createTeamBridgeStore(deps: {
 	}
 	function clearBackoff() {
 		backoff.clear();
+		reactionSettled.clear();
 		for (const timer of retryTimers.values()) clearTimeout(timer);
 		retryTimers.clear();
 	}
@@ -722,6 +878,10 @@ export function createTeamBridgeStore(deps: {
 			store.setState({
 				gate: "plan_required",
 				gateError: error,
+				// This boundary retires ALL writes, not just the request that
+				// discovered the refusal. Old continuations cannot settle new ones.
+				reactionPending: {},
+				reactionFailed: {},
 				defaultOnNoticeBusy: false,
 				defaultOnNoticeError: null,
 			});
@@ -1233,6 +1393,7 @@ export function createTeamBridgeStore(deps: {
 				if (!client) return;
 				// The screen's 20 s poll must not re-ask inside the hub's Retry-After.
 				if (backedOff(`thread:${key}`, clock())) return;
+				const readRevision = reactionRevision;
 				const held = store.getState().threads[key];
 				if (held?.state !== "ready")
 					patchThread(key, { state: "loading", error: null });
@@ -1297,7 +1458,21 @@ export function createTeamBridgeStore(deps: {
 							});
 						const current = store.getState().threads[key];
 						const first = !current || current.messages.length === 0;
-						const messages = mergeMessages(current?.messages ?? [], incoming);
+						/* `current`, not the `held` snapshot from before the GET: a thread
+						 *  read that landed while this page was in flight moved the root's
+						 *  cursor, and a page from before it must not move it back. */
+						const messages = mergeMessages(
+							current?.messages ?? [],
+							protectHeldThreadCursors(
+								current?.messages ?? [],
+								protectReactions(
+									tenantId,
+									conversationId,
+									incoming,
+									readRevision,
+								),
+							),
+						);
 						/* An unchanged poll is not an update (Bridge thread flicker):
 						 *  publishing it re-rendered the open thread, its memoised rows
 						 *  and the viewport's admission recheck for nothing. `mergeMessages`
@@ -1368,6 +1543,7 @@ export function createTeamBridgeStore(deps: {
 				if (!client || !held?.hasMore || held.messages.length === 0) return;
 				const oldest = held.messages[0];
 				if (!oldest) return;
+				const readRevision = reactionRevision;
 				patchThread(key, { loadingOlder: true, olderError: null });
 				try {
 					const page = await client.listMessages(tenantId, conversationId, {
@@ -1377,7 +1553,20 @@ export function createTeamBridgeStore(deps: {
 					if (!owned()) return;
 					const current = store.getState().threads[key] ?? emptyThread();
 					patchThread(key, {
-						messages: mergeMessages(current.messages, page.messages),
+						// An older page can restate a held root (an edit, a rollup) with
+						// the cursor from before a read that landed meanwhile.
+						messages: mergeMessages(
+							current.messages,
+							protectHeldThreadCursors(
+								current.messages,
+								protectReactions(
+									tenantId,
+									conversationId,
+									page.messages,
+									readRevision,
+								),
+							),
+						),
 						hasMore: page.has_more === true && page.messages.length > 0,
 						loadingOlder: false,
 					});
@@ -1721,6 +1910,101 @@ export function createTeamBridgeStore(deps: {
 			return message;
 		},
 
+		/**
+		 * Toggle MY `emoji` on one message (spec §4.8, the desktop's
+		 * `useTeamBridgeReactionState` rule set):
+		 * 1. One toggle in flight per MESSAGE: a second tap while one is pending
+		 *    is `ignored`, so a quick double tap sends one request and two
+		 *    snapshots can never race on rollback.
+		 * 2. The optimistic projection shows at once (`reactionPending`); the
+		 *    held message is untouched, so a poll landing mid-write cannot
+		 *    overwrite it and the snapshot to restore is simply "drop the
+		 *    overlay".
+		 * 3. Success: the server's full summary REPLACES the rows everywhere the
+		 *    message is held; a confirmed add feeds the quick row's usage.
+		 * 4. Failure: the overlay is dropped (the exact prior rows show again),
+		 *    the message is marked failed. No automatic retry: both verbs are
+		 *    idempotent, so the reader's next tap is the retry. Offline fails the
+		 *    same way; no reaction is queued.
+		 * 5. An uncoded 404/405 hides reactions for the session, no error line.
+		 * Haptics and announcements are the screen's (this store is Node-tested);
+		 * it returns what happened so the screen can pick them.
+		 */
+		async toggleReaction(
+			target: ReactionTarget,
+			emoji: string,
+		): Promise<ReactionOutcome> {
+			if (closed) return "ignored";
+			const state = store.getState();
+			if (state.reactionsUnserved) return "unserved";
+			if (
+				state.gate === "plan_required" ||
+				state.gate === "signed_out" ||
+				backedOff("reactions", clock())
+			)
+				return "ignored";
+			const key = reactionKey(target);
+			if (state.reactionPending[key]) return "ignored";
+			const client = deps.hub();
+			if (!client) return "failed";
+			const before = heldReactions(target);
+			const active = reactionAdds(before, emoji);
+			const { [key]: _cleared, ...failed } = state.reactionFailed;
+			store.setState({
+				reactionPending: {
+					...state.reactionPending,
+					[key]: { rows: toggleReaction(before, emoji), emoji },
+				},
+				reactionFailed: failed,
+			});
+			const epoch = generation;
+			const priorBackoff = backoff.get("reactions");
+			const settle = (change: Partial<TeamBridgeState>) =>
+				store.setState((s) => {
+					const { [key]: _done, ...pending } = s.reactionPending;
+					return { reactionPending: pending, ...change };
+				});
+			try {
+				const answer = await client.react(
+					target.tenantId,
+					target.conversationId,
+					target.messageId,
+					emoji,
+					active,
+				);
+				// An account change mid-write: the reset already cleared everything.
+				if (closed || epoch !== generation) return "ignored";
+				reactionSettled.set(key, ++reactionRevision);
+				// A different message may have received a 429 while this write
+				// was in flight. Its newer refusal must survive this success.
+				if (backoff.get("reactions") === priorBackoff)
+					backoff.delete("reactions");
+				patchMessage(target, (m) => ({ ...m, reactions: answer.reactions }));
+				settle({});
+				if (active)
+					recordTeamBridgeEmoji(
+						store.getState().selfAccountId,
+						emoji,
+						(deps.now ?? Date.now)(),
+					);
+				return active ? "added" : "removed";
+			} catch (error) {
+				if (closed || epoch !== generation) return "ignored";
+				if (routeMissing(error)) {
+					settle({ reactionsUnserved: true });
+					return "unserved";
+				}
+				// Writes share an account bucket. Reuse its refusal policy but never
+				// schedule an automatic toggle (which would invert user intent).
+				if (isRateLimited(error)) noteTransient("reactions", error, clock());
+				settle({
+					reactionFailed: { ...store.getState().reactionFailed, [key]: true },
+				});
+				gateFailure(error);
+				return "failed";
+			}
+		},
+
 		/** Insert a conversation the reader just created (a first send's DM). */
 		adopt(conversation: Conversation) {
 			if (closed) return;
@@ -1750,6 +2034,7 @@ export function createTeamBridgeStore(deps: {
 			clearTeamBridgeDrafts();
 			// The remembered last conversation is the same account-scoped class (`last-target.ts`).
 			clearTeamBridgeTargets();
+			clearTeamBridgeEmoji();
 			store.setState(initialTeamBridgeState());
 		},
 
@@ -1765,6 +2050,8 @@ export function createTeamBridgeStore(deps: {
 			clearTeamBridgeDrafts();
 			// The remembered last conversation is the same account-scoped class (`last-target.ts`).
 			clearTeamBridgeTargets();
+			// Emoji usage is per account and in memory (`emoji-usage.ts`).
+			clearTeamBridgeEmoji();
 			store.setState(initialTeamBridgeState());
 		},
 	};

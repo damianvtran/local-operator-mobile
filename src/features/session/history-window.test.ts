@@ -278,10 +278,12 @@ describe("screen-owned retained history", () => {
 		expect(window.hasGap).toBe(true);
 		retained = journal;
 		await window.reload();
-		expect(fetch).toHaveBeenLastCalledWith("q01421");
-		expect(window.cursor).toBe("q01341");
+		// Reload reads the NEWEST durable page (PR #356 R1), not an older page
+		// from the frame's oldest row, so a row the frame placed below its own
+		// window edge is fetched too. Older context follows on scroll.
+		expect(fetch).toHaveBeenLastCalledWith(undefined);
 		expect(window.hasGap).toBe(false);
-		expect(ids(window.visibleRows)).toEqual(ids(journal.slice(1341)));
+		expect(ids(window.visibleRows)).toEqual(ids(journal.slice(1420)));
 		while (window.hasMore && !window.error) await window.load();
 		expect(window.error).toBeNull();
 		expect(ids(window.visibleRows)).toEqual(ids(journal));
@@ -907,9 +909,8 @@ describe("a reader paged to the beginning never claims it across a hole (PR #207
 		"Q7: a disjoint reconnect tail renders AFTER the held rows, with the hole between them (drained %s)",
 		async (drained) => {
 			const journal = sequence(1500);
-			const fetch = vi.fn((before?: string) =>
-				pager(journal.slice(0, 1200), 80)(before),
-			);
+			let retained = journal.slice(0, 1200);
+			const fetch = vi.fn((before?: string) => pager(retained, 80)(before));
 			const window = new HistoryWindow(fetch, () => {});
 			window.accept(capped(journal, 1200));
 			await window.load();
@@ -927,6 +928,9 @@ describe("a reader paged to the beginning never claims it across a hole (PR #207
 			window.accept(capped(journal.concat(row("q01500")), 1501));
 			expect(descendingBreaks(positions(window))).toEqual([]);
 			expect(positions(window).at(-1)).toBe(1500);
+			// Reload reads the newest durable page (PR #356 R1), so the journal
+			// must hold the rows the live frame shows, as it does in production.
+			retained = journal.concat(row("q01500"));
 			await window.reload();
 			expect(window.gapBefore).toBeNull();
 		},

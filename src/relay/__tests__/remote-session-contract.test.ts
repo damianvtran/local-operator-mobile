@@ -197,7 +197,7 @@ describe("remote conversations use ordinary admitted relay routes", () => {
 					images: [{ data_b64: "c3ludGhldGlj", mime_type: "image/png" }],
 				};
 				expect((await client.command(id, body)).ok).toBe(true);
-				expect(requests.at(-1)?.body).toEqual(body);
+				expect(requests.at(-1)?.body).toEqual({ ...body, inline_ui: true });
 			}
 			expect(
 				new TextDecoder().decode(

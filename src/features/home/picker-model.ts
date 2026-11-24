@@ -48,11 +48,6 @@ export const EFFORT_VOCABULARY = [
 	"max",
 ] as const;
 
-/** Above this many rows the model picker grows a search field (design spec §5).
- *  Below it a field is one more control between the reader and a list they can
- *  already see whole. */
-export const MODEL_SEARCH_THRESHOLD = 12;
-
 /** The search query's token separator. */
 const WHITESPACE = /\s+/;
 

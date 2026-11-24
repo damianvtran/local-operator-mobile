@@ -14,7 +14,7 @@ import {
  * TestFlight 578: an ended session ("Disk: recl… Ended") showed `n/a` / `n/a`
  * while the drawer row for the same conversation named its model. These pin the
  * fallback order (projection, then list row), the pickers' labels, the
- * disabled-until-resumed reading, and that the literal `n/a` never renders.
+ * editable-before-resume reading, and that the literal `n/a` never renders.
  */
 
 const OPUS: ModelEntry = {
@@ -44,7 +44,17 @@ describe("friendlyModelName", () => {
 });
 
 describe("sessionChipLabels — an ended session", () => {
-	it("shows the list row's last-known model, disabled until resumed", () => {
+	it("offers the model picker before reopening a stored conversation", () => {
+		const { model } = sessionChipLabels({
+			projection: DURABLE,
+			row: { model_label: OPUS.selector },
+			models: [OPUS],
+			connection: "connected",
+			ended: true,
+		});
+		expect(model.kind).toBe("value");
+	});
+	it("shows the list row's last-known model, editable before resume", () => {
 		const { model, effort } = sessionChipLabels({
 			projection: DURABLE,
 			row: { model_label: "anthropic/claude-opus-5-5" },
@@ -53,10 +63,9 @@ describe("sessionChipLabels — an ended session", () => {
 			ended: true,
 		});
 		expect(model).toEqual({
-			kind: "unavailable",
+			kind: "value",
 			text: "Claude Opus 5.5",
 			accessibilityLabel: "Model, Claude Opus 5.5",
-			accessibilityHint: "Resume this session to change the model",
 		});
 		// No relay sends a last-known effort yet: hidden, not a dash.
 		expect(effort).toBeNull();
@@ -71,9 +80,8 @@ describe("sessionChipLabels — an ended session", () => {
 			ended: true,
 		});
 		expect(effort).toMatchObject({
-			kind: "unavailable",
+			kind: "value",
 			text: "Medium",
-			accessibilityHint: "Resume this session to change the effort",
 		});
 	});
 
@@ -85,10 +93,10 @@ describe("sessionChipLabels — an ended session", () => {
 			connection: "connected",
 			ended: true,
 		});
-		expect(model.kind === "unavailable" && model.text).toBe("Claude Opus 5.5");
+		expect(model.kind === "value" && model.text).toBe("Claude Opus 5.5");
 	});
 
-	it("is an explained dash only when no source has a model", () => {
+	it("still offers a picker when no source recorded a model", () => {
 		const { model } = sessionChipLabels({
 			projection: DURABLE,
 			row: null,
@@ -97,12 +105,11 @@ describe("sessionChipLabels — an ended session", () => {
 			ended: true,
 		});
 		expect(model).toEqual({
-			kind: "unavailable",
-			text: UNAVAILABLE_TEXT,
+			kind: "value",
+			text: "Default model",
 			accessibilityLabel: "Model, not recorded",
-			accessibilityHint: "This session has not recorded a model",
 		});
-		expect(JSON.stringify(model)).not.toMatch(/n\/a/);
+		expect(JSON.stringify(model)).not.toContain("n/a");
 	});
 });
 

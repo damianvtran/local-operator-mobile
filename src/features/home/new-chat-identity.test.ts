@@ -17,6 +17,9 @@ const GUARDED_INTENT =
 	/if \(consumeNewChatRequest\(newChatRequest\)\) newChat\(\);/;
 const NEW_CHAT_BINDING = /onNewChat=\{newChat\}/g;
 
+const MORE_DOOR_FOCUS_RETURN =
+	/returnFocusTestID=\{\[CONTROL\.composerContext, CONTROL\.homeIdentityPill\]\}/;
+
 const newChatBlock = () => {
 	const start = home.indexOf("const newChat = useCallback(");
 	expect(start).toBeGreaterThan(-1);
@@ -56,5 +59,18 @@ describe("home New-chat callback identity", () => {
 		expect(
 			home.replace("if (consumeNewChatRequest(newChatRequest)) ", ""),
 		).not.toMatch(GUARDED_INTENT);
+	});
+});
+
+describe("the identity sheet's More door (PR #358 U5)", () => {
+	it("returns focus to the More button, else the pill, when the sheet closes", () => {
+		/* The More row unmounts with its sheet, so on close focus fell to the
+		 *  page (keyboard walk: `:focus` matched nothing). `Sheet` tries each id in
+		 *  order, and only when nothing else holds focus — the pill door keeps the
+		 *  platform's own return. */
+		const picker = home.slice(home.indexOf("<IdentityPicker"));
+		expect(picker.slice(0, picker.indexOf("/>"))).toMatch(
+			MORE_DOOR_FOCUS_RETURN,
+		);
 	});
 });

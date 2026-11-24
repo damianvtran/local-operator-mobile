@@ -11,6 +11,10 @@
 		"role": "heading",
 		"note": "The destination screen's own title, used as the label of the control that opens it — not an action verb. It must stay identical wherever that screen is named, including the sentence in mobile.home.options.fixed, so a reader recognises the same destination. No final full stop."
 	},
+	"mobile.session.inline_chart_data": {
+		"role": "button",
+		"note": "Disclosure below a chart in an assistant reply. Opens and closes the chart's exact values as a table. The button label stays the same and the expanded state is read separately. Short noun phrase, no final full stop."
+	},
 	"mobile.session.status_tray.hint": {
 		"role": "help",
 		"note": "Accessibility hint read after the status tray's label. Describes what activating the tray opens; no final full stop. \"Subagents\" is a product term."
@@ -199,6 +203,22 @@
 		"role": "heading",
 		"note": "Title of the sheet opened from the counts on the activity line above the composer; it lists the conversation's tasks and its sub-agents. Sentence-style capitalisation after the first word in English."
 	},
+	"mobile.session.sheet_title.search": {
+		"role": "heading",
+		"note": "Title of the bottom sheet that searches the messages of the open conversation on this phone. One noun in Title case in English, like its sibling sheet titles (Model, Effort, Commands). Keep it one short word: a longer phrase was cut off at large text on a 320 pt phone. No placeholders."
+	},
+	"mobile.session.slash.filter": {
+		"role": "meta",
+		"note": "The commands sheet's text field: both its placeholder and its accessible name. Typing narrows the list of slash commands (such as /compact) to those whose name matches. An instruction-like label, sentence case, no final full stop. Keep it short: the field is one line on a 320 pt phone."
+	},
+	"mobile.session.slash.no_matches": {
+		"role": "status",
+		"note": "Muted line in the commands sheet when the filter text matches none of the slash commands the computer offers. A short status in sentence case, no final full stop."
+	},
+	"mobile.session.slash.load_failed": {
+		"role": "status",
+		"note": "Muted line in the commands sheet when this phone could not read the list of slash commands from the reader's computer and holds none. It replaces the list, so it must not suggest that nothing matched. The second sentence is the remedy: leaving and reopening the conversation reads the list again. Two short sentences with final full stops; the apostrophe is a typographic ’."
+	},
 	"mobile.session.subagent.screen_title": {
 		"role": "heading",
 		"note": "Title of the screen that shows one subagent's run. One word; 'subagent' is the product's word for a helper agent started by the main agent."
@@ -219,9 +239,25 @@
 		"role": "help",
 		"note": "Empty-state follow-up giving the two possible reasons the subagent cannot be shown. One sentence."
 	},
+	"mobile.session.subagent.status": {
+		"role": "status",
+		"note": "The status badge beside a subagent's name on its own screen. {status} selects the arm and is never shown itself. queued: waiting to start; running: working now; completed: finished successfully; failed: finished with an error; parked: paused, can resume later; cancelled: stopped by someone before it finished; loading: this phone is still fetching the subagent's details; unavailable: the fetch finished and the computer has no record of this subagent (the screen's body says so too); other: a state this app does not know yet. Each arm is one short lower-case word (no full stop) that fits a small pill beside a title on a 320 pt phone."
+	},
 	"mobile.session.subagent.no_rows": {
 		"role": "status",
 		"note": "Muted line shown when a subagent's transcript is empty. One sentence."
+	},
+	"mobile.session.subagent.queued_next": {
+		"role": "status",
+		"note": "Muted line on a subagent's screen while the subagent is queued and has not started, so it has no messages yet. Replaces a loading placeholder: it must say the subagent has not run, not that the phone is slow. 'Its' is the subagent. Two short sentences with final full stops."
+	},
+	"mobile.session.subagent.load_failed": {
+		"role": "status",
+		"note": "Muted line on a subagent's screen when this phone could not read the subagent's messages (the link dropped); a Try again button follows. Nothing has been shown yet, so it must not say 'the latest' messages. One sentence with a final full stop; the apostrophe is a typographic ’."
+	},
+	"mobile.session.subagent.not_kept": {
+		"role": "status",
+		"note": "Dim line on a subagent's screen when the computer has no saved messages for this subagent: either they were not kept, or the computer is not answering. Stands alone (no headline above it), so it names the subagent. One sentence with a final full stop; apostrophes are typographic ’."
 	},
 	"mobile.session.not_connected.headline": {
 		"role": "status",
@@ -263,6 +299,10 @@
 		"role": "confirm",
 		"note": "Notice above the composer when an earlier instruction is retained and may already have been delivered, so the user must retry it before sending the current draft. Two sentences."
 	},
+	"mobile.session.composer.settings_not_applied": {
+		"role": "status",
+		"note": "Composer error when the session DID reopen (its header now reads Live or Idle) but the model or effort the reader picked for it was refused, so nothing was sent. It shows on two paths: after Send (the message is still in the composer and Send is enabled) and after Retry of a held earlier instruction (that instruction stays held and Send is disabled until it is resolved; the card's Retry is the working control). The remedy must therefore name no specific button: say 'try again' generically, never 'send again', and offer picking a different model or effort as the way out of a repeated refusal. Must not say the session failed to reopen, and must not point at the header's Ended control, which is no longer shown. 'Effort' is the product's word for how hard the model works; reuse the term from the effort-change error."
+	},
 	"mobile.session.tray.context": {
 		"role": "meta",
 		"note": "Activity tray fact: how full the model's context window is. {percent} is a whole number; keep the percent sign. Lower case \"context\"."
@@ -290,6 +330,18 @@
 	"mobile.session.region.more_below": {
 		"role": "meta",
 		"note": "Cue under the capped activity region when more rows are hidden below and there are no region names to list. Keep the middle dot and the down arrow; lower case."
+	},
+	"mobile.session.jump_to_latest": {
+		"role": "button",
+		"note": "The visible and accessible name of the floating chip over the transcript that takes a reader who scrolled up back to the newest message. It appears only after new output arrived while they were away. Keep the leading down arrow; imperative, sentence case, no final full stop. The arrow points at the newest content below, not at the reading direction."
+	},
+	"mobile.session.jump_to_latest_short": {
+		"role": "button",
+		"note": "The visible form of mobile.session.jump_to_latest on phones narrower than 360 pt, where the full sentence crowds the row beside it. Keep the leading down arrow; one or two words at most. The accessible name stays the full sentence, so this label may be an abbreviation."
+	},
+	"mobile.session.jump_to_latest_name": {
+		"role": "button",
+		"note": "The ACCESSIBLE name of the floating \"jump to latest\" chip: the same sentence as mobile.session.jump_to_latest WITHOUT the leading down arrow, because a screen reader would read the glyph as \"down arrow\". Imperative, sentence case, no final full stop. Shown visually only by screen readers, never on the chip itself."
 	},
 	"mobile.session.video.title_fallback": {
 		"role": "heading",
@@ -357,11 +409,11 @@
 	},
 	"mobile.session.sheet_title.commands": {
 		"role": "heading",
-		"note": "Title of the bottom sheet listing slash commands the reader can run in a conversation. Lower case as currently shipped (other sheet titles are Title case; a casing change is a separate design decision) — use your language's natural form. ~16 characters. No placeholders."
+		"note": "Title of the bottom sheet listing slash commands the reader can run in a conversation. One noun in Title case in English, like its sibling sheet titles (Model, Effort, Search); use your language's natural capitalisation for a title. ~16 characters. No placeholders."
 	},
 	"mobile.session.sheet_title.attach": {
 		"role": "heading",
-		"note": "Title of the bottom sheet offering attachment sources (photo, file, camera) in the composer: the verb 'attach' used as a title. Lower case as currently shipped (other sheet titles are Title case; a casing change is a separate design decision). ~16 characters. No placeholders."
+		"note": "Title of the bottom sheet that lists image sources in the composer (Photo Library, Take Photo, Image from Files and Paste Image on iOS and Android; Choose Image and Paste Image on web). It says what the sheet adds — an image — because the relay accepts images only, so 'Attach' promised files it cannot take. Title case like the Model and Effort sheet titles; scripts without letter case need no change. ~16 characters. No placeholders."
 	},
 	"mobile.session.diagram.label": {
 		"role": "meta",

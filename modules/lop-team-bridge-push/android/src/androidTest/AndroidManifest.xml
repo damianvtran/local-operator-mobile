@@ -1,0 +1,17 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <!-- Test APK only: the push-avatar photo case serves a stub hub on
+       127.0.0.1 (ADR 0010 S5), which needs a socket (INTERNET) and plain
+       HTTP to loopback (cleartext, blocked by default since API 28). The
+       production fetcher still refuses http to any non-loopback host. -->
+  <uses-permission android:name="android.permission.INTERNET" />
+  <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+  <application android:usesCleartextTraffic="true" android:icon="@android:drawable/ic_dialog_info">
+    <!-- ShortcutManager requires a launcher component in the publishing package. -->
+    <activity android:name="dev.localoperator.teambridge.BridgeTestLauncher" android:exported="true">
+      <intent-filter>
+        <action android:name="android.intent.action.MAIN" />
+        <category android:name="android.intent.category.LAUNCHER" />
+      </intent-filter>
+    </activity>
+  </application>
+</manifest>

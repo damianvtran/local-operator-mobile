@@ -14,6 +14,7 @@ import {
 	View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import type { SelectTextAccessibility } from "@/features/session/components/selectable-message";
 import { t } from "@/i18n";
 
 import {
@@ -143,11 +144,14 @@ function Placeholder({
 	box,
 	testID,
 	action,
+	accessibility,
 }: {
 	text: string;
 	box: Box;
 	testID: string;
 	action?: { label: string; onPress: () => void };
+	/** The message's screen-reader actions (see `MessageAttachments`). */
+	accessibility?: SelectTextAccessibility;
 }) {
 	return (
 		<View
@@ -155,7 +159,9 @@ function Placeholder({
 			className="items-center justify-center gap-1 overflow-hidden rounded-sm border border-hairline bg-elevated px-2"
 			style={box}
 		>
-			<Text className="text-center text-meta text-ink-muted">{text}</Text>
+			<Text className="text-center text-meta text-ink-muted" {...accessibility}>
+				{text}
+			</Text>
 			{action ? (
 				<Pressable
 					accessibilityRole={ROLE.button}
@@ -185,12 +191,16 @@ function ThreadImage({
 	box,
 	label,
 	onOpen,
+	onLongPress,
+	accessibility,
 }: {
 	source: Source;
 	descriptor: AttachmentDescriptor;
 	box: Box;
 	label: string;
 	onOpen: () => void;
+	onLongPress?: () => void;
+	accessibility?: SelectTextAccessibility;
 }) {
 	const { uri, state, retry } = useAttachmentUri(source, descriptor.id);
 	const testID = teamBridgeAttachmentId(descriptor.id);
@@ -200,6 +210,7 @@ function ThreadImage({
 				text={t("mobile.team_bridge.attachment.unavailable")}
 				box={box}
 				testID={testID}
+				accessibility={accessibility}
 			/>
 		);
 	if (state === "error")
@@ -212,6 +223,7 @@ function ThreadImage({
 					label: t("mobile.team_bridge.attachment.retry"),
 					onPress: retry,
 				}}
+				accessibility={accessibility}
 			/>
 		);
 	return (
@@ -226,6 +238,8 @@ function ThreadImage({
 			accessibilityHint={t("mobile.team_bridge.attachment.open_hint")}
 			disabled={state !== "ready"}
 			onPress={onOpen}
+			onLongPress={onLongPress}
+			{...accessibility}
 			className="overflow-hidden rounded-sm border border-hairline bg-elevated"
 			style={box}
 		>
@@ -261,6 +275,8 @@ export function MessageAttachments({
 	messageId,
 	attachments,
 	initialViewerIndex,
+	onLongPress,
+	accessibility,
 }: {
 	hub: HubClient;
 	tenantId: string;
@@ -269,6 +285,15 @@ export function MessageAttachments({
 	attachments: ReadonlyArray<AttachmentDescriptor | null>;
 	/** Fixture/QA seam: open the viewer at this image on mount. */
 	initialViewerIndex?: number;
+	/** The message row's long-press (its actions sheet). An image tile is the
+	 *  obvious place to hold an image message, and a Pressable with `onPress`
+	 *  but no `onLongPress` releases a hold as a press — it opened the viewer
+	 *  instead of the sheet (PR #339 round 1, m1/U2). */
+	onLongPress?: () => void;
+	/** The message's screen-reader actions, set by the row only when the
+	 *  message has no text: the tiles ARE that message, and a same-sender
+	 *  continuation renders no timestamp to carry them (round 1, M2). */
+	accessibility?: SelectTextAccessibility;
 }) {
 	const { width: windowWidth } = useWindowDimensions();
 	/*
@@ -327,6 +352,7 @@ export function MessageAttachments({
 											? teamBridgeAttachmentId(descriptor.id)
 											: fallbackId
 									}
+									accessibility={accessibility}
 								/>
 							);
 						return (
@@ -341,6 +367,8 @@ export function MessageAttachments({
 										viewablePosition(attachments, descriptor.id)?.index ?? 0,
 									)
 								}
+								onLongPress={onLongPress}
+								accessibility={accessibility}
 							/>
 						);
 					})}

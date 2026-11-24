@@ -13,7 +13,7 @@
 	"mobile.settings.theme.no_match": "Подходящих тем нет",
 	"mobile.settings.theme.row_label": "Тема, {name}",
 	"mobile.settings.theme.search_label": "Поиск тем",
-	"mobile.settings.theme.search_placeholder": "Поиск тем",
+	"mobile.settings.theme.search_placeholder": "Название, например Dracula",
 	"mobile.settings.theme.section_dark": "Тёмные ({count})",
 	"mobile.settings.theme.section_light": "Светлые ({count})",
 	"mobile.settings.theme.title": "Тема",

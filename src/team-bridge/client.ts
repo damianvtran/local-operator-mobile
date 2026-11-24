@@ -51,9 +51,11 @@ import {
 	type Notify,
 	type PushDevice,
 	pushDeviceSchema,
+	type ReactionsAnswer,
 	type ReadState,
 	type ReplyThreadPage,
 	type ReplyThreadReadState,
+	reactionsAnswerSchema,
 	readStateSchema,
 	replyThreadPageSchema,
 	replyThreadReadStateSchema,
@@ -998,6 +1000,37 @@ export function createHubClient(deps: HubClientDeps) {
 				},
 				{ body: { tenant_id: tenantId, seq } },
 			);
+		},
+
+		/**
+		 * Add (`active`) or remove one of MY reactions on a message (spec §2.1,
+		 * the routes core's `client.py` reaches for the desktop). Both verbs are
+		 * idempotent on the hub, so the reader's next tap is a safe retry.
+		 *
+		 * - The emoji is one path segment, percent-encoded with no safe
+		 *   characters (`encodeURIComponent`); the hub alone decides whether it
+		 *   is one RGI emoji. NFC first, as the desktop daemon does, so the same
+		 *   glyph typed two ways is one pill.
+		 * - DELETE carries `tenant_id` in the QUERY: "a DELETE body is not
+		 *   reliably forwarded by every proxy" (core). PUT sends it in the body.
+		 * - Never `actor_endpoint_id` or `expected_account_id`: the phone acts as
+		 *   the human, and its account guard is the pinned per-operation grant.
+		 *
+		 * The answer is the message's FULL summary for this reader, which replaces
+		 * the optimistic rows (`store.toggleReaction`).
+		 */
+		react(
+			tenantId: string,
+			conversationId: string,
+			messageId: string,
+			emoji: string,
+			active: boolean,
+		): Promise<ReactionsAnswer> {
+			const path = `/conversations/${encodeURIComponent(conversationId)}/messages/${encodeURIComponent(messageId)}/reactions/${encodeURIComponent(emoji.normalize("NFC"))}`;
+			const parse = (v: unknown) => reactionsAnswerSchema.parse(v);
+			return active
+				? request("PUT", path, parse, { body: { tenant_id: tenantId } })
+				: request("DELETE", path, parse, { query: { tenant_id: tenantId } });
 		},
 
 		/**

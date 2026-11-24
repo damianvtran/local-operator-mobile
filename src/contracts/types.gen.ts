@@ -121,6 +121,11 @@ export interface PeerSender {
 	conversation_name?: string;
 	model_label?: string;
 	cwd?: string;
+	/** `"team_bridge_message"` on the live echo of a Team Bridge card
+	 *  (`deliver_wake` stamps it); absent on a `lop send` peer. */
+	source?: string;
+	/** The validated display receipt that live echo carries on its sender. */
+	bridge_receipt?: BridgeReceiptDisplay;
 }
 
 /** The `send` tool's settled delivery payload — `details.delivery`.
@@ -459,6 +464,8 @@ export interface SessionProjection {
 	 * (`supplementsFromWire`); an older relay omits the key entirely.
 	 */
 	supplements?: Record<string, Record<string, unknown>>;
+	/** Negotiated sibling keyed by assistant row id; validate in the viewer. */
+	inline_ui?: unknown;
 }
 
 /* --------------------------------------------------------------- session list */
@@ -681,6 +688,14 @@ export interface Capabilities {
 	 * routes cannot be served — never defaulted to available.
 	 */
 	session_tags?: { available: boolean };
+	/**
+	 * The `$skill` capability (local-operator SKM-D3): the catalogue route
+	 * `GET /api/skills`, the `expand_skills` body flag on prompt/steer and the
+	 * receipt's `skills` block, as one licence. A TOP-LEVEL key, not
+	 * `remote_sessions.skill_invocation`. An older relay omits it, and ABSENCE
+	 * means no `$` affordance — never defaulted to available.
+	 */
+	skill_invocation?: { available: boolean };
 	/** `POST /api/sessions/start`'s capability (local-operator
 	 *  `docs/design/mobile-start-receipts.md`); `effort: true` licenses `effort`
 	 *  in a start body (v0.101.9). Absent = a relay that predates it. */
@@ -689,7 +704,17 @@ export interface Capabilities {
 		durable_idempotency?: boolean;
 		receipt_capacity?: number;
 		effort?: boolean;
+		/** local-operator #4367: license the `agent`/`team` start fields and
+		 *  `GET /api/start-targets`. Absent = an older relay, which DROPS the
+		 *  fields on an unkeyed start — never assume them. */
+		agent?: boolean;
+		team?: boolean;
 	};
+	/** local-operator #4395: the session stream moves a delivered phone steer to
+	 *  its journal slot (as `kind: "user"`, same id) for a stream that sends
+	 *  `?steer_journal_order=1`. Absent = an older relay, which must not be sent
+	 *  the parameter. */
+	steer_journal_order?: { available?: boolean; [key: string]: unknown };
 }
 
 export interface SessionListFrame {
@@ -822,6 +847,8 @@ export interface HistoryResponse {
 	has_more: boolean;
 	/** Existing relay archive/decode failure; never an empty retained beginning. */
 	unavailable?: string;
+	/** Same optional presentation as a live projection, scoped to this page. */
+	inline_ui?: unknown;
 }
 
 export interface SlashCommand {
@@ -833,6 +860,24 @@ export interface SlashCommand {
 
 export interface CommandsResponse {
 	commands: SlashCommand[];
+}
+
+/** One row of the `$name` catalogue (`GET /api/skills?session_id=`). */
+export interface SkillEntry {
+	name: string;
+	/** One line, at most 160 characters (the relay cuts it). */
+	description: string;
+	hidden: boolean;
+}
+
+export interface SkillsResponse {
+	skills: SkillEntry[];
+}
+
+/** The additive `skills` block of a prompt/steer receipt (names without `$`). */
+export interface SkillExpansionReceipt {
+	attached: string[];
+	skipped: string[];
 }
 
 export interface ModelEntry {
@@ -861,6 +906,33 @@ export interface ModelsResponse {
 	default?: ModelDefault | null;
 }
 
+/** `GET /api/start-targets` rows (local-operator #4367, `mobile/daemon.py`
+ *  `_start_targets_payload`). */
+export interface StartTargetAgent {
+	name: string;
+	label?: string;
+	kind?: string | null;
+	source?: string | null;
+	description?: string;
+	agent_id?: string | null;
+	avatar_sha256?: string | null;
+}
+
+export interface StartTargetTeam {
+	name: string;
+	label?: string;
+	description?: string;
+	manager?: string;
+	member_count?: number;
+}
+
+/** `degraded: true` = the registries were unreadable (lists empty). */
+export interface StartTargetsResponse {
+	agents: StartTargetAgent[];
+	teams: StartTargetTeam[];
+	degraded: boolean;
+}
+
 export interface Directories {
 	home: string;
 	recent: string[];
@@ -877,6 +949,9 @@ export type CommandOp =
 			images?: PromptImage[];
 			input_mode?: InputMode;
 			input_path?: string;
+			/** Ask the relay to expand `$name` mentions (local conversations only;
+			 *  a remote one answers `409 remote_unsupported`). */
+			expand_skills?: boolean;
 	  }
 	| {
 			op: "steer";
@@ -885,6 +960,9 @@ export type CommandOp =
 			images?: PromptImage[];
 			input_mode?: InputMode;
 			input_path?: string;
+			/** Ask the relay to expand `$name` mentions (local conversations only;
+			 *  a remote one answers `409 remote_unsupported`). */
+			expand_skills?: boolean;
 	  }
 	| { op: "abort" }
 	| { op: "cancel"; mode?: "graceful" | "immediate" }
@@ -930,6 +1008,9 @@ export interface CommandAck {
 	ok: true;
 	/** Prose from the owning runtime; display verbatim, never parse. */
 	detail: string;
+	/** Present whenever the relay honoured `expand_skills`, even with both
+	 *  lists empty; absent from a relay that does not expand. */
+	skills?: SkillExpansionReceipt;
 }
 
 /** `GET /api/sessions/{id}/supplements/{digest}/document` — one stored turn
@@ -938,6 +1019,36 @@ export interface CommandAck {
  *  and no browsing context is navigated to a URL. */
 export interface SupplementDocument {
 	html: string;
+}
+
+/** One message behind an inbound Team Bridge card, as the relay resolves it
+ *  (`team_bridge/card_body.py::resolve_card_body`, local-operator #4238).
+ *  `state` and `reason` stay open strings: a newer relay may add a value, and
+ *  the reader maps an unknown one to "unavailable" rather than guessing a
+ *  moderation outcome (`features/session/bridge-card-body.ts`). */
+export interface BridgeCardBodyItem {
+	message_id?: string;
+	conversation_id?: string;
+	/** admitted | pending | held | refused | not_admitted | unavailable. */
+	state: string;
+	/** Markdown, written by someone else: untrusted, never cached. */
+	body?: string;
+	source?: string;
+	hold?: { class?: string; held_for_s?: number };
+	/** signed_out | other_account | not_member | deleted | hub_unsupported | offline. */
+	reason?: string;
+}
+
+/** `GET /api/sessions/{id}/bridge-cards/{entry_id}/body` — the admitted bodies
+ *  behind one `team_bridge_message` row: at most 20 items, the rest counted in
+ *  `more`. Served `Cache-Control: private, no-store` so revocation stays live. */
+export interface BridgeCardBody {
+	v: 1;
+	/** Display facts from the card journal row (core ebe4a4103ae2).
+	 * Optional for older relays; malformed decorative fields are ignored. */
+	card?: { received_at?: string; thread_reply?: boolean };
+	items: BridgeCardBodyItem[];
+	more: number;
 }
 
 export interface ApiError {

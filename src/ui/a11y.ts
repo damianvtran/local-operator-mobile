@@ -37,6 +37,10 @@ export const ROLE = {
 	tab: "tab",
 	tablist: "tablist",
 	radiogroup: "radiogroup",
+	/* A control with a size or a value the reader steps through (ARIA's
+	 *  `adjustable`, RN's own role): the resizable sheet's grab bar is the one
+	 *  this slice renders, and VoiceOver/TalkBack read its value and actions. */
+	adjustable: "adjustable",
 	radio: "radio",
 	switch: "switch",
 	checkbox: "checkbox",
@@ -59,6 +63,12 @@ export type A11yRole = (typeof ROLE)[keyof typeof ROLE];
 export const SCREEN = {
 	/** Team Bridge is hub-owned: these selectors remain stable without a relay connection. */
 	teamBridgeList: "team-bridge-list",
+	/* The public community client (RFC v2.4; dark behind EXPO_PUBLIC_COMMUNITY). */
+	communityDirectory: "community-directory",
+	communityHome: "community-home",
+	communityConversation: "community-conversation",
+	communityBrowse: "community-browse",
+	communityRequests: "community-requests",
 	teamBridgeThread: "team-bridge-thread",
 	/** One message's reply thread (root + replies), not a conversation. */
 	teamBridgeReplyThread: "team-bridge-reply-thread",
@@ -173,6 +183,9 @@ export const CONTROL = {
 	transcriptGapLoad: "transcript-gap-load",
 	/** Re-read the newest page after a failed refresh, at the newest edge. */
 	transcriptRetryLatest: "transcript-retry-latest",
+	/** The floating "Jump to latest" chip over the transcript: offered only to a
+	 *  reader who left the end while new output arrived below them. */
+	transcriptJumpToLatest: "transcript-jump-to-latest",
 	/** Team Bridge is hub-owned: these selectors remain stable without a relay connection. */
 	teamBridgeAttach: "team-bridge-attach",
 	teamBridgeBack: "team-bridge-back",
@@ -183,6 +196,38 @@ export const CONTROL = {
 	teamBridgeMenu: "team-bridge-menu",
 	teamBridgeConversationsRetry: "team-bridge-conversations-retry",
 	teamBridgeGateRetry: "team-bridge-gate-retry",
+	communityNoPlanJoin: "community-no-plan-join",
+	communitySwitcherBrowse: "community-switcher-browse",
+	communityLoadRetry: "community-load-retry",
+	communityJoinOpen: "community-join-open",
+	communityJoinAgree: "community-join-agree",
+	communityJoinSubmit: "community-join-submit",
+	communityReaccept: "community-reaccept",
+	communityBrowseOpen: "community-browse-open",
+	communityRequestsOpen: "community-requests-open",
+	communitySearch: "community-search",
+	communityBrowseMode: "community-browse-mode",
+	communityBrowseChannels: "community-browse-channels",
+	communityBrowsePeople: "community-browse-people",
+	communityRequestsMode: "community-requests-mode",
+	communityRequestsDm: "community-requests-dm",
+	communityRequestsApprovals: "community-requests-approvals",
+	communityLoadOlder: "community-load-older",
+	communityComposerInput: "community-composer-input",
+	communitySend: "community-send",
+	communityAttach: "community-attach",
+	communityImagesNoteDismiss: "community-images-note-dismiss",
+	communityHomeSwitcher: "community-home-switcher",
+	communityReportConsent: "community-report-consent",
+	communityChannelJoin: "community-channel-join",
+	communityAttemptCancel: "community-attempt-cancel",
+	communityAttemptRetry: "community-attempt-retry",
+	communityAttemptDismiss: "community-attempt-dismiss",
+	communityProfileMessage: "community-profile-message",
+	communityProfileBlock: "community-profile-block",
+	communityProfileReport: "community-profile-report",
+	communityReportNote: "community-report-note",
+	communityReportSubmit: "community-report-submit",
 	teamBridgeJoin: "team-bridge-join",
 	teamBridgeJumpNewest: "team-bridge-jump-newest",
 	teamBridgeLoadOlder: "team-bridge-load-older",
@@ -213,6 +258,9 @@ export const CONTROL = {
 	// because two screens are on the navigation stack at once during a transition.
 	sessionBack: "session-back",
 	subagentBack: "subagent-back",
+	/** The subagent screen's "Try again" when its first transcript read was
+	 *  dropped and there is nothing to draw (`useSubagentTranscript` `failed`). */
+	subagentRetry: "subagent-detail-retry",
 	videoBack: "video-back",
 
 	// Settings: the theme override, the one setting that needs no connection.
@@ -221,6 +269,8 @@ export const CONTROL = {
 	// z ladder allows no more), so their parts are unambiguous without a
 	// discriminator; the surface itself is named by whichever screen opens it.
 	sheetClose: "sheet-close",
+	/** The resizable sheet's two-size control: a drag target AND a tap toggle. */
+	sheetGrabBar: "sheet-grab-bar",
 	sheetScrim: "sheet-scrim",
 	dialogConfirm: "dialog-confirm",
 	dialogCancel: "dialog-cancel",
@@ -382,6 +432,10 @@ export const CONTROL = {
 	askRespond: "ask-respond",
 	askDecline: "ask-decline",
 	askDismiss: "ask-dismiss",
+	/** Back out of the reasons a waiting ask's dismissal asks for. */
+	askDismissCancel: "ask-dismiss-cancel",
+	/** Re-run the asks sheet's failed read. */
+	asksReadRetry: "asks-read-retry",
 	askOpenConversation: "ask-open-conversation",
 	settingsTunnelCancel: "settings-tunnel-cancel",
 	settingsBack: "settings-back",
@@ -420,6 +474,10 @@ export const CONTROL = {
 	/** Settings → Notifications, denied: "Turn on notifications" opens this
 	 *  app's page in the OS settings (PR #264 UX R1 U6). */
 	settingsNotificationsOpenSettings: "settings-notifications-open-settings",
+	/** Android only: opens the system page of the Team Bridge channel the
+	 *  reader switched off there (ADR 0010 S4). */
+	settingsNotificationsBridgeChannelSettings:
+		"settings-notifications-bridge-channel-settings",
 	settingsAccountRoutingGroup: "settings-account-routing-group",
 	settingsAccountRoutingSave: "settings-account-routing-save",
 	settingsAccountRoutingRetry: "settings-account-routing-retry",
@@ -460,6 +518,9 @@ export const CONTROL = {
 	 *  for it that stays put while the composer's disc is Steer (a draft typed). */
 	sessionWorkingStop: "session-working-stop",
 	composerAttach: "composer-attach",
+	/** The camera-access notice's Open Settings action, inside the attach sheet:
+	 *  the only way back after a refusal the OS will not re-ask. */
+	attachCameraSettings: "attach-camera-settings",
 	composerMic: "composer-mic",
 	/** The recording bar's own cancel: DISCARDS the take and sends no request,
 	 *  unlike the mic, which stops and transcribes. Two outcomes, two controls. */
@@ -468,6 +529,9 @@ export const CONTROL = {
 	composerPasteImage: "composer-paste-image",
 	composerResume: "composer-resume",
 	composerInput: "composer-input",
+	/** The scroll-made pill's tap target over its one-line field: a tap opens the
+	 *  card with the field focused. Exists only while the pill stands. */
+	composerPillField: "composer-pill-field",
 	composerContext: "composer-context",
 	composerOpenQueue: "composer-open-queue",
 	/** More's Model and Folder rows: present only while that control's icon is
@@ -627,6 +691,8 @@ export const CONTROL = {
 	 *  swallowed into an empty catalogue, which read as "connected, no model". */
 	homeModelsBanner: "home-models-banner",
 	homeModelsRetry: "home-models-retry",
+	/** The stored-session picker can recover its catalogue without waking a host. */
+	sessionModelsRetry: "session-models-retry",
 	/** The model picker's "back to what the computer would have used" row, shown
 	 *  while the computer names no default model (reviews R5, #174 D1). With a named
 	 *  default, that model's own row is the way back. */
@@ -650,6 +716,14 @@ export const CONTROL = {
 	homeModelPickerRetry: "home-model-picker-retry",
 	homeModelSearch: "home-model-search",
 	homeEffortPicker: "home-effort-picker",
+	/** The "Start this chat with" sheet (agent or team) and its parts. */
+	homeIdentityPicker: "home-identity-picker",
+	homeIdentityPill: "home-identity-pill",
+	homeIdentitySearch: "home-identity-search",
+	homeIdentityDefault: "home-identity-default",
+	homeIdentityRetry: "home-identity-retry",
+	/** The composer More sheet's "Agent or team" row (home only). */
+	composerContextIdentity: "composer-context-identity",
 	/** The home composer's folder icon control (issue #325) — the id the
 	 *  strip's folder chip had, so a flow that pressed it still finds it. */
 	homeFolderChip: "home-folder-chip",
@@ -669,7 +743,9 @@ export const CONTROL = {
 	sidebarViewGroup: "sidebar-view-group",
 	sidebarViewGroupSection: "sidebar-view-group-section",
 	sidebarViewGroupFlat: "sidebar-view-group-flat",
+	sidebarViewGroupTag: "sidebar-view-group-tag",
 	sidebarViewShowEnded: "sidebar-view-show-ended",
+	sidebarViewShowTags: "sidebar-view-show-tags",
 	sidebarViewMore: "sidebar-view-more",
 	settingsSidebarOrder: "settings-sidebar-order",
 	settingsSidebarOrderActiveFirst: "settings-sidebar-order-active-first",
@@ -677,10 +753,12 @@ export const CONTROL = {
 	settingsSidebarGroup: "settings-sidebar-group",
 	settingsSidebarGroupSection: "settings-sidebar-group-section",
 	settingsSidebarGroupFlat: "settings-sidebar-group-flat",
+	settingsSidebarGroupTag: "settings-sidebar-group-tag",
 	settingsSidebarBasis: "settings-sidebar-basis",
 	settingsSidebarBasisActive: "settings-sidebar-basis-active",
 	settingsSidebarBasisCreated: "settings-sidebar-basis-created",
 	settingsSidebarShowEnded: "settings-sidebar-show-ended",
+	settingsSidebarShowTags: "settings-sidebar-show-tags",
 	sidebarPast: "sidebar-past",
 	/** At >= 200 % text the destinations strip collapses to ONE "More" row that
 	 *  opens a sheet with the same destinations (record §3) — labels are never
@@ -839,6 +917,22 @@ export const SURFACE = {
 	sidebarViewSheet: "sidebar-view-sheet",
 	/** Team Bridge is hub-owned: these selectors remain stable without a relay connection. */
 	teamBridgeAttachSheet: "team-bridge-attach-sheet",
+	/** The long-press message-actions sheet (Reply in thread, Copy, Select). */
+	teamBridgeMessageActionsSheet: "team-bridge-message-actions-sheet",
+	/** The selected tint a row holds while its actions sheet is open. */
+	teamBridgeMessageActionsTint: "team-bridge-message-actions-tint",
+	/** The quick-reaction row at the top of the message-actions sheet. */
+	teamBridgeQuickReactions: "team-bridge-quick-reactions",
+	/** The row of reaction pills under a message, and its trailing "+". */
+	teamBridgeReactionPills: "team-bridge-reaction-pills",
+	teamBridgeReactionWrap: "team-bridge-reaction-wrap",
+	teamBridgeReactionsExpand: "team-bridge-reactions-expand",
+	teamBridgeReactionDetails: "team-bridge-reaction-details",
+	teamBridgeReactionAdd: "team-bridge-reaction-add",
+	/** The "Reaction couldn't be saved" line under a refused toggle. */
+	teamBridgeReactionError: "team-bridge-reaction-error",
+	/** The hidden field that raises the system emoji keyboard (`+`). */
+	teamBridgeEmojiCapture: "team-bridge-emoji-capture",
 	teamBridgeReplyThreadList: "team-bridge-reply-thread-list",
 	teamBridgeReplyThreadLoading: "team-bridge-reply-thread-loading",
 	teamBridgeReplyThreadError: "team-bridge-reply-thread-error",
@@ -870,6 +964,15 @@ export const SURFACE = {
 	teamBridgeDeliveryHelpSheet: "team-bridge-delivery-help-sheet",
 	teamBridgeNotifySheet: "team-bridge-notify-sheet",
 	teamBridgeOrganizations: "team-bridge-organizations",
+	communitySwitcherGroup: "community-switcher-group",
+	communityNoPlanCard: "community-no-plan-card",
+	communityJoinSheet: "community-join-sheet",
+	communityProfileSheet: "community-profile-sheet",
+	communityReportSheet: "community-report-sheet",
+	communityAttempt: "community-attempt",
+	communityHistory: "community-history",
+	communityImagesNote: "community-images-note",
+	communityReacceptBanner: "community-reaccept-banner",
 	/** The Team Bridge pane inside the workspace drawer. */
 	teamBridgeDrawerPane: "team-bridge-drawer-pane",
 	teamBridgeProfile: "team-bridge-profile",
@@ -1033,6 +1136,9 @@ export const SURFACE = {
 	 *  actually has). Its rows are the `attach-option-` family below — the rows
 	 *  differ per build kind, the sheet does not. */
 	attachSheet: "attach-sheet",
+	/** The attach sheet's camera notice: access refused (with Open Settings) or
+	 *  no camera on this device. Present only after a press on Camera. */
+	attachCameraNotice: "attach-camera-notice",
 	sessionColumn: "session-column",
 	sessionContext: "session-context",
 	sessionLoading: "session-loading",
@@ -1108,6 +1214,8 @@ export const SURFACE = {
 	modelSheet: "model-sheet",
 	effortSheet: "effort-sheet",
 	slashSheet: "slash-sheet",
+	/** The `$skill` list docked above the session composer's field. */
+	skillTray: "skill-tray",
 	todosPanel: "todos-panel",
 	todosBody: "todos-body",
 	subagentsPanel: "subagents-panel",
@@ -1157,6 +1265,15 @@ export const SURFACE = {
 	 *  Present only while it is telling the truth (the body overflows and is not
 	 *  scrolled to its end), so a frame can measure the cue its own state earns. */
 	sheetBodyFade: "sheet-body-fade",
+	/** Its mirror under a sheet's `pinned` region: present only while the body
+	 *  has scrolled rows up under the pinned field (design D1, PR #343). */
+	sheetPinnedFade: "sheet-pinned-fade",
+	/** The Sheet kit's scrolling body, its `pinned` region (above the body, never
+	 *  scrolls — a search field over its results), and the spacer that lifts the
+	 *  surface onto the software keyboard's top on native (TestFlight 1295). */
+	sheetBody: "sheet-body",
+	sheetPinned: "sheet-pinned",
+	sheetKeyboardSpacer: "sheet-keyboard-spacer",
 
 	/* --- the turn-supplement block ("Highlights", memo §2.8, lane N): the
 	 *  pieces under a final answer. Named in full because the capture cells
@@ -1230,7 +1347,14 @@ export const SURFACE = {
 	/** The scroll cap around the notices above the composer (QA Q-R2-1). */
 	homeNoticeStack: "home-notice-stack",
 	homeGreeting: "home-greeting",
-	homeSuggestions: "home-suggestions",
+	/** The work list above the composer (needs you · running · recent, or the
+	 *  brand-new account's TRY rows): an id so a capture can measure it against
+	 *  the hero and the composer's top. */
+	homeWorkList: "home-work-list",
+	/** One TRY row or the "All conversations" footer inside the work list. The
+	 *  session rows keep the drawer's own `sessionRowId`. */
+	homeWorkRow: "home-work-row",
+	homeWorkAll: "home-work-all",
 	homeStarting: "home-starting",
 	/** The decorative brand mark beside the header's computer chip: an id so a
 	 *  capture can measure its alignment and its yield at large text. */
@@ -1317,6 +1441,17 @@ export const IDENTIFIER_FAMILIES: readonly string[] = [
 	"team-bridge-chief-",
 	"team-bridge-org-",
 	"team-bridge-message-",
+	// Community rows are keyed by server ids (community, channel, public profile, request, approval, message).
+	"community-row-",
+	"community-featured-",
+	"community-channel-row-",
+	"community-dm-row-",
+	"community-person-",
+	"community-message-",
+	"community-author-",
+	"community-request-",
+	"community-approval-",
+	"community-report-category-",
 	"team-bridge-notify-",
 	/* Image attachments: one composer chip per staged image (its remove/retry
 	 *  controls derive from it), one rendered image per message attachment, and
@@ -1394,6 +1529,11 @@ export const IDENTIFIER_FAMILIES: readonly string[] = [
 	"asks-badge-",
 	"ask-field-",
 	"ask-other-",
+	/* The id a reader can MATCH: one chip per ask id quoted in prose, and the
+	 *  copy affordance at the foot of an ask row or receipt. Keyed by the ask id,
+	 *  so a flow reaches the chip of the id the transcript carries. */
+	"ask-chip-",
+	"ask-id-copy-",
 	/* The find sheet's result rows: one per hit, keyed by the message the row
 	 *  will land on, so a flow (or the capture's press) reaches a specific hit
 	 *  without counting rows. */
@@ -1494,22 +1634,28 @@ export const state = (options: {
 	busy?: boolean;
 	selected?: boolean;
 	expanded?: boolean;
+	/** A checkbox's own state (a multi-select option): `selected` is what a radio
+	 *  or a list row reports, `checked` is what ARIA's checkbox role reads. */
+	checked?: boolean;
 }): {
 	disabled?: boolean;
 	busy?: boolean;
 	selected?: boolean;
 	expanded?: boolean;
+	checked?: boolean;
 } => {
 	const out: {
 		disabled?: boolean;
 		busy?: boolean;
 		selected?: boolean;
 		expanded?: boolean;
+		checked?: boolean;
 	} = {};
 	if (options.disabled !== undefined) out.disabled = options.disabled;
 	if (options.busy !== undefined) out.busy = options.busy;
 	if (options.selected !== undefined) out.selected = options.selected;
 	if (options.expanded !== undefined) out.expanded = options.expanded;
+	if (options.checked !== undefined) out.checked = options.checked;
 	return out;
 };
 
@@ -2375,6 +2521,20 @@ export const findResultId = (entryId: string): string =>
 export const completionAnchorId = (anchorId: string): string =>
 	`completion-anchor-${anchorId}`;
 
+/** An inbound Team Bridge card's body region, under its row's own id: a flow
+ *  that found the row finds the body beside it. Built here rather than as a
+ *  template `testID` at the call site, which the identifier check cannot
+ *  follow (`a11y.e2e.test.ts`, "never types an identifier as a literal"). */
+export const bridgeCardBodyId = (rowTestID: string): string =>
+	`${rowTestID}-bridge-body`;
+
+/** The Show more / Show less toggle of one body inside that region, by the
+ *  item's index in the relay's answer. */
+export const bridgeCardBodyMoreId = (
+	regionTestID: string,
+	index: number,
+): string => `${regionTestID}-more-${index}`;
+
 /** One image inside a transcript row, disambiguated by its index within the row. */
 export const transcriptImageId = (entryId: string, index: number): string =>
 	`transcript-image-${entryId}-${index}`;
@@ -2406,6 +2566,9 @@ export const effortRungId = (rung: string): string => `effort-rung-${rung}`;
 /** One command in the slash sheet. */
 export const slashCommandId = (name: string): string => `slash-command-${name}`;
 
+/** One row of the `$skill` tray, by skill name. */
+export const skillTrayRowId = (name: string): string => `skill-tray-${name}`;
+
 /** One attached image in the composer, by its position. */
 export const composerAttachmentId = (index: number): string =>
 	`composer-attachment-${index}`;
@@ -2423,6 +2586,14 @@ export const subagentChipId = (jobId: string): string =>
 
 /** One ask's row in the asks sheet, keyed by the ask's own id. */
 export const askRowId = (askId: string): string => `ask-row-${askId}`;
+
+/** An ask id quoted in an agent's prose: the chip that names its state and opens
+ *  the ask. Keyed by the id the agent wrote (ids are unique per session only). */
+export const askIdChipId = (askId: string): string => `ask-chip-${askId}`;
+
+/** The copy affordance at the foot of an ask card, row or transcript receipt —
+ *  the same id, where it can be pressed as a real box rather than as prose. */
+export const askIdCopyId = (askId: string): string => `ask-id-copy-${askId}`;
 
 /** One file-callout row of a supplement block: its index within the row's
  *  featured `files` list (the recorded order, newest job version first). */
@@ -2463,6 +2634,12 @@ export const askOtherId = (questionId: string): string =>
 export const askOtherFieldId = (questionId: string): string =>
 	`ask-other-field-${questionId}`;
 
+/** The field of a question that has no options (the free-text door). Its own
+ *  family beside `ask-other-field-`, because a flow that focuses "the second
+ *  field of a multi-question ask" must reach it without guessing a coordinate. */
+export const askAnswerFieldId = (questionId: string): string =>
+	`ask-answer-field-${questionId}`;
+
 /** One row of the todos panel, by its position in the list. */
 export const todosRowId = (index: number): string => `todos-row-${index}`;
 
@@ -2471,6 +2648,23 @@ export const todosRowId = (index: number): string => `todos-row-${index}`;
  *  so the screen cannot spell a stable id — the index is the one name a flow has. */
 export const homeFolderRowId = (index: number): string =>
 	`home-folder-row-${index}`;
+
+/** One agent or team row of the identity picker. Names are the relay's slugs
+ *  (`[a-z0-9-_]`), and an agent and a team may share one, so the kind is part of
+ *  the id. A Recent repeat gets its own band prefix so one frame never names an
+ *  id twice. */
+export const homeIdentityRowId = (
+	kind: "agent" | "team",
+	name: string,
+	band: "recent" | "main" = "main",
+): string =>
+	`home-identity-${band === "recent" ? "recent-" : ""}${kind}-${name}`;
+
+/** One reason row of a waiting ask's dismissal (`moot` | `answered_in_chat`),
+ *  keyed by the reason the wire carries so a flow picks one without counting
+ *  rows. */
+export const askDismissReasonId = (reason: string): string =>
+	`ask-dismiss-reason-${reason}`;
 
 /** One question of a multi-question ask: `ask-question-<n>-of-<total>`. */
 export const askQuestionId = (index: number, total: number): string =>
@@ -2519,7 +2713,53 @@ export const teamBridgeAttachmentId = (value: string): string =>
 	`team-bridge-attachment-${value}`;
 export const teamBridgeAttachSourceId = (value: string): string =>
 	`team-bridge-attach-source-${value}`;
+/** One row of the message-actions sheet, keyed by its action name. */
+export const teamBridgeMessageActionId = (value: string): string =>
+	`team-bridge-message-action-${value}`;
+/* Emoji are keyed by their code points, so the id is plain ASCII that any
+ *  test driver can type ("1f44d" for 👍). */
+const emojiKey = (emoji: string): string =>
+	Array.from(emoji, (c) => (c.codePointAt(0) ?? 0).toString(16)).join("-");
+/** One reaction pill under a message. */
+export const teamBridgeReactionPillId = (emoji: string): string =>
+	`team-bridge-reaction-pill-${emojiKey(emoji)}`;
+/** The painted face stays addressable separately from its larger touch box. */
+export const teamBridgeReactionVisualId = (emoji: string): string =>
+	`${teamBridgeReactionPillId(emoji)}-visual`;
+/** Inert layout probes use the same code-point encoding as visible pills: raw
+ * emoji in selectors are fragile for variation selectors, skin tones and ZWJ. */
+export const teamBridgeReactionMeasureId = (emoji: string): string =>
+	`team-bridge-reaction-measure-${emojiKey(emoji)}`;
+/** One emoji cell of the sheet's quick-reaction row. */
+export const teamBridgeQuickReactionId = (emoji: string): string =>
+	`team-bridge-quick-reaction-${emojiKey(emoji)}`;
 export const teamBridgeViewerId = (value: string): string =>
 	`team-bridge-viewer-${value}`;
 export const teamBridgeProfileOpenId = (value: string): string =>
 	`team-bridge-profile-open-${value}`;
+
+/* The community client's id-keyed rows (families above). Server ids only:
+ * never a display name, so a selector survives a rename. */
+export const communityRowId = (communityId: string): string =>
+	`community-row-${communityId}`;
+export const communityFeaturedId = (communityId: string): string =>
+	`community-featured-${communityId}`;
+export const communityChannelRowId = (channelId: string): string =>
+	`community-channel-row-${channelId}`;
+export const communityDmRowId = (conversationId: string): string =>
+	`community-dm-row-${conversationId}`;
+export const communityPersonId = (publicId: string): string =>
+	`community-person-${publicId}`;
+export const communityMessageId = (messageId: string): string =>
+	`community-message-${messageId}`;
+/** The author avatar of one message: the profile tap target (design D1/D5). */
+export const communityAuthorId = (messageId: string): string =>
+	`community-author-${messageId}`;
+export const communityRequestId = (requestId: string, action: string): string =>
+	`community-request-${requestId}-${action}`;
+export const communityApprovalId = (
+	approvalId: string,
+	action: string,
+): string => `community-approval-${approvalId}-${action}`;
+export const communityReportCategoryId = (category: string): string =>
+	`community-report-category-${category}`;

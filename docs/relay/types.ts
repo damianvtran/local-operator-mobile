@@ -740,6 +740,11 @@ export interface Capabilities {
   /** The conversation-tag routes. Optional and never defaulted: absence is an
    *  older relay whose `/api/tags` and `/api/sessions/{id}/tags` do not exist. */
   session_tags?: { available: boolean };
+  /** The `$skill` licence (SKM-D3): `GET /api/skills`, the `expand_skills` body
+   *  flag and the receipt's `skills` block travel under this ONE key. TOP-LEVEL,
+   *  distinct from `remote_sessions.skill_invocation` (remote expansion, false).
+   *  Absent on an older relay, which silently drops the flag. */
+  skill_invocation?: { available: boolean };
   /** `POST /api/sessions/start`'s capability (local-operator
    *  `docs/design/mobile-start-receipts.md`). `effort: true` (v0.101.9) is the
    *  only licence to send `effort` in a start body: an older relay refuses it on
@@ -749,6 +754,12 @@ export interface Capabilities {
     durable_idempotency?: boolean;
     receipt_capacity?: number;
     effort?: boolean;
+    /** local-operator #4367 (`start_receipts.CAPABILITY`): each licenses its
+     *  optional start field AND `GET /api/start-targets`. The unkeyed start
+     *  drops unknown fields, so a client sending `team` blind to an older relay
+     *  starts an UNBOUND chat. */
+    agent?: boolean;
+    team?: boolean;
   };
 }
 
@@ -916,6 +927,27 @@ export interface SlashCommand {
   arguments: "none" | "optional" | "required";
 }
 
+/** One row of `GET /api/skills?session_id=` (`daemon.py` `api_skills`): sorted by
+ *  name, at most 500 rows, `description` cut to 160 characters. Hidden skills
+ *  are INCLUDED and marked, because being typed is the case `hide` leaves open.
+ *  `404 {code: "unknown_session"}` for an id the relay does not know. */
+export interface SkillEntry {
+  name: string;
+  description: string;
+  hidden: boolean;
+}
+
+export interface SkillsResponse {
+  skills: SkillEntry[];
+}
+
+/** The additive `skills` block of a prompt/steer ack, present whenever the relay
+ *  honoured `expand_skills` (names WITHOUT the `$`). */
+export interface SkillExpansionReceipt {
+  attached: string[];
+  skipped: string[];
+}
+
 /** One row of `GET /api/models`. **The array order IS the ranking** (direct
  *  providers first, newest version first, aggregators last) — re-sorting or
  *  regrouping throws that away (`daemon.py:5046-5087`,
@@ -946,6 +978,36 @@ export interface ModelDefault {
   provider: string;
   model_id: string;
   effort: string | null;
+}
+
+/** `GET /api/start-targets` (local-operator #4367, `daemon.py`
+ *  `_start_targets_payload`): the agents and teams a new chat may be bound to,
+ *  projected from the desktop's own `profile_catalogue`/`team_catalogue`.
+ *  `label` is pre-painted (`display_labels.display_form` / `teams.display_form`);
+ *  `avatar_sha256` comes from `agent_avatar.agent_index`. A registry failure
+ *  answers 200 with empty lists and `degraded: true`. */
+export interface StartTargetAgent {
+  name: string;
+  label: string;
+  kind: "role" | "specialist" | null;
+  source: "builtin" | "installed" | "custom" | null;
+  description: string;
+  agent_id: string | null;
+  avatar_sha256: string | null;
+}
+
+export interface StartTargetTeam {
+  name: string;
+  label: string;
+  description: string;
+  manager: string;
+  member_count: number;
+}
+
+export interface StartTargetsResponse {
+  agents: StartTargetAgent[];
+  teams: StartTargetTeam[];
+  degraded: boolean;
 }
 
 /** `GET /api/directories` (`daemon.py:4350-4359`). `tmp` is the RESOLVED temp
@@ -986,6 +1048,11 @@ export type CommandOp =
       images?: PromptImage[];
       input_mode?: InputMode;
       input_path?: string;
+      /** Only `true` expands. Set only when `capabilities.skill_invocation` is
+       *  available and the text carries `$`; a REMOTE conversation answers
+       *  `409 remote_unsupported`, and an over-budget expansion `422
+       *  {code: "skills_too_large"}`. Part of the retry envelope's bytes. */
+      expand_skills?: boolean;
     }
   /** Idempotent mid-turn injection; same identity rules as `prompt`. Answers
    *  `detail: "steering queued"` when the turn is holding it for a boundary. */
@@ -996,6 +1063,11 @@ export type CommandOp =
       images?: PromptImage[];
       input_mode?: InputMode;
       input_path?: string;
+      /** Only `true` expands. Set only when `capabilities.skill_invocation` is
+       *  available and the text carries `$`; a REMOTE conversation answers
+       *  `409 remote_unsupported`, and an over-budget expansion `422
+       *  {code: "skills_too_large"}`. Part of the retry envelope's bytes. */
+      expand_skills?: boolean;
     }
   /** The stop button; never kills the session. On a mixed-version runtime it can
    *  be refused with `422` and the refusal names the op-form to use. */
@@ -1068,6 +1140,8 @@ export type SignedCommand = CommandOp & {
 export interface CommandAck {
   ok: true;
   detail: string;
+  /** See `SkillExpansionReceipt`. */
+  skills?: SkillExpansionReceipt;
 }
 
 /* --------------------------------------------------------------------- errors */

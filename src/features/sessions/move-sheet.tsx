@@ -2,7 +2,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, Text, View } from "react-native";
 
 import type { SessionSummary, TransferReceipt } from "@/contracts";
-import { useConnection } from "@/features/auth/connection-provider";
+import {
+	useConnection,
+	useLocaleFrame,
+} from "@/features/auth/connection-provider";
 import {
 	isRemoteRow,
 	remoteDeviceLabel,
@@ -17,12 +20,13 @@ import {
 	newTransferRequestId,
 	type TransferRefusal,
 } from "@/features/sessions/transfer";
+import { t } from "@/i18n";
 import { sessionTitle } from "@/state/list-store";
 import { CONTROL, ROLE, SURFACE, sessionMoveDestId, state } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
 import { Button } from "@/ui/components/button";
 import { Sheet } from "@/ui/components/sheet";
-import { TEXT_END_CLASS } from "@/ui/direction";
+import { TEXT_END_CLASS, useComposedDir } from "@/ui/direction";
 
 /**
  * The move/offload sheet: one conversation's move, copy, or recall.
@@ -448,20 +452,35 @@ const PickBody = ({
 	selected: MoveDestination | null;
 	onSelect: (to: string) => void;
 }) => {
+	// An open picker can outlive a relay language frame. Subscribe here so its
+	// client-owned copy updates without reopening; relay reasons stay verbatim.
+	useLocaleFrame();
 	const accent = useTokenColor("accent");
+	// The "where it is now" line composes translated prose around a device name
+	// that is usually Latin (and whose fallbacks always are). Urdu's unreachable
+	// line (`move_pick.cannot_reach`) leads with that name, so first-strong
+	// detection would set the paragraph LTR and misorder the postposition. State
+	// the page's base instead; called before the early return (rules of hooks).
+	const composedDir = useComposedDir();
 	if (session === null) return null;
 	const remote = isRemoteRow(session);
 	const unreachable = remote && session.reachable === false;
 	return (
 		<View className="gap-4 pb-2" testID={SURFACE.sessionMoveSheet}>
 			<View className="gap-1">
-				<Text className="text-meta text-ink-muted">Right now</Text>
+				<Text className="text-meta text-ink-muted">
+					{t("mobile.remote_sessions.move_pick.right_now")}
+				</Text>
 				{remote ? (
 					<>
-						<Text className="text-body text-ink">
+						<Text className="text-body text-ink" {...composedDir}>
 							{unreachable
-								? `Can't reach ${remoteDeviceLabel(session)}`
-								: `On ${remoteDeviceLabel(session)}`}
+								? t("mobile.remote_sessions.move_pick.cannot_reach", {
+										device: remoteDeviceLabel(session),
+									})
+								: t("mobile.sidebar.row.on_device", {
+										device: remoteDeviceLabel(session),
+									})}
 						</Text>
 						{unreachable ? (
 							<Text
@@ -469,29 +488,31 @@ const PickBody = ({
 								testID={SURFACE.sessionRemoteUnreachable}
 							>
 								{session.unreachable_reason?.trim() ||
-									"It did not answer when this computer asked."}
+									t("mobile.remote_sessions.move_pick.no_answer")}
 							</Text>
 						) : null}
 					</>
 				) : (
-					<Text className="text-body text-ink">On this computer</Text>
+					<Text className="text-body text-ink">
+						{t("mobile.remote_sessions.move_pick.on_this_computer")}
+					</Text>
 				)}
 			</View>
 
 			{destinations.length === 0 ? (
 				<View className="gap-1">
 					<Text className="text-body text-ink">
-						No other devices are visible.
+						{t("mobile.remote_sessions.move_pick.no_devices")}
 					</Text>
 					<Text className="text-body-sm text-ink-dim">
-						This app can offer the devices your sessions show. A device with no
-						visible session cannot be picked yet — open Local Operator on the
-						other computer and pull the list to refresh.
+						{t("mobile.remote_sessions.move_pick.discovery_help")}
 					</Text>
 				</View>
 			) : (
 				<View className="gap-2">
-					<Text className="text-meta text-ink-muted">Move or copy to</Text>
+					<Text className="text-meta text-ink-muted">
+						{t("mobile.remote_sessions.move_pick.destination_heading")}
+					</Text>
 					<View accessibilityRole={ROLE.radiogroup}>
 						{destinations.map((destination) => {
 							const active = destination.to === selected?.to;

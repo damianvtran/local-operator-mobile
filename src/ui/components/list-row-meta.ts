@@ -1,3 +1,5 @@
+import { t } from "@/i18n";
+import { ROW_STATUS_KEY } from "@/ui/components/list-row-status";
 import { TYPE_STEPS } from "@/ui/tokens.gen";
 
 /**
@@ -465,29 +467,53 @@ export const rowAccessibilityLabel = (options: {
 	 *  row has no tags, so an untagged row's label is unchanged. */
 	tagAnnouncement?: string;
 }): string => {
+	/* Every fragment is keyed (O3-c): the label is what a screen reader speaks,
+	 *  so an English fragment here was English copy in a translated app. The
+	 *  waiting fragment is ONE select message rather than "<word> waiting"
+	 *  composed from the status word, because word order and agreement differ by
+	 *  language and a translator can only fix a phrase they can see whole. */
 	const parts = [options.title];
 	if (options.attention === "pending") {
-		parts.push(`${options.attentionWord} waiting`);
+		parts.push(
+			t("mobile.sidebar.row_label.waiting", { kind: options.attentionWord }),
+		);
 	} else if (options.attention === "streaming") {
-		parts.push("working");
+		parts.push(t("mobile.sidebar.row_label.working"));
 	} else if (options.attention === "unread") {
-		parts.push("new");
+		parts.push(t("mobile.sidebar.row.new"));
 	}
-	/* Read in the same voice as the visible word: a reader who cannot see the muted
-	 * receipt still hears that this session ended or stopped answering. */
-	if (options.ended) parts.push("ended");
-	else if (options.degraded) parts.push("not answering");
+	/* Read in the same voice as the visible word — the SAME keys `ListRow` paints:
+	 * a reader who cannot see the muted receipt still hears that this session
+	 * ended or stopped answering. */
+	if (options.ended) parts.push(t(ROW_STATUS_KEY.ended));
+	else if (options.degraded) parts.push(t(ROW_STATUS_KEY.not_answering));
 	/* EVERY assigned tag, including the ones the compact line hid behind `+N`:
 	 * the line caps its paint at two, and a label built from the painted badges
 	 * would lose the rest. */
 	if (options.tagAnnouncement !== undefined)
 		parts.push(options.tagAnnouncement);
 	if (options.remoteDevice !== undefined) {
-		parts.push(`on ${options.remoteDevice}`);
-		if (options.remoteUnreachable === true) parts.push("not reachable");
+		parts.push(
+			t("mobile.sidebar.row_label.on_device", {
+				device: options.remoteDevice,
+			}),
+		);
+		if (options.remoteUnreachable === true)
+			parts.push(t(ROW_STATUS_KEY.not_reachable));
 	}
-	if (options.selected) parts.push("open");
-	return parts.join(", ");
+	if (options.selected) parts.push(t("mobile.sidebar.row_label.open"));
+	/* The separator is keyed too: `", "` is English's list comma, and a zh-CN
+	 *  or ur reader's screen reader should hear the label punctuated as their
+	 *  own language punctuates a list (`，`, `، `). Folded pairwise, the same
+	 *  shape as `mobile.session.highlights.withheld_reasons_join`, so the
+	 *  catalogue holds one separator rather than one message per label length;
+	 *  `parts` always holds the title, so the seed is never empty. */
+	return parts
+		.slice(1)
+		.reduce(
+			(first, second) => t("mobile.sidebar.row_label.join", { first, second }),
+			parts[0] ?? "",
+		);
 };
 
 /**

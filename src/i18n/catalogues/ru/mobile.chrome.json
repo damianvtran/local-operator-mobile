@@ -31,5 +31,6 @@
 	"mobile.chrome.composer.run_settings": "{model}, {effort}",
 	"mobile.chrome.composer.run_settings_hint": "Выберите модель и усилие",
 	"mobile.chrome.composer.run_settings_title": "Модель и усилие",
-	"mobile.chrome.composer.row_folder": "Папка"
+	"mobile.chrome.composer.row_folder": "Папка",
+	"mobile.chrome.composer.row_identity": "Агент или команда"
 }

@@ -34,6 +34,45 @@ import {
 	WEB_IDLE_MS,
 } from "../session/reader-scroll-hold";
 
+/**
+ * VirtualizedList's own `initialNumToRender` default, restated so a landed
+ * transcript windows exactly as it did before `landingRenderCount` existed.
+ */
+export const LANDED_RENDER_COUNT = 10;
+
+/**
+ * How many rows the transcript's FlatList renders up front (its
+ * `initialNumToRender`).
+ *
+ * WHY: VirtualizedList mounts only its first `initialNumToRender` rows and adds
+ * the rest in later batches. The landing measures whatever is mounted, so an
+ * open landed on a PARTIAL page: ten short rows fit the window and the "fits"
+ * shortcut finished the landing at the top, or the list scrolled to the end of
+ * those ten. The rows were then revealed, and every later batch grew the
+ * content and pulled the following reader down again. The reader saw older
+ * messages flash in before the list settled at the newest one (TestFlight,
+ * "flickers between the message at the bottom and some other message from
+ * higher up"). Measured on the hosted web export, opening a 50-row page: the
+ * revealed list walked scrollTop 0 → 59 → 617 → 1091 → 1564 → 1801 over about
+ * 1.3 s, showing rows 31-39 first and the newest row last (PR body).
+ *
+ * So while the open is still unpositioned (rows hidden), every held row is
+ * mounted, and the first measurement the viewport trusts is of the whole page.
+ * No viewport change is needed: content growth still re-targets, it just has
+ * nothing left to grow by. Once positioned, the default returns, so ordinary
+ * windowing (and an older page's prepend) is exactly as before. The count is
+ * what the reader already holds (one 50-row page on an ordinary open; an
+ * anchored open's walk adds the pages it fetched), not a new cap.
+ */
+export function landingRenderCount(
+	itemCount: number,
+	positioned: boolean,
+): number {
+	return positioned
+		? LANDED_RENDER_COUNT
+		: Math.max(LANDED_RENDER_COUNT, itemCount);
+}
+
 /** Sub-pixel slack for "at the exact end": web scrollTop is fractional
  * (2043.5) and device-pixel rounding can leave the host < 1 px short of max. */
 export const POSITION_SLACK = 1;

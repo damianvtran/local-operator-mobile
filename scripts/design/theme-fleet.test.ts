@@ -50,7 +50,9 @@ describe("the theme fleet", () => {
 			expect(entry, id).toBeDefined();
 			expect(entry?.failures, id).toEqual([]);
 			// 587 + 4: the two `diagram` rows in palette-rules.mjs, two assertions each.
-			expect(entry?.checks, id).toBe(591);
+			// + 12: the two Team Bridge reaction-pill rows (#345), three grounds ×
+			// (ink + boundary) each.
+			expect(entry?.checks, id).toBe(603);
 		}
 	});
 

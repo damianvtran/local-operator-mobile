@@ -192,6 +192,17 @@ export const CONTROLS = [
 	{ id: "nav/computer-chip", fill: null, border: "border-control", ink: "ink-muted", grounds: ["canvas"] },
 	{ id: "nav/drawer-computer-row", fill: "surface", border: "border-control", ink: "ink", grounds: ["canvas", "surface"] },
 
+	/* Team Bridge reaction pills (reactions spec §4.3, slice PR b). A pill is a
+	   TOGGLE, so 1.4.11 binds its edge: the desktop's borderless pill measured
+	   `elevated` 1.15:1 and `accent-wash` 1.01:1 on the light canvas, which on a
+	   phone outdoors reads as bare text. Both pills therefore carry a ring — the
+	   chip's `border-control` for others' reactions, `accent-border` for mine —
+	   and the count's ink is asserted on the fill it actually sits on. Grounds as
+	   the chip's: the timeline page and the reply thread are `canvas`; a row's
+	   own pressed/selected tint is the list's control, not the pill's ground. */
+	{ id: "team bridge reaction pill", fill: "elevated", border: "border-control", ink: "ink-muted", grounds: ["canvas", "surface", "elevated"] },
+	{ id: "team bridge own reaction pill", fill: "accent-wash", border: "accent-border", ink: "accent", grounds: ["canvas", "surface", "elevated"] },
+
 	{ id: "badge/neutral", fill: "surface", border: "hairline", ink: "ink-dim", boundary: false },
 	{ id: "badge/success", fill: "success-wash", border: "success-border", ink: "success", boundary: false },
 	{ id: "badge/warning", fill: "warning-wash", border: "warning-border", ink: "warning", boundary: false },

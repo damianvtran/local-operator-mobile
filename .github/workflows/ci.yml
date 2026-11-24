@@ -62,17 +62,19 @@ on:
 # `workflow_call` (a tag ref or a dispatch event, never `push` on main) are
 # never cancelled.
 #
-# `github.event_name` IS PART OF THE GROUP, and it is what keeps the release gate
-# from cancelling itself. When release.yml calls this workflow, `github.workflow`
-# inside the callee is the CALLER's name, so a group of `workflow-ref` alone is
-# identical to release.yml's own group — GitHub's documented outcome is
-# "Canceling since a deadlock for concurrency group … was detected between 'top
-# level workflow' and …", i.e. the release's `gate` job is cancelled before it
-# starts. The event name makes the call site distinct (`…-workflow_call`).
+# LITERAL WORKFLOW PREFIX (`ci-...`) AND `github.event_name` ARE PART OF THE
+# GROUP. When release.yml calls this workflow via `workflow_call`,
+# `github.workflow` inside the callee is the CALLER's name, so a group of
+# `workflow-ref` alone is identical to release.yml's own group — GitHub's
+# documented outcome is "Canceling since a deadlock for concurrency group … was
+# detected between 'top level workflow' and …", i.e. the release's `gate` job is
+# cancelled before it starts. Using the literal `'ci'` prefix plus
+# `github.event_name` keeps caller and callee lanes distinct even when called
+# from a `pull_request` or tag workflow.
 # `cancel-in-progress` never reaches a tag for the same reason: a tag run is a
 # release in progress, and cancelling it would drop the artefacts.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
+  group: ${{ format('ci-{0}-{1}', github.ref, github.event_name) }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main') }}
 
 # Least privilege: nothing here writes. The release workflow is the one place
@@ -319,6 +321,12 @@ jobs:
     # run is cited in the pull request's evidence table).
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    # `actions: read` is for the visibility wait below (it lists this run's
+    # artefacts); `contents: read` restates the workflow default, which a job-level
+    # block would otherwise drop. Nothing here writes.
+    permissions:
+      contents: read
+      actions: read
     steps:
       - uses: actions/checkout@v7
 
@@ -341,6 +349,7 @@ jobs:
         # must not be mistakable for a release one). Single-sourced on purpose: a
         # probe that re-spells the upload block cannot catch that block drifting
         # away from the staging step it feeds.
+        id: upload-android
         uses: ./.github/actions/upload-android-release
         with:
           aab: android/app/build/outputs/bundle/release/app-release.aab
@@ -348,11 +357,91 @@ jobs:
           name: android-release-probe
 
       - name: Upload the IPA exactly as release.yml does
+        id: upload-ipa
         uses: actions/upload-artifact@v7
         with:
           name: ios-ipa-probe
           path: ${{ runner.temp }}/ipa/*.ipa
           retention-days: 1
+
+      - name: Wait until both probe artefacts are listed for this run
+        # WHY THIS STEP EXISTS. Uploading and downloading in the SAME job races the
+        # artefact backend, whose listing is eventually consistent just after an
+        # upload finalizes. Three unrelated pull requests went red here with the
+        # artefact not yet visible, each green on one rerun: #348 (job 135857781891,
+        # "Artifact not found for name: ios-ipa-probe" ~0.75 s after finalize; the
+        # artefact, id 14569594432, existed afterwards), #349 (job 135907423135,
+        # "No artifacts found for ID: 14578420722" ~1.23 s after finalize — so an
+        # ID-based download alone does not fix it) and #350 (job 136012395453,
+        # "Artifact not found for name: ios-ipa-probe" ~1.09 s after finalize).
+        # release.yml never meets this race: its downloads run in a later job, long
+        # after the build jobs' uploads finalized, so it gets no such wait and the
+        # download steps below stay byte-for-byte the shape release.yml uses.
+        #
+        # THIS ATTEMPT ONLY. A job rerun keeps the run's earlier attempts' artefacts
+        # in the listing under the same names (run 44622457070 lists ios-ipa-probe
+        # 14578420722 from attempt 1 beside 14579372496 from attempt 2), so a
+        # name-only match passes on the first poll of a rerun, before this attempt's
+        # uploads are visible. Each entry is therefore `name=<artifact-id>`, the ID
+        # the upload step above output, and only that exact pair counts. An empty
+        # ID means an upload output went missing: that fails at once, never falls
+        # back to names.
+        #
+        # THE BOUND. Observed lag is ~1 s (n=3 above: 0.75, 1.09, 1.23 s); the limit
+        # is 60 s with backoff, well above that, every sleep is capped at the time
+        # left so the wait never sleeps past the limit, and the step's own
+        # timeout-minutes is the hard stop. Never-visible is a real failure: it
+        # exits 1 with the last listing, it is never skipped or continued past.
+        #
+        # THE LIMIT. download-artifact resolves names through the runtime's internal
+        # artefact service, which a shell step cannot call; the public run listing
+        # polled here is the nearest observable signal of the same backend. If the
+        # two ever diverge, the download below still fails loudly — this narrows the
+        # race, it does not hide a failure.
+        timeout-minutes: 2
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+          EXPECTED: android-release-probe=${{ steps.upload-android.outputs.artifact-id }} ios-ipa-probe=${{ steps.upload-ipa.outputs.artifact-id }}
+        run: |
+          set -euo pipefail
+          for entry in $EXPECTED; do
+            if [ -z "${entry#*=}" ]; then
+              echo "::error::upload step output no artifact-id for ${entry%%=*}; cannot tell this attempt's artefact from an earlier one"
+              exit 1
+            fi
+          done
+          limit=60
+          start=$SECONDS
+          deadline=$((start + limit))
+          delay=1
+          while :; do
+            # A transient API error is just another not-yet-visible poll; the
+            # deadline still bounds it.
+            listed=$(gh api "repos/$REPO/actions/runs/$RUN_ID/artifacts?per_page=100" \
+              --jq '.artifacts[] | select(.expired | not) | "\(.name)=\(.id)"' 2>&1) || true
+            missing=""
+            for entry in $EXPECTED; do
+              grep -qxF "$entry" <<<"$listed" || missing="$missing $entry"
+            done
+            if [ -z "$missing" ]; then
+              echo "visible after $((SECONDS - start))s: $EXPECTED"
+              break
+            fi
+            left=$((deadline - SECONDS))
+            if [ "$left" -le 0 ]; then
+              echo "::error::probe artefact(s) not listed for run $RUN_ID within ${limit}s:$missing"
+              echo "--- last listing"
+              echo "$listed"
+              exit 1
+            fi
+            # Never sleep past the deadline: the next poll lands at it at the latest.
+            [ "$delay" -gt "$left" ] && delay=$left
+            echo "not yet listed:$missing — retrying in ${delay}s"
+            sleep "$delay"
+            delay=$((delay * 2 > 8 ? 8 : delay * 2))
+          done
 
       - name: Download them into `artifacts/` exactly as release.yml does
         uses: actions/download-artifact@v8
@@ -464,6 +553,137 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - name: Freeze the capture renderer for the whole job
+        id: freeze
+        # The runner's /Applications/Google Chrome.app is NOT stable for the length
+        # of a job: GoogleUpdater replaces it while the job runs. The listing
+        # diagnostics showed the `all` and `frames` capture passes on different
+        # builds in 11 of 12 runs on main (e.g. 156.0.8078.80, then 157.0.8103.80;
+        # one failing run printed 157.0.8103.79 at the tools step and 158.0.8127.36
+        # two minutes later), and the listing gate failed in 13 of 78 recent runs
+        # with one signature on the caption mark's stroke edge. Rather than widen
+        # a pixel tolerance to absorb a renderer swap, every Chrome launch in this
+        # job runs ONE copy taken here, before anything uses Chrome. `capture.mjs`
+        # and the stale probe (which inherits this environment) honour `CHROME`.
+        #
+        # A COPY ALONE IS NOT FROZEN (PR #355, run 44855933617): the copy reported
+        # 157.0.8103.79 here, the `all` pass rendered with .79 from it, and the
+        # `frames` pass three minutes later rendered with .80 from the SAME path.
+        # Chrome registers the bundle it is launched from with Google's updater,
+        # so the first headless launch of the copy handed the copy to the updater,
+        # which updated it in place. Two independent locks, belt and braces,
+        # because either alone has a gap:
+        #   (a) the updater is stopped for the job — its launchd jobs booted out
+        #       (user and system domains) and any running process killed by exact
+        #       pid. Labels vary across updater generations (Keystone,
+        #       GoogleUpdater, *.wake, *.system), so they are matched by name and
+        #       logged; "none found" is fine (an image without it cannot update).
+        #       A launchd job we did not see, or one respawned later, is (b)'s job.
+        #   (b) the copy and its parent directory are made immutable (`chflags -R
+        #       uchg`): no file in it can be written, replaced, renamed or
+        #       unlinked, so an updater that does run cannot change it. Chrome
+        #       writes nothing into its own bundle (the profile is
+        #       --user-data-dir), which the smoke launch below proves on the
+        #       locked copy. The flag is cleared again at job end (always()).
+        # The drift step re-reads the copy's on-disk version at the end of the job,
+        # independently of what CDP reported, so a lock that did not hold fails.
+        #
+        # Fails closed: no bundle, an original that will not report a version, a
+        # swap DURING the copy (before != after), a copy that differs from the
+        # original, a copy that will not launch headless, or a copy whose version
+        # moved across the lock all stop the job here, by name.
+        run: |
+          set -euo pipefail
+          source="/Applications/Google Chrome.app"
+          frozen_dir="$RUNNER_TEMP/chrome-frozen"
+          frozen="$frozen_dir/Google Chrome.app"
+          original_bin="$source/Contents/MacOS/Google Chrome"
+          frozen_bin="$frozen/Contents/MacOS/Google Chrome"
+          chrome_version() { "$1" --version 2>&1 | head -1; }
+          if [ ! -x "$original_bin" ]; then
+            echo "::error::no Chrome at $source — the capture gates cannot run without it"
+            exit 1
+          fi
+
+          # (a) Stop the updater before the copy exists, so nothing can register
+          # or touch it. Logged either way; never fatal.
+          updater='google.*(updater|keystone)|keystone|googlesoftwareupdate'
+          found=0
+          while read -r _pid _status label; do
+            [ -n "${label:-}" ] || continue
+            found=1
+            echo "updater launchd job (gui/$(id -u)): $label — booting out"
+            launchctl bootout "gui/$(id -u)/$label" 2>&1 || echo "  bootout of $label failed (the lock below still holds)"
+          done < <(launchctl list 2>/dev/null | grep -i -E "$updater" || true)
+          while read -r _pid _status label; do
+            [ -n "${label:-}" ] || continue
+            found=1
+            echo "updater launchd job (system): $label — booting out"
+            sudo -n launchctl bootout "system/$label" 2>&1 || echo "  bootout of $label failed (the lock below still holds)"
+          done < <(sudo -n launchctl list 2>/dev/null | grep -i -E "$updater" || true)
+          while read -r pid command; do
+            [ -n "${pid:-}" ] || continue
+            found=1
+            echo "updater process: $pid $command — killing by pid"
+            sudo -n kill -TERM "$pid" 2>/dev/null || kill -TERM "$pid" 2>&1 || echo "  kill of $pid failed (the lock below still holds)"
+          done < <(pgrep -fl -i "$updater" || true) # macOS pgrep: ERE by default, no -E
+          [ "$found" = 1 ] || echo "no Google updater job or process found on this runner"
+
+          before="$(chrome_version "$original_bin")" || {
+            echo "::error::the runner's Chrome at $source does not run (--version before the copy: '$before')"
+            exit 1
+          }
+          mkdir -p "$frozen_dir"
+          ditto "$source" "$frozen"
+          after="$(chrome_version "$original_bin")" || {
+            echo "::error::the runner's Chrome at $source does not run (--version after the copy: '$after')"
+            exit 1
+          }
+          version="$(chrome_version "$frozen_bin")" || {
+            echo "::error::the frozen Chrome copy does not run: $version"
+            exit 1
+          }
+          if ! [[ "$version" =~ [0-9]+\.[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+            echo "::error::the frozen Chrome copy reported no version: '$version'"
+            exit 1
+          fi
+          if [ "$before" != "$after" ]; then
+            echo "::error::Chrome was replaced while it was being frozen (before: '$before', after: '$after', copy: '$version'); re-run the job"
+            exit 1
+          fi
+          if [ "$version" != "$before" ]; then
+            echo "::error::the frozen copy differs from the original it was copied from (original: '$before', copy: '$version'); the copy is not that build"
+            exit 1
+          fi
+
+          # (b) Lock the copy, then prove a locked copy still launches headless —
+          # an unlaunchable copy must fail HERE, by name, not later in the
+          # preview step whose failure is soft and blamed on fonts. perl's alarm
+          # survives exec, so this needs no coreutils `timeout`. 60 s: launch to
+          # first CDP answer took 6.8 s (cold, the `all` pass) and 1.8 s (warm,
+          # `frames`) in run 44855933617; a dump of about:blank does less.
+          chflags -R uchg "$frozen_dir"
+          smoke_profile="$RUNNER_TEMP/chrome-frozen-smoke-profile"
+          smoke_status=0
+          smoke="$(perl -e 'alarm shift; exec @ARGV or die "exec: $!\n"' 60 "$frozen_bin" \
+            --headless=new --use-mock-keychain --password-store=basic --no-first-run \
+            --no-default-browser-check --user-data-dir="$smoke_profile" --dump-dom about:blank 2>&1)" || smoke_status=$?
+          if [ "$smoke_status" != 0 ] || ! grep -q '<html' <<<"$smoke"; then
+            echo "::error::the frozen (locked) Chrome copy does not launch headless (exit $smoke_status; 142 = killed at the 60 s limit): $(head -c 600 <<<"$smoke")"
+            exit 1
+          fi
+          locked="$(chrome_version "$frozen_bin")" || {
+            echo "::error::the frozen Chrome copy stopped running after it was locked: '$locked'"
+            exit 1
+          }
+          if [ "$locked" != "$version" ]; then
+            echo "::error::the frozen copy changed while it was being locked (copied: '$version', now: '$locked')"
+            exit 1
+          fi
+          echo "frozen capture renderer: $version at $frozen (locked; headless smoke launch ok)"
+          echo "CHROME=$frozen_bin" >> "$GITHUB_ENV"
+          echo "CAPTURE_CHROME_VERSION=$version" >> "$GITHUB_ENV"
+
       # pnpm is here to RUN package scripts, not to install anything: the design
       # gates are plain `node` programs with no dependencies, which is why this
       # job still never runs `pnpm install` and stays cheap on a docs-only pull
@@ -491,7 +711,10 @@ jobs:
               exit 1
             fi
           done
-          echo "chrome: $(/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome --version 2>&1 | head -1)"
+          echo "chrome: $("$CHROME" --version 2>&1 | head -1) (frozen copy: $CHROME)"
+
+      - name: Diagnostic retention and metadata allowlists (no browser)
+        run: node --test --test-concurrency=1 design/preview/capture-diagnostics.test.mjs design/preview/renderer-drift.test.mjs
 
       - name: Styling layer is current with the tokens
         # Through the package script, not a path: the file was `.mjs` when this
@@ -527,6 +750,9 @@ jobs:
         run: node design/app-icon/build-icons.mjs --check
 
       - name: Preview sheet and feature graphic re-render identically
+        # runner.temp is a step context, not valid in job-level env.
+        env:
+          CAPTURE_DIAGNOSTICS_DIR: ${{ runner.temp }}/listing-render-diagnostics
         # `--check` defaults to every target (design/README.md is explicit that a
         # gate whose default scope is narrower than the page it documents is the
         # same defect as one that cannot fail), so this also covers the four
@@ -600,6 +826,9 @@ jobs:
         run: node design/preview/capture-stale.probe.mjs
 
       - name: The committed listing frames re-render identically
+        id: listing
+        env:
+          CAPTURE_DIAGNOSTICS_DIR: ${{ runner.temp }}/listing-render-diagnostics
         # A HARD gate, and separate from the step above on purpose. That step has
         # to tolerate failure while the preview sheet's shipped faces live in a
         # sibling checkout (docs/ci.md, "When a run goes red"), so a stale LISTING
@@ -618,6 +847,32 @@ jobs:
         # difference, so the values can be re-derived from the log.
         run: node design/preview/capture.mjs --target frames --check
 
+      - name: The capture renderer did not change mid-job
+        # The other half of the freeze step: proof it held, two ways. Both capture
+        # passes above write the Chrome build they rendered with into the
+        # diagnostics directory (renderer.json), and this also re-runs the frozen
+        # copy's own `--version` NOW, independently of CDP (a pass whose renderer
+        # CDP could not report still cannot hide an on-disk change). It fails,
+        # naming every version, if any of them differs from the version frozen.
+        # It runs even when the listing gate failed, because a stale frame next to
+        # a renderer swap is a harness failure, not a design finding — but only
+        # when the freeze succeeded (otherwise there is nothing to check and the
+        # freeze step already failed by name) and the listing step actually ran
+        # (an unrelated earlier failure skips it, and "no renderer recorded"
+        # would then be a misleading warning). A pass whose renderer could not be
+        # read is a warning only (renderer facts never decide a verdict alone).
+        if: ${{ !cancelled() && steps.freeze.outcome == 'success' && (steps.listing.outcome == 'success' || steps.listing.outcome == 'failure') }}
+        run: node design/preview/renderer-drift.mjs "$RUNNER_TEMP/listing-render-diagnostics" "$CAPTURE_CHROME_VERSION" "$CHROME"
+
+      - name: Upload listing renderer diagnostics even when the gate fails
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: listing-render-diagnostics
+          path: ${{ runner.temp }}/listing-render-diagnostics/
+          if-no-files-found: warn
+          retention-days: 7
+
       - name: Render the preview sheet for the review rounds
         # These are the frames a designer or UX round looks at. They are written
         # into the tree by the generator and uploaded as an artefact, never
@@ -633,3 +888,85 @@ jobs:
             docs/design/preview/*.png
             design/app-icon/store/play-feature-graphic-1024x500.png
           retention-days: 30
+
+      - name: Unlock the frozen capture renderer
+        # The freeze step made the copy immutable (chflags uchg); clear that so
+        # the runner's own temp-directory cleanup can delete it. Never fails the
+        # job: a hosted VM is discarded anyway, and there may be no copy at all.
+        if: always()
+        run: chflags -R nouchg "$RUNNER_TEMP/chrome-frozen" 2>/dev/null || true
+
+  # ONE stable check name (`CI Gate`) to require on every pull request and read
+  # before arming the merge gate (`pnpm merge-gate <pr>`). Requiring individual
+  # jobs makes every job rename or addition a ruleset edit that strands in-flight
+  # pull requests; requiring this aggregate does not.
+  #
+  # FAIL CLOSED (`if: always()`, invariant I2):
+  #   * `changes`, `checks`, and `release-staging` MUST conclude `success` on
+  #     every trigger — never `skipped`, `failure`, or `cancelled`.
+  #   * `team-bridge-qa` runs only when `github.event_name == 'pull_request'`:
+  #     it MUST be `success` on `pull_request`, and `skipped` on non-PR triggers.
+  #   * `design-kit` is path-gated by `changes.outputs.design`: it may conclude
+  #     `skipped` ONLY on a `pull_request` whose classifier explicitly wrote
+  #     `design == 'false'`. On every other trigger — or if `changes` failed or
+  #     emitted an empty/unknown output — `skipped` is rejected as a failure.
+  ci-gate:
+    name: CI Gate
+    needs:
+      - changes
+      - checks
+      - team-bridge-qa
+      - release-staging
+      - design-kit
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verify fast-tier jobs succeeded (fail closed)
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+          EVENT: ${{ github.event_name }}
+          DESIGN_NEEDED: ${{ needs.changes.outputs.design }}
+        run: |
+          node --input-type=module <<'NODE'
+          const needs = JSON.parse(process.env.NEEDS ?? "{}");
+          const event = process.env.EVENT ?? "";
+          const designNeeded = process.env.DESIGN_NEEDED ?? "";
+
+          const expected = ["changes", "checks", "team-bridge-qa", "release-staging", "design-kit"];
+          const bad = [];
+
+          for (const job of expected) {
+            const result = needs[job]?.result ?? "missing";
+            console.log(`${job}: ${result}`);
+            if (job === "team-bridge-qa") {
+              const ok = event === "pull_request" ? result === "success" : result === "skipped";
+              if (!ok) bad.push(`${job}=${result} (event=${event})`);
+              continue;
+            }
+            if (job === "design-kit") {
+              const allowedSkip =
+                event === "pull_request" &&
+                needs.changes?.result === "success" &&
+                designNeeded === "false";
+              const ok = result === "success" || (result === "skipped" && allowedSkip);
+              if (!ok) bad.push(`${job}=${result} (design=${designNeeded || "<empty>"}, event=${event})`);
+              continue;
+            }
+            if (result !== "success") {
+              bad.push(`${job}=${result}`);
+            }
+          }
+
+          for (const [job, entry] of Object.entries(needs)) {
+            if (!expected.includes(job) && entry?.result !== "success") {
+              bad.push(`${job}=${entry?.result ?? "unknown"}`);
+            }
+          }
+
+          if (bad.length > 0) {
+            console.log(`::error title=CI Gate::${bad.join(", ")}`);
+            process.exit(1);
+          }
+          console.log("CI Gate green on this head.");
+          NODE

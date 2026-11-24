@@ -36,7 +36,6 @@
  */
 
 import Constants from "expo-constants";
-import { Platform } from "react-native";
 import {
 	ensureInstallRecord,
 	nextBridgePushGeneration,
@@ -46,15 +45,14 @@ import {
 	notificationsSupported,
 } from "@/notifications/native";
 import { notePushToken } from "@/notifications/push-token-changes";
+import { ensureAndroidTeamBridgePresentation } from "@/team-bridge/android-presentation";
 import { type HubClient, isHubError } from "@/team-bridge/client";
 import {
 	type TeamBridgePush,
 	teamBridgePushFromResponse,
 } from "@/team-bridge/push-payload";
 
-/** The Android channel the hub names (`channelId: "team-bridge"`). Created at
- *  start, because FCM falls back to the default channel for an unknown id. */
-export const TEAM_BRIDGE_CHANNEL_ID = "team-bridge";
+export { TEAM_BRIDGE_CHANNEL_ID } from "@/team-bridge/android-presentation";
 
 export type RegistrationOutcome =
 	| "registered"
@@ -393,17 +391,9 @@ export async function installTeamBridgeNotifications(): Promise<void> {
 	} catch {
 		handlerInstalled = false;
 	}
-	if (Platform.OS === "android") {
-		try {
-			await module.setNotificationChannelAsync(TEAM_BRIDGE_CHANNEL_ID, {
-				name: "Team Bridge",
-				description: "Messages from your teammates and their agents.",
-				importance: module.AndroidImportance.HIGH,
-			});
-		} catch {
-			/* Delivery falls back to the default channel; nothing the reader can act on. */
-		}
-	}
+	/* The channel (localised, lock-screen PRIVATE) and the native delegate's
+	 * copy. Also re-run on every language change (`use-notification-categories.ts`). */
+	await ensureAndroidTeamBridgePresentation();
 }
 
 /**

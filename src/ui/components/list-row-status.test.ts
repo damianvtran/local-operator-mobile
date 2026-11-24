@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 
+import { renderFor } from "@/i18n";
 import { STATE_MARKER, SURFACE } from "@/ui/a11y";
-import { listRowStatus } from "./list-row-status";
+import { listRowStatus, ROW_STATUS_KEY } from "./list-row-status";
 
 const idle = {
 	pending: false,
@@ -19,7 +20,7 @@ describe("observable row receipts", () => {
 			testID: STATE_MARKER.sidebar.ended,
 		});
 		expect(listRowStatus({ ...idle, degraded: true })).toEqual({
-			word: "not answering",
+			word: "not_answering",
 			testID: STATE_MARKER.sidebar["degraded-row"],
 		});
 	});
@@ -39,8 +40,28 @@ describe("observable row receipts", () => {
 		expect(
 			listRowStatus({ ...idle, remoteUnreachable: true, degraded: true }),
 		).toEqual({
-			word: "not reachable",
+			word: "not_reachable",
 			testID: SURFACE.sessionRemoteUnreachable,
 		});
+	});
+});
+
+describe("the painted status word (O3-c)", () => {
+	it("is keyed, and its English is the word the row painted before", () => {
+		/* The projection now returns identifiers; `ListRow` paints
+		 *  `t(ROW_STATUS_KEY[word])`. English must not move a byte, so each key's
+		 *  English is pinned to the literal the row rendered raw on f5498d3c. */
+		const before = {
+			approval: "approval",
+			question: "question",
+			not_reachable: "not reachable",
+			ended: "ended",
+			not_answering: "not answering",
+		} as const;
+		for (const [word, english] of Object.entries(before)) {
+			expect(
+				renderFor(ROW_STATUS_KEY[word as keyof typeof before], {}, "en"),
+			).toBe(english);
+		}
 	});
 });

@@ -74,7 +74,12 @@
  */
 
 import type { PendingAsk } from "@/contracts";
-import { dockAsk, isLapsed, outstandingAsks } from "@/features/session/asks";
+import {
+	dockAsk,
+	isLapsed,
+	isOutstanding,
+	outstandingAsks,
+} from "@/features/session/asks";
 import type { ProjectionEntry } from "@/state";
 
 /* ---------------------------------------------------------- the queue reading */
@@ -651,6 +656,32 @@ export const expandTargetFor = (
 };
 
 /**
+ * The ask a freshly opened sheet shows EXPANDED, or `null`.
+ *
+ * A CHIP'S PIN ONLY OUTLIVES THE READER'S OWN OPEN (review round 1, m4b). The pin
+ * is screen state set when a chip names a row; every way out of the sheet that is
+ * not `close` — a navigation from inside it, a failed first read, the policy
+ * re-pointing the controller — used to leave it behind, so a later policy open
+ * expanded the stale pin instead of the head ask. Reading the pin only for a
+ * `reader` open makes the gate the same one `expandTargetFor` already applies to
+ * the policy's head ask, and covers exits this module cannot see.
+ */
+export const initialOpenAskFor = ({
+	visible,
+	pinned,
+	origin,
+	asks,
+}: {
+	visible: boolean;
+	pinned: string | null;
+	origin: OpenOrigin | null;
+	asks: PendingAsk[] | undefined | null;
+}): string | null => {
+	if (!visible) return null;
+	return (origin === "reader" ? pinned : null) ?? expandTargetFor(origin, asks);
+};
+
+/**
  * The sheet's expansion choice, as a pure reducer (round 2, Q5/M2).
  *
  * `undefined` = the reader has not chosen in THIS opening, so the opening's own
@@ -696,21 +727,84 @@ export const shownExpansion = (
 ): string | null => (choice === undefined ? initial : choice);
 
 /**
- * The rows the sheet draws: the frame's own SEED until the aggregate has been
- * read SUCCESSFULLY, then the aggregate.
+ * The rows the sheet draws: the aggregate read UNION the frame rows the app
+ * already holds, keyed by `ask_id`.
  *
- * It is the first SUCCESS, not the first read: a failed opening read leaves the
- * aggregate empty, and swapping the seed for that empty list would make the very
- * question a reader is answering vanish when the error line appears (round 2, U9
- * - the failure keeps the sheet up, so the rows it is up for must stay). A seed
- * is passed for a policy open only, so a reader-opened sheet is unaffected.
+ * WHY A UNION AND NOT A SWITCH (issue #247). This used to draw the frame's seed
+ * until the first successful aggregate read and the aggregate ALONE after it - so
+ * a sheet the reader opened by hand after closing it (same mount, the read
+ * already done) drew only the aggregate. When that read answers with an empty or
+ * partial queue - a relay whose index has not caught up, an older daemon - the
+ * sheet painted nothing while the conversation's own frame held the question, and
+ * the question came back only on an app relaunch. Neither source can be made
+ * complete, so the rows are both.
+ *
+ * THE RULES, each load-bearing:
+ *
+ *  * An AGGREGATE row WINS for an ask in both: it is the richer row (the frame's
+ *    rows carry no `cwd` and no reliable `session_id`) and the aggregate is the
+ *    one route that can answer for another conversation.
+ *  * A frame row absent from the aggregate is kept ONLY while it is OUTSTANDING
+ *    in the frame (`isOutstanding`, the predicate the bar and the auto-open
+ *    use): the frame is the live SSE view, so an ask answered, declined or
+ *    expired anywhere drops out of it, and a frame row is no evidence of a
+ *    question that is finished.
+ *  * A kept frame row is STAMPED with the conversation whose frame it came from.
+ *    Frame rows carry no `session_id`, and the answer path is
+ *    `client.command(sessionId, ...)`: an unstamped row would settle against the
+ *    empty id and the sheet would refuse its own answer.
+ *  * BEFORE THE FIRST SUCCESSFUL READ the frame rows are kept WHOLE, not merely
+ *    the outstanding ones - the old seed contract (round 2, U9). The failure
+ *    keeps the sheet up, so the rows it is up for must stay, and a lapsed ask's
+ *    only control lives in exactly that list. `aggregateRead` marks the first
+ *    SUCCESS, not the last read: after one success a later failed RE-read keeps
+ *    the last good aggregate (the sheet only replaces its rows on a success)
+ *    and the outstanding-only filter above applies, so that failure does not
+ *    re-admit a lapsed frame row.
+ *  * `settled` - ids this sheet has already answered, declined or dismissed - are
+ *    suppressed from the FRAME side. The settle request lands before the next
+ *    frame does, so without it a stale frame row would put the question the
+ *    reader just answered back in the list.
  */
-export const drawnRows = (
-	seed: readonly PendingAsk[] | null,
-	aggregate: readonly PendingAsk[],
-	aggregateRead: boolean,
-): readonly PendingAsk[] =>
-	!aggregateRead && seed !== null ? seed : aggregate;
+export interface DrawnRowsInput {
+	/** The live frame's rows for `currentSessionId` (`projection.asks`), or null
+	 *  when that frame does not publish asks (the capability proxy). */
+	frame: readonly PendingAsk[] | null | undefined;
+	/** The aggregate read's rows (`GET /api/asks`); empty until it succeeds. */
+	aggregate: readonly PendingAsk[];
+	/** Whether the aggregate has been read SUCCESSFULLY at least once. */
+	aggregateRead: boolean;
+	/** The conversation the frame rows belong to. */
+	currentSessionId?: string | null;
+	/** Ask ids this sheet has settled since it mounted. */
+	settled?: ReadonlySet<string> | null;
+}
+
+export const drawnRows = ({
+	frame,
+	aggregate,
+	aggregateRead,
+	currentSessionId,
+	settled,
+}: DrawnRowsInput): readonly PendingAsk[] => {
+	const drawn: readonly PendingAsk[] = Array.isArray(aggregate)
+		? aggregate
+		: [];
+	if (!Array.isArray(frame) || frame.length === 0) return drawn;
+	const seen = new Set(drawn.map((row) => row.ask_id));
+	const kept: PendingAsk[] = [];
+	for (const row of frame) {
+		if (!row || typeof row.ask_id !== "string" || seen.has(row.ask_id))
+			continue;
+		if (settled?.has(row.ask_id)) continue;
+		if (aggregateRead && !isOutstanding(String(row.status || "open"))) continue;
+		seen.add(row.ask_id);
+		kept.push(
+			currentSessionId ? { ...row, session_id: currentSessionId } : row,
+		);
+	}
+	return kept.length === 0 ? drawn : [...drawn, ...kept];
+};
 
 /**
  * `now` is the clock the view's start is read on, in epoch milliseconds — the unit

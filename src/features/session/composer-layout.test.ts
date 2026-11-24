@@ -68,7 +68,13 @@ describe("build389 persistent field and context", () => {
 			folderRow,
 		);
 		expect(COMPOSER).not.toContain("CONTROL.composerContextEffort");
-		expect(sheet.match(/<ContextRow\b/g) ?? []).toHaveLength(6);
+		/* Seven: the home-only "Agent or team" row (identity-picker spec D-S2)
+		 *  leads More, rendered only when the host passes `identityRow`. */
+		expect(sheet.match(/<ContextRow\b/g) ?? []).toHaveLength(7);
+		expect(sheet.indexOf("CONTROL.composerContextIdentity")).toBeLessThan(
+			folderRow,
+		);
+		expect(sheet).not.toContain("<ComposerChipButton");
 		// D2 (round 6): landscape has ONE context affordance — the compact strip's.
 		expect(COMPOSER).not.toContain("CONTROL.composerCompactContext");
 	});

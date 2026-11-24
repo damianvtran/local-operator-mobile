@@ -10,6 +10,8 @@ import {
 	STATE_MARKER,
 	SURFACE,
 	state,
+	teamBridgeReactionMeasureId,
+	teamBridgeReactionVisualId,
 } from "@/ui/a11y";
 
 const KEBAB = /^[a-z0-9]+(-[a-z0-9]+)*$/;
@@ -27,6 +29,28 @@ const DECLARED = [
 const MARKER_IDS = Object.values(STATE_MARKER).flatMap((states) =>
 	Object.values(states),
 );
+
+describe("reaction measurement identifiers", () => {
+	it("uses distinct ASCII code-point identifiers for inert emoji probes", () => {
+		const cases = [
+			["👍", "1f44d"],
+			["👍🏽", "1f44d-1f3fd"],
+			["❤️", "2764-fe0f"],
+			["❤", "2764"],
+			["👩‍💻", "1f469-200d-1f4bb"],
+		] as const;
+		const ids = cases.map(([emoji, suffix]) => {
+			const id = teamBridgeReactionMeasureId(emoji);
+			expect(id).toBe(`team-bridge-reaction-measure-${suffix}`);
+			expect(id).toMatch(KEBAB);
+			expect(teamBridgeReactionVisualId(emoji)).toBe(
+				`team-bridge-reaction-pill-${suffix}-visual`,
+			);
+			return id;
+		});
+		expect(new Set(ids).size).toBe(cases.length);
+	});
+});
 
 describe("accessibility identifiers", () => {
 	it("are unique across the declaring groups", () => {
@@ -100,5 +124,6 @@ describe("state()", () => {
 		expect(state({ disabled: true })).toEqual({ disabled: true });
 		expect(state({ busy: false })).toEqual({ busy: false });
 		expect(Object.keys(state({}))).toHaveLength(0);
+		expect(state({ checked: true })).toEqual({ checked: true });
 	});
 });

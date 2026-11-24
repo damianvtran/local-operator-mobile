@@ -31,5 +31,6 @@
 	"mobile.chrome.composer.run_settings": "{model}, {effort}",
 	"mobile.chrome.composer.run_settings_hint": "Choose the model and effort",
 	"mobile.chrome.composer.run_settings_title": "Model and effort",
-	"mobile.chrome.composer.row_folder": "Folder"
+	"mobile.chrome.composer.row_folder": "Folder",
+	"mobile.chrome.composer.row_identity": "Agent or team"
 }

@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 
+import type { TranscriptEntry } from "@/contracts";
 import {
 	ACK_MAX_BACKOFF_MS,
 	type AckGates,
+	completionAnchorEntry,
 	mayAcknowledge,
 	overlaysBlocked,
 	retryDelayMs,
@@ -164,5 +166,60 @@ describe("settlesCompletion", () => {
 		],
 	] as const)("refuses to settle on %s", (_name, answer) => {
 		expect(settlesCompletion(answer, expected)).toBe(false);
+	});
+});
+
+/**
+ * Issue #322: a conversation whose live tail (the relay's 80-row frame) is all
+ * peer receipts and tool rows names a completion anchor that only exists in
+ * the history the reader paged in. The gate read the anchor from the live
+ * tail alone, so a completion the reader could see never counted as complete
+ * and its notification never cleared.
+ */
+describe("completionAnchorEntry", () => {
+	const row = (
+		id: string,
+		over: Partial<TranscriptEntry> = {},
+	): TranscriptEntry => ({
+		id,
+		kind: "assistant",
+		text: "Done.",
+		tool_call_id: "",
+		tool_name: "",
+		tool_state: "done",
+		summary: "",
+		intent: "",
+		diff_added: 0,
+		diff_removed: 0,
+		elapsed_s: 0,
+		error: "",
+		details: {},
+		images: [],
+		final: true,
+		text_complete: true,
+		...over,
+	});
+	const tail = [
+		row("m-peer-1", { kind: "peer_message" }),
+		row("m-tool-1", { kind: "tool" }),
+	];
+
+	it("finds an anchor that only the paged-in history holds", () => {
+		const paged = row("m-answer");
+		expect(completionAnchorEntry("m-answer", [paged, ...tail], tail)).toBe(
+			paged,
+		);
+	});
+
+	it("prefers the live frame's copy when both hold the anchor", () => {
+		const held = row("m-tool-1", { kind: "tool", final: false });
+		const live = row("m-tool-1", { kind: "tool" });
+		expect(completionAnchorEntry("m-tool-1", [held], [live])).toBe(live);
+	});
+
+	it("answers undefined for a missing anchor or none at all", () => {
+		expect(completionAnchorEntry("m-gone", tail, tail)).toBeUndefined();
+		expect(completionAnchorEntry(null, tail, tail)).toBeUndefined();
+		expect(completionAnchorEntry(undefined, tail, tail)).toBeUndefined();
 	});
 });

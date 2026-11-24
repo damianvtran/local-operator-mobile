@@ -451,11 +451,17 @@ export function ProfileAuthorName({
 	label,
 	onOpen,
 	testID,
+	onLongPress,
 }: {
 	subject: ProfileSubject;
 	label: string;
 	onOpen: (subject: ProfileSubject) => void;
 	testID: string;
+	/** The message row's long-press (its actions sheet). A Pressable with
+	 *  `onPress` but no `onLongPress` turns a hold into a press on release, so
+	 *  without this the innermost control took the hold and the row's sheet
+	 *  never opened (PR #339 round 1, m1/U2/U6). */
+	onLongPress?: () => void;
 }) {
 	return (
 		<Pressable
@@ -464,6 +470,7 @@ export function ProfileAuthorName({
 			accessibilityHint={t("mobile.team_bridge.profile.opens_hint")}
 			hitSlop={8}
 			onPress={() => onOpen(subject)}
+			onLongPress={onLongPress}
 			testID={testID}
 			className="rounded-xs"
 			style={AUTHOR_NAME_TOUCH_BOX}
@@ -477,9 +484,15 @@ export function ProfileAuthorName({
 export function ProfileAuthorPhoto({
 	subject,
 	onOpen,
+	onLongPress,
 }: {
 	subject: ProfileSubject;
 	onOpen: (subject: ProfileSubject) => void;
+	/** The message row's long-press (its actions sheet). A Pressable with
+	 *  `onPress` but no `onLongPress` turns a hold into a press on release, so
+	 *  without this the innermost control took the hold and the row's sheet
+	 *  never opened (PR #339 round 1, m1/U2/U6). */
+	onLongPress?: () => void;
 }) {
 	return (
 		<Pressable
@@ -497,6 +510,7 @@ export function ProfileAuthorPhoto({
 			hitSlop={6}
 			className="mt-0.5"
 			onPress={() => onOpen(subject)}
+			onLongPress={onLongPress}
 		>
 			<ProfileSubjectAvatar subject={subject} size="sm" />
 		</Pressable>

@@ -28,6 +28,12 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocaleFrame } from "@/features/auth/connection-provider";
+import {
+	textSelectionContainerScroll,
+	textSelectionContainerTouch,
+	textSelectionContainerTouchCancel,
+	textSelectionContainerTouchEnd,
+} from "@/features/session/text-selection";
 import { activeLocale, t } from "@/i18n";
 import type { DirectoryMember, Message } from "@/team-bridge/contract";
 import * as model from "@/team-bridge/model";
@@ -36,6 +42,7 @@ import { useTeamBridge, useTeamBridgeState } from "@/team-bridge/provider";
 import {
 	isReplyRootGone,
 	newestDisplayedReplySeq,
+	REPLY_THREAD_COMPOSE_PARAM,
 	type ReplyThreadTarget,
 	replyThreadKey,
 } from "@/team-bridge/reply-threads";
@@ -49,6 +56,7 @@ import { Skeleton } from "@/ui/components/skeleton";
 import { useCompactChrome } from "@/ui/layout";
 import { BridgeComposerDock } from "./composer-dock";
 import { BridgeBack, BridgeGate } from "./gate";
+import { useMessageActions } from "./message-actions-sheet";
 import { ProfileSheet } from "./profile-card";
 import { BridgeComposerField, BridgeThreadTitle } from "./thread-chrome";
 import { ThreadMessageRow } from "./thread-screen";
@@ -73,7 +81,15 @@ type Row =
 	| { type: "message"; key: string; message: Message; root: boolean }
 	| { type: "divider"; key: string; count: number };
 
-function ReplyThreadContent({ target }: { target: ReplyThreadTarget }) {
+function ReplyThreadContent({
+	target,
+	compose = false,
+}: {
+	target: ReplyThreadTarget;
+	/** Opened from the actions sheet's "Reply in thread": focus the
+	 *  composer on arrival (`replyThreadPath(…, { compose: true })`). */
+	compose?: boolean;
+}) {
 	const { actions, hub } = useTeamBridge();
 	const insets = useSafeAreaInsets();
 	const chromeGlass = useChromeGlass();
@@ -195,14 +211,18 @@ function ReplyThreadContent({ target }: { target: ReplyThreadTarget }) {
 	const rows = useMemo<Row[]>(() => {
 		if (!thread?.root) return [];
 		const root = thread.root;
+		// The SERVED count, never `replies.length`: a page can hold fewer.
+		const count = root.reply_count ?? 0;
 		return [
 			{ type: "message", key: root.id, message: root, root: true },
-			{
-				type: "divider",
-				key: "divider",
-				// The SERVED count, never `replies.length`: a page can hold fewer.
-				count: root.reply_count ?? 0,
-			},
+			/* No "0 replies" divider over the empty line ("No replies yet. Start
+			 *  the thread."): it said the same thing twice, and "Reply in
+			 *  thread" made that the first frame of the headline flow (PR #339
+			 *  design round 1, D5). Kept when replies are loaded even if the
+			 *  served count lags behind them. */
+			...(count === 0 && thread.replies.length === 0
+				? []
+				: [{ type: "divider" as const, key: "divider", count }]),
 			...thread.replies.map(
 				(message): Row => ({
 					type: "message",
@@ -216,6 +236,18 @@ function ReplyThreadContent({ target }: { target: ReplyThreadTarget }) {
 
 	const [profile, setProfile] = useState<ProfileSubject | null>(null);
 	const [deliveryHelp, setDeliveryHelp] = useState<string | null>(null);
+	/* The timeline's actions sheet, minus "Reply in thread": threads are one
+	 *  level deep (the hub refuses a reply as a root), and the root here is
+	 *  already this thread. Copy and Select text on every row. */
+	const messageActions = useMessageActions({
+		scope: "reply",
+		tenantId: target.tenantId,
+		canReplyInThread: false,
+		// The root and every reply take reactions, as on the desktop's thread pane.
+		canReact: !readOnly,
+	});
+	const actionsController = messageActions.controller;
+	const actionsOpenId = messageActions.openMessageId;
 	const renderItem = useCallback(
 		({ item }: { item: Row }) =>
 			item.type === "divider" ? (
@@ -235,9 +267,11 @@ function ReplyThreadContent({ target }: { target: ReplyThreadTarget }) {
 					onOpenProfile={setProfile}
 					onDeliveryHelp={setDeliveryHelp}
 					locale={locale}
+					actions={actionsController}
+					actionsOpen={item.message.id === actionsOpenId}
 				/>
 			),
-		[people, hub, target.tenantId, locale],
+		[people, hub, target.tenantId, locale, actionsController, actionsOpenId],
 	);
 
 	/* The composer: one pending reply, idempotent on retry. The same text keeps
@@ -336,6 +370,15 @@ function ReplyThreadContent({ target }: { target: ReplyThreadTarget }) {
 						renderItem={renderItem}
 						onViewableItemsChanged={onViewableItemsChanged}
 						viewabilityConfig={viewabilityConfig}
+						/* The timeline's selection-mode container handlers: on
+						 *  Android the hosted "Select text" mode ends only when these
+						 *  see a tap outside the message, so without them it never
+						 *  ended here and that row's hold started native selection
+						 *  instead of opening the sheet (PR #339 round 1, m2). */
+						onTouchStart={textSelectionContainerTouch}
+						onTouchEnd={textSelectionContainerTouchEnd}
+						onTouchCancel={textSelectionContainerTouchCancel}
+						onScrollBeginDrag={textSelectionContainerScroll}
 						refreshControl={
 							<RefreshControl refreshing={refreshing} onRefresh={refresh} />
 						}
@@ -390,6 +433,7 @@ function ReplyThreadContent({ target }: { target: ReplyThreadTarget }) {
 							onSend={() => {
 								void send();
 							}}
+							autoFocus={compose}
 						/>
 					</BridgeComposerDock>
 				) : null}
@@ -400,6 +444,7 @@ function ReplyThreadContent({ target }: { target: ReplyThreadTarget }) {
 				onClose={() => setProfile(null)}
 				currentConversationId={target.conversationId}
 			/>
+			{messageActions.sheet}
 			<Sheet
 				visible={deliveryHelp !== null}
 				onClose={() => setDeliveryHelp(null)}
@@ -423,6 +468,7 @@ export default function TeamBridgeReplyThreadScreen() {
 		tenantId?: string;
 		conversationId?: string;
 		rootId?: string;
+		compose?: string;
 	}>();
 	const tenantId = single(params.tenantId);
 	const conversationId = single(params.conversationId);
@@ -444,6 +490,7 @@ export default function TeamBridgeReplyThreadScreen() {
 				 *  visibility evidence survives into another one. */
 				key={`${selfAccountId}/${tenantId}/${conversationId}/${rootId}`}
 				target={target}
+				compose={single(params[REPLY_THREAD_COMPOSE_PARAM]) === "1"}
 			/>
 		</BridgeGate>
 	);

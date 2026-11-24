@@ -31,5 +31,6 @@
 	"mobile.chrome.composer.run_settings": "{model}，{effort}",
 	"mobile.chrome.composer.run_settings_hint": "选择模型和推理强度",
 	"mobile.chrome.composer.run_settings_title": "模型和推理强度",
-	"mobile.chrome.composer.row_folder": "文件夹"
+	"mobile.chrome.composer.row_folder": "文件夹",
+	"mobile.chrome.composer.row_identity": "智能体或团队"
 }

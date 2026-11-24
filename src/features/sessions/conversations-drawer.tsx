@@ -21,7 +21,7 @@ import {
 	requestDrawerNewChat,
 } from "@/features/sessions/drawer-focus";
 import { t } from "@/i18n";
-import { ROLE, SURFACE } from "@/ui/a11y";
+import { CONTROL, ROLE, SURFACE } from "@/ui/a11y";
 import { useReducedMotion, useTokenColor } from "@/ui/appearance";
 import {
 	ModalScopeContext,
@@ -31,8 +31,16 @@ import { useShadow } from "@/ui/elevation";
 import { sidebarWidthFor, TOUCH_FLOOR } from "@/ui/layout";
 import { exitPointerEvents, useModalExit } from "@/ui/modal-exit";
 import { effectiveDuration, parseCubicBezier } from "@/ui/motion";
+import {
+	guardScrimFocus,
+	keyboardInput,
+	PROGRAMMATIC_FOCUS_CLASS,
+	scrimFocusRedirect,
+	webPointerOnly,
+} from "@/ui/programmatic-focus";
 import { TextScaleProvider } from "@/ui/text-scale-provider";
 import { DURATIONS, EASINGS } from "@/ui/tokens.gen";
+import { cx } from "@/ui/variants";
 
 /**
  * The conversations drawer: the temporary variant of Material's navigation
@@ -210,6 +218,36 @@ export const ConversationsDrawer = ({
 		scrim: true,
 	});
 
+	/* Web only: react-native-web's modal trap focuses the first node that ACCEPTS
+	 *  focus — on open, and whenever Tab wraps past the last or first control —
+	 *  and the scrim is first in DOM order. `tabIndex={-1}` keeps it out of the
+	 *  browser's Tab sequence but not out of the trap's reach, so each wrap landed
+	 *  on an unmarked stop named "Close conversations" that Enter would act on
+	 *  (review round 1: R1 / D1 / Q1). The guard (`guardScrimFocus`) moves
+	 *  KEYBOARD focus off the scrim, so the trap's walk continues to the panel's
+	 *  first control — the Agents segment, ringed — on open and on every forward
+	 *  wrap; a backward wrap reaches the last control (review round 2, R2-1). A
+	 *  tap, or no input at all (a deep link to /conversations, Q6), leaves the
+	 *  open-time focus on the ringless scrim. Native has no `<div>` and no trap. */
+	const scrimRef = useRef<View>(null);
+	useEffect(() => {
+		if (!visible || nested || Platform.OS !== "web") return;
+		const scrim = scrimRef.current as unknown as HTMLElement | null;
+		if (!scrim) return;
+		return guardScrimFocus(scrim, () =>
+			scrimFocusRedirect(false, keyboardInput())
+				? /* THIS modal's Close, scoped to the dialog the scrim sits in. A
+					 *  trap walk does not stop here: it moves on to the panel's first
+					 *  control (the Agents segment), which is where a wrap lands. */
+					scrim
+						.closest<HTMLElement>('[aria-modal="true"]')
+						?.querySelector<HTMLElement>(
+							`[data-testid="${CONTROL.sidebarClose}"]`,
+						)
+				: null,
+		);
+	}, [visible, nested]);
+
 	return (
 		/* The scope is what keeps this fix and R13's together: the pane's long-press
 		 *  menu is a `Sheet` rendered INSIDE this `Modal`, so the scope tells the
@@ -281,11 +319,18 @@ export const ConversationsDrawer = ({
 							/* The dim, with no claim to a press this layer cannot receive. */
 							<View style={{ flex: 1, backgroundColor: scrimColour }} />
 						) : (
+							/* Pointer-only on the web: the pane's own labelled Close is the
+							 *  keyboard route, and react-native-web's focus trap lands on
+							 *  this first focusable node on open — its browser ring drew a
+							 *  1 px line down the drawer's edge (`@/ui/programmatic-focus`).
+							 *  Native keeps the scrim exactly as it was. */
 							<Pressable
-								className="flex-1"
+								ref={scrimRef}
+								className={cx("flex-1", PROGRAMMATIC_FOCUS_CLASS)}
 								style={{ backgroundColor: scrimColour }}
 								accessibilityRole={ROLE.button}
 								accessibilityLabel={t("mobile.chrome.close_conversations")}
+								{...webPointerOnly(Platform.OS)}
 								onPress={close}
 							/>
 						)}

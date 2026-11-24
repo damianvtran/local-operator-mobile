@@ -41,6 +41,16 @@ on:
         description: Secret-free device callback proof only (run after the iOS proof settles)
         type: boolean
         default: false
+  # Callable by merge-gate.yml on `ready-to-merge` (`full: true`) so pure JS/UI
+  # pull requests skip per-push Gradle builds during review churn while still
+  # running the full Android APK + manifest + determinism gate once before merge.
+  workflow_call:
+    inputs:
+      full:
+        description: "Run the native build unconditionally (used by merge-gate.yml)"
+        required: false
+        type: boolean
+        default: false
 
 # THE TRIGGER IS PART OF THE KEY. The mechanism is the one e2e.yml spells out at
 # length and has the measurement for: GitHub keeps one pending run per concurrency
@@ -57,15 +67,22 @@ on:
 # is proven on e2e.yml, and applying it here keeps the first occurrence from
 # happening rather than diagnosing it afterwards.
 #
-# `github.event_name` gives each trigger its own lane; `cancel-in-progress` is
-# untouched, so a running run on `main` is still never cancelled.
+# LITERAL WORKFLOW PREFIX (`android-...`) AND `github.event_name` ARE PART OF
+# THE GROUP. Under `workflow_call` (from `merge-gate.yml`), GitHub sets
+# `github.workflow` inside the callee to the CALLER's workflow name ("Merge
+# Gate") and `github.event_name` to the caller's event (`pull_request` or
+# `workflow_dispatch`). Keying on `github.workflow` would therefore give caller
+# `merge-gate` and sibling callees `ios`, `android`, and `e2e` the EXACT SAME
+# group — deadlocking the caller or cancelling sibling jobs mid-flight! Using
+# the literal `'android'` prefix keeps caller and every sibling callee in
+# disjoint lanes.
 # MAIN STAYS UNCANCELLED, deliberately (re-checked 2026-11-18, when e2e.yml and
 # ci.yml began cancelling superseded main pushes to free the shared job pool): a
 # main push here signs and uploads to the Play internal track (`internal`, whenever
 # its `credentials` job finds the secrets), and cancelling that mid-upload is a
 # release lost, not a minute saved.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  group: ${{ format('android-{0}-{1}', github.event_name, github.ref) }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 permissions:
@@ -77,6 +94,10 @@ env:
   # JDK on the `ubuntu-latest` image. Named here so the toolchain is an explicit
   # input rather than whatever the image happens to default to that week.
   JAVA_VERSION: "17"
+  # fastlane reports anonymous usage from every invocation. The `internal` job here
+  # runs a lane against a real Play key, and this is the only other place the
+  # uploader starts; the flag is inert for the jobs that never touch fastlane.
+  FASTLANE_OPT_OUT_USAGE: "1"
 
 jobs:
   oauth-callback-proof:
@@ -92,6 +113,7 @@ jobs:
     outputs:
       native: ${{ steps.diff.outputs.native }}
       sound_native: ${{ steps.sound_diff.outputs.run }}
+      team_bridge_native: ${{ steps.team_bridge_diff.outputs.run }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -102,11 +124,47 @@ jobs:
         id: sound_diff
         env:
           BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          BASE_REF: ${{ github.base_ref }}
+          EVENT: ${{ github.event_name }}
+          FULL: ${{ inputs.full && 'true' || 'false' }}
+        run: |
+          set -euo pipefail
+          # Keep `sound-ios` (macos-26) and `sound-android` path-scoped on pull
+          # requests (even when `merge-gate.yml` passes `FULL=true` on a labeled
+          # PR, where `EVENT` is still `pull_request`), while comparing three-dot
+          # `FETCH_HEAD...HEAD` against the current base branch tip so a PR
+          # behind `origin/main` does not spuriously run `sound-ios` for `main`
+          # commits outside the PR's own diff.
+          if [ "$EVENT" = "pull_request" ]; then
+            git fetch --no-tags origin "$BASE_REF"
+            files=$(git diff --name-only "FETCH_HEAD...HEAD")
+            if [ -z "$files" ]; then
+              echo "run=true" >> "$GITHUB_OUTPUT"
+            elif printf '%s\n' "$files" | grep -E '^(modules/lop-notification-sound/|scripts/ci/notification-sound-|\.github/workflows/android\.yml$)' >/dev/null; then
+              echo "run=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "run=false" >> "$GITHUB_OUTPUT"
+            fi
+          elif [ "$FULL" = "true" ] || [ -z "$BASE" ] || ! git cat-file -e "$BASE^{commit}"; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          elif git diff --name-only "$BASE" HEAD | grep -E '^(modules/lop-notification-sound/|scripts/ci/notification-sound-|\.github/workflows/android\.yml$)' >/dev/null; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Select bounded Team Bridge push native execution
+        # ADR 0010 S2/S4: the delegate/renderer instrumentation runs only when
+        # its module, its plugin, its CI script or this workflow changes, the
+        # same bounding as the sound provider's lane above.
+        id: team_bridge_diff
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
         run: |
           set -euo pipefail
           if [ -z "$BASE" ] || ! git cat-file -e "$BASE^{commit}"; then
             echo "run=true" >> "$GITHUB_OUTPUT"
-          elif git diff --name-only "$BASE" HEAD | grep -E '^(modules/lop-notification-sound/|scripts/ci/notification-sound-|\.github/workflows/android\.yml$)' >/dev/null; then
+          elif git diff --name-only "$BASE" HEAD | grep -E '^(modules/lop-team-bridge-push/|plugins/with-android-team-bridge-push|scripts/ci/team-bridge-push-|\.github/workflows/android\.yml$)' >/dev/null; then
             echo "run=true" >> "$GITHUB_OUTPUT"
           else
             echo "run=false" >> "$GITHUB_OUTPUT"
@@ -117,11 +175,17 @@ jobs:
         env:
           BASE_REF: ${{ github.base_ref }}
           EVENT: ${{ github.event_name }}
+          FULL: ${{ inputs.full && 'true' || 'false' }}
         run: |
           set -euo pipefail
-          # Not a pull request: `main` is the release signal and a hand-run is
-          # somebody asking for this pipeline on purpose, so both run everything.
-          if [ "$EVENT" != "pull_request" ]; then
+          # Unconditional when called from merge-gate.yml (`inputs.full == true`)
+          # or on any non-PR event (`main` is the release signal and a hand-run is
+          # somebody asking for this pipeline on purpose). Note that when
+          # `merge-gate.yml` triggers on `pull_request: [labeled]` and calls this
+          # workflow via `workflow_call`, `github.event_name` inside the callee is
+          # still `pull_request` — so checking `$FULL = true` FIRST is what
+          # guarantees the merge gate always builds!
+          if [ "$FULL" = "true" ] || [ "$EVENT" != "pull_request" ]; then
             echo "native=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
@@ -138,16 +202,20 @@ jobs:
             echo "native=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          # Skipped only when EVERY changed file is documentation (ADR 0004:
-          # "docs/** or **/*.md"). Anything else, a workflow file included, runs
-          # the native jobs.
-          other=$(printf '%s\n' "$files" | grep -v -E '^(docs/|.*\.md$)' || true)
-          if [ -n "$other" ]; then
+          # Two-tier native CI: per-push PR runs build Android only when
+          # native-affecting inputs change; pure `src/**` / `app/**` / `tools/**` /
+          # `docs/**` pushes skip per-push Gradle builds during review churn and run
+          # the full Android APK + manifest + determinism gate once via
+          # `merge-gate.yml` (`ready-to-merge`) before merge.
+          native_inputs=$(printf '%s\n' "$files" \
+            | grep -E '^(android/|ios/|modules/|plugins/|assets/|design/(tokens/tokens\.json$|app-icon/|fonts/)|app\.config\.|app\.json$|eas\.json$|package\.json$|pnpm-lock\.yaml$|babel\.config\.|metro\.config\.|tsconfig\.json$|scripts/ci/|\.github/workflows/(android|ios|merge-gate)\.yml$)' \
+            || true)
+          if [ -n "$native_inputs" ]; then
             echo "native=true" >> "$GITHUB_OUTPUT"
-            printf 'native surfaces touched:\n%s\n' "$(printf '%s\n' "$other" | head -20)"
+            printf 'native surfaces touched:\n%s\n' "$(printf '%s\n' "$native_inputs" | head -20)"
           else
             echo "native=false" >> "$GITHUB_OUTPUT"
-            echo "documentation only (docs/** or *.md) — the native jobs are skipped"
+            echo "no native-affecting inputs touched on per-push PR — deferred to Merge Gate (ready-to-merge)"
           fi
 
   android:
@@ -217,7 +285,9 @@ jobs:
           cd android
           # Compile the framework-only provider instrumentation as well. This
           # does NOT claim execution or system-consumer URI-grant/device proof.
-          ./gradlew assembleDebug :lop-notification-sound:assembleDebugAndroidTest --no-daemon
+          # The Team Bridge push module's instrumentation APK too (ADR 0010
+          # S2/S4); executed by the `team-bridge-push-android` job below.
+          ./gradlew assembleDebug :lop-notification-sound:assembleDebugAndroidTest :lop-team-bridge-push:assembleDebugAndroidTest --no-daemon
 
       - name: Bind the sound test artifact to the checked-out source
         run: git rev-parse HEAD > modules/lop-notification-sound/android/build/outputs/apk/androidTest/debug/source-sha.txt
@@ -227,6 +297,16 @@ jobs:
         with:
           name: notification-sound-native-tests
           path: modules/lop-notification-sound/android/build/outputs/apk/androidTest/debug/
+          if-no-files-found: error
+
+      - name: Bind the Team Bridge push test artifact to the checked-out source
+        run: git rev-parse HEAD > modules/lop-team-bridge-push/android/build/outputs/apk/androidTest/debug/source-sha.txt
+
+      - name: Upload the Team Bridge push native test APK
+        uses: actions/upload-artifact@v7
+        with:
+          name: team-bridge-push-native-tests
+          path: modules/lop-team-bridge-push/android/build/outputs/apk/androidTest/debug/
           if-no-files-found: error
 
       - name: Assert the version in the built APK
@@ -509,13 +589,18 @@ jobs:
           umask 077
           printf '%s' "$PLAY_SERVICE_ACCOUNT_JSON_BASE64" | base64 --decode > "$RUNNER_TEMP/play-service-account.json"
 
+      # ubuntu-latest (ubuntu-26.04) ships no fastlane; install the version the
+      # repository pins (Gemfile.lock) rather than relying on the image. See
+      # .github/actions/setup-fastlane for why bundler and not `gem install`.
+      - uses: ./.github/actions/setup-fastlane
+
       - name: Upload to the Play internal track (fastlane)
         env:
           SUPPLY_JSON_KEY: ${{ runner.temp }}/play-service-account.json
           # The AAB, not the APK: Play requires the app bundle for a release, and
           # the APK is what the GitHub Release attaches for sideloading.
           LO_ANDROID_AAB: ${{ github.workspace }}/android/app/build/outputs/bundle/release/app-release.aab
-        run: fastlane android internal
+        run: bundle exec fastlane android internal
 
       - name: Remove the decoded credentials
         # `always()`: this runs on a failed run too, which is exactly when a
@@ -605,6 +690,75 @@ jobs:
         with:
           name: sound-native-api-${{ matrix.api }}
           path: ${{ runner.temp }}/sound-native.log
+          if-no-files-found: warn
+
+
+  team-bridge-push-android:
+    name: Team Bridge push instrumentation (API ${{ matrix.api }})
+    needs: [changes, android]
+    if: needs.changes.outputs.team_bridge_native == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        api: [29, 36]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          name: team-bridge-push-native-tests
+          path: ${{ runner.temp }}/team-bridge-apk
+      - name: Verify artifact source identity before emulator dispatch
+        run: |
+          set -euo pipefail
+          test "$(cat "$RUNNER_TEMP/team-bridge-apk/source-sha.txt")" = "$(git rev-parse HEAD)"
+          test "$(find "$RUNNER_TEMP/team-bridge-apk" -maxdepth 1 -name '*.apk' | wc -l)" -eq 1
+      - name: Enable KVM and await permission-rule completion
+        # trigger queues events asynchronously. An immediate access predicate
+        # in the same step can race udev and gives only exit 1, not node/UID facts.
+        # Keep the established repo/GitHub rule, but bound and await completion.
+        run: |
+          set -euxo pipefail
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          sudo udevadm settle --timeout=10
+      - name: Prove runner-user KVM access before emulator dispatch
+        run: |
+          set -euo pipefail
+          python3 scripts/ci/notification-sound-kvm.py --self-test
+          echo "runner user: $(id -un); groups: $(id -Gn)"
+          if [ ! -c /dev/kvm ]; then
+            echo "::error title=KVM unavailable::/dev/kvm is absent or not a character device after udev settle; a KVM-capable Linux host is required."
+            exit 1
+          fi
+          ls -l /dev/kvm
+          if [ ! -r /dev/kvm ]; then
+            echo "::error title=KVM read denied::runner user cannot read /dev/kvm after udev settle."
+            exit 1
+          fi
+          if [ ! -w /dev/kvm ]; then
+            echo "::error title=KVM write denied::runner user cannot write /dev/kvm after udev settle."
+            exit 1
+          fi
+          python3 scripts/ci/notification-sound-kvm.py
+      - name: Execute the compiled framework-native tests
+        uses: reactivecircus/android-emulator-runner@c9c93e6ba9c4194322e114c40970d5983d9a07cc
+        with:
+          api-level: ${{ matrix.api }}
+          target: google_apis
+          arch: x86_64
+          force-avd-creation: true
+          emulator-options: -accel on -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot-save -memory 1536
+          disable-animations: true
+          script: bash scripts/ci/team-bridge-push-android-tests.sh
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: team-bridge-push-native-api-${{ matrix.api }}
+          path: ${{ runner.temp }}/team-bridge-push-native.log
           if-no-files-found: warn
 
   sound-ios:

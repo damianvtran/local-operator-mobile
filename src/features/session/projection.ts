@@ -93,11 +93,45 @@ export const visibleTranscriptEntries = (
 	entries: readonly TranscriptEntry[],
 ): readonly TranscriptEntry[] => {
 	const visible = (entry: TranscriptEntry) =>
-		!(
-			entry.kind === "notice" &&
-			(entry.custom_type || entry.details.custom_kind) === "session_state"
-		);
+		!(entry.kind === "notice" && hiddenNotice(entry));
 	return entries.every(visible) ? entries : entries.filter(visible);
+};
+
+/** The credential-binding notice Core's fold emits ("[session credential] This
+ * session is now using <account> on <host>.") — Core
+ * `harness/message_types.py` `SESSION_BINDING_NOTICE_MESSAGE_TYPE`. It is
+ * harness chrome about the desktop's credential routing: on a phone it is not
+ * actionable, local or remote (operator, TestFlight). Core is dropping it from
+ * the phone fold separately; this keeps phones on older Cores clean too. */
+export const SESSION_CREDENTIAL_NOTICE_TYPE =
+	"session_credential_binding_notice.v1";
+/** The legacy head of the same notice from a Core that predates the typed
+ *  stamp. Core's own `harness/rows.py` `_HARNESS_NOTICE_HEADS` treats this head
+ *  as harness-authored, so it is not the reader's words. Matched on NOTICE rows
+ *  only, after leading whitespace as Core does: a user or peer quoting the
+ *  words still owns them (the session_state rule above).
+ *
+ *  And only on UNTYPED notices (agent review round 1, R1-6). Core prints the
+ *  same head on its typed `session_credential` notices — "[session credential]
+ *  KEY was just stored by the operator…" / "…was removed" (`incidents.py`
+ *  `format_credential_message`, `harness/message_types.py`
+ *  `SESSION_CREDENTIAL_MESSAGE_TYPE`) — which ARE the reader's own action and
+ *  stay visible; Core's fix drops only the binding type. A typed row is
+ *  therefore judged by its type alone; the head is the fallback for rows that
+ *  carry no type at all. */
+const SESSION_CREDENTIAL_NOTICE_HEAD = "[session credential] ";
+
+const HIDDEN_NOTICE_TYPES: ReadonlySet<string> = new Set([
+	"session_state",
+	SESSION_CREDENTIAL_NOTICE_TYPE,
+]);
+
+/** A notice row that is harness metadata, not a conversation event. Display
+ *  only, and filtered BEFORE condensing so it adds no rows or group counts. */
+const hiddenNotice = (entry: TranscriptEntry): boolean => {
+	const type = entry.custom_type || entry.details.custom_kind || "";
+	if (type !== "") return HIDDEN_NOTICE_TYPES.has(type);
+	return entry.text.trimStart().startsWith(SESSION_CREDENTIAL_NOTICE_HEAD);
 };
 
 /** Whether the row is one the reader wrote. Used for alignment, and for the one
@@ -124,9 +158,34 @@ export const isBridgeReceipt = (entry: TranscriptEntry): boolean =>
 	entry.kind === "notice" &&
 	(entry.custom_type || entry.details.custom_kind) === "team_bridge_message";
 
+/**
+ * The LIVE echo of a Team Bridge card: a `peer_message` row whose sender the
+ * Team Bridge connector stamped `source: "team_bridge_message"`.
+ *
+ * Core paints a live card one of two ways. With `peer_cycles` negotiated it is a
+ * `notice` carrying `custom_kind` (`note_nonpeer_delivery`), which
+ * `isBridgeReceipt` already reads. Without it, the handle's optimistic echo
+ * (`serving.py` → `note_peer_message`) makes a plain `peer_message` row whose
+ * text is the model-facing METADATA card (no body: `build_conversation_card`
+ * cannot carry one) and whose only typed marks are on the sender
+ * (`connector/wake.py` `deliver_wake`). That row painted as
+ * "another session <team-bridge>" until the conversation was reopened (QA
+ * round 1, Q2). The provenance is a typed producer key, never body wording;
+ * its id is the delivery's message id, which the body route resolves.
+ */
+export const isLiveBridgeEcho = (entry: TranscriptEntry): boolean =>
+	entry.kind === "peer_message" &&
+	entry.details.sender?.source === "team_bridge_message";
+
+/** The display receipt for either card shape: the row's own (history fold and
+ *  the `notice` live arm) or, on the live echo, its sender's. */
+const bridgeReceiptOf = (entry: TranscriptEntry) =>
+	entry.details.bridge_receipt ??
+	(isLiveBridgeEcho(entry) ? entry.details.sender?.bridge_receipt : undefined);
+
 /** Only receiver-projected display metadata names an incoming organization member. */
 export function bridgeReceiptLabel(entry: TranscriptEntry): string {
-	const receipt = entry.details.bridge_receipt;
+	const receipt = bridgeReceiptOf(entry);
 	if (receipt?.v !== 1) return "Team Bridge";
 	const name = receipt.sender?.name;
 	return typeof name === "string"
@@ -141,7 +200,7 @@ export function bridgeReceiptLabel(entry: TranscriptEntry): string {
 /** Optional secondary facts on a typed Bridge receipt (channel/DM + attachment count)
  *  from receiver-projected display metadata, sanitized against control/bidi code points. */
 export function bridgeReceiptMeta(entry: TranscriptEntry): string {
-	const receipt = entry.details.bridge_receipt;
+	const receipt = bridgeReceiptOf(entry);
 	if (receipt?.v !== 1) return "";
 	const parts: string[] = [];
 	const convName = receipt.conversation?.label;

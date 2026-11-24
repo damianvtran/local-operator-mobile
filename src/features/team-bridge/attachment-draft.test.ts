@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it, vi } from "vitest";
 
+import { t } from "@/i18n";
 import { HubError } from "@/team-bridge/client";
 import { TOUCH_TARGET } from "@/ui/tokens.gen";
 
@@ -48,7 +49,7 @@ function setup(
 }
 
 describe("deferred picker/paste authority", () => {
-	it.each(["library", "paste"] as const)(
+	it.each(["library", "camera", "paste"] as const)(
 		"a live %s still prepares and uploads the acquired source",
 		async (source) => {
 			const { draft, deps } = setup();
@@ -56,6 +57,7 @@ describe("deferred picker/paste authority", () => {
 			const release = vi.fn();
 			await addDraftImages(draft, source, {
 				pick: async () => ["raw"],
+				capture: async () => "raw",
 				paste: async () => "raw",
 				isCurrent: () => true,
 				release,
@@ -69,7 +71,7 @@ describe("deferred picker/paste authority", () => {
 			expect(release).not.toHaveBeenCalled();
 		},
 	);
-	it.each(["library", "paste"] as const)(
+	it.each(["library", "camera", "paste"] as const)(
 		"releases stale %s after draft replacement without preparing or publishing",
 		async (source) => {
 			const { draft, deps } = setup();
@@ -82,6 +84,7 @@ describe("deferred picker/paste authority", () => {
 			const notice = vi.fn();
 			const acquisition = addDraftImages(draft, source, {
 				pick: () => pending,
+				capture: async () => (await pending)[0] ?? null,
 				paste: async () => (await pending)[0] ?? null,
 				isCurrent: () => current === draft,
 				release,
@@ -102,6 +105,47 @@ describe("deferred picker/paste authority", () => {
 		},
 	);
 
+	it("a cancelled camera capture is silent: no paste-empty notice, nothing staged", async () => {
+		/* PR #278 round 1 (U5/D1): Team Bridge's Take Photo row. Backing out of
+		 * the camera is the reader's choice, like cancelling the picker. */
+		const { draft, deps } = setup();
+		const notice = vi.fn();
+		await addDraftImages(draft, "camera", {
+			pick: async () => ["wrong"],
+			capture: async () => null,
+			paste: async () => "wrong",
+			isCurrent: () => true,
+			release: vi.fn(),
+			notice,
+		});
+		expect(deps.prepare).not.toHaveBeenCalled();
+		expect(notice).not.toHaveBeenCalled();
+		expect(draft.chips()).toEqual([]);
+	});
+
+	/* PR #354 U2: a camera that failed to open has no image to "not read". */
+	it.each([
+		["camera", "mobile.composer_input.attach.camera_error"],
+		["library", "mobile.team_bridge.attachment.read_error"],
+		["paste", "mobile.team_bridge.attachment.read_error"],
+	] as const)("a %s that throws says %s", async (source, key) => {
+		const { draft } = setup();
+		const notice = vi.fn();
+		const fail = async (): Promise<never> => {
+			throw new Error("launch failed");
+		};
+		await addDraftImages(draft, source, {
+			pick: fail,
+			capture: fail,
+			paste: fail,
+			isCurrent: () => true,
+			release: vi.fn(),
+			notice,
+		});
+		expect(notice).toHaveBeenCalledWith(t(key));
+		expect(draft.chips()).toEqual([]);
+	});
+
 	it.each(["empty", "rejected"] as const)(
 		"does not show a late %s paste notice after disposal",
 		async (result) => {
@@ -114,6 +158,7 @@ describe("deferred picker/paste authority", () => {
 			const notice = vi.fn();
 			const acquisition = addDraftImages(draft, "paste", {
 				pick: async () => [],
+				capture: async () => null,
 				paste: async () => {
 					await pending;
 					if (result === "rejected") throw new Error("denied");

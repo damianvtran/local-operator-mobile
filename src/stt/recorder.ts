@@ -29,6 +29,7 @@
 
 import { Platform } from "react-native";
 
+import type { TranscribeAudioBytesPart } from "@/relay/endpoints";
 import { MAX_RECORDING_SECONDS } from "@/stt/dictation";
 import { meterFraction } from "@/stt/levels";
 
@@ -38,6 +39,39 @@ type AudioModule = typeof import("expo-audio");
  *  literal in the body is recompiled every time. */
 const LEADING_DOT = /^\./;
 const URI_QUERY = /[?#]/;
+/** A file URI or an absolute path, and everything after it: the recording's
+ *  location on the device, which a diagnostic has no use for. A path segment may
+ *  hold spaces or any script (`Application Support`, a localized folder), so no
+ *  character class can say where it ends; the message is cut at its start
+ *  instead (round 1, n1). The look-behind keeps `and/or` and the `//` of a URL
+ *  scheme other than `file:` from counting as a path. */
+const FILE_PATH = /(?:file:\/\/|(?<![\w.:/])\/).*$/s;
+
+/** Where `startRecording` was when it threw — the one fact the reader's line
+ *  ("Couldn’t start recording") cannot carry and a developer needs (issue #323). */
+type StartStage =
+	| "permission"
+	| "audio-mode"
+	| "recorder"
+	| "prepare"
+	| "record";
+
+/**
+ * A development build's note of a start that threw. The reader still gets only
+ * the line; this is for whoever is debugging the build. Release builds say
+ * nothing (`__DEV__` is false there, undefined in Node). Carries the step, the
+ * error's name and its message with any path redacted and the length capped —
+ * no recording, no permission state beyond the step, nothing the reader said.
+ */
+const noteStartFailure = (stage: StartStage, cause: unknown): void => {
+	if (typeof __DEV__ === "undefined" || !__DEV__) return;
+	const error = cause instanceof Error ? cause : null;
+	console.warn("[stt] recorder did not start", {
+		stage,
+		name: error?.name ?? typeof cause,
+		message: (error?.message ?? "").replace(FILE_PATH, "<path>").slice(0, 200),
+	});
+};
 
 /** Whether this PLATFORM can record at all. The web target cannot — capture
  *  needs a native recorder; the web composer's MediaRecorder path is a different
@@ -291,6 +325,7 @@ export async function startRecording(options?: {
 }): Promise<ActiveRecording | null> {
 	const module = await loadRecorder();
 	if (module === null) return null;
+	let stage: StartStage = "permission";
 	try {
 		if (options?.permission !== undefined) {
 			if (options.permission !== "granted") return null;
@@ -306,10 +341,12 @@ export async function startRecording(options?: {
 		 * `setAudioModeAsync` (build/ExpoAudio.js) drops `allowsRecording` and forwards
 		 * `playsInSilentMode`, whose native default is already true
 		 * (AudioRecords.kt), so the mode there is unchanged. */
+		stage = "audio-mode";
 		await module.setAudioModeAsync({
 			allowsRecording: true,
 			playsInSilentMode: true,
 		});
+		stage = "recorder";
 		const preset = module.RecordingPresets.HIGH_QUALITY;
 		const recorder = new module.AudioModule.AudioRecorder({
 			/* FLAT, the way expo-audio's own `createRecordingOptions`
@@ -336,7 +373,9 @@ export async function startRecording(options?: {
 					? preset.android
 					: preset.web),
 		});
+		stage = "prepare";
 		await recorder.prepareToRecordAsync();
+		stage = "record";
 		recorder.record({ forDuration: MAX_RECORDING_SECONDS });
 		let stopped = false;
 		const stop = async (): Promise<MicrophoneRecording | null> => {
@@ -361,7 +400,10 @@ export async function startRecording(options?: {
 				}
 			},
 		};
-	} catch {
+	} catch (cause) {
+		/* Still `null` for the reader — the hook turns it into the mic-failed line —
+		 * but no longer silent for a developer (issue #323). */
+		noteStartFailure(stage, cause);
 		return null;
 	}
 }
@@ -386,6 +428,37 @@ export async function discardRecording(
 	} catch {
 		/* See above: cleanup never fails the caller. */
 	}
+}
+
+/**
+ * The `audio` part `POST /api/transcribe` uploads, to be handed to
+ * `endpoints.transcribe`.
+ *
+ * The recording cannot travel as React Native's `{ uri, name, type }`
+ * descriptor: SDK 57's global `fetch` is `expo/fetch`, whose multipart encoder
+ * reads a string, a `Blob` or anything with `bytes()`, and refuses the
+ * descriptor with "Unsupported FormDataPart implementation" before a request
+ * leaves. Every dictation then looked like a relay failure. So the file is read
+ * here and handed over as bytes — the shape the encoder does read.
+ *
+ * Lazy, like `discardRecording`, and for the same two reasons: the SDK import
+ * costs nothing until an upload runs, and a Node test never loads it. A read
+ * failure PROPAGATES, unlike the discard's swallow: an unreadable recording is
+ * an upload that failed, and the caller owes the reader the retry sentence
+ * rather than a silent drop.
+ */
+export async function recordingUploadPart(
+	recording: MicrophoneRecording,
+): Promise<TranscribeAudioBytesPart> {
+	const { File } = await import("expo-file-system");
+	/* Constructed now, read on demand: `File` only holds the URI, and the encoder
+	 * asks for `bytes()` once, on the upload's own turn. */
+	const file = new File(recording.uri);
+	return {
+		name: recording.name,
+		type: recording.mimeType,
+		bytes: () => file.bytes(),
+	};
 }
 
 /** The extension, with its dot, of a file URI path. */

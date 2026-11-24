@@ -1,12 +1,14 @@
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
+import { Bell, BellOff, Check } from "lucide-react-native";
 import {
-	Bell,
-	BellOff,
-	Check,
-	ClipboardPaste,
-	ImagePlus,
-} from "lucide-react-native";
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+	memo,
+	useCallback,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+	useSyncExternalStore,
+} from "react";
 import {
 	Animated,
 	AppState,
@@ -22,12 +24,18 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocaleFrame } from "@/features/auth/connection-provider";
 import { createAttachmentSheetHandoff } from "@/features/session/attach-handoff";
+import type { AttachSource } from "@/features/session/attach-rule";
+import { AttachSheet } from "@/features/session/components/attach-sheet";
 import { Markdown } from "@/features/session/components/markdown";
+import type { HostSelection } from "@/features/session/components/selectable-message";
 import {
+	activeTextSelection,
+	subscribeTextSelection,
 	textSelectionContainerScroll,
 	textSelectionContainerTouch,
 	textSelectionContainerTouchCancel,
 	textSelectionContainerTouchEnd,
+	usesSelectionMode,
 } from "@/features/session/text-selection";
 import { activeLocale, type ShippedLocale, t } from "@/i18n";
 import { useUiStore } from "@/state/ui-store";
@@ -93,6 +101,7 @@ import {
 	pickTeamBridgeImages,
 	prepareTeamBridgeImage,
 	releaseTeamBridgeSource,
+	takeTeamBridgePhoto,
 } from "./attachment-source";
 import { ComposerAttachments, MessageAttachments } from "./attachment-views";
 import { BridgeComposerDock } from "./composer-dock";
@@ -107,6 +116,12 @@ import {
 } from "./mentions/mention-strip";
 import { serializeMentions } from "./mentions/tokens";
 import { useMentions } from "./mentions/use-mentions";
+import {
+	bridgeSelectionId,
+	type MessageActionsController,
+	messageActionAccessibility,
+	useMessageActions,
+} from "./message-actions-sheet";
 import { MessageDelivery } from "./message-delivery";
 import { createMessageSender } from "./message-sender";
 import {
@@ -115,11 +130,13 @@ import {
 	ProfileSheet,
 	UnknownSenderAvatar,
 } from "./profile-card";
+import { ReactionPills } from "./reaction-pills";
 import { ReplyThreadChip } from "./reply-thread-chip";
 import { parseThreadAnchor, type ThreadAnchor } from "./thread-anchor";
 import { BridgeComposerField, BridgeThreadTitle } from "./thread-chrome";
 import {
 	createThreadViewport,
+	landingRenderCount,
 	showsMetadataOverlay,
 	type ThreadViewport,
 } from "./thread-viewport";
@@ -204,6 +221,14 @@ function AnchorHighlight({
  *  `people` prop on every memoised row (Bridge thread flicker). */
 const NO_PEOPLE: readonly DirectoryMember[] = [];
 
+/** Team Bridge's rows in the shared add-image sheet: every source its upload
+ *  pipeline can bound (no Files — see AttachSheet's `sources`). */
+const TEAM_BRIDGE_ATTACH_SOURCES: readonly AttachSource[] = [
+	"library",
+	"camera",
+	"paste",
+];
+
 export const ThreadMessageRow = memo(function ThreadMessageRow({
 	message,
 	onOpenReplyThread,
@@ -218,9 +243,18 @@ export const ThreadMessageRow = memo(function ThreadMessageRow({
 	fadeMs = DURATIONS.draw,
 	onAnchorLayout,
 	locale,
+	actions,
+	actionsOpen = false,
 }: {
 	message: Message;
 	continuation: boolean;
+	/** The screen's message-actions sheet (`message-actions-sheet.tsx`):
+	 *  long-press opens it, and its actions ride on the body leaves for screen
+	 *  readers. Absent: the row is inert to long-press. */
+	actions?: MessageActionsController;
+	/** This row's sheet is open: the row holds the selected tint so the
+	 *  reader keeps the referent while choosing (spec §4.2). */
+	actionsOpen?: boolean;
 	/** The app language the row renders in. A PROP rather than an
 	 *  `activeLocale()` read because this row is `memo()`: a read inside it is
 	 *  only re-run when some other prop changes, so a language frame would leave
@@ -244,15 +278,68 @@ export const ThreadMessageRow = memo(function ThreadMessageRow({
 	 *  (the reply thread's own rows: threads are one level deep). */
 	onOpenReplyThread?: (rootId: string) => void;
 }) {
+	const origin = useRef<View>(null);
 	const sender = model.senderLabel(message.sender, people);
 	const replies = onOpenReplyThread ? replyThreadSummary(message) : null;
 	// A sender the directory no longer knows renders a neutral silhouette + inert name.
 	const subject = senderSubject(message.sender, people);
 	const attachments = messageAttachments(message);
+	/* The body hands its long-press and screen-reader actions to the row
+	 *  (`HostSelection`): long-press now opens the actions sheet instead of
+	 *  entering selection directly, which moved into the sheet as "Select
+	 *  text" (Slack's pattern). Recomputed on a language change so the action
+	 *  labels follow it (`locale` is in the deps for exactly that). */
+	// biome-ignore lint/correctness/useExhaustiveDependencies: `locale` is a TRIGGER: the action labels are read live through t()
+	const host = useMemo<HostSelection | undefined>(
+		() =>
+			actions
+				? {
+						id: bridgeSelectionId(actions.scope, message.id),
+						onLongPress: () => actions.open(message, () => origin.current),
+						accessibility: messageActionAccessibility(
+							actions.list(message),
+							(action) => actions.run(action, message),
+							/* "React" opens the same sheet at its quick row, so reacting
+							 *  never needs a hold (spec §4.6). */
+							actions.reactable
+								? () => actions.open(message, () => origin.current)
+								: undefined,
+						),
+					}
+				: undefined,
+		[actions, message, locale],
+	);
+	/* A message with no text has no body leaf to carry the screen-reader
+	 *  actions: its timestamp, its "no text" line and its attachment tiles do
+	 *  instead. The tiles matter for a same-sender continuation, which renders
+	 *  no timestamp (PR #339 round 1, M2). */
+	const bodylessAccessibility =
+		host && !message.body?.trim() ? host.accessibility : undefined;
+	/* Off iOS, "Select text" only makes the leaves selectable — nothing you can
+	 *  see (design round 1, D2: 0 pixels changed). The row holds the same
+	 *  referent layer while it is in the mode, so the reader can see which
+	 *  message is armed and that a tap elsewhere ends it. iOS swaps in its own
+	 *  visible selection view, so it is excluded. */
+	const hostId = host?.id;
+	const selecting = useSyncExternalStore(
+		subscribeTextSelection,
+		() =>
+			hostId !== undefined &&
+			!usesSelectionMode() &&
+			activeTextSelection() === hostId,
+	);
+	const referent = actionsOpen || selecting;
 	return (
-		<View
+		<Pressable
+			ref={origin}
+			tabIndex={-1}
 			className={`flex-row gap-3 px-4 ${continuation ? "py-0.5" : "pt-3 pb-0.5"}`}
 			testID={teamBridgeMessageId(message.id)}
+			onLongPress={host?.onLongPress}
+			/* NOT one accessibility element: an accessible container hides its
+			 *  children on iOS, swallowing the author link, the body's links and
+			 *  the attachments. Screen readers reach the actions on the leaves. */
+			accessible={false}
 			onLayout={
 				onAnchorLayout
 					? (event) =>
@@ -260,13 +347,32 @@ export const ThreadMessageRow = memo(function ThreadMessageRow({
 					: undefined
 			}
 		>
+			{referent ? (
+				/* Painted beneath the content on its own layer, like the anchor
+				 *  highlight, so opening the sheet shifts no geometry.
+				 *  The ACCENT start edge is what survives the sheet's scrim (design
+				 *  round 1, D3): `row-selected` is 1.06:1 against the canvas, and
+				 *  under the 70 % scrim it measured 1.03:1 (light) / 1.04:1 (dark) —
+				 *  the pressed row could not be picked out. `border-s` is logical,
+				 *  so the edge follows the reading start in RTL. */
+				<View
+					pointerEvents="none"
+					aria-hidden
+					className="absolute inset-0 border-s-4 border-accent bg-row-selected"
+					testID={SURFACE.teamBridgeMessageActionsTint}
+				/>
+			) : null}
 			{highlight ? (
 				<AnchorHighlight fading={highlight === "fade"} fadeMs={fadeMs} />
 			) : null}
 			<View className="w-8">
 				{!continuation &&
 					(subject ? (
-						<ProfileAuthorPhoto subject={subject} onOpen={onOpenProfile} />
+						<ProfileAuthorPhoto
+							subject={subject}
+							onOpen={onOpenProfile}
+							onLongPress={host?.onLongPress}
+						/>
 					) : (
 						<View className="mt-0.5">
 							<UnknownSenderAvatar kind={message.sender.kind} size="sm" />
@@ -287,13 +393,20 @@ export const ThreadMessageRow = memo(function ThreadMessageRow({
 								label={sender}
 								onOpen={onOpenProfile}
 								testID={teamBridgeProfileOpenId(message.id)}
+								onLongPress={host?.onLongPress}
 							/>
 						) : (
 							<Text className="py-0.5 text-body-read font-semibold text-ink">
 								{sender}
 							</Text>
 						)}
-						<Text className="text-meta text-ink-muted">
+						<Text
+							className="text-meta text-ink-muted"
+							/* A message with no text has no body leaf to carry the
+							 *  actions (an image-only root): its time does instead, so
+							 *  "Reply in thread" stays reachable without a hold. */
+							{...bodylessAccessibility}
+						>
 							{/* The APP language, not the device default: with no locale
 							 *  `toLocaleTimeString` follows the device, so a Spanish-UI
 							 *  reader on an English device got English times. */}
@@ -302,7 +415,10 @@ export const ThreadMessageRow = memo(function ThreadMessageRow({
 					</View>
 				)}
 				{message.body === null ? (
-					<Text className="text-body-read italic text-ink-dim">
+					<Text
+						className="text-body-read italic text-ink-dim"
+						{...bodylessAccessibility}
+					>
 						{t("mobile.team_bridge.thread.body_unavailable")}
 					</Text>
 				) : message.body.trim() === "" ? (
@@ -312,12 +428,15 @@ export const ThreadMessageRow = memo(function ThreadMessageRow({
 					 * this build does not render), say so instead of an empty bubble.
 					 */
 					attachments.length === 0 ? (
-						<Text className="text-body-read italic text-ink-dim">
+						<Text
+							className="text-body-read italic text-ink-dim"
+							{...bodylessAccessibility}
+						>
 							{t("mobile.team_bridge.attachment.unsupported_content")}
 						</Text>
 					) : null
 				) : (
-					<Markdown text={message.body} />
+					<Markdown text={message.body} host={host} />
 				)}
 				<MessageAttachments
 					hub={hub}
@@ -326,8 +445,22 @@ export const ThreadMessageRow = memo(function ThreadMessageRow({
 					messageId={message.id}
 					attachments={attachments}
 					initialViewerIndex={initialViewerIndex}
+					onLongPress={host?.onLongPress}
+					accessibility={bodylessAccessibility}
 				/>
 				<MessageDelivery message={message} onHelp={onDeliveryHelp} />
+				{/* Under the body and delivery line, above the reply chip (spec
+				 *  §4.3). Renders nothing for a message without reactions. */}
+				<ReactionPills
+					message={message}
+					tenantId={tenantId}
+					locale={locale}
+					canReact={actions?.reactable === true}
+					onAdd={
+						actions ? (control) => actions.open(message, control) : undefined
+					}
+					onLongPress={host?.onLongPress}
+				/>
 				{replies && onOpenReplyThread ? (
 					<ReplyThreadChip
 						rootId={message.id}
@@ -335,10 +468,11 @@ export const ThreadMessageRow = memo(function ThreadMessageRow({
 						people={people}
 						locale={locale}
 						onOpen={onOpenReplyThread}
+						onLongPress={host?.onLongPress}
 					/>
 				) : null}
 			</View>
-		</View>
+		</Pressable>
 	);
 });
 
@@ -428,7 +562,6 @@ function ThreadContent({
 	const activeNow = useRef(AppState.currentState === "active");
 	const mounted = useRef(true);
 	const checkColor = useTokenColor("accent");
-	const sheetIconColor = useTokenColor("ink-muted");
 	// Derive visibility synchronously from the actual account/route identity,
 	// not a passive reset effect: even the first boundary render cannot display
 	// another account's help or return focus to its opener.
@@ -521,13 +654,14 @@ function ThreadContent({
 			? (draftImages.current?.draft ?? null)
 			: null;
 	const chips = images?.chips() ?? [];
-	const addImages = async (source: "library" | "paste") => {
+	const addImages = async (source: "library" | "camera" | "paste") => {
 		setAttachOpen(false);
 		setAttachNotice(null);
 		const draft = images;
 		if (!draft) return;
 		await addDraftImages(draft, source, {
 			pick: pickTeamBridgeImages,
+			capture: takeTeamBridgePhoto,
 			paste: pasteTeamBridgeImage,
 			// A capability/conversation replacement can happen while the screen
 			// remains mounted, so mounted ownership alone is not enough.
@@ -944,6 +1078,31 @@ function ThreadContent({
 		},
 		[router, tenantId, conversationId],
 	);
+	/* The actions sheet's "Reply in thread": the chip's route plus `compose`,
+	 *  so the thread screen lands with its composer focused. This is the only
+	 *  way to START a thread from the timeline — the chip renders only once a
+	 *  root has replies. Not offered read-only: that thread has no composer. */
+	const startReplyThread = useCallback(
+		(rootId: string) => {
+			if (!conversationId) return;
+			router.push(
+				replyThreadPath(
+					{ tenantId, conversationId, rootId },
+					{ compose: true },
+				) as never,
+			);
+		},
+		[router, tenantId, conversationId],
+	);
+	const messageActions = useMessageActions({
+		scope: "timeline",
+		tenantId,
+		canReplyInThread: !readOnly && !!conversationId,
+		canReact: !readOnly && !!conversationId,
+		onReplyInThread: startReplyThread,
+	});
+	const actionsController = messageActions.controller;
+	const actionsOpenId = messageActions.openMessageId;
 	const renderItem = useCallback(
 		({ item }: { item: model.ThreadItem }) => {
 			if (item.type === "day")
@@ -989,6 +1148,8 @@ function ThreadContent({
 						item.message.id === highlightId ? measureRow : undefined
 					}
 					locale={locale}
+					actions={actionsController}
+					actionsOpen={item.message.id === actionsOpenId}
 				/>
 			);
 		},
@@ -1004,6 +1165,8 @@ function ThreadContent({
 			measureRow,
 			locale,
 			openReplyThread,
+			actionsController,
+			actionsOpenId,
 		],
 	);
 	const validDraft = routeId === "new" && !!target;
@@ -1210,6 +1373,12 @@ function ThreadContent({
 									maintainVisibleContentPosition={
 										positioned ? { minIndexForVisible: 0 } : undefined
 									}
+									// Mount the whole held page before landing, so the landing never
+									// measures (and reveals) a partial page (`landingRenderCount`).
+									initialNumToRender={landingRenderCount(
+										items.length,
+										positioned,
+									)}
 									style={{ opacity: initialRowsHidden ? 0 : 1 }}
 									accessibilityElementsHidden={initialRowsHidden}
 									importantForAccessibility={
@@ -1469,6 +1638,7 @@ function ThreadContent({
 				onClose={() => setProfile(null)}
 				currentConversationId={conversationId}
 			/>
+			{messageActions.sheet}
 			<Sheet
 				visible={currentDeliveryHelp?.open === true}
 				onClose={() =>
@@ -1493,59 +1663,33 @@ function ThreadContent({
 					{t("mobile.team_bridge.delivery.help")}
 				</Text>
 			</Sheet>
-			<Sheet
+			{/* The session composer's AttachSheet, not a Team Bridge copy: one
+			 *  add-image menu across the app, Take Photo included. Files is left
+			 *  out because this pipeline bounds images from a URI with known
+			 *  dimensions (AttachSheet's `sources`). The sheet asks for camera
+			 *  permission on the press; the launch still waits for the iOS
+			 *  dismissal through the shared handoff (and the sheet closes with no
+			 *  exit animation for it — `Sheet`'s `exitInstantly`), and the bytes
+			 *  still go through Team Bridge's own upload path. The existing test
+			 *  IDs are kept so automation keeps addressing them. */}
+			<AttachSheet
 				visible={attachOpen}
 				onClose={() => setAttachOpen(false)}
 				onDismiss={attachHandoff.dismissed}
+				onHidden={attachHandoff.hidden}
 				title={t("mobile.team_bridge.attachment.add")}
+				sources={TEAM_BRIDGE_ATTACH_SOURCES}
 				testID={SURFACE.teamBridgeAttachSheet}
-			>
-				<View className="gap-1 pb-2">
-					{(
-						[
-							[
-								"library",
-								t("mobile.team_bridge.attachment.library"),
-								ImagePlus,
-							],
-							[
-								"paste",
-								t("mobile.team_bridge.attachment.paste"),
-								ClipboardPaste,
-							],
-						] as const
-					).map(([source, text, Icon]) => (
-						<Pressable
-							key={source}
-							accessibilityRole={ROLE.button}
-							accessibilityLabel={text}
-							testID={teamBridgeAttachSourceId(source)}
-							onPress={() => {
-								// Closed first; the picker opens over a dismissed sheet.
-								setAttachOpen(false);
-								attachHandoff.choose(() => {
-									void addImages(source);
-								}, Platform.OS);
-							}}
-							style={{ minHeight: TOUCH_FLOOR }}
-						>
-							{({ pressed }) => (
-								<View
-									className={cx(
-										"flex-1 flex-row items-center gap-3 rounded-sm px-3 py-2",
-										pressed ? "bg-row-hover" : "bg-transparent",
-									)}
-								>
-									<Icon size={18} color={sheetIconColor} aria-hidden />
-									<Text className="min-w-0 flex-1 text-body text-ink">
-										{text}
-									</Text>
-								</View>
-							)}
-						</Pressable>
-					))}
-				</View>
-			</Sheet>
+				optionId={teamBridgeAttachSourceId}
+				onChoose={(source) => {
+					if (source === "files") return;
+					// Closed first; the picker opens over a dismissed sheet.
+					setAttachOpen(false);
+					attachHandoff.choose(() => {
+						void addImages(source);
+					}, Platform.OS);
+				}}
+			/>
 			<Sheet
 				visible={notifyOpen}
 				onClose={() => setNotifyOpen(false)}

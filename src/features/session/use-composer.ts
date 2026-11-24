@@ -14,15 +14,16 @@ import {
 
 import type { Capabilities, PromptImage, SlashCommand } from "@/contracts";
 import {
-	pasteImage,
-	pickImageFromFiles,
-	pickImageFromLibrary,
+	readImageFrom,
+	readPastedImages,
 	readWebImageFile,
 } from "@/features/session/attach";
+import { createAttachLatch } from "@/features/session/attach-latch";
 import type { AttachSource, PasteVia } from "@/features/session/attach-rule";
 import {
 	acknowledgedCurrentDraft,
 	ambiguousMessage,
+	attachFailureLine,
 	chooseOp,
 	composerControls,
 	composerCopy,
@@ -49,6 +50,10 @@ import {
 import type { SessionRelaySource } from "@/features/session/relay-source";
 import { sendSlashCommand } from "@/features/session/send-slash";
 import {
+	skippedSkillsNotice,
+	wantsSkillExpansion,
+} from "@/features/session/skills/skill-send";
+import {
 	parseSlashDraft,
 	slashQuery,
 	slashTap,
@@ -59,6 +64,7 @@ import {
 	type DictationState,
 	useDictation,
 } from "@/features/session/use-dictation";
+import { isStoredSettingsRefusal } from "@/features/session/use-stored-model";
 import { haptic } from "@/lib/haptics";
 import { type ContinuationEnvelope, isRelayError } from "@/relay";
 import {
@@ -114,11 +120,21 @@ export interface ComposerState {
 	 *  hands the raw file here so the read and its failure copy live beside the
 	 *  pickers' own. */
 	pasteFile: (file: File) => void;
+	/** Images pasted into the message field on a phone (`paste-image-field.tsx`). */
+	pasteImages: (uris: string[]) => void;
 	/** A picker is open or an image is being read. */
 	attaching: boolean;
+	/** Attach was pressed: a pick still in flight is not on screen, so it stops
+	 *  holding the composer (`createAttachLatch().abandon`, native only). */
+	abandonAttach: () => void;
 	/** The instruction retained under an unknown outcome, or `null`. */
 	retained: ContinuationEnvelope | null;
 	sending: boolean;
+	/** Counts ACCEPTED sends (a prompt, or a typed slash op). The transcript snaps
+	 *  to the end on a change of this, not of `sending`: that flag is also true
+	 *  while Approve/Deny, an ask answer, a retry or a slash TAP is in flight, and
+	 *  none of those is a message leaving this composer (code review round 1, R2). */
+	sendMark: number;
 	/** `null` when nothing is wrong; a sentence otherwise. */
 	error: string | null;
 	/** A definitive acknowledgement of an EDITED draft: a success, not an error. */
@@ -163,6 +179,10 @@ export const useComposer = (input: {
 	 *  frame must never be sendable (PR #246 R1/Q1-1). Optional so hosts that
 	 *  never hydrate (the provisional editor) need not pass it. */
 	cached?: boolean;
+	/** Apply a stored conversation's model intent before admitting any message.
+	 * A failure leaves the editor and envelope untouched; this runs inside the
+	 * existing in-flight guard, so double taps cannot duplicate the reopen. */
+	beforeSend?: () => Promise<void>;
 	/** The relay's capability block, off the list frame. Decides whether a mic
 	 *  exists at all (`capabilities.stt`, absence = unavailable). */
 	capabilities: Capabilities | null | undefined;
@@ -173,6 +193,10 @@ export const useComposer = (input: {
 	 *  `/command` is refused with this sentence and NOTHING is sent, instead of
 	 *  a guaranteed `409 remote_unsupported`. The draft is kept. */
 	slashRefusal?: null | string;
+	/** The relay licenses `$skill` expansion for THIS conversation
+	 *  (`capabilities.skill_invocation` and a local conversation). Off, no send
+	 *  ever carries `expand_skills`. */
+	expandSkills?: boolean;
 	/** An adopted provisional editor keeps its identity while this host adds the
 	 * normal session actions, dictation and slash controls around it. */
 	editor?: {
@@ -189,7 +213,9 @@ export const useComposer = (input: {
 	// `useCallback` below it pointless.
 	const { sessionId, source, streaming, ended, capabilities, onSent } = input;
 	const slashRefusal = input.slashRefusal ?? null;
+	const expandSkills = input.expandSkills === true;
 	const cached = input.cached === true;
+	const beforeSend = input.beforeSend;
 	const endpoints = source.endpoints;
 	const authorization = useSyncExternalStore(
 		subscribeStartupAuthorization,
@@ -261,6 +287,8 @@ export const useComposer = (input: {
 		);
 	}, [outboxOwns]);
 	const [sending, setSending] = useState(false);
+	/* Bumped where a send is ADMITTED and nowhere else — see the prop's doc. */
+	const [sendMark, setSendMark] = useState(0);
 	/* The same guard as `sending`, but synchronous. React state is what DISABLES the
 	 * controls; it is not visible to a second event in the same frame, and a double
 	 * tap on a slash row arrives exactly there — measured: two taps in one tick put
@@ -272,7 +300,15 @@ export const useComposer = (input: {
 	const inFlight = useRef(false);
 	const [error, setError] = useState<string | null>(null);
 	const [notice, setNotice] = useState<string | null>(null);
+	/* Whether the notice painted is the skipped-skill receipt. It describes the
+	 * message just SENT, so the first keystroke of the next draft clears it —
+	 * left up, it would read as a statement about the new draft. A ref: it gates a
+	 * clear and never renders. */
+	const skipNotice = useRef(false);
 	const [attaching, setAttaching] = useState(false);
+	/* Busy from a pick's start until it settles; only a pick the attach
+	 *  handoff's fallback launched can be released early (`attach-latch.ts`). */
+	const attachLatch = useRef(createAttachLatch(setAttaching)).current;
 
 	/* The draft window's provenance (design §2.1): sticky per window, reset by an
 	 * empty draft. A ref, not state — nothing renders differently from it, and the
@@ -428,6 +464,23 @@ export const useComposer = (input: {
 		},
 	});
 	const cancelDictationForSend = voice.cancelForSend;
+	const clearDictationOutcome = voice.clearOutcome;
+
+	/** The FIELD's change handler (what the screen hands the TextInput): the
+	 *  reader's own edit also ends a resting dictation line (issue #323). Kept off
+	 *  the internal `setDraft`, which echo restores and acks also call, and off
+	 *  `commitDraft`, the transcript append that `added` announces. */
+	const editDraft = useCallback(
+		(text: string) => {
+			clearDictationOutcome();
+			if (skipNotice.current) {
+				skipNotice.current = false;
+				setNotice(null);
+			}
+			setDraft(text);
+		},
+		[clearDictationOutcome, setDraft],
+	);
 
 	/* --------------------------------------------------------------- the send */
 
@@ -478,9 +531,12 @@ export const useComposer = (input: {
 				payloadImages === undefined ? parseSlashDraft(trimmed) : null;
 
 			setSending(true);
+			setSendMark((at) => at + 1);
 			setError(null);
 			setNotice(null);
+			skipNotice.current = false;
 			try {
+				await beforeSend?.();
 				if (parsed !== null) {
 					/* No envelope: a slash command carries no durable identity to replay,
 					 * so there is nothing whose outcome could be ambiguous. The send itself
@@ -512,6 +568,13 @@ export const useComposer = (input: {
 					op,
 					text: trimmed,
 					...(payloadImages ? { images: payloadImages } : {}),
+					...(wantsSkillExpansion({
+						available: expandSkills,
+						text: trimmed,
+						slash: parsed !== null,
+					})
+						? { expand_skills: true }
+						: {}),
 					onHeld: (envelope) => {
 						sentBody = {
 							text: envelope.text,
@@ -610,6 +673,13 @@ export const useComposer = (input: {
 					 * rapid steering stays silent (UX round 1, U2). */
 					setNotice(earlierWentThroughNotice());
 				}
+				/* AFTER the chain above: what the message CONTAINS outranks the
+				 * "your edit is still here" line, and the send went either way. */
+				const skippedNotice = skippedSkillsNotice(result.skills);
+				if (skippedNotice !== null) {
+					skipNotice.current = true;
+					setNotice(skippedNotice);
+				}
 				onSent?.();
 			} catch (failure) {
 				/* The op this send carried, so a failed steer is never worded as a
@@ -630,7 +700,18 @@ export const useComposer = (input: {
 				 * which reads the relay error layer's own `envelope` directive — so this
 				 * handler presents and does not decide. Settling again here would be a second
 				 * reading of one failure, which is how one failure acquires two rules. */
-				if (receipt !== null) {
+				if (isStoredSettingsRefusal(failure)) {
+					/* `beforeSend` got the session reachable (it resumed, or was already
+					 * live) and THEN a model/effort change was refused, so nothing was
+					 * sent and the draft is untouched. The ended-session sentence below
+					 * would claim the reopen failed and send the reader to an Ended
+					 * control the now-Live/Idle header no longer shows (PR #350 D2/U1);
+					 * `ended` is this attempt's captured value, stale by now. An earlier
+					 * held envelope, if any, is unchanged by this attempt: read it back
+					 * rather than guess. */
+					setRetained(await envelopeStore.peek(sessionId));
+					setError(composerCopy().settingsNotApplied);
+				} else if (receipt !== null) {
 					setRetained(
 						receipt.kind === "ambiguous" || receipt.kind === "not-sent"
 							? await envelopeStore.peek(sessionId)
@@ -678,6 +759,8 @@ export const useComposer = (input: {
 			cancelDictationForSend,
 			echoDraft,
 			slashRefusal,
+			beforeSend,
+			expandSkills,
 		],
 	);
 
@@ -718,6 +801,7 @@ export const useComposer = (input: {
 			const retryImages = imagesRef.current;
 			let painted: PaintedEcho | null = null;
 			try {
+				await beforeSend?.();
 				/* The retry IS the replay: `holdNew` returns the stored envelope for this
 				 * session, so this sends the bytes and the UUID it was minted with. */
 				const outcome = await outbox.deliver({
@@ -727,6 +811,9 @@ export const useComposer = (input: {
 					op: held.op,
 					text: held.text,
 					...(held.images ? { images: held.images } : {}),
+					/* From the ENVELOPE: a retry asks for the expansion the first attempt
+					 * asked for, or it would send the literal text. */
+					...(held.expand_skills === true ? { expand_skills: true } : {}),
 					/* A retry paints its row too, under the SAME id — the replayed
 					 * envelope's — and moves the draft only when the visible draft is
 					 * that envelope's body (the failed send handed it back untouched). */
@@ -769,6 +856,11 @@ export const useComposer = (input: {
 				} else {
 					setNotice(earlierWentThroughNotice());
 				}
+				const skippedNotice = skippedSkillsNotice(result.skills);
+				if (skippedNotice !== null) {
+					skipNotice.current = true;
+					setNotice(skippedNotice);
+				}
 			} catch (failure) {
 				const receipt = isRelayError(failure)
 					? receiptForError(failure, held.op)
@@ -784,7 +876,14 @@ export const useComposer = (input: {
 						? "refused"
 						: "unconfirmed",
 				);
-				if (receipt !== null) {
+				if (isStoredSettingsRefusal(failure)) {
+					/* Same as `runSend`: the resume landed and a model/effort change was
+					 * refused, so the held envelope was never replayed and stays the
+					 * retry target. Not the ended "couldn't be reopened" sentence
+					 * (PR #350 D2/U1). */
+					setRetained(await envelopeStore.peek(sessionId));
+					setError(composerCopy().settingsNotApplied);
+				} else if (receipt !== null) {
 					setRetained(
 						receipt.kind === "ambiguous" || receipt.kind === "not-sent"
 							? await envelopeStore.peek(sessionId)
@@ -824,6 +923,7 @@ export const useComposer = (input: {
 		ended,
 		echoDraft,
 		cached,
+		beforeSend,
 	]);
 
 	/**
@@ -923,7 +1023,7 @@ export const useComposer = (input: {
 	const attach = useCallback(
 		(source: AttachSource, via: PasteVia = "sheet") => {
 			void (async () => {
-				setAttaching(true);
+				const endAttach = attachLatch.begin();
 				/* A new attach supersedes the last failure the way `home.tsx`'s copies of
 				 * this handler already do (`setComposerError(null)`): without it, "No image
 				 * was pasted…" stayed up after a later SUCCESSFUL attach, so the error line
@@ -931,12 +1031,10 @@ export const useComposer = (input: {
 				 * R3). */
 				setError(null);
 				try {
-					const image =
-						source === "library"
-							? await pickImageFromLibrary()
-							: source === "paste"
-								? await pasteImage()
-								: await pickImageFromFiles();
+					const image = await readImageFrom(source);
+					/* Abandoned by an Attach press, or superseded by a newer pick
+					 *  (`attach-latch.ts`, R1): the reader has moved on. */
+					if (!endAttach.current()) return;
 					if (image !== null) {
 						setImages((current) => [...current, image]);
 					} else if (source === "paste") {
@@ -946,13 +1044,36 @@ export const useComposer = (input: {
 						setError(pasteNothingLine(via, Platform.OS));
 					}
 				} catch {
-					setError(composerCopy().attachError);
+					if (!endAttach.current()) return;
+					setError(attachFailureLine(source));
 				} finally {
-					setAttaching(false);
+					endAttach();
 				}
 			})();
 		},
-		[setImages],
+		[attachLatch, setImages],
+	);
+
+	/** Images pasted INTO the message field on a phone: the same latch, strip and
+	 *  failure copy as `attach`, from `file://` copies the field's wrapper wrote. */
+	const pasteImages = useCallback(
+		(uris: string[]) => {
+			void (async () => {
+				const endAttach = attachLatch.begin();
+				setError(null);
+				try {
+					const pasted = await readPastedImages(uris);
+					if (!endAttach.current()) return;
+					setImages((current) => [...current, ...pasted]);
+				} catch {
+					if (!endAttach.current()) return;
+					setError(composerCopy().attachError);
+				} finally {
+					endAttach();
+				}
+			})();
+		},
+		[attachLatch, setImages],
 	);
 
 	/** The web paste EVENT's file. Same failure copy as the pickers, same strip
@@ -1059,7 +1180,7 @@ export const useComposer = (input: {
 		draft:
 			editor !== undefined || draftReadFor === storageIdentity ? draft : "",
 		draftReady: editor !== undefined || draftReadFor === storageIdentity,
-		setDraft,
+		setDraft: editDraft,
 		images:
 			editor !== undefined || draftReadFor === storageIdentity ? images : [],
 		addImage: (image) => setImages((current) => [...current, image]),
@@ -1074,13 +1195,19 @@ export const useComposer = (input: {
 			setImages([]);
 			setError(null);
 			setNotice(null);
+			/* The × is the reader's own deletion, so a resting dictation line ends
+			 * with the draft it sat under (issue #323; round 1, D1/Q1). */
+			clearDictationOutcome();
 		},
 		dismissError: () => setError(null),
 		attach,
 		pasteFile,
+		pasteImages,
 		attaching,
+		abandonAttach: attachLatch.abandon,
 		retained,
 		sending,
+		sendMark,
 		error,
 		notice,
 		controls,

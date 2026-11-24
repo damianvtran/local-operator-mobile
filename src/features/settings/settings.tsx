@@ -28,6 +28,7 @@ import {
 } from "@/features/auth/connection-provider";
 import { diagnosticReason } from "@/features/auth/stream-health-reason";
 import { TransientNotice } from "@/features/auth/transient-notice";
+import { attachHandoffDiagnostics } from "@/features/session/attach-handoff";
 import {
 	diagnosticsReasonValue,
 	diagnosticsText,
@@ -77,6 +78,7 @@ import {
 	retryTargetMatches,
 } from "./refusal-in-view";
 import { SidebarSettingsSection } from "./sidebar-section";
+import { themeModeOptions } from "./theme-picker-model";
 import { ThemeRow } from "./theme-row";
 import { useRefusalReveal } from "./use-refusal-reveal";
 
@@ -480,43 +482,55 @@ export default function Settings() {
 					) : null}
 					{/* `flex-wrap`: two controls side by side are 2 x (label + padding) wide,
 					 *  and at 200 % text that is wider than a 320 pt phone — the row ran to
-					 *  399 px (`U-06`, measured). Wrapping keeps both reachable. */}
+					 *  399 px (`U-06`, measured). Wrapping keeps both reachable. Each
+					 *  button sits in a `grow` cell so a wrapped line fills the column
+					 *  edge to edge instead of leaving ragged gaps. */}
 					<View className="flex-row flex-wrap gap-2 pt-1">
-						<Button
-							testID={CONTROL.settingsRefresh}
-							label={t("mobile.settings.connection.refresh")}
-							onPress={() => void refreshComputers()}
-							/* ONE STYLE FOR THE THREE (visual audit D15). Refresh was
-							 *  outlined while its two neighbours were plain text, which
-							 *  ranked a background re-read above "Switch computer" — the
-							 *  action a reader actually comes here for. None of the three
-							 *  is the section's primary action, so all three are quiet. */
-							variant="quiet"
-							size="sm"
-							/* A discovery, not a pick: the same flag the Computers header
-							 *  uses, which also absorbs repeat taps while one is in flight
-							 *  (U4). */
-							loading={discovering}
-						/>
+						<View className="grow">
+							<Button
+								testID={CONTROL.settingsRefresh}
+								label={t("mobile.settings.connection.refresh")}
+								onPress={() => void refreshComputers()}
+								/* ONE STYLE FOR THE THREE (visual audit D15): none of the
+								 *  three is the section's primary action, so none outranks
+								 *  the others. They were borderless `quiet` text and barely
+								 *  read as tappable (UX pass, settings); the kit's bordered
+								 *  secondary (`outline`) reads as a control, at the `sm` size
+								 *  of this screen's other secondary actions. `Button` raises
+								 *  `sm` to a TOUCH_FLOOR box (44 pt iOS / 48 dp Android and
+								 *  web) with the 32 pt pill centred in it, so the floor is
+								 *  real geometry. */
+								variant="outline"
+								size="sm"
+								/* A discovery, not a pick: the same flag the Computers header
+								 *  uses, which also absorbs repeat taps while one is in flight
+								 *  (U4). */
+								loading={discovering}
+							/>
+						</View>
 						{/* Every computer this phone knows, own-address ones included — the
 						 *  rows above are only the account's Radient computers. */}
-						<Button
-							testID={CONTROL.settingsSwitchComputer}
-							label={t("mobile.computers.switch")}
-							onPress={switcher.open}
-							variant="quiet"
-							size="sm"
-						/>
-						<Button
-							testID={CONTROL.settingsAddComputer}
-							label={t("mobile.computers.add")}
-							/* The set-up paths, not the list: the list has no add path once
-							 *  the account has a computer (UX round 2, U12), and the switcher's
-							 *  own "Add a computer" goes to the same place. */
-							onPress={() => router.push(ADD_COMPUTER_HREF)}
-							variant="quiet"
-							size="sm"
-						/>
+						<View className="grow">
+							<Button
+								testID={CONTROL.settingsSwitchComputer}
+								label={t("mobile.computers.switch")}
+								onPress={switcher.open}
+								variant="outline"
+								size="sm"
+							/>
+						</View>
+						<View className="grow">
+							<Button
+								testID={CONTROL.settingsAddComputer}
+								label={t("mobile.computers.add")}
+								/* The set-up paths, not the list: the list has no add path once
+								 *  the account has a computer (UX round 2, U12), and the switcher's
+								 *  own "Add a computer" goes to the same place. */
+								onPress={() => router.push(ADD_COMPUTER_HREF)}
+								variant="outline"
+								size="sm"
+							/>
+						</View>
 					</View>
 				</View>
 
@@ -539,7 +553,7 @@ export default function Settings() {
 					 *  and proofs that drive it are unchanged. */}
 					{/* VISIBLE LABELS (visual audit D15). Both segmented controls had
 					 *  an accessible name and no visible one, so a sighted reader met
-					 *  "System / Dark / Light" directly above "System / 100% / 150% /
+					 *  "System / Light / Dark" directly above "System / 100% / 150% /
 					 *  200%" and had to infer which was which from the options. The
 					 *  label is the control's own accessible name, drawn — so the two
 					 *  cannot drift (WCAG 2.5.3) — and hidden from assistive tech,
@@ -555,23 +569,11 @@ export default function Settings() {
 							label={t("mobile.settings.theme.mode_label")}
 							value={theme}
 							onChange={setPreference}
-							options={[
-								{
-									value: "system",
-									label: t("mobile.settings.theme.mode_system"),
-									testID: CONTROL.settingsThemeSystem,
-								},
-								{
-									value: "dark",
-									label: t("mobile.settings.theme.mode_dark"),
-									testID: CONTROL.settingsThemeDark,
-								},
-								{
-									value: "light",
-									label: t("mobile.settings.theme.mode_light"),
-									testID: CONTROL.settingsThemeLight,
-								},
-							]}
+							options={themeModeOptions({
+								system: CONTROL.settingsThemeSystem,
+								light: CONTROL.settingsThemeLight,
+								dark: CONTROL.settingsThemeDark,
+							})}
 						/>
 					</View>
 					<ThemeRow />
@@ -724,6 +726,7 @@ export default function Settings() {
 									lastErrorAt: diagnosticError?.at ?? null,
 									version,
 									platform: Platform.OS,
+									attachHandoff: attachHandoffDiagnostics(),
 								}),
 							)
 						}
@@ -777,7 +780,14 @@ export default function Settings() {
 								),
 							)
 						}
-						variant="quiet"
+						/* The kit's `danger` action (components.md § 2): deleting the
+						 *  account is the one irreversible thing on this screen, and a
+						 *  neutral `quiet` label read like any link (UX pass, settings).
+						 *  The tone is the danger ink on its wash and border, and the
+						 *  label itself says "Delete", so colour is never the only
+						 *  signal. What it does is unchanged: the console's account page,
+						 *  where deletion and its own confirmation happen. */
+						variant="danger"
 						testID={CONTROL.settingsDeleteAccount}
 					/>
 					<Text className="text-body-sm text-ink-dim">

@@ -1,10 +1,18 @@
 import { afterEach, describe, expect, it } from "vitest";
-import type { HistoryResponse } from "@/contracts";
+import type { HistoryResponse, TranscriptEntry } from "@/contracts";
 import { RelayEndpoints, RelayHttpClient } from "@/relay";
 import { loadFixtures } from "../../../tools/mock-relay/fixtures";
 import { createRelay, DEFAULT_PASSWORD } from "../../../tools/mock-relay/relay";
 import { buildScenarios } from "../../../tools/mock-relay/scenarios";
+import { completionAnchorEntry } from "./completion-ack";
+import { entryComplete } from "./completion-visibility";
 import { HistoryWindow } from "./history-window";
+import type { TranscriptItem } from "./turn-condensing";
+import {
+	olderFillReady,
+	showsConversation,
+	UNDERFLOW_FILL_PAGES,
+} from "./underflow-fill";
 
 /**
  * The app's production history reader against the mock relay's own worlds.
@@ -129,6 +137,66 @@ describe("the mock worlds the S5 cells open, through the production reader", () 
 		expect(reader.hasMore).toBe(true);
 	});
 
+	for (const order of ORDERS)
+		it(`peer-tail-history (${order}): the first-window fill pages to the conversation and the completion it anchors (#322)`, async () => {
+			const { reader, projection, asked } = await open("peer-tail-history");
+			const attention =
+				projection.attention && "anchor_id" in projection.attention
+					? projection.attention
+					: null;
+			const anchorId = attention?.anchor_id ?? null;
+			// The reported shape: a full live frame with no conversation row in it,
+			// and the anchored answer absent from it.
+			expect(projection.transcript).toHaveLength(80);
+			const asItems = (rows: readonly TranscriptEntry[]): TranscriptItem[] =>
+				rows.map((row) => ({ kind: "entry", id: row.id, entry: row }));
+			expect(showsConversation(asItems(projection.transcript))).toBe(false);
+			expect(projection.transcript.some((row) => row.id === anchorId)).toBe(
+				false,
+			);
+			// Either order opens on a window with no conversation row: the frame,
+			// or the mount read's page, whichever the reader sees first.
+			if (order === "frame first") reader.accept(projection);
+			await reader.load(true);
+			reader.accept(structuredClone(projection));
+			expect(showsConversation(asItems(reader.visibleRows))).toBe(false);
+			expect(reader.hasMore).toBe(true);
+			const ready = () =>
+				olderFillReady({
+					read: reader.read,
+					loading: reader.loading,
+					hasMore: reader.hasMore,
+					olderState: reader.olderState,
+					frameRows: projection.transcript.length,
+					frameHeadPinned: projection.transcript_head_pinned,
+				});
+			// The list's automatic walk, minus the geometry: page while ready and no
+			// conversation row is held, within the budget.
+			let pages = 0;
+			while (
+				ready() &&
+				!showsConversation(asItems(reader.visibleRows)) &&
+				pages < UNDERFLOW_FILL_PAGES
+			) {
+				await reader.load();
+				pages += 1;
+			}
+			expect(reader.error).toBeNull();
+			expect(pages).toBeGreaterThan(0);
+			expect(pages).toBeLessThanOrEqual(UNDERFLOW_FILL_PAGES);
+			expect(asked).toHaveLength(pages + 1);
+			expect(showsConversation(asItems(reader.visibleRows))).toBe(true);
+			// The anchor now resolves from the rendered rows, complete — the gate's
+			// `completionComplete` fact — while the live frame still lacks it.
+			const anchor = completionAnchorEntry(
+				anchorId,
+				reader.visibleRows,
+				projection.transcript,
+			);
+			expect(anchor?.id).toBe(anchorId);
+			expect(anchor !== undefined && entryComplete(anchor)).toBe(true);
+		});
+
 	for (const scenario of ["rich-rows", "store-diff"]) {
 		it(`${scenario}: a frame landing while the page is in flight keeps each row's own body`, async () => {
 			const { reader, projection, gate } = await open(scenario);
@@ -170,8 +238,12 @@ describe("the mock worlds the S5 cells open, through the production reader", () 
 		const { reader, projection, asked } = await open("idle");
 		reader.accept(projection);
 		const held = reader.visibleRows.map((row) => row.id);
+		// The opening read is the newest durable page even with a frame held
+		// (history-window.ts, "THE OPENING READ IS THE NEWEST PAGE TOO"); the
+		// older read after it names the oldest row.
 		await reader.load(true);
-		expect(asked).toEqual([reader.cursor]);
+		await reader.load();
+		expect(asked).toEqual([undefined, reader.cursor]);
 		expect(reader.olderState).toBe("end");
 		expect(reader.visibleRows.map((row) => row.id)).toEqual(held);
 	});

@@ -1,0 +1,34 @@
+$ shasum -a 256 (python hashlib) inputs
+  8ca29c50fb6cca5f329510b0ae209e2dd1372562b9ecb330307dc1de22df2bc2  brief  /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/on-device-brief.json
+  65fe290841522526d227cb3eb73f25ab8ce098c196db8ccdbf17b70f9613b2a8  draft  /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/on-device/draft-fr.json
+  fa75c73f7477ebedc0b22f8aa05b9470d874c5284d558f3864a0464e531734b9  en  /Users/damian/local-operator-mobile/.worktrees/i18n-on-device/src/i18n/catalogues/en/mobile.sidebar.json
+  71e6533736c8accd336298da920d83f777933b1d4b5cc30dacf9fa11818e01e1  en_context  /Users/damian/local-operator-mobile/.worktrees/i18n-on-device/src/i18n/catalogues/en/mobile.sidebar.context.json
+  26a8484dd717ec3cec504e2d3caa104d3046de0ed480bcab91d55e5fd21fba3b  fr_catalogue  /Users/damian/local-operator-mobile/.worktrees/i18n-on-device/src/i18n/catalogues/fr/mobile.sidebar.json
+  en sha matches brief fa75c73f…: True
+  draft.source_sha256 == en: True
+$ git -C worktree rev-parse HEAD: d1ed0e2a82615f53ee18fd3ea2ad6d51a8308a35
+$ key set check: draft keys == audited keys: True
+$ check mobile.sidebar.row.on_device
+  en   : 'On {device}'
+  draft: 'Sur {device}' codepoints: (ascii only)
+  brace set en ['device'] draft ['device'] EXACT
+  brace counts { }: 1 1 en: 1 1
+  NFC: True | bidi controls: none | trailing full stop: False
+  frame around name: 'Sur ' len 4 (en 'On ' len 3) | east-asian-wide chars: 0
+$ check mobile.sidebar.row_label.join
+  en   : '{first}, {second}'
+  draft: '{first}, {second}' codepoints: (ascii only)
+  brace set en ['first', 'second'] draft ['first', 'second'] EXACT
+  brace counts { }: 2 2 en: 2 2
+  NFC: True | bidi controls: none | trailing full stop: False
+  order first<second: True | separator: ', '
+$ consistency: existing row_label.on_device = 'sur {device}'
+  row.on_device lower-first-char equals existing: True
+  withheld_reasons_join (mobile.session.json): '{first}, {second}' == draft join: True
+  shipped catalogue already has new keys?: [False, False]
+$ redaction marker scan (draft): hits 0
+$ tsx parse-ondev.ts (repo parseMessage/formatMessage from worktree src/i18n/messages.ts @ d1ed0e2a; primary checkout's tsx, no install)
+fr mobile.sidebar.row.on_device parse OK {"source":"Sur {device}","params":{},"nodes":[{"type":"text","value":"Sur "},{"type":"argument","name":"device"}]} -> "Sur Studio Mac (2)"
+fr mobile.sidebar.row_label.join parse OK {"source":"{first}, {second}","params":{},"nodes":[{"type":"argument","name":"first"},{"type":"text","value":", "},{"type":"argument","name":"second"}]} -> "Payments, on Studio"
+NEG unterminated rejected: Invalid message "Sur {device": expected ',' or '}' (at offset 11)
+$ git -C worktree status --porcelain | wc -l -> 0 (worktree untouched)

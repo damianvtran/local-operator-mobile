@@ -57,6 +57,7 @@ export function ReplyThreadChip({
 	people: directory,
 	locale,
 	onOpen,
+	onLongPress,
 }: {
 	rootId: string;
 	summary: ReplyThreadSummary;
@@ -64,8 +65,23 @@ export function ReplyThreadChip({
 	people: readonly DirectoryMember[];
 	locale: ShippedLocale;
 	onOpen: (rootId: string) => void;
+	/** The message row's long-press (its actions sheet). A Pressable with
+	 *  `onPress` but no `onLongPress` turns a hold into a press on release, so
+	 *  without this the innermost control took the hold and the row's sheet
+	 *  never opened (PR #339 round 1, m1/U2/U6). */
+	onLongPress?: () => void;
 }) {
 	const accent = useTokenColor("accent");
+	// Absolute, locale-formatted time does not silently age while the list rests.
+	// The summary only carries this field when the hub supplied a valid value.
+	const lastReply = summary.lastReplyAt
+		? t("mobile.team_bridge.reply_thread.last_reply", {
+				time: new Intl.DateTimeFormat(locale, {
+					dateStyle: "short",
+					timeStyle: "short",
+				}).format(new Date(summary.lastReplyAt)),
+			})
+		: undefined;
 	const unread = showsThreadUnread(summary) ? (summary.unread ?? 0) : 0;
 	const people = participantsLine(
 		summary.participants.map((p) => replierLabel(p, directory)),
@@ -82,8 +98,10 @@ export function ReplyThreadChip({
 						})
 					: t("mobile.team_bridge.reply_thread.open", { count: summary.count })
 			}
+			accessibilityHint={lastReply}
 			testID={teamBridgeReplyThreadOpenId(rootId)}
 			onPress={() => onOpen(rootId)}
+			onLongPress={onLongPress}
 			/* The touch floor, not the text's height: this is the only way into
 			 *  the thread from the timeline. Content TOP-aligned inside that floor
 			 *  (design review D2): centred, the 18 pt line floated 20 pt under its
@@ -95,31 +113,37 @@ export function ReplyThreadChip({
 		>
 			{({ pressed }) => (
 				<View
-					className={`flex-row items-center gap-2 rounded-sm px-1 py-1 ${pressed ? "bg-row-selected" : ""}`}
+					className={`max-w-full gap-1 rounded-sm px-1 py-1 ${pressed ? "bg-row-selected" : ""}`}
 				>
-					<MessagesSquare size={15} color={accent} aria-hidden />
-					<Text className="text-meta font-semibold text-accent">
-						{t("mobile.team_bridge.reply_thread.count", {
-							count: summary.count,
-						})}
-					</Text>
-					{people ? (
-						<Text
-							className="min-w-0 shrink text-meta text-ink-muted"
-							numberOfLines={1}
-						>
-							{people}
+					<View className="flex-row items-center gap-2">
+						<MessagesSquare size={15} color={accent} aria-hidden />
+						<Text className="text-meta font-semibold text-accent">
+							{t("mobile.team_bridge.reply_thread.count", {
+								count: summary.count,
+							})}
 						</Text>
-					) : null}
-					{unread > 0 ? (
-						<View
-							className="rounded-full bg-accent px-2 py-0.5"
-							testID={teamBridgeReplyThreadUnreadId(rootId)}
-						>
-							<Text className="text-mono-label tabular-nums text-on-accent">
-								{countLabel(unread)}
+						{people ? (
+							<Text
+								className="min-w-0 shrink text-meta text-ink-muted"
+								numberOfLines={1}
+							>
+								{people}
 							</Text>
-						</View>
+						) : null}
+
+						{unread > 0 ? (
+							<View
+								className="rounded-full bg-accent px-2 py-0.5"
+								testID={teamBridgeReplyThreadUnreadId(rootId)}
+							>
+								<Text className="text-mono-label tabular-nums text-on-accent">
+									{countLabel(unread)}
+								</Text>
+							</View>
+						) : null}
+					</View>
+					{lastReply ? (
+						<Text className="text-meta text-ink-muted">{lastReply}</Text>
 					) : null}
 				</View>
 			)}

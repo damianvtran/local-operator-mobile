@@ -8,11 +8,19 @@ import type {
 	RunSettingSection,
 } from "@/features/session/composer-controls";
 import { t } from "@/i18n";
-import { effortRungId, modelOptionId, ROLE, SURFACE, state } from "@/ui/a11y";
+import {
+	CONTROL,
+	effortRungId,
+	modelOptionId,
+	ROLE,
+	SURFACE,
+	state,
+} from "@/ui/a11y";
 import { Sheet } from "@/ui/components";
 import { Alert } from "@/ui/components/alert";
 import { Badge } from "@/ui/components/badge";
 import { SectionHeader } from "@/ui/components/section-header";
+import { Button } from "@/ui/components/button";
 import { CONTROL_DISABLED_INK, cx } from "@/ui/variants";
 
 /**
@@ -349,6 +357,8 @@ export const SessionRunSettingsSheet = ({
 	selectedModel,
 	selectedEffort,
 	loading = false,
+	failed = false,
+	onRetry,
 	model,
 	effort,
 	summary,
@@ -363,6 +373,9 @@ export const SessionRunSettingsSheet = ({
 	selectedModel: string;
 	selectedEffort: string;
 	loading?: boolean;
+	/** The stored catalogue could not be read (an ended chat, PR #350). */
+	failed?: boolean;
+	onRetry?: () => void;
 	model: RunSettingSection;
 	effort: RunSettingSection;
 	summary: string | null;
@@ -431,6 +444,20 @@ export const SessionRunSettingsSheet = ({
 							<Text className="px-3 py-2 text-body-sm text-ink-dim">
 								{t("mobile.home.picker.loading")}
 							</Text>
+						) : failed ? (
+							<View className="px-3 py-2 gap-2">
+								<Text className="text-body-sm text-ink-dim">
+									{t("mobile.home.models_read_failed")}
+								</Text>
+								{onRetry ? (
+									<Button
+										label={t("mobile.computers.retry")}
+										variant="outline"
+										onPress={onRetry}
+										testID={CONTROL.sessionModelsRetry}
+									/>
+								) : null}
+							</View>
 						) : models.length === 0 ? (
 							<Text className="px-3 py-2 text-body-sm text-ink-dim">
 								{t("mobile.home.picker.model_empty")}

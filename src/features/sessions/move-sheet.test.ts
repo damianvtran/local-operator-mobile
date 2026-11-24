@@ -122,6 +122,59 @@ const fill = (): string => {
 	return match?.[0] ?? "";
 };
 
+// This source contract deliberately avoids importing the native sheet. Mounted
+// locale-frame and rendered bidi proof remain separate gates; this only pins
+// the seven client-copy sites and the server-owned fallback boundary.
+describe("the move picker's client-owned copy", () => {
+	const pickBody = SOURCE.slice(SOURCE.indexOf("const PickBody ="));
+	const english = JSON.parse(
+		readFileSync(
+			new URL(
+				"../../i18n/catalogues/en/mobile.remote_sessions.json",
+				import.meta.url,
+			),
+			"utf8",
+		),
+	) as Record<string, string>;
+	const messages = {
+		right_now: "Right now",
+		cannot_reach: "Can't reach {device}",
+		no_answer: "It did not answer when this computer asked.",
+		on_this_computer: "On this computer",
+		no_devices: "No other devices are visible.",
+		discovery_help:
+			"This app can offer the devices your sessions show. A device with no visible session cannot be picked yet — open Local Operator on the other computer and pull the list to refresh.",
+		destination_heading: "Move or copy to",
+	};
+
+	it("resolves exactly the seven new English messages inside the picker", () => {
+		for (const [suffix, message] of Object.entries(messages)) {
+			const key = `mobile.remote_sessions.move_pick.${suffix}`;
+			expect(english[key]).toBe(message);
+			expect(pickBody).toContain(`t("${key}"`);
+			expect(SOURCE.slice(0, SOURCE.indexOf("const PickBody ="))).not.toContain(
+				`t("${key}"`,
+			);
+		}
+		expect(pickBody).toContain("useLocaleFrame();");
+	});
+
+	it("keeps the device argument verbatim and reuses the existing On-device key", () => {
+		expect(pickBody).toMatch(
+			/t\("mobile\.remote_sessions\.move_pick\.cannot_reach",\s*\{\s*device: remoteDeviceLabel\(session\),/,
+		);
+		expect(pickBody).toMatch(
+			/t\("mobile\.sidebar\.row\.on_device",\s*\{\s*device: remoteDeviceLabel\(session\),/,
+		);
+	});
+
+	it("gives the trimmed server reason precedence over the client fallback", () => {
+		expect(pickBody).toMatch(
+			/session\.unreachable_reason\?\.trim\(\) \|\|\s*t\("mobile\.remote_sessions\.move_pick\.no_answer"\)/,
+		);
+	});
+});
+
 describe("the phase bar's colour carrier", () => {
 	it("names the element that draws the colour", () => {
 		expect(fill()).toContain("accessibilityLabel=");

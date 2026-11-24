@@ -1,0 +1,385 @@
+{
+  "schema": 1,
+  "auditor": "independent-translation-auditor (lopdev reviewer)",
+  "role": "Independent semantic delta audit; no implementation or translation edits",
+  "instance": "9af46213ad99",
+  "model": "openai/gpt-6.1-sol",
+  "fallback": "anthropic/claude-opus-5-5 -> openai/gpt-6.1-sol due provider quota, before semantic audit began",
+  "date": "2026-11-21",
+  "repository": "local-operator-mobile",
+  "pr_url": "https://github.com/damianvtran/local-operator-mobile/pull/360",
+  "head": "debf3ade057383aa7e95537a6010070cec1320f5",
+  "base": "de933f5d",
+  "independence": "Auditor session 9af46213ad99 is different from translator e896d2db9139 and all product implementers; authored no repository file. Receipt authored by auditor in scratch for fresh coder byte-for-byte retention.",
+  "status": "clean-with-findings",
+  "scope": "Only listed changed bridge-card keys, against current English and context. All target value changes versus base are covered. Untouched namespace keys are byte-compatible by parsed-value comparison and retain historical audits; this is not a new full-namespace audit or resolution of historical deferred findings.",
+  "semantic_values_reviewed": 28,
+  "checks": {
+    "key_and_placeholder_parity": "passed",
+    "translator_hash_bindings": "passed for all seven translator receipts and all namespaces",
+    "target_delta_coverage": "passed: no changed target value outside reviewed keys",
+    "NFC": "passed",
+    "bidi_controls": "none in reviewed values",
+    "semantics": "Each listed value read against English/context: held remains reviewable, not refused; pending remains agent delivery; offline says automatic retry; DM/channel/group/thread labels retain context."
+  },
+  "limitations": [
+    "No native-speaker certification claimed.",
+    "No rendered fit, bidi shaping, mirroring or pixel validation: browser tool absent in reviewer role; independent visual lanes remain required.",
+    "No code review round, ledger assembly, generation writes, commit or push performed by auditor."
+  ],
+  "namespaces": {
+    "mobile.team_bridge": {
+      "status": "clean-with-findings",
+      "sha256": {
+        "en": "077e9195346937b338b288c1ccbbbc5fb60b1d4aff6f8038bb683304c8dde8b0",
+        "es": "0d02937d64d95c5f0474bd1d8257c7d81b93a8a5a72ee3af850ef129233db35d",
+        "fr": "205826750856b84d38839ead1e637a59287795dc302ec95253d190fc3f751c2a",
+        "hi": "8f79e76e37ab58ef42768348bd744ea8cb426b2e6c9a8bf1d0554f53612cdaed",
+        "ru": "ed8560582fbcdc2c0a8bdd1b29bda3532d8cc9ae6ddf7a2deb2cf1fcdc78a5e0",
+        "ur": "baf6e2f0b4d17cd741b27356a4493f9aa749578d9e3a443845617fcba25d609b",
+        "vi": "065ff05ddfbe7638060532a504c82af1bf7d1f678aed79783aa54cafee920e03",
+        "zh-CN": "4220ee1ecd04a9f42659c21c778063e353515c062ce3de15de2f08754140474d"
+      },
+      "source_path": "src/i18n/catalogues/en/mobile.team_bridge.json",
+      "context_path": "src/i18n/catalogues/en/mobile.team_bridge.context.json",
+      "context_sha256": "cedfd178566653ac80674d6acde3d6c8458b499990f9b9e288518213c57c23eb",
+      "locales": {
+        "es": {
+          "target_path": "src/i18n/catalogues/es/mobile.team_bridge.json",
+          "keys_reviewed": [
+            "mobile.team_bridge.card_body.held",
+            "mobile.team_bridge.card_body.offline",
+            "mobile.team_bridge.card_body.pending",
+            "mobile.team_bridge.card_body.thread_reply"
+          ],
+          "reviewed_values": {
+            "mobile.team_bridge.card_body.held": {
+              "english": "Held for review.",
+              "target": "Retenido para revisión.",
+              "result": "passed"
+            },
+            "mobile.team_bridge.card_body.offline": {
+              "english": "Couldn't reach Radient — retrying.",
+              "target": "No se pudo conectar con Radient — reintentando.",
+              "result": "passed"
+            },
+            "mobile.team_bridge.card_body.pending": {
+              "english": "Waiting to be delivered to your agent.",
+              "target": "Pendiente de entregar a tu agente.",
+              "result": "passed"
+            },
+            "mobile.team_bridge.card_body.thread_reply": {
+              "english": "Thread reply",
+              "target": "Respuesta en el hilo",
+              "result": "passed"
+            }
+          }
+        },
+        "fr": {
+          "target_path": "src/i18n/catalogues/fr/mobile.team_bridge.json",
+          "keys_reviewed": [
+            "mobile.team_bridge.card_body.held",
+            "mobile.team_bridge.card_body.offline",
+            "mobile.team_bridge.card_body.pending",
+            "mobile.team_bridge.card_body.thread_reply"
+          ],
+          "reviewed_values": {
+            "mobile.team_bridge.card_body.held": {
+              "english": "Held for review.",
+              "target": "Retenu pour examen.",
+              "result": "passed"
+            },
+            "mobile.team_bridge.card_body.offline": {
+              "english": "Couldn't reach Radient — retrying.",
+              "target": "Impossible de joindre Radient — nouvelle tentative en cours.",
+              "result": "passed"
+            },
+            "mobile.team_bridge.card_body.pending": {
+              "english": "Waiting to be delivered to your agent.",
+              "target": "En attente de transmission à votre agent.",
+              "result": "passed"
+            },
+            "mobile.team_bridge.card_body.thread_reply": {
+              "english": "Thread reply",
+              "target": "Réponse dans le fil",
+              "result": "passed"
+            }
+          }
+        },
+        "hi": {
+          "target_path": "src/i18n/catalogues/hi/mobile.team_bridge.json",
+          "keys_reviewed": [
+            "mobile.team_bridge.card_body.held",
+            "mobile.team_bridge.card_body.offline",
+            "mobile.team_bridge.card_body.pending",
+            "mobile.team_bridge.card_body.thread_reply"
+          ],
+          "reviewed_values": {
+            "mobile.team_bridge.card_body.held": {
+              "english": "Held for review.",
+              "target": "समीक्षा के लिए रोका गया है।",
+              "result": "passed"
+            },
+            "mobile.team_bridge.card_body.offline": {
+              "english": "Couldn't reach Radient — retrying.",
+              "target": "Radient से संपर्क नहीं हुआ — फिर से कोशिश की जा रही है।",
+              "result": "passed"
+            },
+            "mobile.team_bridge.card_body.pending": {
+              "english": "Waiting to be delivered to your agent.",
+              "target": "आपके एजेंट तक पहुँचाए जाने का इंतज़ार है।",
+              "result": "passed"
+            },
+            "mobile.team_bridge.card_body.thread_reply": {
+              "english": "Thread reply",
+              "target": "थ्रेड में जवाब",
+              "result": "passed"
+            }
+          }
+        },
+        "ru": {
+          "target_path": "src/i18n/catalogues/ru/mobile.team_bridge.json",
+          "keys_reviewed": [
+            "mobile.team_bridge.card_body.held",
+            "mobile.team_bridge.card_body.offline",
+            "mobile.team_bridge.card_body.pending",
+            "mobile.team_bridge.card_body.thread_reply"
+          ],
+          "reviewed_values": {
+            "mobile.team_bridge.card_body.held": {
+              "english": "Held for review.",
+              "target": "Задержано для проверки.",
+              "result": "passed"
+            },
+            "mobile.team_bridge.card_body.offline": {
+              "english": "Couldn't reach Radient — retrying.",
+              "target": "Нет связи с Radient — повторяем попытку.",
+              "result": "passed"
+            },
+            "mobile.team_bridge.card_body.pending": {
+              "english": "Waiting to be delivered to your agent.",
+              "target": "Ожидает доставки вашему агенту.",
+              "result": "passed"
+            },
+            "mobile.team_bridge.card_body.thread_reply": {
+              "english": "Thread reply",
+              "target": "Ответ в ветке",
+              "result": "passed"
+            }
+          }
+        },
+        "ur": {
+          "target_path": "src/i18n/catalogues/ur/mobile.team_bridge.json",
+          "keys_reviewed": [
+            "mobile.team_bridge.card_body.held",
+            "mobile.team_bridge.card_body.offline",
+            "mobile.team_bridge.card_body.pending",
+            "mobile.team_bridge.card_body.thread_reply"
+          ],
+          "reviewed_values": {
+            "mobile.team_bridge.card_body.held": {
+              "english": "Held for review.",
+              "target": "جائزے کے لیے روکا گیا ہے۔",
+              "result": "passed"
+            },
+            "mobile.team_bridge.card_body.offline": {
+              "english": "Couldn't reach Radient — retrying.",
+              "target": "Radient سے رابطہ نہیں ہوا — دوبارہ کوشش کی جا رہی ہے۔",
+              "result": "passed"
+            },
+            "mobile.team_bridge.card_body.pending": {
+              "english": "Waiting to be delivered to your agent.",
+              "target": "آپ کے ایجنٹ تک پہنچائے جانے کا منتظر۔",
+              "result": "passed"
+            },
+            "mobile.team_bridge.card_body.thread_reply": {
+              "english": "Thread reply",
+              "target": "تھریڈ میں جواب",
+              "result": "passed"
+            }
+          }
+        },
+        "vi": {
+          "target_path": "src/i18n/catalogues/vi/mobile.team_bridge.json",
+          "keys_reviewed": [
+            "mobile.team_bridge.card_body.held",
+            "mobile.team_bridge.card_body.offline",
+            "mobile.team_bridge.card_body.pending",
+            "mobile.team_bridge.card_body.thread_reply"
+          ],
+          "reviewed_values": {
+            "mobile.team_bridge.card_body.held": {
+              "english": "Held for review.",
+              "target": "Đang bị giữ lại để xem xét.",
+              "result": "passed"
+            },
+            "mobile.team_bridge.card_body.offline": {
+              "english": "Couldn't reach Radient — retrying.",
+              "target": "Không thể kết nối Radient — đang thử lại.",
+              "result": "passed"
+            },
+            "mobile.team_bridge.card_body.pending": {
+              "english": "Waiting to be delivered to your agent.",
+              "target": "Đang chờ chuyển đến tác nhân của bạn.",
+              "result": "passed"
+            },
+            "mobile.team_bridge.card_body.thread_reply": {
+              "english": "Thread reply",
+              "target": "Trả lời trong luồng",
+              "result": "passed"
+            }
+          }
+        },
+        "zh-CN": {
+          "target_path": "src/i18n/catalogues/zh-CN/mobile.team_bridge.json",
+          "keys_reviewed": [
+            "mobile.team_bridge.card_body.held",
+            "mobile.team_bridge.card_body.offline",
+            "mobile.team_bridge.card_body.pending",
+            "mobile.team_bridge.card_body.thread_reply"
+          ],
+          "reviewed_values": {
+            "mobile.team_bridge.card_body.held": {
+              "english": "Held for review.",
+              "target": "已暂扣，等待审核。",
+              "result": "passed"
+            },
+            "mobile.team_bridge.card_body.offline": {
+              "english": "Couldn't reach Radient — retrying.",
+              "target": "无法连接 Radient——正在重试。",
+              "result": "passed"
+            },
+            "mobile.team_bridge.card_body.pending": {
+              "english": "Waiting to be delivered to your agent.",
+              "target": "等待送达智能体。",
+              "result": "passed"
+            },
+            "mobile.team_bridge.card_body.thread_reply": {
+              "english": "Thread reply",
+              "target": "讨论串回复",
+              "result": "passed"
+            }
+          }
+        }
+      },
+      "findings": [
+        {
+          "id": "COPY-N1",
+          "severity": "NIT",
+          "locale": "zh-CN",
+          "key": "mobile.team_bridge.card_body.offline",
+          "problem": "One ASCII space remains between Chinese prose and Radient, unlike the zh-CN style-guide no-added-space rule. Meaning is correct.",
+          "suggestion": "无法连接Radient——正在重试。",
+          "disposition": "deferred — pre-existing typography, out of scope and non-gating; verified base de933f5d already has the ASCII space before Radient"
+        }
+      ]
+    }
+  },
+  "translator_receipts": [
+    {
+      "path": "i18n/receipts/bridge-card-reread-translator-es-e896d2db9139.json",
+      "sha256": "992d0a5c731c7fc610dcff30711797496c3199a900f85e3d6ac54e1f74553ce9",
+      "identity": {
+        "agent": "i18n-translator (lopdev translation pass)",
+        "session": "e896d2db9139",
+        "model": "openai/gpt-6.1-sol",
+        "fallback": "anthropic/claude-opus-5-5 → openai/gpt-6.1-sol; provider quota failure"
+      }
+    },
+    {
+      "path": "i18n/receipts/bridge-card-reread-translator-fr-e896d2db9139.json",
+      "sha256": "1600317b302b6c1769129fe2e22222bfc2b039fc79d699c0906b4fcad722e172",
+      "identity": {
+        "agent": "i18n-translator (lopdev translation pass)",
+        "session": "e896d2db9139",
+        "model": "openai/gpt-6.1-sol",
+        "fallback": "anthropic/claude-opus-5-5 → openai/gpt-6.1-sol; provider quota failure"
+      }
+    },
+    {
+      "path": "i18n/receipts/bridge-card-reread-translator-hi-e896d2db9139.json",
+      "sha256": "9f6c5363c1d9bf12daca1018b60fe7d19fa0a1070a6936fda66f850bec152425",
+      "identity": {
+        "agent": "i18n-translator (lopdev translation pass)",
+        "session": "e896d2db9139",
+        "model": "openai/gpt-6.1-sol",
+        "fallback": "anthropic/claude-opus-5-5 → openai/gpt-6.1-sol; provider quota failure"
+      }
+    },
+    {
+      "path": "i18n/receipts/bridge-card-reread-translator-ru-e896d2db9139.json",
+      "sha256": "ecc0d29835dd433c65e339517c0c2bbc81f356f87aa71c12bcc1fccba5bb0395",
+      "identity": {
+        "agent": "i18n-translator (lopdev translation pass)",
+        "session": "e896d2db9139",
+        "model": "openai/gpt-6.1-sol",
+        "fallback": "anthropic/claude-opus-5-5 → openai/gpt-6.1-sol; provider quota failure"
+      }
+    },
+    {
+      "path": "i18n/receipts/bridge-card-reread-translator-ur-e896d2db9139.json",
+      "sha256": "00d2436f5b8dedf49a6ea10bbb02b98bb496d0dd794a8cd513ccfc660e2f1075",
+      "identity": {
+        "agent": "i18n-translator (lopdev translation pass)",
+        "session": "e896d2db9139",
+        "model": "openai/gpt-6.1-sol",
+        "fallback": "anthropic/claude-opus-5-5 → openai/gpt-6.1-sol; provider quota failure"
+      }
+    },
+    {
+      "path": "i18n/receipts/bridge-card-reread-translator-vi-e896d2db9139.json",
+      "sha256": "9ebff10aedeea4dbe6fbfad2aa6d0867f3b0043c85e8cfaf777c8015726ba87c",
+      "identity": {
+        "agent": "i18n-translator (lopdev translation pass)",
+        "session": "e896d2db9139",
+        "model": "openai/gpt-6.1-sol",
+        "fallback": "anthropic/claude-opus-5-5 → openai/gpt-6.1-sol; provider quota failure"
+      }
+    },
+    {
+      "path": "i18n/receipts/bridge-card-reread-translator-zh-CN-e896d2db9139.json",
+      "sha256": "8d030c383c8a55049abe9c4a5887b7691576a8519f851f0c549f3b1bb972d18f",
+      "identity": {
+        "agent": "i18n-translator (lopdev translation pass)",
+        "session": "e896d2db9139",
+        "model": "openai/gpt-6.1-sol",
+        "fallback": "anthropic/claude-opus-5-5 → openai/gpt-6.1-sol; provider quota failure"
+      }
+    }
+  ],
+  "style_inputs": {
+    "repository": "local-operator",
+    "glossary_path": "i18n/glossary.md",
+    "glossary_sha256": "5de3929198c3f603ce14bf75fb992c0f5c7a1952c440b496386977f8c636fcc7",
+    "style_guides": {
+      "fr": {
+        "path": "i18n/style-guides/fr.md",
+        "sha256": "5315e1ac10c2ce57aac631ba653d08de680ee70c9a022ed3a8345ce2f9902ee7"
+      },
+      "es": {
+        "path": "i18n/style-guides/es.md",
+        "sha256": "4a6f6270f028e5f5fbca7156a8f5099077f92585db94c14653482e9b188248a6"
+      },
+      "zh-CN": {
+        "path": "i18n/style-guides/zh-CN.md",
+        "sha256": "615a126a8dbff72c52875a56aa80728f8af858764ef4974e1f74192589b830b6"
+      },
+      "ru": {
+        "path": "i18n/style-guides/ru.md",
+        "sha256": "f20e1cafaf70578c17ce072c71725628808d228e4be5604329f8da30386f1fb5"
+      },
+      "vi": {
+        "path": "i18n/style-guides/vi.md",
+        "sha256": "99eed3b6f9b619f9eb7fb00e4ffc8963df0adaea29891dfa3aefc58d658eba51"
+      },
+      "ur": {
+        "path": "i18n/style-guides/ur.md",
+        "sha256": "7276e96210fe5f23fd82a39ae4cc0c88b2c1009d3a551d914efc3f61516eddc4"
+      },
+      "hi": {
+        "path": "i18n/style-guides/hi.md",
+        "sha256": "82292dc8d13fcc93dc752457719264aed3cc20bb65ecfaba0f0e5a31f4cb40d5"
+      }
+    }
+  }
+}

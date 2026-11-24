@@ -81,6 +81,9 @@ vi.mock("react-native", () => ({
 	View: Recorder,
 	Text: Recorder,
 	Pressable: Recorder,
+	/* `@/ui/direction` reads the platform at import (project-detail's milestone
+	 *  placeholders, PR #302 D1); native is the branch with no `dir` side effect. */
+	Platform: { OS: "ios", select: (o: Record<string, unknown>) => o.ios },
 }));
 vi.mock("lucide-react-native", () => ({ Pencil: () => null }));
 vi.mock("expo-router", () => ({

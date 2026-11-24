@@ -77,7 +77,12 @@ describe("the asks sheet's Other door", () => {
 			at,
 			"the press must distinguish the two select modes",
 		).toBeGreaterThan(-1);
-		const toggle = SOURCE.slice(at, at + 240);
+		/* To the door's own `testID`, not a fixed window: the press carries notes
+		 *  that grow, and a shorter slice then fails on a comment rather than on
+		 *  the wiring it pins. */
+		const end = SOURCE.indexOf("testID={askOtherId(", at);
+		expect(end).toBeGreaterThan(at);
+		const toggle = SOURCE.slice(at, end);
 		expect(toggle).toContain("open: false");
 		expect(toggle).toContain("open: true");
 	});
@@ -103,8 +108,8 @@ describe("the asks sheet's Other door", () => {
 		 * arrived. The hint stays (with a kept-text sentence of its own) and the
 		 * desktop's one prompt is the string it says. */
 		expect(SOURCE).not.toMatch(DROPPED_HINT_CONDITIONAL);
-		expect(SOURCE).toContain('"Type your answer"');
-		expect(SOURCE).toContain("your text is kept");
+		expect(SOURCE).toContain('t("mobile.asks.other_hint")');
+		expect(SOURCE).toContain('t("mobile.asks.other_kept")');
 	});
 
 	it("pins the answering verbs in Sheet's footer — the three-region rule (D2)", () => {
@@ -133,5 +138,82 @@ describe("the asks sheet's walk after a settle (UX r1 U1)", () => {
 		expect(SOURCE).toMatch(
 			/const next = nextActionableAsk\(shownRows, row\.ask_id\)/,
 		);
+	});
+});
+
+describe("the asks sheet's card layout (ask-panel parity N1/N2/N4)", () => {
+	/** The index of a needle in the sheet's own JSX, so ORDER can be pinned. */
+	const at = (needle: string): number => {
+		const index = SOURCE.lastIndexOf(needle);
+		expect(index, `${needle} must be rendered`).toBeGreaterThan(-1);
+		return index;
+	};
+
+	it("draws the open card first, then the waiting rows, then Earlier, then the honesty line", () => {
+		/* The honesty line was "ALWAYS first (§5)"; Ben moved it to the bottom
+		 * (2026-11-23), under everything the reader came to read. */
+		const card = at("openCard(openInBand)");
+		const waiting = at("waitingBand.map(");
+		const earlier = at('t("mobile.asks.settled")');
+		const honesty = at('t("mobile.asks.honesty")');
+		expect(card).toBeLessThan(waiting);
+		expect(waiting).toBeLessThan(earlier);
+		expect(earlier).toBeLessThan(honesty);
+		expect(SOURCE).not.toContain("ALWAYS first");
+	});
+
+	it("never draws a settled ask between the card's options and the pinned buttons", () => {
+		/* Settled asks come from the `earlier` band only, and that band renders
+		 * after the card and the waiting rows. */
+		expect(SOURCE).toContain("bands.earlier.map(");
+		expect(SOURCE).toContain("askBands(shownRows)");
+	});
+
+	it("keeps the scroll-to-field ref on the question block, and scrolls the card to its top", () => {
+		/* #378's `blockRefs` drive `revealField`; the card's own scroll is a
+		 * second, separate mechanism (`scrollToBlock`). */
+		expect(SOURCE).toContain("blockRefs.current.set(id, node)");
+		expect(SOURCE).toContain("scroll?.scrollToBlock(cardRef.current)");
+	});
+
+	it("puts the state line first in the card, as a status region", () => {
+		const card = SOURCE.slice(at("const openCard = "), at("const waitingBand"));
+		expect(card.indexOf("role={ROLE.status}")).toBeGreaterThan(-1);
+		expect(card.indexOf("role={ROLE.status}")).toBeLessThan(
+			card.indexOf("detailOf(row)"),
+		);
+	});
+
+	it("moves the reader's place to the next ask's question after a send", () => {
+		expect(SOURCE).toContain("setFocusAsk(next ? next.ask_id : null)");
+		expect(SOURCE).toContain("moveReadingPlace(node)");
+	});
+
+	it("draws the option rows through one shell with a trailing check, not colour alone", () => {
+		expect(SOURCE).toContain("<ChoiceRow");
+		expect(SOURCE).toContain("<Check ");
+		expect(SOURCE).toContain("choiceRowClasses(");
+	});
+
+	it("takes the pinned verbs' words from the catalogue, in the card's order", () => {
+		expect(SOURCE).toContain('t("mobile.asks.send_answers")');
+		expect(SOURCE).toContain('t("mobile.asks.send_answer")');
+		expect(SOURCE).toContain('t("mobile.asks.decline")');
+		expect(SOURCE).toContain('t("mobile.asks.dismiss_open")');
+		expect(SOURCE).not.toContain('label="Answer"');
+		const progress = at("{progressLine}");
+		const send = at('t("mobile.asks.send_answer")');
+		const dismiss = at('t("mobile.asks.dismiss_open")');
+		/* The pair, then ONE row holding why Send is grey and the quiet way out. */
+		expect(send).toBeLessThan(progress);
+		expect(progress).toBeLessThan(dismiss);
+	});
+
+	it("dismisses a waiting ask only WITH a reason, and a lapsed one without", () => {
+		/* The request gate, not only the button's: a waiting ask without a reason
+		 * never leaves, and the lapsed ask's body stays the one older daemons take. */
+		expect(SOURCE).toContain("dismissNeedsReason(String(row.status");
+		expect(SOURCE).toContain("reason === undefined ? {} : { reason }");
+		expect(SOURCE).toContain("DISMISS_REASONS.map(");
 	});
 });

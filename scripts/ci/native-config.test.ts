@@ -6,15 +6,19 @@ import { fileURLToPath } from "node:url";
 import { afterAll, describe, expect, it } from "vitest";
 
 import {
+	ANDROID_CAMERA_PERMISSION,
 	ANDROID_FORBIDDEN_PERMISSIONS,
 	ANDROID_LOCAL_NETWORK_PERMISSION,
+	ANDROID_OPTIONAL_CAMERA_FEATURES,
 	checkAndroidBadging,
 	checkAndroidManifest,
 	checkIosInfoPlist,
+	EXPO_NOTIFICATIONS_RECEIVER,
 	IOS_EXCEPTION_DOMAINS,
 	IOS_FORBIDDEN_KEYS,
 	LAUNCHER_LABEL,
 	summarize,
+	TEAM_BRIDGE_RECEIVER,
 } from "./native-config";
 
 /**
@@ -52,6 +56,8 @@ const validPlist = (): Record<string, unknown> => ({
 	CFBundleDisplayName: "Operator",
 	CFBundleName: "LocalOperator",
 	UIBackgroundModes: ["remote-notification", "fetch"],
+	NSCameraUsageDescription:
+		"Take a photo to attach to your message. The photo is sent to your own computer and not saved to your library.",
 	NSLocalNetworkUsageDescription:
 		"Connect to the relay running on your own computer when it is on the same Wi-Fi network. The app reaches only the address you enter, and does not scan your network.",
 	NSAppTransportSecurity: {
@@ -73,10 +79,18 @@ const fields = (findings: { field: string }[]): string[] =>
 const validManifest = (): string => `<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
   <uses-permission android:name="android.permission.ACCESS_LOCAL_NETWORK"/>
+  <uses-permission android:name="android.permission.CAMERA"/>
   <uses-permission android:name="android.permission.INTERNET"/>
   <uses-permission android:name="android.permission.RECORD_AUDIO"/>
+  <uses-feature android:name="android.hardware.camera" android:required="false"/>
+  <uses-feature android:required="false" android:name="android.hardware.camera.autofocus"/>
   <application android:name=".MainApplication" android:label="@string/app_name" android:usesCleartextTraffic="true" android:theme="@style/AppTheme">
     <activity android:name=".MainActivity" android:exported="true"/>
+    <receiver android:name="dev.localoperator.teambridge.LoNotificationsService" android:enabled="true" android:exported="false">
+      <intent-filter android:priority="-1">
+        <action android:name="expo.modules.notifications.NOTIFICATION_EVENT"/>
+      </intent-filter>
+    </receiver>
   </application>
 </manifest>
 `;
@@ -95,6 +109,20 @@ describe("checkIosInfoPlist", () => {
 	it("passes the configuration the app asks for", () => {
 		expect(checkIosInfoPlist(validPlist())).toEqual([]);
 	});
+
+	it.each([undefined, "", "   "])(
+		"requires the camera usage string the Camera row depends on: %j",
+		(value) => {
+			/* iOS terminates an app that opens the camera without this key, so a
+			 * plugin option that drops it is a crash on first use, not a prompt. */
+			const plist = validPlist();
+			if (value === undefined) delete plist.NSCameraUsageDescription;
+			else plist.NSCameraUsageDescription = value;
+			expect(fields(checkIosInfoPlist(plist))).toEqual([
+				"NSCameraUsageDescription",
+			]);
+		},
+	);
 
 	it("pins the label the operator chose, not the app name", () => {
 		expect(LAUNCHER_LABEL).toBe("Operator");
@@ -223,7 +251,7 @@ describe("checkIosInfoPlist", () => {
 		/* The early returns must not hide it: both findings, one run. */
 		const plist = validPlist();
 		delete plist.NSLocalNetworkUsageDescription;
-		plist[IOS_FORBIDDEN_KEYS[1]] = "Allow camera";
+		plist[IOS_FORBIDDEN_KEYS[1]] = "Add to your photos";
 		expect(fields(checkIosInfoPlist(plist))).toEqual([
 			IOS_FORBIDDEN_KEYS[1],
 			"NSLocalNetworkUsageDescription",
@@ -234,6 +262,35 @@ describe("checkIosInfoPlist", () => {
 describe("checkAndroidManifest", () => {
 	it("passes the declarations the app asks for", () => {
 		expect(checkAndroidManifest(validManifest())).toEqual([]);
+	});
+
+	it("reports a manifest without the Team Bridge receiver (ADR 0010 S2)", () => {
+		const manifest = validManifest().replace(
+			"dev.localoperator.teambridge.LoNotificationsService",
+			"some.other.Receiver",
+		);
+		expect(fields(checkAndroidManifest(manifest))).toEqual([
+			`receiver[${TEAM_BRIDGE_RECEIVER}]`,
+		]);
+	});
+
+	it("reports Expo's own receiver surviving the merge, which could win dispatch", () => {
+		const manifest = validManifest().replace(
+			"  </application>",
+			`    <receiver android:name="${EXPO_NOTIFICATIONS_RECEIVER}" android:exported="false"/>\n  </application>`,
+		);
+		expect(fields(checkAndroidManifest(manifest))).toEqual([
+			`receiver[${EXPO_NOTIFICATIONS_RECEIVER}]`,
+		]);
+	});
+
+	it("is not satisfied by a commented-out receiver", () => {
+		const manifest = validManifest()
+			.replace("<receiver android:name", "<!-- <receiver android:name")
+			.replace("</receiver>", "</receiver> -->");
+		expect(fields(checkAndroidManifest(manifest))).toEqual([
+			`receiver[${TEAM_BRIDGE_RECEIVER}]`,
+		]);
 	});
 
 	it("tolerates attribute order and whitespace variations AGP may write", () => {
@@ -301,18 +358,68 @@ describe("checkAndroidManifest", () => {
 		expect(fields(checkAndroidManifest("<manifest/>"))).toEqual([
 			"AndroidManifest.xml",
 			`uses-permission[${ANDROID_LOCAL_NETWORK_PERMISSION}]`,
+			`receiver[${TEAM_BRIDGE_RECEIVER}]`,
+			`uses-permission[${ANDROID_CAMERA_PERMISSION}]`,
+			...ANDROID_OPTIONAL_CAMERA_FEATURES.map(
+				(feature) => `uses-feature[${feature}]@android:required`,
+			),
 		]);
+	});
+
+	it("requires CAMERA, which the Camera row asks for at use", () => {
+		/* An undeclared permission can never be granted: without the declaration
+		 * the row would answer "access is off" forever. */
+		const manifest = validManifest().replace(
+			'  <uses-permission android:name="android.permission.CAMERA"/>\n',
+			"",
+		);
+		expect(fields(checkAndroidManifest(manifest))).toEqual([
+			`uses-permission[${ANDROID_CAMERA_PERMISSION}]`,
+		]);
+	});
+
+	/* PR #278 round 1, R1: CAMERA implies a required back camera on Google
+	 * Play unless both implied features are declared optional. */
+	it.each(ANDROID_OPTIONAL_CAMERA_FEATURES)(
+		'requires %s declared android:required="false"',
+		(feature) => {
+			const line = validManifest()
+				.split("\n")
+				.find((item) => item.includes(`"${feature}"`));
+			if (line === undefined) throw new Error("fixture lacks the feature");
+			const missing = validManifest().replace(`${line}\n`, "");
+			const requiredTrue = validManifest().replace(
+				line,
+				line.replace('android:required="false"', 'android:required="true"'),
+			);
+			const defaulted = validManifest().replace(
+				line,
+				line.replace(' android:required="false"', ""),
+			);
+			const field = `uses-feature[${feature}]@android:required`;
+			for (const manifest of [missing, requiredTrue, defaulted]) {
+				expect(fields(checkAndroidManifest(manifest))).toEqual([field]);
+			}
+		},
+	);
+
+	it("accepts the optional camera features in single quotes", () => {
+		const manifest = validManifest().replace(
+			'<uses-feature android:name="android.hardware.camera" android:required="false"/>',
+			"<uses-feature android:name='android.hardware.camera' android:required='false'/>",
+		);
+		expect(checkAndroidManifest(manifest)).toEqual([]);
 	});
 
 	it("reports a library-manifest media permission the merge brought in", () => {
 		/* What expo-image-picker's own manifest would contribute without the
-		 * blockedPermissions + plugin options: CAMERA and the storage pair. */
+		 * blockedPermissions list: the storage pair (CAMERA is required now). */
 		const manifest = validManifest().replace(
 			'  <uses-permission android:name="android.permission.INTERNET"/>',
-			'  <uses-permission android:name="android.permission.INTERNET"/>\n  <uses-permission android:name="android.permission.CAMERA"/>\n  <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>',
+			'  <uses-permission android:name="android.permission.INTERNET"/>\n  <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>\n  <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>',
 		);
 		expect(fields(checkAndroidManifest(manifest))).toEqual([
-			"uses-permission[android.permission.CAMERA]",
+			"uses-permission[android.permission.READ_EXTERNAL_STORAGE]",
 			"uses-permission[android.permission.READ_MEDIA_IMAGES]",
 		]);
 	});
@@ -352,10 +459,10 @@ describe("checkAndroidManifest", () => {
 	it("catches a single-quoted declaration — quote style cannot slip an absence check", () => {
 		const manifest = validManifest().replace(
 			'  <uses-permission android:name="android.permission.INTERNET"/>',
-			"  <uses-permission android:name='android.permission.CAMERA'/>",
+			"  <uses-permission android:name='android.permission.INTERNET'/>\n  <uses-permission android:name='android.permission.READ_MEDIA_IMAGES'/>",
 		);
 		expect(fields(checkAndroidManifest(manifest))).toEqual([
-			"uses-permission[android.permission.CAMERA]",
+			"uses-permission[android.permission.READ_MEDIA_IMAGES]",
 		]);
 	});
 
@@ -425,6 +532,9 @@ describe("summarize", () => {
 		);
 		expect(summarize("android")).toContain(
 			'android:usesCleartextTraffic="true"',
+		);
+		expect(summarize("android")).toContain(
+			'android.hardware.camera and android.hardware.camera.autofocus declared required="false"',
 		);
 	});
 });

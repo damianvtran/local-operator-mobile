@@ -47,8 +47,10 @@ const TRAIL_MIN_OPACITY = 0.35;
  *  the left on every sample). */
 const DRAWN = LEVEL_BARS + 1;
 
-const barHeight = (level: number) =>
-	BAR_MIN_PX + level * (BAR_MAX_PX - BAR_MIN_PX);
+const barHeight = (level: number) => {
+	"worklet";
+	return BAR_MIN_PX + level * (BAR_MAX_PX - BAR_MIN_PX);
+};
 
 /** One bar, reading its height from the shared array on the UI thread. */
 const WaveBar = ({

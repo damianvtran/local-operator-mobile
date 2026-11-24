@@ -49,6 +49,7 @@ const copy = (from, to) => {
 /** A one-frame design tree: exactly what `--target frames` opens for one surface. */
 const buildTree = (tree) => {
 	copy(join(design, "preview", "capture.mjs"), join(tree, "preview", "capture.mjs"));
+	copy(join(design, "preview", "capture-diagnostics.mjs"), join(tree, "preview", "capture-diagnostics.mjs"));
 	copy(join(design, "preview", "frame-difference.mjs"), join(tree, "preview", "frame-difference.mjs"));
 	copy(
 		join(design, "store-screenshots", "iphone-6.9.html"),
@@ -130,7 +131,9 @@ export const checkStaleFrame = () => {
 				timeout: 180_000,
 				/* A scratch base this check owns, so the per-pid tree the child creates is
 				 * predictable and its removal is checked rather than trusted. */
-				env: { ...process.env, LOCAL_OPERATOR_SCRATCHPAD: scratchBase },
+				// Keep the negative control's diagnostic evidence in its own disposable tree,
+				// never in the original invocations' public artifact directory.
+				env: { ...process.env, LOCAL_OPERATOR_SCRATCHPAD: scratchBase, CAPTURE_DIAGNOSTICS_DIR: join(work, "diagnostics") },
 			},
 		);
 		runPid = run.pid ?? null;
@@ -155,6 +158,27 @@ export const checkStaleFrame = () => {
 			"the browser teardown did not run",
 		);
 		expect(run.status !== 0, "the gate exited 0 on a stale frame");
+		const retained = join(work, "diagnostics", `frames-${run.pid}`, SURFACE, SLUG);
+		for (const name of ["actual.png", "reference.png", "comparison.json"]) {
+			expect(existsSync(join(retained, name)), `failed-frame evidence missing: ${name}`);
+		}
+		if (existsSync(join(retained, "comparison.json"))) {
+			const comparison = JSON.parse(readFileSync(join(retained, "comparison.json"), "utf8"));
+			expect(comparison.stale === true, "retained evidence changed the stale verdict");
+			if (comparison.beyondFuzz === null) {
+				// The fast lane need not install a decoder; the design job's arithmetic
+				// probe separately requires one. Never accept an unexplained missing delta.
+				const statusPath = join(retained, "delta-status.json");
+				expect(existsSync(statusPath), "missing explicit decoder-unavailable evidence");
+				if (existsSync(statusPath)) {
+					const status = JSON.parse(readFileSync(statusPath, "utf8"));
+					expect(status.available === false && status.reason === "image-decoder-unavailable",
+						"invalid decoder-unavailable evidence");
+				}
+			} else {
+				expect(existsSync(join(retained, "delta.png")), "failed-frame evidence missing: delta.png");
+			}
+		}
 		expect(
 			!(existsSync(scratchBase) && readdirSync(scratchBase).length > 0),
 			"the run left its scratch tree behind",

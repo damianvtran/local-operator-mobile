@@ -193,6 +193,35 @@ describe("reads use the contract's paths and query", () => {
 		plain.stop();
 	});
 
+	it("declares steer journal order on the session stream only when asked", async () => {
+		/* local-operator #4395: only the exact value `1` opts in, and an older
+		 * relay must see no new parameter — so leaving the flag off has to be
+		 * the URL every older build opened. */
+		const { http, client } = endpoints(() => ({ json: {} }));
+		const declared = client.sessionStream("s/1", {
+			steerJournalOrder: true,
+			onFrame: () => {},
+		});
+		declared.connection.start();
+		await new Promise((resolve) => setTimeout(resolve, 10));
+		expect(http.streamRequests[0]?.path).toBe(
+			"/api/sessions/s%2F1/events?steer_journal_order=1",
+		);
+		declared.stop();
+		for (const steerJournalOrder of [false, undefined]) {
+			const plain = client.sessionStream("s/1", {
+				steerJournalOrder,
+				onFrame: () => {},
+			});
+			plain.connection.start();
+			await new Promise((resolve) => setTimeout(resolve, 10));
+			expect(http.streamRequests.at(-1)?.path).toBe(
+				"/api/sessions/s%2F1/events",
+			);
+			plain.stop();
+		}
+	});
+
 	it("sends the transfer body exactly as the route validates it, deadline override included", async () => {
 		/* The body carries the route's four keys and nothing else — the route
 		 * refuses extras — and the per-request deadline rides OUTSIDE it, because

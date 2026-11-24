@@ -25,7 +25,7 @@
 	},
 	"mobile.chrome.clear_search": {
 		"role": "button",
-		"note": "Accessible name of the small × inside the sidebar's search field; it empties the search text. Shown only while the field has text. No final full stop."
+		"note": "Empties the search text. Used in three places: the accessible name of the small × inside the sidebar's search field (shown only while the field has text), and the visible button label under 'Nothing matches that.' in the sidebar's no-match empty state and on the Past sessions screen. Short imperative, no final full stop."
 	},
 	"mobile.chrome.close_conversations": {
 		"role": "button",
@@ -130,5 +130,9 @@
 	"mobile.chrome.composer.row_folder": {
 		"role": "meta",
 		"note": "Row label in the composer's More sheet, shown only when the folder button does not fit on a narrow phone; the folder's name is shown at the other end of the same row and tapping the row opens the folder sheet. A noun, no colon."
+	},
+	"mobile.chrome.composer.row_identity": {
+		"role": "meta",
+		"note": "Row label in the composer's More sheet for which agent or team the new chat starts as; its value is that name or \"Default agent\". Short. New in the new-chat identity picker; the non-English text awaits the translation audit."
 	}
 }

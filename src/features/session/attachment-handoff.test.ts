@@ -1,10 +1,22 @@
 import { readFileSync } from "node:fs";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createAttachmentSheetHandoff } from "./attach-handoff";
+import {
+	attachHandoffDiagnostics,
+	createAttachmentSheetHandoff,
+	DISMISS_FALLBACK_MS,
+} from "./attach-handoff";
 
-const OWNER_ATTACH_FINALLY = /finally\s*\{\s*setAttaching\(false\)/;
+const OWNER_ATTACH_FINALLY = /finally\s*\{\s*endAttach\(\);/;
+/* The owner's `onAttachOpen` (abandon a pick in flight, PR #354 R1) may run
+ *  first; cancel must still come immediately before the reopen. */
 const CANCEL_BEFORE_REOPEN =
-	/onPress=\{\(\) => \{\s*attachmentHandoff\.cancel\(\);\s*setAttachSheetOpen\(true\);/;
+	/onPress=\{\(\) => \{\s*(?:onAttachOpen\?\.\(\);\s*)?attachmentHandoff\.cancel\(\);\s*setAttachSheetOpen\(true\);/;
+/* A chosen row marks the close as a hand-off in the SAME update that closes
+ * the sheet, so the iOS sheet closes in one commit (`Sheet`'s `exitInstantly`;
+ * the native timing is run in `ui/components/sheet-ios-picker-handoff.test.tsx`). */
+const SHEET_HANDOFF_CLOSE = /setHandingOff\(true\);\s*onChoose\(source\);/;
+const COMPOSER_CHOOSE =
+	/setAttachSheetOpen\(false\);[\s\S]*?attachmentHandoff\.choose\(\(\) => onAttach\(source\), Platform\.OS\);/;
 const BRIDGE_CHOOSE =
 	/setAttachOpen\(false\);\s*attachHandoff\.choose\(\(\) => \{\s*void addImages\(source\);\s*\}, Platform\.OS\);/;
 const BRIDGE_CANCEL_BEFORE_REOPEN =
@@ -13,6 +25,8 @@ const BRIDGE_DIRECT_LAUNCH =
 	/onPress=\{\(\) => \{\s*void addImages\(source\);\s*\}\}/;
 const HOME_DISMISS_SHOWN_LINE =
 	/onDismissError=\{\s*startup\.snapshot\.error == null && composerError !== null\s*\? \(\) => setComposerError\(null\)\s*: undefined\s*\}/;
+const TRAIL_TAIL = /onDismiss 14ms, fallback 1000ms, late onDismiss 1180ms$/;
+const TRAIL_BOUNDED = /^(onDismiss 0ms, ){19}onDismiss 0ms$/;
 const source = readFileSync(
 	new URL("./components/composer.tsx", import.meta.url),
 	"utf8",
@@ -191,15 +205,151 @@ describe("native attachment sheet handoff", () => {
 		handoff.dismissed();
 		expect(launch).toHaveBeenCalledOnce();
 	});
+	/* #248: on iOS 26 the sheet closed and no picker appeared. The launch waited
+	 * on the Modal's onDismiss alone, and native delivery of that callback was
+	 * never proven on a device. The fallback starts only from the commit that
+	 * hid the Modal (`hidden`, the Sheet's onHidden), never from the press. */
+	it("no onDismiss after hide commit still launches once", () => {
+		vi.useFakeTimers();
+		const trace = vi.fn();
+		const handoff = createAttachmentSheetHandoff(trace);
+		const launch = vi.fn();
+		handoff.choose(launch, "ios");
+		// The press alone arms nothing: the exit animation still holds the Modal.
+		vi.advanceTimersByTime(60_000);
+		expect(launch).not.toHaveBeenCalled();
+		handoff.hidden();
+		vi.advanceTimersByTime(DISMISS_FALLBACK_MS - 1);
+		expect(launch).not.toHaveBeenCalled();
+		vi.advanceTimersByTime(1);
+		expect(launch).toHaveBeenCalledOnce();
+		expect(trace).toHaveBeenLastCalledWith({
+			via: "fallback",
+			afterHiddenMs: DISMISS_FALLBACK_MS,
+		});
+		// A late onDismiss, a second hide, more time: still exactly once. The
+		// late callback is recorded (it tells "late" from "lost"), once.
+		vi.advanceTimersByTime(180);
+		handoff.dismissed();
+		handoff.hidden();
+		handoff.dismissed();
+		vi.runAllTimers();
+		expect(launch).toHaveBeenCalledOnce();
+		expect(trace).toHaveBeenLastCalledWith({
+			via: "late-onDismiss",
+			afterHiddenMs: DISMISS_FALLBACK_MS + 180,
+		});
+		expect(trace).toHaveBeenCalledTimes(2);
+	});
+	it("onDismiss then timer launches once, never twice", () => {
+		vi.useFakeTimers();
+		const trace = vi.fn();
+		const handoff = createAttachmentSheetHandoff(trace);
+		const launch = vi.fn();
+		handoff.choose(launch, "ios");
+		handoff.hidden();
+		vi.advanceTimersByTime(16);
+		handoff.dismissed();
+		expect(launch).toHaveBeenCalledOnce();
+		expect(trace).toHaveBeenLastCalledWith({
+			via: "onDismiss",
+			afterHiddenMs: 16,
+		});
+		vi.runAllTimers();
+		expect(vi.getTimerCount()).toBe(0);
+		expect(launch).toHaveBeenCalledOnce();
+		expect(trace).toHaveBeenCalledOnce();
+	});
+	it("unmount cancels", () => {
+		vi.useFakeTimers();
+		const handoff = create();
+		const launch = vi.fn();
+		handoff.choose(launch, "ios");
+		handoff.hidden();
+		// The composer's unmount effect, and Attach's reopen, both call cancel().
+		handoff.cancel();
+		expect(vi.getTimerCount()).toBe(0);
+		vi.runAllTimers();
+		handoff.dismissed();
+		expect(launch).not.toHaveBeenCalled();
+	});
+	it("a hide with nothing chosen arms nothing", () => {
+		vi.useFakeTimers();
+		const handoff = create();
+		handoff.hidden();
+		expect(vi.getTimerCount()).toBe(0);
+		const launch = vi.fn();
+		handoff.choose(launch, "android");
+		handoff.hidden();
+		expect(vi.getTimerCount()).toBe(0);
+		expect(launch).toHaveBeenCalledOnce();
+	});
+	/* Review round 1, R4: only a pending attach choice is traced — not every
+	 * close (Close, the scrim) and never the web or Android, which launch at
+	 * once — so the trail is the sample DISMISS_FALLBACK_MS needs, undiluted. */
+	it("traces only an attach choice that waited, never a plain close or an immediate launch", () => {
+		vi.useFakeTimers();
+		const trace = vi.fn();
+		const handoff = createAttachmentSheetHandoff(trace);
+		handoff.hidden();
+		handoff.dismissed();
+		for (const platform of ["web", "android"]) {
+			handoff.cancel();
+			handoff.choose(vi.fn(), platform);
+			handoff.hidden();
+			handoff.dismissed();
+		}
+		vi.runAllTimers();
+		expect(trace).not.toHaveBeenCalled();
+	});
+	/* Review round 1, R1: the trace must reach a RELEASE build, because the
+	 * only iPhone channel is TestFlight. It lands in Settings → Copy
+	 * diagnostics, bounded, with no content: a path name and milliseconds. */
+	it("keeps a bounded release trail for Copy diagnostics", () => {
+		vi.useFakeTimers();
+		const handoff = create();
+		handoff.choose(vi.fn(), "ios");
+		handoff.hidden();
+		vi.advanceTimersByTime(14);
+		handoff.dismissed();
+		handoff.cancel();
+		handoff.choose(vi.fn(), "ios");
+		handoff.hidden();
+		vi.advanceTimersByTime(DISMISS_FALLBACK_MS + 180);
+		handoff.dismissed();
+		expect(attachHandoffDiagnostics()).toMatch(TRAIL_TAIL);
+		for (let i = 0; i < 30; i += 1) {
+			handoff.cancel();
+			handoff.choose(vi.fn(), "ios");
+			handoff.hidden();
+			handoff.dismissed();
+		}
+		expect(attachHandoffDiagnostics()?.split(", ")).toHaveLength(20);
+		expect(attachHandoffDiagnostics()).toMatch(TRAIL_BOUNDED);
+	});
+	/* Review round 1, R5: the fallback races only a NON-animated native
+	 * dismissal. That is the invariant its size rests on; the size itself is
+	 * a maintainer decision pending device measurement (the PR's options). */
+	it("races only a non-animated native dismissal", () => {
+		expect(read("../../ui/components/sheet.tsx")).toContain(
+			'animationType="none"',
+		);
+	});
 	it("wires the real composer choice and native dismissal without changing close/layout", () => {
+		expect(source).toContain("onHidden={attachmentHandoff.hidden}");
 		expect(source).toContain("onDismiss={attachmentHandoff.dismissed}");
-		expect(source).toContain("attachmentHandoff.choose(");
+		expect(source).toMatch(COMPOSER_CHOOSE);
 		expect(source).toMatch(CANCEL_BEFORE_REOPEN);
 		expect(source).toContain(
 			"// The handoff waits for native dismissal; state alone is not that acknowledgement.",
 		);
-		expect(source).toContain("() => onAttach(action.source)");
 		expect(source).toContain("onClose={() => setAttachSheetOpen(false)}");
+		expect(source).toContain("<AttachSheet");
+		const sheet = read("./components/attach-sheet.tsx");
+		expect(sheet).toMatch(SHEET_HANDOFF_CLOSE);
+		expect(sheet).toContain(
+			'exitInstantly={handingOff && Platform.OS === "ios"}',
+		);
 		// One shared rule: the composer imports it rather than keeping a copy.
 		expect(source).toContain(
 			'import { createAttachmentSheetHandoff } from "@/features/session/attach-handoff";',
@@ -219,8 +369,10 @@ describe("native attachment sheet handoff", () => {
 			'import { createAttachmentSheetHandoff } from "@/features/session/attach-handoff";',
 		);
 		expect(bridge).toContain("onDismiss={attachHandoff.dismissed}");
+		expect(bridge).toContain("onHidden={attachHandoff.hidden}");
 		expect(bridge).toMatch(BRIDGE_CHOOSE);
 		expect(bridge).toMatch(BRIDGE_CANCEL_BEFORE_REOPEN);
+		expect(bridge).toContain("<AttachSheet");
 		expect(bridge).toContain(
 			"useEffect(() => () => attachHandoff.cancel(), [attachHandoff]);",
 		);

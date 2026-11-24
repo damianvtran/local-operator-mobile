@@ -16,6 +16,8 @@ const read = (name: string) =>
 	readFileSync(fileURLToPath(new URL(name, import.meta.url)), "utf8");
 const PANE = read("./conversations-pane.tsx");
 const SHEET = read("./sidebar-view-sheet.tsx");
+const CONTROLS = read("./sidebar-view-controls.tsx");
+const SETTINGS = read("../settings/sidebar-section.tsx");
 
 describe("the drawer draws the view's cues", () => {
 	it("D1: the flat list draws a divider after its pinned run", () => {
@@ -25,9 +27,11 @@ describe("the drawer draws the view's cues", () => {
 	});
 
 	it("D2: hidden sections are announced in the list, and the trigger fills when custom", () => {
-		expect(PANE).toContain("hiddenSectionCount(sidebarView)");
+		expect(PANE).toContain("hiddenSectionCount(sidebarView, tagsAssignable)");
 		expect(PANE).toContain('t("mobile.sidebar.hidden_sections"');
-		expect(SHEET).toContain("active={isCustomSidebarView(view)}");
+		expect(SHEET).toContain(
+			"active={isCustomSidebarView(view, tagsAvailable)}",
+		);
 	});
 
 	it("M1: a list the view emptied gets its own empty state, with a reset", () => {
@@ -38,5 +42,73 @@ describe("the drawer draws the view's cues", () => {
 
 	it("Q2: the sheet title may take two lines rather than ellipsize at 320 pt / 200 %", () => {
 		expect(SHEET).toContain("titleLines={2}");
+	});
+});
+
+/**
+ * The tag view options (mobile sidebar tag view options, 2026-11-22): the pane
+ * and the sheet draw the capability-gated controls, the grouping's own
+ * headings, and the row's line switch. The RULES are unit-tested in
+ * `sidebar-view.test.ts`; this pins the surfaces that must read them.
+ */
+describe("the drawer draws the tag view options", () => {
+	it("gates both controls on the relay's tag capability and passes the drawn grouping", () => {
+		expect(SHEET).toContain("canAssignSessionTags(capabilities)");
+		expect(SHEET).toContain("tagsAvailable={tagsAvailable}");
+		expect(SETTINGS).toContain("canAssignSessionTags(capabilities)");
+		expect(SETTINGS).toContain("tagsAvailable={tagsAvailable}");
+		expect(CONTROLS).toContain("drawnGroupBy(view, tagsAvailable)");
+		expect(CONTROLS).toContain('t("mobile.sidebar.group.tag")');
+		expect(CONTROLS).toContain('t("mobile.sidebar.show_tags")');
+		expect(CONTROLS).toContain('t("mobile.sidebar.show_tags_hint")');
+	});
+
+	it("draws the tag groups' headings from the arrangement and withholds row lines", () => {
+		expect(PANE).toContain("arrangeSidebar(filtered, sidebarView, now, {");
+		expect(PANE).toContain("tagsAvailable: tagsAssignable");
+		// The group order is the registry's, read only while that grouping draws.
+		expect(PANE).toContain(".tags()");
+		expect(PANE).toContain("group.tag.name");
+		expect(PANE).toContain('t("mobile.sidebar.section.untagged")');
+		expect(PANE).toContain('t("mobile.sidebar.tag_group.announcement"');
+		expect(PANE).toContain("labelDir={composedDir}");
+		expect(PANE).toContain("showTags={sidebarView.showTags}");
+	});
+});
+
+/**
+ * The sheet is a `Modal` INSIDE the drawer's `Modal`, so its footer link must
+ * hand off (close, wait for the sheet's own native dismissal, then leave the
+ * drawer and push) rather than close both in one tick — "More sidebar
+ * settings" left iOS holding a presented controller over Settings that way
+ * (2026-11-22; `sidebar-view-handoff.ts`).
+ *
+ * Asserted over the SOURCE for the same reason as above — rendering this file
+ * needs the `uniwind` chain — while the WIRING itself is run against emulated
+ * native modal hosts in `sidebar-view-handoff.test.tsx`.
+ */
+describe("the View options sheet hands off before it leaves the drawer", () => {
+	it("takes its open state, close, dismissal and navigation from the shared hand-off", () => {
+		expect(SHEET).toContain(
+			'import { useSidebarViewHandoff } from "@/features/sessions/sidebar-view-handoff";',
+		);
+		expect(SHEET).toContain("const sheet = useSidebarViewHandoff();");
+		expect(SHEET).toContain("onPress={sheet.openSheet}");
+		expect(SHEET).toContain("visible={sheet.open}");
+		expect(SHEET).toContain("onClose={sheet.closeSheet}");
+		expect(SHEET).toContain("onDismiss={sheet.onDismiss}");
+		expect(SHEET).toContain("onHidden={sheet.onHidden}");
+		expect(SHEET).toContain("exitInstantly={sheet.exitInstantly}");
+	});
+
+	it("runs the drawer close and the push only from the hand-off's launch", () => {
+		const more = SHEET.indexOf("sheet.moreSettings(");
+		const leave = SHEET.indexOf("onNavigate?.();", more);
+		const push = SHEET.indexOf('router.push("/settings?section=sidebar"', more);
+		expect(more).toBeGreaterThan(0);
+		expect(leave).toBeGreaterThan(more);
+		expect(push).toBeGreaterThan(leave);
+		// The old wiring kept its own open state and closed it beside the push.
+		expect(SHEET).not.toContain("setOpen(");
 	});
 });

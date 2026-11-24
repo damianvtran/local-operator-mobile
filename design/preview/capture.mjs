@@ -35,6 +35,8 @@ import {
 	STRAY_PIXELS,
 } from "./frame-difference.mjs";
 
+import { createDiagnostics, fontHashes, rendererFacts, rendererLine, retainSafely } from "./capture-diagnostics.mjs";
+
 const here = new URL(".", import.meta.url);
 const root = new URL("../", here); // design/
 const repoRoot = new URL("../../", here);
@@ -116,7 +118,13 @@ const findChrome = () => {
 	return null;
 };
 
-const chrome = findChrome();
+/* `CHROME` wins over the candidate list, and it is ONE variable for both the
+ * presence check and the launch. The design-kit job points it at a copy of the
+ * runner's Chrome taken at job start, because GoogleUpdater replaces
+ * /Applications/Google Chrome.app mid-job (two passes of one run rendered with
+ * 156.0.8078.80 and 157.0.8103.80); a launch that quietly fell back to the
+ * /Applications bundle would reopen exactly that hole. */
+const chrome = process.env.CHROME || findChrome();
 if (!chrome) {
 	console.error(
 		"No Chrome or Chromium found. Install Google Chrome, or pass a path in CHROME=…\n" +
@@ -132,7 +140,7 @@ const profile = `${scratch}/profile-${process.pid}-${Date.now()}`;
 mkdirSync(profile, { recursive: true });
 
 const proc = spawn(
-	process.env.CHROME ?? chrome,
+	chrome,
 	[
 		"--headless=new",
 		`--user-data-dir=${profile}`,
@@ -229,6 +237,63 @@ const onEvent = (method) =>
 
 await send("Page.enable");
 await send("Runtime.enable");
+
+/* Browser-target SystemInfo is not available on the page socket. Read it through
+ * a separate, bounded diagnostic connection; never change renderer flags in an
+ * attempt to make the existing gate pass. Unsupported facts remain absent. */
+const browserFacts = async () => {
+	const { webSocketDebuggerUrl } = await (await fetch(`http://127.0.0.1:${portLine}/json/version`, { signal: AbortSignal.timeout(5000) })).json();
+	const socket = new WebSocket(webSocketDebuggerUrl);
+	try {
+		return await new Promise((resolve, reject) => {
+			const timer = setTimeout(() => reject(new Error("Diagnostic metadata timed out")), 5000);
+			const answers = {};
+			socket.addEventListener("open", () => {
+				socket.send(JSON.stringify({ id: 1, method: "Browser.getVersion" }));
+				socket.send(JSON.stringify({ id: 2, method: "SystemInfo.getInfo" }));
+			});
+			socket.addEventListener("error", () => { clearTimeout(timer); reject(new Error("Diagnostic metadata unavailable")); });
+			socket.addEventListener("message", (event) => {
+				const message = JSON.parse(event.data);
+				if (![1, 2].includes(message.id)) return;
+				answers[message.id] = message.result ?? {};
+				if (Object.keys(answers).length === 2) {
+					clearTimeout(timer);
+					resolve(rendererFacts(answers[1], answers[2]));
+				}
+			});
+		});
+	} finally {
+		socket.close();
+	}
+};
+/* Every `--check` names the renderer that produced its verdict, diagnostics dir
+ * or not: a stale frame is only interpretable next to the Chrome that rendered
+ * it (13 of 78 design-kit runs failed on one stroke edge while the job's Chrome
+ * changed version between passes). Observational only — an unreadable answer
+ * prints "unavailable" and the verdict below is untouched. */
+const renderer = check ? await browserFacts().catch(() => ({ unavailable: true })) : null;
+if (check) console.log(rendererLine(renderer));
+let retainListing = null;
+if (check && process.env.CAPTURE_DIAGNOSTICS_DIR && ["all", "frames"].includes(target)) {
+	try {
+		retainListing = createDiagnostics({
+			directory: process.env.CAPTURE_DIAGNOSTICS_DIR,
+			invocation: target,
+			renderer,
+			fonts: fontHashes(new URL("fonts/", root).pathname),
+			makeDifference: (fresh, reference, output) => execFileSync(alphaTool(), [
+				fresh, reference, "-alpha", "off", "-compose", "difference", "-composite", `PNG24:${output}`,
+			], { stdio: "pipe" }),
+		});
+	} catch {
+		// Evidence collection must not replace or mask the existing gate verdict.
+		console.warn("listing diagnostics: renderer metadata unavailable");
+	}
+}
+const retainEvidence = (listing, fresh, reference, metrics) => {
+	if (listing) retainSafely(retainListing, { ...listing, fresh, reference, metrics });
+};
 
 /** Load a local file at a phone viewport, settle, and return a page object with
  * `shot()` for capturing. `settle` exists because a font that swaps in after
@@ -460,7 +525,7 @@ const stale = (path, why) => {
 /** In generation mode: write. In `--check`: compare against the committed file
  * and report the strongest comparison that passed. `fuzz` is the surface's own
  * tolerance, passed by the caller from `frames.json`. */
-const save = (pngBuffer, outPath, { reencode = null, fuzz = 0 } = {}) => {
+const save = (pngBuffer, outPath, { reencode = null, fuzz = 0, listing = null } = {}) => {
 	if (!check) {
 		writeFileSync(outPath, pngBuffer);
 		previewTargets.push(outPath);
@@ -472,6 +537,7 @@ const save = (pngBuffer, outPath, { reencode = null, fuzz = 0 } = {}) => {
 	if (reencode) reencode(fresh);
 	if (!existsSync(outPath)) return stale(outPath, "missing");
 	if (readFileSync(fresh).equals(readFileSync(outPath))) {
+		retainEvidence(listing, fresh, outPath, { strict: 0, beyondFuzz: 0, largest: 0, fuzz, stale: false });
 		console.log(`  ${outPath.split("/").pop()}: byte-identical`);
 		return verified.push(outPath);
 	}
@@ -488,6 +554,10 @@ const save = (pngBuffer, outPath, { reencode = null, fuzz = 0 } = {}) => {
 	 * definition and the extra decode would buy nothing. */
 	const spread = differing === 0 && strict === 0 ? 0 : largestDifference(fresh, outPath);
 	const worst = Number.isFinite(spread) ? `; largest ${spread}/255` : "";
+	retainEvidence(listing, fresh, outPath, {
+		strict, beyondFuzz: differing, largest: spread, fuzz,
+		stale: !(differing === 0 || (fuzz > 0 && Number.isFinite(differing) && differing > 0 && differing <= STRAY_PIXELS)),
+	});
 	if (differing === 0) {
 		if (fuzz === 0) {
 			console.log(
@@ -731,6 +801,10 @@ if (target === "frames" || target === "all") {
 				continue;
 			}
 			const png = await pagep.shot();
+			// Observe fonts after capture; diagnostic failure must not change the verdict.
+			const faces = retainListing ? await pagep.evaluate(
+				'[...document.fonts].map(({ family, status, weight }) => ({ family, status, weight }))',
+			).catch(() => []) : [];
 			const { width: w, height: h } = pngDimensions(png);
 			const ok = w === surface.canvas.width && h === surface.canvas.height;
 			console.log(
@@ -743,6 +817,7 @@ if (target === "frames" || target === "all") {
 			save(png, `${frameDir}${frame.slug}.png`, {
 				reencode: stripAlpha24,
 				fuzz: surface.compareFuzz ?? 0,
+				listing: { surface: surface.id, slug: frame.slug, faces },
 			});
 		}
 	}

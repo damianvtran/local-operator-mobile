@@ -1,0 +1,18 @@
+{
+	"mobile.past.search_label": {
+		"role": "meta",
+		"note": "Visible label above the search field on the Past sessions screen, and the field's accessible name. The field has no placeholder, so this label alone says what it is for. It sits in a narrow column beside the Search button and may break onto two lines at large text: keep it short and breakable at a space. No final full stop."
+	},
+	"mobile.past.empty_headline": {
+		"role": "heading",
+		"note": "Headline of the Past sessions screen when the computer has no finished conversations. Plain statement, not an error."
+	},
+	"mobile.past.empty_next": {
+		"role": "help",
+		"note": "Second line under 'No past conversations yet.': what will appear on this screen and that a conversation can be resumed from it."
+	},
+	"mobile.past.no_matches_next": {
+		"role": "help",
+		"note": "Second line under 'Nothing matches that.' on the Past sessions screen: the search looks at the conversation text and titles, so trying a shorter word may find a match."
+	}
+}

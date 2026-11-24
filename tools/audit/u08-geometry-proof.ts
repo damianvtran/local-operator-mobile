@@ -206,7 +206,10 @@ async function main() {
 	// move a measured box must not refuse the run, and an allowlisted file whose
 	// content changed must. Both proofs measure the same pinned instrument, so the
 	// check is shared; u08-content-pins.ts explains the scope file by file.
-	assertPinnedContent();
+	// The app itself is not pinned: the admission hashes it and every receipt
+	// below records that digest beside `head` (RUN_DERIVED_ROOTS explains why).
+	const renderedSource = assertPinnedContent();
+	console.log(`U08 rendered source: ${JSON.stringify(renderedSource)}`);
 	const head = execFileSync("git", ["rev-parse", "HEAD"], {
 		encoding: "utf8",
 	}).trim();
@@ -250,6 +253,7 @@ async function main() {
 				relay: listening.url,
 				out,
 				head,
+				renderedSource,
 				baseRecord: RECORD,
 				nodePath: ORIGINAL_NODE_PATH,
 				historical: {
@@ -359,6 +363,7 @@ async function main() {
 		const receipt = {
 			kind: "EXPECTED ORIGINAL FAILURE FAMILY REPRODUCED — diagnosis data, NOT audit PASS",
 			head,
+			renderedSource,
 			originalHead: ORIGINAL_HEAD,
 			originalRun: ORIGINAL_RUN,
 			record: RECORD,
@@ -398,6 +403,7 @@ async function main() {
 			resolve(out, "NOT-REPRODUCED.json"),
 			JSON.stringify({
 				head,
+				renderedSource,
 				originalHead: ORIGINAL_HEAD,
 				originalRun: ORIGINAL_RUN,
 				error: (error instanceof Error ? error.message : String(error)).slice(
