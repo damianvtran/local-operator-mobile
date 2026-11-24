@@ -682,55 +682,139 @@ describe("RunSettingsPicker model search (TestFlight 1295, #335)", () => {
 		expect(node(CONTROL.homeModelSearch)?.path).toContain(SURFACE.sheetPinned);
 	});
 
-	it("keeps the rows still when the search appears over a scrolled body (design D1)", async () => {
+	/** The body's own scroll event, alone: what native reports after a
+	 *  programmatic scroll, with the offset it actually reached. */
+	const scrollEvent = (y: number) =>
+		act(() => {
+			(node(SURFACE.sheetBody)?.props.onScroll as (e: unknown) => void)?.({
+				nativeEvent: { contentOffset: { x: 0, y } },
+			});
+		});
+	/** Reach the models, then measure the body at the height it is held at
+	 *  under the search before the search's own height is known. */
+	const pinOver = async (y: number, content = 1200) => {
+		await scrollBody(MODEL_TOP);
+		const before = bodyMaxHeight() ?? 0;
+		expect(before).toBeGreaterThan(0);
+		await scrollBody(y, before, content);
+		return before;
+	};
+
+	it("keeps the rows still when the search appears over a scrolled body, in the commit that shrinks it (design D1, D5)", async () => {
 		await mountPicker(() => {});
 		await layoutModels();
 		const scrollTo = stubScrollTo();
-		await scrollBody(MODEL_TOP);
+		const before = await pinOver(MODEL_TOP);
 		expect(scrollTo).not.toHaveBeenCalled();
 		await layout(SURFACE.sheetPinned, PINNED);
-		/* Not yet: until the body has shrunk, the offset the rows need may be
-		 *  past the end it can scroll to (design round 5, D4 b). */
-		expect(scrollTo).not.toHaveBeenCalled();
-		await layoutBody(400 - PINNED);
+		/* Asked in the commit that shrinks the body, not from the body's own
+		 *  onLayout: on the web that arrives a frame later, and the rows painted
+		 *  dropped by the shrink for one frame (design round 6, D5). */
+		expect(bodyMaxHeight()).toBe(before - PINNED);
 		expect(scrollTo).toHaveBeenCalledTimes(1);
 		expect(scrollTo).toHaveBeenCalledWith({
 			y: MODEL_TOP + PINNED,
 			animated: false,
 		});
+		/* The measured shrink agrees with the hold: nothing more to ask. */
+		await layoutBody(before - PINNED);
+		expect(scrollTo).toHaveBeenCalledTimes(1);
 		/* A later re-measure of the same region (rotation, text size) is not a
 		 *  second appearance. */
 		await layout(SURFACE.sheetPinned, PINNED + 10);
-		await layoutBody(400 - PINNED - 10);
+		await layoutBody(before - PINNED - 10);
 		expect(scrollTo).toHaveBeenCalledTimes(1);
+	});
+
+	it("is not settled by a body layout that only moved (review R7-1, Fabric's order)", async () => {
+		await mountPicker(() => {});
+		await layoutModels();
+		const scrollTo = stubScrollTo();
+		const before = await pinOver(MODEL_TOP);
+		await layout(SURFACE.sheetPinned, PINNED);
+		/* Fabric reports the body pushed down at its old height first. */
+		await layoutBody(before);
+		await layoutBody(before - PINNED);
+		expect(scrollTo).toHaveBeenCalledTimes(1);
+		expect(scrollTo).toHaveBeenCalledWith({
+			y: MODEL_TOP + PINNED,
+			animated: false,
+		});
+	});
+
+	it("asks again at the measured shrink when native clamped the first scroll to the old end (review R7-1)", async () => {
+		await mountPicker(() => {});
+		await layoutModels();
+		const scrollTo = stubScrollTo();
+		/* At the old end of a tall body; the region asks for 61 pt more. */
+		const before = await pinOver(0);
+		const end = 1200 - before;
+		await scrollBody(end, before, 1200);
+		await layout(SURFACE.sheetPinned, 61);
+		expect(scrollTo).toHaveBeenLastCalledWith({ y: end + 61, animated: false });
+		/* Android runs a view command before the batch's new frames, so the
+		 *  scroll stopped at the old end; then the move, then the shrink. */
+		await scrollEvent(end);
+		await layoutBody(before);
+		expect(scrollTo).toHaveBeenCalledTimes(1);
+		await layoutBody(before - 61);
+		expect(scrollTo).toHaveBeenCalledTimes(2);
+		expect(scrollTo).toHaveBeenLastCalledWith({ y: end + 61, animated: false });
 	});
 
 	it("moves the rows by what the body lost when the sheet grows instead (D4 a: 320 pt, 200 %, ru)", async () => {
 		await mountPicker(() => {});
+		/* A column short enough that the hold under a 122 pt region is the
+		 *  body's 120 pt floor: the sheet grows 29 pt, so the body's top moves
+		 *  93 pt, not 122. */
+		await layout("column", 462);
 		await layoutModels();
 		const scrollTo = stubScrollTo();
-		await scrollBody(MODEL_TOP, 213, 1200);
-		/* A 122 pt region; the body stops at its 120 pt floor and the sheet grows
-		 *  29 pt, so the body's top moves 93 pt, not 122. */
+		const before = await pinOver(MODEL_TOP);
+		expect(before).toBe(213);
 		await layout(SURFACE.sheetPinned, 122);
-		await layoutBody(120);
+		expect(bodyMaxHeight()).toBe(120);
 		expect(scrollTo).toHaveBeenCalledTimes(1);
 		expect(scrollTo).toHaveBeenCalledWith({
 			y: MODEL_TOP + 93,
 			animated: false,
 		});
+		await layoutBody(120);
+		expect(scrollTo).toHaveBeenCalledTimes(1);
 	});
 
 	it("keeps the rows still at the end of a tall body with less than a region of room left (D4 b)", async () => {
 		await mountPicker(() => {});
 		await layoutModels();
 		const scrollTo = stubScrollTo();
-		/* At the old maximum (1200 − 400); the region asks for 61 pt more. */
-		await scrollBody(800, 400, 1200);
+		/* At the old maximum; the region asks for 61 pt more, which exists only
+		 *  at the body's new height. */
+		const before = await pinOver(0);
+		await scrollBody(1200 - before, before, 1200);
 		await layout(SURFACE.sheetPinned, 61);
-		expect(scrollTo).not.toHaveBeenCalled();
-		await layoutBody(339);
-		expect(scrollTo).toHaveBeenCalledWith({ y: 861, animated: false });
+		expect(scrollTo).toHaveBeenCalledWith({
+			y: 1200 - before + 61,
+			animated: false,
+		});
+		await layoutBody(before - 61);
+		expect(scrollTo).toHaveBeenCalledTimes(1);
+	});
+
+	it("does not carry a body layout from the close animation into the next visit (review R7-2)", async () => {
+		await mountPicker(() => {});
+		await reachModels();
+		/* Closed with the search focused: the keyboard leaving during the exit
+		 *  lays the body out again, at this visit's offset. */
+		host.exiting = true;
+		await mountPicker(() => {}, { visible: false });
+		await scrollBody(MODEL_TOP);
+		host.exiting = false;
+		await mountPicker(() => {}, { visible: false });
+		await mountPicker(() => {});
+		/* The section is measured before the fresh body reports anything. */
+		await layoutModels();
+		expect(node(CONTROL.homeModelSearch)).toBeUndefined();
+		expect(node(SURFACE.sheetPinned)).toBeUndefined();
 	});
 
 	it("drops the compensation when the body keeps its height, so a later resize is not taken for it", async () => {

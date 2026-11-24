@@ -1,5 +1,12 @@
 import { X } from "lucide-react-native";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+	useCallback,
+	useEffect,
+	useLayoutEffect,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
 import {
 	AccessibilityInfo,
 	Animated,
@@ -812,10 +819,37 @@ export const Sheet = ({
 	 *  appearance, and a region that goes away arms the next one — its stale
 	 *  height too, so the next appearance is a CHANGE the check below sees. */
 	const pinnedLaidOut = useRef(false);
-	/* The body's height when the region appeared over a scrolled body, until the
-	 *  body's own `onLayout` reports the height it shrank to. Only then does the
-	 *  larger offset exist to scroll to (D4 b). */
-	const pendingReveal = useRef<number | null>(null);
+	/* A region's appearance over a scrolled body, until the body's own `onLayout`
+	 *  reports the height it shrank to: the body's height and offset then, and
+	 *  the offset already asked for before paint (`to`, the layout effect below). */
+	const pendingReveal = useRef<{
+		viewportBefore: number;
+		from: number;
+		to: number | null;
+	} | null>(null);
+	/* Scroll to where the rows were, for a body that is now `viewportAfter` tall.
+	 *  Asked again only when the offset differs, so a second ask for the same
+	 *  shrink is a no-op rather than a second jump. */
+	const applyReveal = useCallback(
+		(
+			reveal: { viewportBefore: number; from: number },
+			viewportAfter: number,
+		) => {
+			const y = pinnedRevealScroll({
+				y: reveal.from,
+				viewportBefore: reveal.viewportBefore,
+				viewportAfter,
+				content: scrollFacts.current.contentH,
+			});
+			if (y === null || Math.abs(y - scrollFacts.current.y) < 1) return y;
+			bodyRef.current?.scrollTo({ y, animated: false });
+			/* The scroll's own event follows; the cue reads the offset the reader
+			 *  now sees. */
+			scrollFacts.current.y = y;
+			return y;
+		},
+		[],
+	);
 	const pinnedPresent = pinned !== undefined;
 	useEffect(() => {
 		if (pinnedPresent) return;
@@ -830,12 +864,30 @@ export const Sheet = ({
 	 *  and a later resize (the keyboard) is not this appearance's to correct. */
 	const heldBodyHeight =
 		pinned === undefined || resizable ? undefined : maxContentHeight;
-	useEffect(() => {
-		const before = pendingReveal.current;
-		if (before === null || pinnedHeight === 0) return;
-		if (heldBodyHeight !== undefined && Math.abs(heldBodyHeight - before) < 1)
+	/* BEFORE PAINT (design round 6, D5): the commit that shrinks the body is the
+	 *  one that knows its new height, so the offset is asked for here, not from
+	 *  the body's `onLayout` — that arrives a frame later on the web (a
+	 *  `ResizeObserver`), and the rows painted dropped by the shrink for it. The
+	 *  body's `onLayout` still checks the measured height (below): a held height
+	 *  the layout did not honour, or a native scroll clamped to the old end
+	 *  because it ran before the new frame was mounted, is asked again there. */
+	useLayoutEffect(() => {
+		const reveal = pendingReveal.current;
+		if (
+			reveal === null ||
+			reveal.to !== null ||
+			pinnedHeight === 0 ||
+			heldBodyHeight === undefined
+		)
+			return;
+		if (Math.abs(heldBodyHeight - reveal.viewportBefore) < 1) {
 			pendingReveal.current = null;
-	}, [pinnedHeight, heldBodyHeight]);
+			return;
+		}
+		const to = applyReveal(reveal, heldBodyHeight);
+		if (to === null) pendingReveal.current = null;
+		else reveal.to = to;
+	}, [pinnedHeight, heldBodyHeight, applyReveal]);
 	/* The last field asked to be revealed, so the reveal can be repeated once the
 	 *  keyboard has finished moving the sheet (see the effect below). */
 	const lastReveal = useRef<{ block: View | null; field: View | null } | null>(
@@ -1423,7 +1475,11 @@ export const Sheet = ({
 											pinnedLaidOut.current = true;
 											const { y, viewportH } = scrollFacts.current;
 											if (y > 0 && viewportH > 0)
-												pendingReveal.current = viewportH;
+												pendingReveal.current = {
+													viewportBefore: viewportH,
+													from: y,
+													to: null,
+												};
 										}}
 									>
 										{pinned}
@@ -1479,23 +1535,18 @@ export const Sheet = ({
 									 *  boolean below. */
 									onLayout={(event) => {
 										const height = event.nativeEvent.layout.height;
-										const before = pendingReveal.current;
-										pendingReveal.current = null;
 										scrollFacts.current.viewportH = height;
-										const y =
-											before === null
-												? null
-												: pinnedRevealScroll({
-														y: scrollFacts.current.y,
-														viewportBefore: before,
-														viewportAfter: height,
-														content: scrollFacts.current.contentH,
-													});
-										if (y !== null) {
-											bodyRef.current?.scrollTo({ y, animated: false });
-											/* The scroll's own event follows; the cue reads the
-											 *  offset the reader now sees. */
-											scrollFacts.current.y = y;
+										/* Only a CHANGED height settles the reveal. On Fabric a body
+										 *  that only MOVED reports too (the region inserted above it
+										 *  pushes it down at its old height), and consuming the
+										 *  reveal there lost the shrink that follows (review R7-1). */
+										const reveal = pendingReveal.current;
+										if (
+											reveal !== null &&
+											Math.abs(height - reveal.viewportBefore) >= 1
+										) {
+											pendingReveal.current = null;
+											applyReveal(reveal, height);
 										}
 										syncBodyCue();
 									}}
