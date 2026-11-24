@@ -656,6 +656,32 @@ export const expandTargetFor = (
 };
 
 /**
+ * The ask a freshly opened sheet shows EXPANDED, or `null`.
+ *
+ * A CHIP'S PIN ONLY OUTLIVES THE READER'S OWN OPEN (review round 1, m4b). The pin
+ * is screen state set when a chip names a row; every way out of the sheet that is
+ * not `close` — a navigation from inside it, a failed first read, the policy
+ * re-pointing the controller — used to leave it behind, so a later policy open
+ * expanded the stale pin instead of the head ask. Reading the pin only for a
+ * `reader` open makes the gate the same one `expandTargetFor` already applies to
+ * the policy's head ask, and covers exits this module cannot see.
+ */
+export const initialOpenAskFor = ({
+	visible,
+	pinned,
+	origin,
+	asks,
+}: {
+	visible: boolean;
+	pinned: string | null;
+	origin: OpenOrigin | null;
+	asks: PendingAsk[] | undefined | null;
+}): string | null => {
+	if (!visible) return null;
+	return (origin === "reader" ? pinned : null) ?? expandTargetFor(origin, asks);
+};
+
+/**
  * The sheet's expansion choice, as a pure reducer (round 2, Q5/M2).
  *
  * `undefined` = the reader has not chosen in THIS opening, so the opening's own

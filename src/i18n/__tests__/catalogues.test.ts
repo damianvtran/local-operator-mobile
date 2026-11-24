@@ -111,7 +111,9 @@ const NAMESPACES = [
 		// reasons, the "Settled" heading, the footer progress lines, and every
 		// string the panel used to hardcode (14 in the first slice, + 23 in the
 		// review remediation = 37), counted over the en JSON.
-		expected: 37,
+		// +13 ask-id chips: the eight state words, the two chip labels, the
+		// not-found sentence, the copy label and the copied toast (37 + 13 = 50).
+		expected: 50,
 	},
 	{
 		name: "mobile.oauth",

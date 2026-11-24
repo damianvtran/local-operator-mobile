@@ -49,6 +49,19 @@ export type CatalogueKey =
 	| "mobile.agent_avatar.label"
 	| "mobile.asks.answer_label"
 	| "mobile.asks.answer_placeholder"
+	| "mobile.asks.chip.answered"
+	| "mobile.asks.chip.copied"
+	| "mobile.asks.chip.copy_label"
+	| "mobile.asks.chip.declined"
+	| "mobile.asks.chip.dismissed"
+	| "mobile.asks.chip.expired"
+	| "mobile.asks.chip.label"
+	| "mobile.asks.chip.label_bare"
+	| "mobile.asks.chip.late"
+	| "mobile.asks.chip.open"
+	| "mobile.asks.chip.timed_out"
+	| "mobile.asks.chip.unknown_label"
+	| "mobile.asks.chip.withdrawn"
 	| "mobile.asks.choose_any"
 	| "mobile.asks.deadline_ago"
 	| "mobile.asks.decline"
@@ -1504,6 +1517,14 @@ export type NoParamKey =
 	| "mobile.agent_avatar.edit_hint"
 	| "mobile.agent_avatar.label"
 	| "mobile.asks.answer_placeholder"
+	| "mobile.asks.chip.answered"
+	| "mobile.asks.chip.declined"
+	| "mobile.asks.chip.dismissed"
+	| "mobile.asks.chip.expired"
+	| "mobile.asks.chip.late"
+	| "mobile.asks.chip.open"
+	| "mobile.asks.chip.timed_out"
+	| "mobile.asks.chip.withdrawn"
 	| "mobile.asks.choose_any"
 	| "mobile.asks.decline"
 	| "mobile.asks.decline_hint"
@@ -2709,6 +2730,19 @@ export type MessageParams = {
 	"mobile.agent_avatar.label": NoParams;
 	"mobile.asks.answer_label": { question: string | number };
 	"mobile.asks.answer_placeholder": NoParams;
+	"mobile.asks.chip.answered": NoParams;
+	"mobile.asks.chip.copied": { id: string | number };
+	"mobile.asks.chip.copy_label": { id: string | number };
+	"mobile.asks.chip.declined": NoParams;
+	"mobile.asks.chip.dismissed": NoParams;
+	"mobile.asks.chip.expired": NoParams;
+	"mobile.asks.chip.label": { id: string | number; question: string | number; state: string | number };
+	"mobile.asks.chip.label_bare": { id: string | number; state: string | number };
+	"mobile.asks.chip.late": NoParams;
+	"mobile.asks.chip.open": NoParams;
+	"mobile.asks.chip.timed_out": NoParams;
+	"mobile.asks.chip.unknown_label": { id: string | number };
+	"mobile.asks.chip.withdrawn": NoParams;
 	"mobile.asks.choose_any": NoParams;
 	"mobile.asks.deadline_ago": { duration: string | number };
 	"mobile.asks.decline": NoParams;
@@ -4181,6 +4215,19 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.agent_avatar.label": "Agent picture",
 	"mobile.asks.answer_label": "Your answer to: {question}",
 	"mobile.asks.answer_placeholder": "Your answer",
+	"mobile.asks.chip.answered": "answered",
+	"mobile.asks.chip.copied": "Copied {id}",
+	"mobile.asks.chip.copy_label": "Copy ask id {id}",
+	"mobile.asks.chip.declined": "declined",
+	"mobile.asks.chip.dismissed": "dismissed",
+	"mobile.asks.chip.expired": "expired",
+	"mobile.asks.chip.label": "Ask {id}, {state}: {question}. Activate to show.",
+	"mobile.asks.chip.label_bare": "Ask {id}, {state}. Activate to show.",
+	"mobile.asks.chip.late": "late",
+	"mobile.asks.chip.open": "open",
+	"mobile.asks.chip.timed_out": "timed out",
+	"mobile.asks.chip.unknown_label": "Ask {id} is not in this session's list. It may belong to another session or have aged out.",
+	"mobile.asks.chip.withdrawn": "withdrawn",
 	"mobile.asks.choose_any": "Choose any that apply",
 	"mobile.asks.deadline_ago": "Deadline passed {duration} ago",
 	"mobile.asks.decline": "Decline",
@@ -5638,6 +5685,19 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.agent_avatar.label": { role: "button", note: "Accessible name of the agent's profile picture in a conversation header (a decorative picture that is also a button explaining where to change it). A noun phrase, not an action. \"Agent\" is the product term for the AI assistant the conversation runs. No final full stop." },
 	"mobile.asks.answer_label": { role: "help", note: "Accessibility name of the free-text field. {question} is the question text, supplied by the agent and never translated." },
 	"mobile.asks.answer_placeholder": { role: "help", note: "Placeholder of the free-text answer field. No final full stop." },
+	"mobile.asks.chip.answered": { role: "status", note: "One-word state of an ask, shown after its id in a chip inside the agent's prose (states: open, answered, declined, timed out, late, dismissed, withdrawn, expired). Lower case, no final full stop; it labels a status, not a sentence. {id} is the ask's id such as a-745e and is never translated. This one is the word for \"answered\"." },
+	"mobile.asks.chip.copied": { role: "status", note: "Toast confirming an ask id was copied to the clipboard. {id} is the ask id such as a-745e, never translated. No final full stop." },
+	"mobile.asks.chip.copy_label": { role: "button", note: "Accessible name of the copy control beside an ask id, and the hint on long-pressing an ask-id chip. {id} is the ask id such as a-745e, never translated. No final full stop." },
+	"mobile.asks.chip.declined": { role: "status", note: "One-word state of an ask, shown after its id in a chip inside the agent's prose (states: open, answered, declined, timed out, late, dismissed, withdrawn, expired). Lower case, no final full stop; it labels a status, not a sentence. {id} is the ask's id such as a-745e and is never translated. This one is the word for \"declined\"." },
+	"mobile.asks.chip.dismissed": { role: "status", note: "One-word state of an ask, shown after its id in a chip inside the agent's prose (states: open, answered, declined, timed out, late, dismissed, withdrawn, expired). Lower case, no final full stop; it labels a status, not a sentence. {id} is the ask's id such as a-745e and is never translated. This one is the word for \"dismissed\"." },
+	"mobile.asks.chip.expired": { role: "status", note: "One-word state of an ask, shown after its id in a chip inside the agent's prose (states: open, answered, declined, timed out, late, dismissed, withdrawn, expired). Lower case, no final full stop; it labels a status, not a sentence. {id} is the ask's id such as a-745e and is never translated. This one is the word for \"expired\"." },
+	"mobile.asks.chip.label": { role: "help", note: "Accessible name of an ask-id chip in the agent's prose when the session knows the ask. {id} is the id such as a-745e (never translated); {state} is the one-word state already translated; {question} is the first question's own text, copied verbatim. Ends with an instruction to activate the chip." },
+	"mobile.asks.chip.label_bare": { role: "help", note: "Same accessible name as the chip label, for an ask the app knows but whose question text it does not hold. {id} is the ask id, {state} the one-word state. Ends with an instruction to activate the chip." },
+	"mobile.asks.chip.late": { role: "status", note: "One-word state of an ask, shown after its id in a chip inside the agent's prose (states: open, answered, declined, timed out, late, dismissed, withdrawn, expired). Lower case, no final full stop; it labels a status, not a sentence. {id} is the ask's id such as a-745e and is never translated. This one is the word for \"late\"." },
+	"mobile.asks.chip.open": { role: "status", note: "One-word state of an ask, shown after its id in a chip inside the agent's prose (states: open, answered, declined, timed out, late, dismissed, withdrawn, expired). Lower case, no final full stop; it labels a status, not a sentence. {id} is the ask's id such as a-745e and is never translated. This one is the word for \"open\"." },
+	"mobile.asks.chip.timed_out": { role: "status", note: "One-word state of an ask, shown after its id in a chip inside the agent's prose (states: open, answered, declined, timed out, late, dismissed, withdrawn, expired). Lower case, no final full stop; it labels a status, not a sentence. {id} is the ask's id such as a-745e and is never translated. This one is the word for \"timed out\"." },
+	"mobile.asks.chip.unknown_label": { role: "help", note: "Accessible name of an ask id the agent quoted that is NOT in this conversation's ask list (it belongs to another conversation, or has been purged). It is also the sentence shown when such an id is tapped. Two short sentences, final full stops. {id} is the id such as a-745e, never translated." },
+	"mobile.asks.chip.withdrawn": { role: "status", note: "One-word state of an ask, shown after its id in a chip inside the agent's prose (states: open, answered, declined, timed out, late, dismissed, withdrawn, expired). Lower case, no final full stop; it labels a status, not a sentence. {id} is the ask's id such as a-745e and is never translated. This one is the word for \"withdrawn\"." },
 	"mobile.asks.choose_any": { role: "help", note: "Caption above the options of a multi-select question. No final full stop." },
 	"mobile.asks.deadline_ago": { role: "meta", note: "Meta line on an ask whose deadline has passed. {duration} is a compact elapsed time such as \"5 m\" or \"2 h\", supplied by the app; it must survive translation. No final full stop." },
 	"mobile.asks.decline": { role: "button", note: "Danger button beside the send button. Tells the agent no answer is coming and it should decide itself; unlike Dismiss it answers the agent. Verb, sentence case, no final full stop." },
@@ -7109,6 +7169,19 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.agent_avatar.label": "Imagen del agente",
 		"mobile.asks.answer_label": "Tu respuesta a: {question}",
 		"mobile.asks.answer_placeholder": "Tu respuesta",
+		"mobile.asks.chip.answered": "respondida",
+		"mobile.asks.chip.copied": "Copiado {id}",
+		"mobile.asks.chip.copy_label": "Copiar el id de la pregunta {id}",
+		"mobile.asks.chip.declined": "rechazada",
+		"mobile.asks.chip.dismissed": "descartada",
+		"mobile.asks.chip.expired": "caducada",
+		"mobile.asks.chip.label": "Pregunta {id}, {state}: {question}. Activa para mostrarla.",
+		"mobile.asks.chip.label_bare": "Pregunta {id}, {state}. Activa para mostrarla.",
+		"mobile.asks.chip.late": "con retraso",
+		"mobile.asks.chip.open": "abierta",
+		"mobile.asks.chip.timed_out": "plazo agotado",
+		"mobile.asks.chip.unknown_label": "La pregunta {id} no está en la lista de esta sesión. Puede pertenecer a otra sesión o haber caducado.",
+		"mobile.asks.chip.withdrawn": "retirada",
 		"mobile.asks.choose_any": "Elige las que correspondan",
 		"mobile.asks.deadline_ago": "Plazo vencido hace {duration}",
 		"mobile.asks.decline": "Rechazar",
@@ -8564,6 +8637,19 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.agent_avatar.label": "Photo de l’agent",
 		"mobile.asks.answer_label": "Votre réponse à : {question}",
 		"mobile.asks.answer_placeholder": "Votre réponse",
+		"mobile.asks.chip.answered": "répondue",
+		"mobile.asks.chip.copied": "Copié {id}",
+		"mobile.asks.chip.copy_label": "Copier l'identifiant de la question {id}",
+		"mobile.asks.chip.declined": "refusée",
+		"mobile.asks.chip.dismissed": "écartée",
+		"mobile.asks.chip.expired": "expirée",
+		"mobile.asks.chip.label": "Question {id}, {state} : {question}. Activez pour l'afficher.",
+		"mobile.asks.chip.label_bare": "Question {id}, {state}. Activez pour l'afficher.",
+		"mobile.asks.chip.late": "en retard",
+		"mobile.asks.chip.open": "ouverte",
+		"mobile.asks.chip.timed_out": "délai dépassé",
+		"mobile.asks.chip.unknown_label": "La question {id} n'est pas dans la liste de cette session. Elle appartient peut-être à une autre session ou a été purgée.",
+		"mobile.asks.chip.withdrawn": "retirée",
 		"mobile.asks.choose_any": "Choisissez tout ce qui s’applique",
 		"mobile.asks.deadline_ago": "Échéance dépassée depuis {duration}",
 		"mobile.asks.decline": "Refuser",
@@ -10019,6 +10105,19 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.agent_avatar.label": "एजेंट की तस्वीर",
 		"mobile.asks.answer_label": "इस सवाल पर आपका उत्तर: {question}",
 		"mobile.asks.answer_placeholder": "आपका उत्तर",
+		"mobile.asks.chip.answered": "उत्तर दिया गया",
+		"mobile.asks.chip.copied": "कॉपी किया गया {id}",
+		"mobile.asks.chip.copy_label": "प्रश्न आईडी {id} कॉपी करें",
+		"mobile.asks.chip.declined": "अस्वीकृत",
+		"mobile.asks.chip.dismissed": "खारिज",
+		"mobile.asks.chip.expired": "समय सीमा समाप्त",
+		"mobile.asks.chip.label": "प्रश्न {id}, {state}: {question}. दिखाने के लिए सक्रिय करें।",
+		"mobile.asks.chip.label_bare": "प्रश्न {id}, {state}. दिखाने के लिए सक्रिय करें।",
+		"mobile.asks.chip.late": "देर से",
+		"mobile.asks.chip.open": "खुला",
+		"mobile.asks.chip.timed_out": "समय समाप्त",
+		"mobile.asks.chip.unknown_label": "प्रश्न {id} इस सत्र की सूची में नहीं है। हो सकता है यह किसी दूसरे सत्र का हो या पुराना हो चुका हो।",
+		"mobile.asks.chip.withdrawn": "वापस लिया गया",
 		"mobile.asks.choose_any": "जो लागू हों, उन्हें चुनें",
 		"mobile.asks.deadline_ago": "समय-सीमा {duration} पहले बीत गई",
 		"mobile.asks.decline": "अस्वीकार करें",
@@ -11474,6 +11573,19 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.agent_avatar.label": "Изображение агента",
 		"mobile.asks.answer_label": "Ваш ответ на вопрос: {question}",
 		"mobile.asks.answer_placeholder": "Ваш ответ",
+		"mobile.asks.chip.answered": "отвечен",
+		"mobile.asks.chip.copied": "Скопировано {id}",
+		"mobile.asks.chip.copy_label": "Скопировать id вопроса {id}",
+		"mobile.asks.chip.declined": "отклонён",
+		"mobile.asks.chip.dismissed": "снят",
+		"mobile.asks.chip.expired": "истёк срок",
+		"mobile.asks.chip.label": "Вопрос {id}, {state}: {question}. Активируйте, чтобы показать.",
+		"mobile.asks.chip.label_bare": "Вопрос {id}, {state}. Активируйте, чтобы показать.",
+		"mobile.asks.chip.late": "с опозданием",
+		"mobile.asks.chip.open": "открыт",
+		"mobile.asks.chip.timed_out": "время истекло",
+		"mobile.asks.chip.unknown_label": "Вопроса {id} нет в списке этой сессии. Возможно, он относится к другой сессии или устарел.",
+		"mobile.asks.chip.withdrawn": "отозван",
 		"mobile.asks.choose_any": "Выберите все подходящие",
 		"mobile.asks.deadline_ago": "Срок истёк {duration} назад",
 		"mobile.asks.decline": "Отклонить",
@@ -12929,6 +13041,19 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.agent_avatar.label": "ایجنٹ کی تصویر",
 		"mobile.asks.answer_label": "اس سوال پر آپ کا جواب: {question}",
 		"mobile.asks.answer_placeholder": "آپ کا جواب",
+		"mobile.asks.chip.answered": "جواب دیا گیا",
+		"mobile.asks.chip.copied": "نقل ہو گیا {id}",
+		"mobile.asks.chip.copy_label": "سوال کی شناخت {id} نقل کریں",
+		"mobile.asks.chip.declined": "مسترد",
+		"mobile.asks.chip.dismissed": "نظر انداز",
+		"mobile.asks.chip.expired": "میعاد ختم",
+		"mobile.asks.chip.label": "سوال {id}، {state}: {question}۔ دکھانے کے لیے فعال کریں۔",
+		"mobile.asks.chip.label_bare": "سوال {id}، {state}۔ دکھانے کے لیے فعال کریں۔",
+		"mobile.asks.chip.late": "تاخیر سے",
+		"mobile.asks.chip.open": "کھلا",
+		"mobile.asks.chip.timed_out": "وقت ختم",
+		"mobile.asks.chip.unknown_label": "سوال {id} اس سیشن کی فہرست میں نہیں ہے۔ یہ کسی دوسرے سیشن کا ہو سکتا ہے یا پرانا ہو چکا ہے۔",
+		"mobile.asks.chip.withdrawn": "واپس لیا گیا",
 		"mobile.asks.choose_any": "جو بھی لاگو ہوں، منتخب کریں",
 		"mobile.asks.deadline_ago": "مقررہ وقت کو گزرے {duration} ہو گئے",
 		"mobile.asks.decline": "انکار کریں",
@@ -14384,6 +14509,19 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.agent_avatar.label": "Ảnh của tác nhân",
 		"mobile.asks.answer_label": "Câu trả lời của bạn cho: {question}",
 		"mobile.asks.answer_placeholder": "Câu trả lời của bạn",
+		"mobile.asks.chip.answered": "đã trả lời",
+		"mobile.asks.chip.copied": "Đã sao chép {id}",
+		"mobile.asks.chip.copy_label": "Sao chép id câu hỏi {id}",
+		"mobile.asks.chip.declined": "đã từ chối",
+		"mobile.asks.chip.dismissed": "đã bỏ qua",
+		"mobile.asks.chip.expired": "đã hết hạn",
+		"mobile.asks.chip.label": "Câu hỏi {id}, {state}: {question}. Kích hoạt để xem.",
+		"mobile.asks.chip.label_bare": "Câu hỏi {id}, {state}. Kích hoạt để xem.",
+		"mobile.asks.chip.late": "trả lời muộn",
+		"mobile.asks.chip.open": "đang mở",
+		"mobile.asks.chip.timed_out": "quá hạn",
+		"mobile.asks.chip.unknown_label": "Câu hỏi {id} không có trong danh sách của phiên này. Có thể nó thuộc phiên khác hoặc đã bị loại bỏ.",
+		"mobile.asks.chip.withdrawn": "đã rút lại",
 		"mobile.asks.choose_any": "Chọn tất cả mục phù hợp",
 		"mobile.asks.deadline_ago": "Đã quá hạn cách đây {duration}",
 		"mobile.asks.decline": "Từ chối",
@@ -15839,6 +15977,19 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.agent_avatar.label": "智能体头像",
 		"mobile.asks.answer_label": "你对此问题的回答：{question}",
 		"mobile.asks.answer_placeholder": "你的回答",
+		"mobile.asks.chip.answered": "已回答",
+		"mobile.asks.chip.copied": "已复制 {id}",
+		"mobile.asks.chip.copy_label": "复制问题 ID {id}",
+		"mobile.asks.chip.declined": "已拒绝",
+		"mobile.asks.chip.dismissed": "已忽略",
+		"mobile.asks.chip.expired": "已过期",
+		"mobile.asks.chip.label": "问题 {id}，{state}：{question}。激活以显示。",
+		"mobile.asks.chip.label_bare": "问题 {id}，{state}。激活以显示。",
+		"mobile.asks.chip.late": "迟答",
+		"mobile.asks.chip.open": "待回答",
+		"mobile.asks.chip.timed_out": "已超时",
+		"mobile.asks.chip.unknown_label": "问题 {id} 不在本次会话的列表中。它可能属于另一个会话，或已被清理。",
+		"mobile.asks.chip.withdrawn": "已撤回",
 		"mobile.asks.choose_any": "可多选",
 		"mobile.asks.deadline_ago": "已超过截止时间 {duration}",
 		"mobile.asks.decline": "拒绝",

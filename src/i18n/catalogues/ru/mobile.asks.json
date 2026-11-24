@@ -35,5 +35,18 @@
 	"mobile.asks.none_recorded": "Для этого вопроса ответ не записан.",
 	"mobile.asks.recommended": "· Рекомендовано",
 	"mobile.asks.urgent": "· Срочно",
-	"mobile.asks.deadline_ago": "Срок истёк {duration} назад"
+	"mobile.asks.deadline_ago": "Срок истёк {duration} назад",
+	"mobile.asks.chip.open": "открыт",
+	"mobile.asks.chip.answered": "отвечен",
+	"mobile.asks.chip.declined": "отклонён",
+	"mobile.asks.chip.timed_out": "время истекло",
+	"mobile.asks.chip.late": "с опозданием",
+	"mobile.asks.chip.dismissed": "снят",
+	"mobile.asks.chip.withdrawn": "отозван",
+	"mobile.asks.chip.expired": "истёк срок",
+	"mobile.asks.chip.label": "Вопрос {id}, {state}: {question}. Активируйте, чтобы показать.",
+	"mobile.asks.chip.label_bare": "Вопрос {id}, {state}. Активируйте, чтобы показать.",
+	"mobile.asks.chip.unknown_label": "Вопроса {id} нет в списке этой сессии. Возможно, он относится к другой сессии или устарел.",
+	"mobile.asks.chip.copy_label": "Скопировать id вопроса {id}",
+	"mobile.asks.chip.copied": "Скопировано {id}"
 }

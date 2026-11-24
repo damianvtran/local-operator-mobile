@@ -3,6 +3,10 @@ import { createRoot } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { TranscriptEntry } from "@/contracts";
+import {
+	AskChipDrawnContext,
+	AskChipHostContext,
+} from "@/features/session/ask-chip-host";
 import type { AssistantPart } from "@/features/session/inline-ui-parts";
 import { useStreamArrival } from "@/features/session/stream-arrival";
 import { installDomShim } from "@/testing/dom-shim";
@@ -889,5 +893,64 @@ describe("iOS VoiceOver reach inside a selectable answer", () => {
 			);
 			expect(markup).not.toContain("data-actions=");
 		}
+	});
+});
+
+describe("ask-id chips inside the real markdown tree (PR #387 round 1, m5)", () => {
+	/* The parser's rules are `ask-chip.test.ts`'s; what a source grep cannot see is
+	 *  whether the REAL renderer reaches a chip through each inline shape a
+	 *  sentence and a table give it. */
+	const chipMarkup = (text: string) =>
+		renderToStaticMarkup(
+			createElement(
+				AskChipDrawnContext.Provider,
+				{ value: true },
+				createElement(
+					AskChipHostContext.Provider,
+					{
+						value: {
+							facts: new Map([
+								["a-745e", { status: "open", question: "Ship it?" }],
+								["a-e53b", { status: "withdrawn", question: "" }],
+							]),
+							open: () => {},
+						},
+					},
+					createElement(Markdown, { text }),
+				),
+			),
+		);
+
+	it("chips an id in prose, in bold, in a code span and in a table cell", () => {
+		const markup = chipMarkup(
+			[
+				"Prose a-745e here.",
+				"",
+				"**Bold a-e53b**",
+				"",
+				"`a-745e`",
+				"",
+				"| ask | state |",
+				"| --- | --- |",
+				"| a-e53b | withdrawn |",
+			].join("\n"),
+		);
+		expect(markup.match(/data-testid="ask-chip-a-745e"/g) ?? []).toHaveLength(
+			2,
+		);
+		expect(markup.match(/data-testid="ask-chip-a-e53b"/g) ?? []).toHaveLength(
+			2,
+		);
+	});
+
+	it("leaves a URL, a file name and a link label literal", () => {
+		const markup = chipMarkup(
+			[
+				"https://x/a-745e logs/a-e53b a-745e.json",
+				"",
+				"[a-745e](https://example.com)",
+			].join("\n"),
+		);
+		expect(markup).not.toContain("ask-chip-a-745e");
 	});
 });

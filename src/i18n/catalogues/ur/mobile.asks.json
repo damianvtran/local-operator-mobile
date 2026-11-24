@@ -35,5 +35,18 @@
 	"mobile.asks.none_recorded": "اس سوال کا کوئی جواب درج نہیں ہوا۔",
 	"mobile.asks.recommended": "· تجویز کردہ",
 	"mobile.asks.urgent": "· فوری",
-	"mobile.asks.deadline_ago": "مقررہ وقت کو گزرے {duration} ہو گئے"
+	"mobile.asks.deadline_ago": "مقررہ وقت کو گزرے {duration} ہو گئے",
+	"mobile.asks.chip.open": "کھلا",
+	"mobile.asks.chip.answered": "جواب دیا گیا",
+	"mobile.asks.chip.declined": "مسترد",
+	"mobile.asks.chip.timed_out": "وقت ختم",
+	"mobile.asks.chip.late": "تاخیر سے",
+	"mobile.asks.chip.dismissed": "نظر انداز",
+	"mobile.asks.chip.withdrawn": "واپس لیا گیا",
+	"mobile.asks.chip.expired": "میعاد ختم",
+	"mobile.asks.chip.label": "سوال {id}، {state}: {question}۔ دکھانے کے لیے فعال کریں۔",
+	"mobile.asks.chip.label_bare": "سوال {id}، {state}۔ دکھانے کے لیے فعال کریں۔",
+	"mobile.asks.chip.unknown_label": "سوال {id} اس سیشن کی فہرست میں نہیں ہے۔ یہ کسی دوسرے سیشن کا ہو سکتا ہے یا پرانا ہو چکا ہے۔",
+	"mobile.asks.chip.copy_label": "سوال کی شناخت {id} نقل کریں",
+	"mobile.asks.chip.copied": "نقل ہو گیا {id}"
 }

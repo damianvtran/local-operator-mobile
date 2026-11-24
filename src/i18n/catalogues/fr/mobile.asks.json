@@ -35,5 +35,18 @@
 	"mobile.asks.none_recorded": "Aucune réponse n’a été enregistrée pour cette question.",
 	"mobile.asks.recommended": "· Recommandé",
 	"mobile.asks.urgent": "· Urgent",
-	"mobile.asks.deadline_ago": "Échéance dépassée depuis {duration}"
+	"mobile.asks.deadline_ago": "Échéance dépassée depuis {duration}",
+	"mobile.asks.chip.open": "ouverte",
+	"mobile.asks.chip.answered": "répondue",
+	"mobile.asks.chip.declined": "refusée",
+	"mobile.asks.chip.timed_out": "délai dépassé",
+	"mobile.asks.chip.late": "en retard",
+	"mobile.asks.chip.dismissed": "écartée",
+	"mobile.asks.chip.withdrawn": "retirée",
+	"mobile.asks.chip.expired": "expirée",
+	"mobile.asks.chip.label": "Question {id}, {state} : {question}. Activez pour l'afficher.",
+	"mobile.asks.chip.label_bare": "Question {id}, {state}. Activez pour l'afficher.",
+	"mobile.asks.chip.unknown_label": "La question {id} n'est pas dans la liste de cette session. Elle appartient peut-être à une autre session ou a été purgée.",
+	"mobile.asks.chip.copy_label": "Copier l'identifiant de la question {id}",
+	"mobile.asks.chip.copied": "Copié {id}"
 }

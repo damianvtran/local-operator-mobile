@@ -35,5 +35,18 @@
 	"mobile.asks.none_recorded": "此问题没有记录到回答。",
 	"mobile.asks.recommended": "· 推荐",
 	"mobile.asks.urgent": "· 紧急",
-	"mobile.asks.deadline_ago": "已超过截止时间 {duration}"
+	"mobile.asks.deadline_ago": "已超过截止时间 {duration}",
+	"mobile.asks.chip.open": "待回答",
+	"mobile.asks.chip.answered": "已回答",
+	"mobile.asks.chip.declined": "已拒绝",
+	"mobile.asks.chip.timed_out": "已超时",
+	"mobile.asks.chip.late": "迟答",
+	"mobile.asks.chip.dismissed": "已忽略",
+	"mobile.asks.chip.withdrawn": "已撤回",
+	"mobile.asks.chip.expired": "已过期",
+	"mobile.asks.chip.label": "问题 {id}，{state}：{question}。激活以显示。",
+	"mobile.asks.chip.label_bare": "问题 {id}，{state}。激活以显示。",
+	"mobile.asks.chip.unknown_label": "问题 {id} 不在本次会话的列表中。它可能属于另一个会话，或已被清理。",
+	"mobile.asks.chip.copy_label": "复制问题 ID {id}",
+	"mobile.asks.chip.copied": "已复制 {id}"
 }
