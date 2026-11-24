@@ -1,0 +1,184 @@
+Independent dependency-free Python audit; no repository tests/builds.
+Attempt 1 command: python3 /Users/damian/.local-operator/sessions/e5caed1bcb4e/scratchpad/check-fr-move-pick-audit.py (initial broad marker assertion)
+INPUT_SHA256 brief 5a72dfd72dc820b1fa8e73d78b97807581572334ee0fd25eb2eab346e759ebca
+INPUT_SHA256 draft 8db8ff0bdac7c4691240fa7d82bb8e275a39ad85dd79a0ba1d2da405888a098c
+INPUT_SHA256 translator_verification c48dd24d2b73b276967df6e90f5ec1e33b70065632aba73e0738ee0d57e1c723
+INPUT_SHA256 translator_notes 47d24aeafecb1ad0e3b13d2fe8b5b800da00369d9333e78baa4c5fbfc25da7de
+INPUT_SHA256 schema_reference 0a38f3c7ed2c875a3259195c8b29b6bac1dd62efcd559fd8ab208011cbafaa51
+INPUT_SHA256 english 436f8ec3bda274431146e7e7cb82b2add418f598bd2a7a6d7426f561a4312984
+INPUT_SHA256 context c703dff07b634d3d2d4b7c789e6a4a1eecf192a57618ea8e9e72197d325d08eb
+INPUT_SHA256 usage 6a3f7126eb2fefc5ad0138a1731e3898d66d333ea8ca1b4ac99321da18d495aa
+INPUT_SHA256 fr_existing 97c041855132c488e20dfa7f398e1e9c910469d2707fcfa3a1da4df9a30cdba4
+INPUT_SHA256 fr_sidebar 64389128f141bfa8394ab1fcd3db6c4c525f78bf0a86a6e2fd9e2df972fcb119
+INPUT_SHA256 fr_style_reference ae1519ab7617d19aa826918d607de1d018595094166edbc18aa58f6a8f0a4226
+INPUT_SHA256 glossary_reference 0eb34437a8c3d6f564f278ef957a603b1d9f51bb07d5ddae5ea8f37deba962f8
+INPUT_SHA256 core_guidance c8c66d86f7603dd4cfbcfc9beb887b369450004f3d9695a7d6e91e0fd58dba44
+INPUT_SHA256 mobile_guidance 84021f7c9df58bfe01376669c187cbdf777c680d918f9f001201faeae2a14ad7
+SOURCE_HEAD 9362cce8a631791b676b2d2c9eda90c43fc7e11c
+FROZEN_HASH_MATCH PASS
+KEY_SET_AND_ORDER PASS 7/7
+NEGATIVE_CONTROL rejected '{device'
+NEGATIVE_CONTROL rejected '{device}}'
+NEGATIVE_CONTROL rejected '{{device}'
+KEY_PASS mobile.remote_sessions.move_pick.cannot_reach en_codepoints 20 fr_codepoints 24 ratio 1.2 tokens ['{device}']
+PSEUDO_NONRENDERED mobile.remote_sessions.move_pick.cannot_reach "⟦{device} est injoignable ~~~~~~~~~⟧" codepoints 36
+VERBATIM_SUBSTITUTION_ONLY "Damian’s MacBook Pro est injoignable"
+VERBATIM_SUBSTITUTION_ONLY "東京 workstation est injoignable"
+VERBATIM_SUBSTITUTION_ONLY "جهاز اختبار est injoignable"
+KEY_PASS mobile.remote_sessions.move_pick.destination_heading en_codepoints 15 fr_codepoints 23 ratio 1.5333 tokens []
+PSEUDO_NONRENDERED mobile.remote_sessions.move_pick.destination_heading "⟦Déplacer ou copier vers ~~~~~~~~~⟧" codepoints 35
+KEY_PASS mobile.remote_sessions.move_pick.discovery_help en_codepoints 178 fr_codepoints 245 ratio 1.3764 tokens []
+PSEUDO_NONRENDERED mobile.remote_sessions.move_pick.discovery_help "⟦Seuls les appareils associés aux sessions visibles sont proposés. Un appareil sans session visible ne peut pas encore être sélectionné. Ouvrez Local Operator sur l’autre ordinateur, puis tirez la liste des sessions vers le bas pour l’actualiser. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~⟧" codepoints 334
+KEY_PASS mobile.remote_sessions.move_pick.no_answer en_codepoints 43 fr_codepoints 50 ratio 1.1628 tokens []
+PSEUDO_NONRENDERED mobile.remote_sessions.move_pick.no_answer "⟦Il n’a pas répondu à la demande de cet ordinateur. ~~~~~~~~~~~~~~~~~~⟧" codepoints 71
+KEY_PASS mobile.remote_sessions.move_pick.no_devices en_codepoints 29 fr_codepoints 35 ratio 1.2069 tokens []
+PSEUDO_NONRENDERED mobile.remote_sessions.move_pick.no_devices "⟦Aucun autre appareil n’est visible. ~~~~~~~~~~~~~⟧" codepoints 51
+KEY_PASS mobile.remote_sessions.move_pick.on_this_computer en_codepoints 16 fr_codepoints 18 ratio 1.125 tokens []
+PSEUDO_NONRENDERED mobile.remote_sessions.move_pick.on_this_computer "⟦Sur cet ordinateur ~~~~~~~⟧" codepoints 28
+KEY_PASS mobile.remote_sessions.move_pick.right_now en_codepoints 9 fr_codepoints 12 ratio 1.3333 tokens []
+PSEUDO_NONRENDERED mobile.remote_sessions.move_pick.right_now "⟦Actuellement ~~~~~⟧" codepoints 20
+CLDR_PLURAL N/A: all seven simple messages; no plural/select/count/skeleton/markup structures
+EXPLICIT_REDACTION_MARKERS brief 0
+EXPLICIT_REDACTION_MARKERS draft 8
+EXPLICIT_REDACTION_MARKERS translator_verification 0
+EXPLICIT_REDACTION_MARKERS translator_notes 0
+EXPLICIT_REDACTION_MARKERS schema_reference 0
+EXPLICIT_REDACTION_MARKERS english 0
+EXPLICIT_REDACTION_MARKERS context 0
+EXPLICIT_REDACTION_MARKERS usage 0
+EXPLICIT_REDACTION_MARKERS fr_existing 0
+EXPLICIT_REDACTION_MARKERS fr_sidebar 0
+EXPLICIT_REDACTION_MARKERS fr_style_reference 0
+EXPLICIT_REDACTION_MARKERS glossary_reference 0
+EXPLICIT_REDACTION_MARKERS core_guidance 0
+EXPLICIT_REDACTION_MARKERS mobile_guidance 0
+Traceback (most recent call last):
+  File "/Users/damian/.local-operator/sessions/e5caed1bcb4e/scratchpad/check-fr-move-pick-audit.py", line 44, in <module>
+    assert total==0; print('REDACTION_INPUT_HITS',total)
+           ^^^^^^^^
+AssertionError
+
+Exit: 1
+Correction: inspected all 8 raw matches; all are scanner-regex/example metadata in draft.redaction_marker_scan, not copy. Final script separates raw-file literal counts from copy-payload counts.
+Final command: python3 /Users/damian/.local-operator/sessions/e5caed1bcb4e/scratchpad/check-fr-move-pick-audit.py
+Final script SHA256: 46f3dac6169d652b7d9aed9b5cba39c768183daceab58d3ffe1d2f0811b8ca4b
+--- Final script ---
+from pathlib import Path
+import json,hashlib,re,unicodedata,subprocess,math
+paths={'brief': '/Users/damian/.local-operator/sessions/ca8720609fc7/scratchpad/translation-brief.json', 'draft': '/Users/damian/.local-operator/sessions/3e5cf4a65579/scratchpad/draft-fr.json', 'translator_verification': '/Users/damian/.local-operator/sessions/3e5cf4a65579/scratchpad/verification-fr.json', 'translator_notes': '/Users/damian/.local-operator/sessions/3e5cf4a65579/scratchpad/notes-fr.md', 'schema_reference': '/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/i18n/audits/evidence/fr/mobile.sidebar/ondev-fr-cf2fe6/record.json', 'english': '/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/i18n/catalogues/en/mobile.remote_sessions.json', 'context': '/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/i18n/catalogues/en/mobile.remote_sessions.context.json', 'usage': '/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/features/sessions/move-sheet.tsx', 'fr_existing': '/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/i18n/catalogues/fr/mobile.remote_sessions.json', 'fr_sidebar': '/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/i18n/catalogues/fr/mobile.sidebar.json', 'fr_style_reference': '/Users/damian/local-operator/i18n/style-guides/fr.md', 'glossary_reference': '/Users/damian/local-operator/i18n/glossary.md', 'core_guidance': '/Users/damian/local-operator/AGENTS.md', 'mobile_guidance': '/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/AGENTS.md'}
+expected={'brief': {'path': '/Users/damian/.local-operator/sessions/ca8720609fc7/scratchpad/translation-brief.json', 'sha256': '5a72dfd72dc820b1fa8e73d78b97807581572334ee0fd25eb2eab346e759ebca'}, 'draft': {'path': '/Users/damian/.local-operator/sessions/3e5cf4a65579/scratchpad/draft-fr.json', 'sha256': '8db8ff0bdac7c4691240fa7d82bb8e275a39ad85dd79a0ba1d2da405888a098c'}, 'translator_verification': {'path': '/Users/damian/.local-operator/sessions/3e5cf4a65579/scratchpad/verification-fr.json', 'sha256': 'c48dd24d2b73b276967df6e90f5ec1e33b70065632aba73e0738ee0d57e1c723'}, 'translator_notes': {'path': '/Users/damian/.local-operator/sessions/3e5cf4a65579/scratchpad/notes-fr.md', 'sha256': '47d24aeafecb1ad0e3b13d2fe8b5b800da00369d9333e78baa4c5fbfc25da7de'}, 'schema_reference': {'path': '/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/i18n/audits/evidence/fr/mobile.sidebar/ondev-fr-cf2fe6/record.json', 'sha256': '0a38f3c7ed2c875a3259195c8b29b6bac1dd62efcd559fd8ab208011cbafaa51'}, 'english': {'path': '/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/i18n/catalogues/en/mobile.remote_sessions.json', 'sha256': '436f8ec3bda274431146e7e7cb82b2add418f598bd2a7a6d7426f561a4312984'}, 'context': {'path': '/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/i18n/catalogues/en/mobile.remote_sessions.context.json', 'sha256': 'c703dff07b634d3d2d4b7c789e6a4a1eecf192a57618ea8e9e72197d325d08eb'}, 'usage': {'path': '/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/features/sessions/move-sheet.tsx', 'sha256': '6a3f7126eb2fefc5ad0138a1731e3898d66d333ea8ca1b4ac99321da18d495aa'}, 'fr_existing': {'path': '/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/i18n/catalogues/fr/mobile.remote_sessions.json', 'sha256': '97c041855132c488e20dfa7f398e1e9c910469d2707fcfa3a1da4df9a30cdba4'}, 'fr_sidebar': {'path': '/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/i18n/catalogues/fr/mobile.sidebar.json', 'sha256': '64389128f141bfa8394ab1fcd3db6c4c525f78bf0a86a6e2fd9e2df972fcb119'}, 'fr_style_reference': {'path': '/Users/damian/local-operator/i18n/style-guides/fr.md', 'sha256': 'ae1519ab7617d19aa826918d607de1d018595094166edbc18aa58f6a8f0a4226'}, 'glossary_reference': {'path': '/Users/damian/local-operator/i18n/glossary.md', 'sha256': '0eb34437a8c3d6f564f278ef957a603b1d9f51bb07d5ddae5ea8f37deba962f8'}, 'core_guidance': {'path': '/Users/damian/local-operator/AGENTS.md', 'sha256': 'c8c66d86f7603dd4cfbcfc9beb887b369450004f3d9695a7d6e91e0fd58dba44'}, 'mobile_guidance': {'path': '/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/AGENTS.md', 'sha256': '84021f7c9df58bfe01376669c187cbdf777c680d918f9f001201faeae2a14ad7'}}
+sha=lambda p:hashlib.sha256(Path(p).read_bytes()).hexdigest()
+for name,p in paths.items():
+ h=sha(p); assert h==expected[name]['sha256']; print('INPUT_SHA256',name,h)
+b=json.loads(Path(paths['brief']).read_text()); d=json.loads(Path(paths['draft']).read_text()); e=json.loads(Path(paths['english']).read_text()); c=json.loads(Path(paths['context']).read_text())
+head=subprocess.check_output(['git','-C',str(Path(paths['english']).parents[4]),'rev-parse','HEAD'],text=True).strip()
+assert head==b['source_sha']; print('SOURCE_HEAD',head)
+assert sha(paths['brief'])=='5a72dfd72dc820b1fa8e73d78b97807581572334ee0fd25eb2eab346e759ebca'
+assert sha(paths['draft'])=='8db8ff0bdac7c4691240fa7d82bb8e275a39ad85dd79a0ba1d2da405888a098c'
+for rel,v in b['authoring_files'].items():
+ p=Path(paths['english']).parents[4]/rel
+ assert sha(p)==v['sha256']
+print('FROZEN_HASH_MATCH PASS')
+keys=[r['key'] for r in b['keys']]; assert list(d['values'])==keys and len(keys)==7
+print('KEY_SET_AND_ORDER PASS 7/7')
+def tokens(s):
+ ts=re.findall(r'\{[A-Za-z_][A-Za-z_0-9]*\}',s)
+ rest=re.sub(r'\{[A-Za-z_][A-Za-z_0-9]*\}','',s)
+ assert '{' not in rest and '}' not in rest,'invalid simple-message braces'
+ return sorted(ts)
+for bad in ['{device','{device}}','{{device}']:
+ try:tokens(bad)
+ except AssertionError:print('NEGATIVE_CONTROL rejected',repr(bad))
+ else:raise AssertionError('negative control accepted')
+for row in b['keys']:
+ k=row['key']; s=d['values'][k]; assert e[k]==row['english']; assert c[k]==row['context']; assert tokens(s)==tokens(e[k]); assert tokens(s)==(['{device}'] if k.endswith('cannot_reach') else []); assert unicodedata.normalize('NFC',s)==s
+ assert not re.search('[\u061c\u200e\u200f\u202a-\u202e\u2066-\u2069]',s)
+ assert not re.search('[\u0600-\u06ff\u0750-\u077f\u08a0-\u08ff]',s)
+ print('KEY_PASS',k,'en_codepoints',len(e[k]),'fr_codepoints',len(s),'ratio',round(len(s)/len(e[k]),4),'tokens',tokens(s))
+ pseudo='⟦'+re.sub(r'[^{}]+',lambda m:m.group(0),s)+' '+'~'*math.ceil(len(s)*.35)+'⟧'
+ assert tokens(pseudo)==tokens(s)
+ print('PSEUDO_NONRENDERED',k,json.dumps(pseudo,ensure_ascii=False),'codepoints',len(pseudo))
+ if k.endswith('cannot_reach'):
+  for device in ['Damian’s MacBook Pro','東京 workstation','جهاز اختبار']:
+   rendered=s.replace('{device}',device); assert device in rendered; print('VERBATIM_SUBSTITUTION_ONLY',json.dumps(rendered,ensure_ascii=False))
+print('CLDR_PLURAL N/A: all seven simple messages; no plural/select/count/skeleton/markup structures')
+pattern=re.compile(r'\[(?:REDACTED|REDACTION|MASKED)(?:[^\]\r\n]*)\]|<(?:REDACTED|MASKED)(?:[^>\r\n]*)>|__REDACTED__|\*\*\*REDACTED\*\*\*',re.I)
+total=0
+for name,p in paths.items():
+ count=len(pattern.findall(Path(p).read_text())); total+=count; print('EXPLICIT_REDACTION_MARKERS',name,count)
+print('RAW_INPUT_MARKER_LITERAL_HITS',total,'includes scanner-pattern metadata, not redacted copy')
+payloads={'brief_copy':json.dumps({'keys':b['keys'],'glossary':b['existing_translation_glossary_examples']},ensure_ascii=False),'draft_values':json.dumps(d['values'],ensure_ascii=False),'english':Path(paths['english']).read_text(),'context':Path(paths['context']).read_text()}
+copy_total=0
+for name,text in payloads.items():
+ count=len(pattern.findall(text));copy_total+=count;print('COPY_INPUT_REDACTION_MARKERS',name,count)
+assert copy_total==0;print('COPY_INPUT_REDACTION_HITS',copy_total)
+print('ROUTE ordinary approved file/git reads; nested context JSON; NO keyed/public-copy receipt')
+print('LIMITATION dependency-free syntax/substitution/source measurements only; NO repo parser/runtime/native/browser/fit proof')
+print('CHECK_RESULT PASS')
+
+--- Actual final stdout ---
+INPUT_SHA256 brief 5a72dfd72dc820b1fa8e73d78b97807581572334ee0fd25eb2eab346e759ebca
+INPUT_SHA256 draft 8db8ff0bdac7c4691240fa7d82bb8e275a39ad85dd79a0ba1d2da405888a098c
+INPUT_SHA256 translator_verification c48dd24d2b73b276967df6e90f5ec1e33b70065632aba73e0738ee0d57e1c723
+INPUT_SHA256 translator_notes 47d24aeafecb1ad0e3b13d2fe8b5b800da00369d9333e78baa4c5fbfc25da7de
+INPUT_SHA256 schema_reference 0a38f3c7ed2c875a3259195c8b29b6bac1dd62efcd559fd8ab208011cbafaa51
+INPUT_SHA256 english 436f8ec3bda274431146e7e7cb82b2add418f598bd2a7a6d7426f561a4312984
+INPUT_SHA256 context c703dff07b634d3d2d4b7c789e6a4a1eecf192a57618ea8e9e72197d325d08eb
+INPUT_SHA256 usage 6a3f7126eb2fefc5ad0138a1731e3898d66d333ea8ca1b4ac99321da18d495aa
+INPUT_SHA256 fr_existing 97c041855132c488e20dfa7f398e1e9c910469d2707fcfa3a1da4df9a30cdba4
+INPUT_SHA256 fr_sidebar 64389128f141bfa8394ab1fcd3db6c4c525f78bf0a86a6e2fd9e2df972fcb119
+INPUT_SHA256 fr_style_reference ae1519ab7617d19aa826918d607de1d018595094166edbc18aa58f6a8f0a4226
+INPUT_SHA256 glossary_reference 0eb34437a8c3d6f564f278ef957a603b1d9f51bb07d5ddae5ea8f37deba962f8
+INPUT_SHA256 core_guidance c8c66d86f7603dd4cfbcfc9beb887b369450004f3d9695a7d6e91e0fd58dba44
+INPUT_SHA256 mobile_guidance 84021f7c9df58bfe01376669c187cbdf777c680d918f9f001201faeae2a14ad7
+SOURCE_HEAD 9362cce8a631791b676b2d2c9eda90c43fc7e11c
+FROZEN_HASH_MATCH PASS
+KEY_SET_AND_ORDER PASS 7/7
+NEGATIVE_CONTROL rejected '{device'
+NEGATIVE_CONTROL rejected '{device}}'
+NEGATIVE_CONTROL rejected '{{device}'
+KEY_PASS mobile.remote_sessions.move_pick.cannot_reach en_codepoints 20 fr_codepoints 24 ratio 1.2 tokens ['{device}']
+PSEUDO_NONRENDERED mobile.remote_sessions.move_pick.cannot_reach "⟦{device} est injoignable ~~~~~~~~~⟧" codepoints 36
+VERBATIM_SUBSTITUTION_ONLY "Damian’s MacBook Pro est injoignable"
+VERBATIM_SUBSTITUTION_ONLY "東京 workstation est injoignable"
+VERBATIM_SUBSTITUTION_ONLY "جهاز اختبار est injoignable"
+KEY_PASS mobile.remote_sessions.move_pick.destination_heading en_codepoints 15 fr_codepoints 23 ratio 1.5333 tokens []
+PSEUDO_NONRENDERED mobile.remote_sessions.move_pick.destination_heading "⟦Déplacer ou copier vers ~~~~~~~~~⟧" codepoints 35
+KEY_PASS mobile.remote_sessions.move_pick.discovery_help en_codepoints 178 fr_codepoints 245 ratio 1.3764 tokens []
+PSEUDO_NONRENDERED mobile.remote_sessions.move_pick.discovery_help "⟦Seuls les appareils associés aux sessions visibles sont proposés. Un appareil sans session visible ne peut pas encore être sélectionné. Ouvrez Local Operator sur l’autre ordinateur, puis tirez la liste des sessions vers le bas pour l’actualiser. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~⟧" codepoints 334
+KEY_PASS mobile.remote_sessions.move_pick.no_answer en_codepoints 43 fr_codepoints 50 ratio 1.1628 tokens []
+PSEUDO_NONRENDERED mobile.remote_sessions.move_pick.no_answer "⟦Il n’a pas répondu à la demande de cet ordinateur. ~~~~~~~~~~~~~~~~~~⟧" codepoints 71
+KEY_PASS mobile.remote_sessions.move_pick.no_devices en_codepoints 29 fr_codepoints 35 ratio 1.2069 tokens []
+PSEUDO_NONRENDERED mobile.remote_sessions.move_pick.no_devices "⟦Aucun autre appareil n’est visible. ~~~~~~~~~~~~~⟧" codepoints 51
+KEY_PASS mobile.remote_sessions.move_pick.on_this_computer en_codepoints 16 fr_codepoints 18 ratio 1.125 tokens []
+PSEUDO_NONRENDERED mobile.remote_sessions.move_pick.on_this_computer "⟦Sur cet ordinateur ~~~~~~~⟧" codepoints 28
+KEY_PASS mobile.remote_sessions.move_pick.right_now en_codepoints 9 fr_codepoints 12 ratio 1.3333 tokens []
+PSEUDO_NONRENDERED mobile.remote_sessions.move_pick.right_now "⟦Actuellement ~~~~~⟧" codepoints 20
+CLDR_PLURAL N/A: all seven simple messages; no plural/select/count/skeleton/markup structures
+EXPLICIT_REDACTION_MARKERS brief 0
+EXPLICIT_REDACTION_MARKERS draft 8
+EXPLICIT_REDACTION_MARKERS translator_verification 0
+EXPLICIT_REDACTION_MARKERS translator_notes 0
+EXPLICIT_REDACTION_MARKERS schema_reference 0
+EXPLICIT_REDACTION_MARKERS english 0
+EXPLICIT_REDACTION_MARKERS context 0
+EXPLICIT_REDACTION_MARKERS usage 0
+EXPLICIT_REDACTION_MARKERS fr_existing 0
+EXPLICIT_REDACTION_MARKERS fr_sidebar 0
+EXPLICIT_REDACTION_MARKERS fr_style_reference 0
+EXPLICIT_REDACTION_MARKERS glossary_reference 0
+EXPLICIT_REDACTION_MARKERS core_guidance 0
+EXPLICIT_REDACTION_MARKERS mobile_guidance 0
+RAW_INPUT_MARKER_LITERAL_HITS 8 includes scanner-pattern metadata, not redacted copy
+COPY_INPUT_REDACTION_MARKERS brief_copy 0
+COPY_INPUT_REDACTION_MARKERS draft_values 0
+COPY_INPUT_REDACTION_MARKERS english 0
+COPY_INPUT_REDACTION_MARKERS context 0
+COPY_INPUT_REDACTION_HITS 0
+ROUTE ordinary approved file/git reads; nested context JSON; NO keyed/public-copy receipt
+LIMITATION dependency-free syntax/substitution/source measurements only; NO repo parser/runtime/native/browser/fit proof
+CHECK_RESULT PASS
+
+--- Actual final stderr ---
+
+Exit: 0

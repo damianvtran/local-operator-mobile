@@ -1,0 +1,1312 @@
+{
+  "record_kind": "i18n-audit",
+  "audit_id": "move-pick-ur-3ebdc948-r1-a",
+  "slice": "move-picker-seven-keys",
+  "locale": "ur",
+  "namespace": "mobile.remote_sessions",
+  "audit_date": "2026-11-22",
+  "round": 1,
+  "audit_role": "independent A; Urdu last/separate",
+  "key_count": 7,
+  "keys_audited": [
+    "mobile.remote_sessions.move_pick.cannot_reach",
+    "mobile.remote_sessions.move_pick.destination_heading",
+    "mobile.remote_sessions.move_pick.discovery_help",
+    "mobile.remote_sessions.move_pick.no_answer",
+    "mobile.remote_sessions.move_pick.no_devices",
+    "mobile.remote_sessions.move_pick.on_this_computer",
+    "mobile.remote_sessions.move_pick.right_now"
+  ],
+  "translator_session": "bd4d8a762e59",
+  "translator_actual_model": "UNKNOWN",
+  "translator_model_source": "Draft records UNKNOWN with reported fallback; no serving receipt independently available.",
+  "auditor": {
+    "agent": "translation-auditor (team lopdev)",
+    "session": "3ebdc948939c",
+    "model": "UNKNOWN",
+    "actual_model_source": "Visible user [model switch] notice reports temporary openai/gpt-6.1-sol fallback from anthropic/claude-opus-5-5 due to provider quota failure. Audit executed after notice. No independent serving receipt is available; actual serving model remains UNKNOWN.",
+    "model_provenance": {
+      "verified_serving_model": "UNKNOWN",
+      "serving_receipt": null,
+      "initial_system_model": "anthropic/claude-opus-5-5",
+      "observed_switch_notice": "openai/gpt-6.1-sol",
+      "fallback_disclosure": "Visible user [model switch] notice reports temporary openai/gpt-6.1-sol fallback from anthropic/claude-opus-5-5 due to provider quota failure. Audit executed after notice. No independent serving receipt is available; actual serving model remains UNKNOWN."
+    },
+    "independent_from_translator_session": true
+  },
+  "draft": {
+    "path": "/Users/damian/.local-operator/sessions/bd4d8a762e59/scratchpad/draft-ur.json",
+    "sha256": "e4da7bd8528a3f24622878a2d93e7c1b820771b01d16cf6ba23b639176ff068b",
+    "sha256_verified": true
+  },
+  "brief": {
+    "path": "/Users/damian/.local-operator/sessions/ca8720609fc7/scratchpad/translation-brief.json",
+    "sha256": "5a72dfd72dc820b1fa8e73d78b97807581572334ee0fd25eb2eab346e759ebca",
+    "sha256_verified": true
+  },
+  "brief_sha256": "5a72dfd72dc820b1fa8e73d78b97807581572334ee0fd25eb2eab346e759ebca",
+  "source_commit": "9362cce8a631791b676b2d2c9eda90c43fc7e11c",
+  "source_branch": "feat/i18n-move-sheet-copy",
+  "read_route": "Ordinary approved absolute source/scratch reads plus dependency-free Python pathlib/json/hashlib/unicodedata and read-only git rev-parse/ls-files. read_public_copy NOT invoked; no keyed/public receipt claimed. Nested context role/note objects read ordinarily, not routable as keyed public-copy reads. Mobile has no tracked locale style/glossary file (git ls-files); shared core Urdu guide/glossary checked against actual mobile remote/sidebar catalogues. No repository edits.",
+  "input_hashes": {
+    "brief": {
+      "path": "/Users/damian/.local-operator/sessions/ca8720609fc7/scratchpad/translation-brief.json",
+      "sha256": "5a72dfd72dc820b1fa8e73d78b97807581572334ee0fd25eb2eab346e759ebca"
+    },
+    "draft": {
+      "path": "/Users/damian/.local-operator/sessions/bd4d8a762e59/scratchpad/draft-ur.json",
+      "sha256": "e4da7bd8528a3f24622878a2d93e7c1b820771b01d16cf6ba23b639176ff068b"
+    },
+    "translator_verification": {
+      "path": "/Users/damian/.local-operator/sessions/bd4d8a762e59/scratchpad/verification-ur.json",
+      "sha256": "a0d1fd10ff7a44c218abd4a6484d848c54102e3bd2dd548d7a97971a24ad3e09"
+    },
+    "translator_notes": {
+      "path": "/Users/damian/.local-operator/sessions/bd4d8a762e59/scratchpad/notes-ur.md",
+      "sha256": "a915cbb25087642a4dcdf497404269b3f27637493194dfe3051af6c5f14df186"
+    },
+    "schema_reference": {
+      "path": "/Users/damian/.local-operator/sessions/e5caed1bcb4e/scratchpad/bundles/fr/mobile.remote_sessions/move-pick-fr-e5caed1b-r1/record.json",
+      "sha256": "a2cb1e7f3fce51b1ae603ab066560c6beec1d7c40f2954d272f8bcdb6f96e85d"
+    },
+    "english": {
+      "path": "/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/i18n/catalogues/en/mobile.remote_sessions.json",
+      "sha256": "436f8ec3bda274431146e7e7cb82b2add418f598bd2a7a6d7426f561a4312984"
+    },
+    "context": {
+      "path": "/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/i18n/catalogues/en/mobile.remote_sessions.context.json",
+      "sha256": "c703dff07b634d3d2d4b7c789e6a4a1eecf192a57618ea8e9e72197d325d08eb"
+    },
+    "usage": {
+      "path": "/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/features/sessions/move-sheet.tsx",
+      "sha256": "6a3f7126eb2fefc5ad0138a1731e3898d66d333ea8ca1b4ac99321da18d495aa"
+    },
+    "ur_existing": {
+      "path": "/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/i18n/catalogues/ur/mobile.remote_sessions.json",
+      "sha256": "c49b1ac702a58d224129f8f3097332a8d810f7028c2d71cb90aa6acae6506d57"
+    },
+    "ur_sidebar": {
+      "path": "/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/i18n/catalogues/ur/mobile.sidebar.json",
+      "sha256": "a6e11c23083193d443aab0144672b8f9ad92e58ae68cb6a56b09fd2aef6b6387"
+    },
+    "ur_style_reference": {
+      "path": "/Users/damian/local-operator/i18n/style-guides/ur.md",
+      "sha256": "c0eecf7f7b5e89956b7de9ab7a9eb647ff1a7ef701ccf2a7f0264d5eea15ca60"
+    },
+    "glossary_reference": {
+      "path": "/Users/damian/local-operator/i18n/glossary.md",
+      "sha256": "0eb34437a8c3d6f564f278ef957a603b1d9f51bb07d5ddae5ea8f37deba962f8"
+    },
+    "core_guidance": {
+      "path": "/Users/damian/local-operator/AGENTS.md",
+      "sha256": "c8c66d86f7603dd4cfbcfc9beb887b369450004f3d9695a7d6e91e0fd58dba44"
+    },
+    "mobile_guidance": {
+      "path": "/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/AGENTS.md",
+      "sha256": "84021f7c9df58bfe01376669c187cbdf777c680d918f9f001201faeae2a14ad7"
+    }
+  },
+  "checks": {
+    "keys_missing": 0,
+    "keys_extra": 0,
+    "brief_vs_en_mismatches": 0,
+    "brief_vs_context_mismatches": 0,
+    "source_authoring_hashes_verified": true,
+    "placeholder_brace_sets": "exact {device} once only in cannot_reach; six empty",
+    "negative_controls": "rejected missing/renamed/extra argument, injected RLM, missing key, nested/unbalanced/complex braces",
+    "icu_scope": "simple-message dependency-free grammar only; no repository ICU parser run; no plural/select/number/date skeleton or markup tokens present",
+    "CLDR_plural": "N/A for all seven messages: no count/plural syntax; Urdu one/other needs no branches here",
+    "nfc": "pass",
+    "bidi_control_chars": 0,
+    "RTL_scope": "Logical codepoint/bidi-class traces and byte-identical substitutions only; NOT paragraph-base/font shaping/native ordering proof",
+    "product_name": "Local Operator exact Latin once",
+    "pseudo": "actual bracket + 35% tilde padding generated for all seven and arguments preserved; RISK-only stress examples, not rendering",
+    "repo_validator": "not run per explicit no tests/compiler/build/hooks scope"
+  },
+  "redaction_marker_hits": {
+    "copy_inputs": 0,
+    "draft_values": 0,
+    "english_sources": 0,
+    "raw_file_marker_literal_hits": 0,
+    "patterns": [
+      "\\[REDACTED\\]",
+      "<redacted>",
+      "\\*{3}REDACTED\\*{3}",
+      "REDACTED[_ -](?:SECRET|TOKEN|VALUE)",
+      "\\[MASKED\\]"
+    ],
+    "explanation": "Separate semantic copy-input and raw draft/metadata-inclusive scans. No matching redaction markers in either; this is not a secret audit."
+  },
+  "verdict": "passed_with_minors",
+  "linguistic_verdict": "passed",
+  "namespace_verdicts": {
+    "mobile.remote_sessions (seven move_pick keys only)": "passed_with_minors"
+  },
+  "current_report_verdict": {
+    "status": "passed_with_minors",
+    "unresolved_blocker_major_count": 0,
+    "finding_ids": [
+      "UR-A1",
+      "UR-A2",
+      "UR-A3"
+    ],
+    "verdict_reason": "All seven linguistically clean; three deferred minor source-expansion/render risks, not proved defects. Independent A pass only; fresh B and source-hook gap remain."
+  },
+  "findings": [
+    {
+      "id": "UR-A1",
+      "severity": "minor",
+      "kind": "unverified_width_risk_not_proven_overflow",
+      "key": "mobile.remote_sessions.move_pick.cannot_reach",
+      "current_text": "{device} سے رابطہ نہیں ہو رہا",
+      "proposed_text": "{device} سے رابطہ نہیں ہو رہا",
+      "proposed_action": "Retain accurate copy; defer narrow-phone rendered wrapping/height verification to the owning visual lane. Also inspect actual bidi/native punctuation with Latin and mixed-script opaque names; do not add translation bidi controls.",
+      "reason": "29 versus 20 source codepoints (+45.0%); actual synthetic 35% padding was generated, but neither counts nor pseudo text prove rendered overflow or fit.",
+      "disposition": "deferred — non-gating rendered-risk check outside this read-only linguistic lane; no translator remediation required on current evidence"
+    },
+    {
+      "id": "UR-A2",
+      "severity": "minor",
+      "kind": "unverified_width_risk_not_proven_overflow",
+      "key": "mobile.remote_sessions.move_pick.destination_heading",
+      "current_text": "منتقل یا کاپی کرنے کی جگہ",
+      "proposed_text": "منتقل یا کاپی کرنے کی جگہ",
+      "proposed_action": "Retain accurate copy; defer narrow-phone rendered wrapping/height verification to the owning visual lane. ",
+      "reason": "25 versus 15 source codepoints (+66.7%); actual synthetic 35% padding was generated, but neither counts nor pseudo text prove rendered overflow or fit.",
+      "disposition": "deferred — non-gating rendered-risk check outside this read-only linguistic lane; no translator remediation required on current evidence"
+    },
+    {
+      "id": "UR-A3",
+      "severity": "minor",
+      "kind": "unverified_width_risk_not_proven_overflow",
+      "key": "mobile.remote_sessions.move_pick.discovery_help",
+      "current_text": "یہ ایپ صرف وہ ڈیوائسز دکھا سکتی ہے جن کے سیشن فہرست میں نظر آتے ہیں۔ جس ڈیوائس کا کوئی سیشن نظر نہیں آ رہا، اسے ابھی منتخب نہیں کیا جا سکتا — دوسرے کمپیوٹر پر Local Operator کھولیں، پھر سیشن کی فہرست کو نیچے کھینچ کر تازہ کریں۔",
+      "proposed_text": "یہ ایپ صرف وہ ڈیوائسز دکھا سکتی ہے جن کے سیشن فہرست میں نظر آتے ہیں۔ جس ڈیوائس کا کوئی سیشن نظر نہیں آ رہا، اسے ابھی منتخب نہیں کیا جا سکتا — دوسرے کمپیوٹر پر Local Operator کھولیں، پھر سیشن کی فہرست کو نیچے کھینچ کر تازہ کریں۔",
+      "proposed_action": "Retain accurate copy; defer narrow-phone rendered wrapping/height verification to the owning visual lane. ",
+      "reason": "227 versus 178 source codepoints (+27.5%); actual synthetic 35% padding was generated, but neither counts nor pseudo text prove rendered overflow or fit.",
+      "disposition": "deferred — non-gating rendered-risk check outside this read-only linguistic lane; no translator remediation required on current evidence"
+    }
+  ],
+  "per_key": [
+    {
+      "key": "mobile.remote_sessions.move_pick.cannot_reach",
+      "english": "Can't reach {device}",
+      "current_text": "{device} سے رابطہ نہیں ہو رہا",
+      "analysis": "Natural calm reachability wording, matching existing مالک کمپیوٹر سے رابطہ نہیں ہو رہا. The postposition سے follows the opaque device name with a space; it neither translates nor inflects that name. StudioMac, Mac(2), and mixed Urdu/Latin examples preserve bytes. Name-first first-strong class can vary; this is a renderer risk, not evidence of incorrect native order.",
+      "linguistic_verdict": "passed",
+      "verdict": "passed_with_minor_width_risk",
+      "findings": [
+        "UR-A1"
+      ],
+      "severity": "minor",
+      "width": {
+        "key": "mobile.remote_sessions.move_pick.cannot_reach",
+        "english_codepoints": 20,
+        "urdu_codepoints": 29,
+        "ratio": 1.45
+      }
+    },
+    {
+      "key": "mobile.remote_sessions.move_pick.destination_heading",
+      "english": "Move or copy to",
+      "current_text": "منتقل یا کاپی کرنے کی جگہ",
+      "analysis": "منتقل یا کاپی retains both operations using the existing row hint terms منتقل کریں / کاپی کریں. کرنے کی جگہ is a natural nominal destination heading (place to move or copy to), not a command or claim of progress. No final punctuation. Longer source text needs a narrow-screen check.",
+      "linguistic_verdict": "passed",
+      "verdict": "passed_with_minor_width_risk",
+      "findings": [
+        "UR-A2"
+      ],
+      "severity": "minor",
+      "width": {
+        "key": "mobile.remote_sessions.move_pick.destination_heading",
+        "english_codepoints": 15,
+        "urdu_codepoints": 25,
+        "ratio": 1.6667
+      }
+    },
+    {
+      "key": "mobile.remote_sessions.move_pick.discovery_help",
+      "english": "This app can offer the devices your sessions show. A device with no visible session cannot be picked yet — open Local Operator on the other computer and pull the list to refresh.",
+      "current_text": "یہ ایپ صرف وہ ڈیوائسز دکھا سکتی ہے جن کے سیشن فہرست میں نظر آتے ہیں۔ جس ڈیوائس کا کوئی سیشن نظر نہیں آ رہا، اسے ابھی منتخب نہیں کیا جا سکتا — دوسرے کمپیوٹر پر Local Operator کھولیں، پھر سیشن کی فہرست کو نیچے کھینچ کر تازہ کریں۔",
+      "analysis": "صرف وہ ڈیوائسز ... جن کے سیشن فہرست میں نظر آتے ہیں preserves the visible-session-only discovery limit; اسے ابھی منتخب نہیں کیا جا سکتا retains cannot be picked yet. دوسرے کمپیوٹر correctly identifies the other computer, not the phone. کھولیں then نیچے کھینچ کر تازہ کریں are polite respectful imperatives and preserve the ordered open/pull-to-refresh steps. Local Operator stays exact Latin. ڈیوائسز is a grammatical plural of glossary ڈیوائس, not term drift; سیشن / فہرست تازہ کریں match current Urdu copy.",
+      "linguistic_verdict": "passed",
+      "verdict": "passed_with_minor_width_risk",
+      "findings": [
+        "UR-A3"
+      ],
+      "severity": "minor",
+      "width": {
+        "key": "mobile.remote_sessions.move_pick.discovery_help",
+        "english_codepoints": 178,
+        "urdu_codepoints": 227,
+        "ratio": 1.2753
+      }
+    },
+    {
+      "key": "mobile.remote_sessions.move_pick.no_answer",
+      "english": "It did not answer when this computer asked.",
+      "current_text": "جب اس کمپیوٹر نے رابطہ کیا تو اس نے جواب نہیں دیا۔",
+      "analysis": "جب اس کمپیوٹر نے رابطہ کیا تو اس نے جواب نہیں دیا naturally expresses a computer making contact and the remote machine not answering; it avoids a literal anthropomorphic translation of asked as a spoken question. The preceding unreachable status identifies the remote referent. This computer remains کمپیوٹر, not فون. Source shows this sentence is client fallback only after absent/blank trimmed server reason; the server reason is not translation input.",
+      "linguistic_verdict": "passed",
+      "verdict": "passed",
+      "findings": [],
+      "severity": null,
+      "width": {
+        "key": "mobile.remote_sessions.move_pick.no_answer",
+        "english_codepoints": 43,
+        "urdu_codepoints": 50,
+        "ratio": 1.1628
+      }
+    },
+    {
+      "key": "mobile.remote_sessions.move_pick.no_devices",
+      "english": "No other devices are visible.",
+      "current_text": "کوئی اور ڈیوائس نظر نہیں آ رہی۔",
+      "analysis": "کوئی اور preserves no other; نظر نہیں آ رہی means not visible, not offline or nonexistent. Feminine singular agreement with ڈیوائس is idiomatic after کوئی and matches the singular form used in discovery. No count exists, so plural ICU branches would be spurious.",
+      "linguistic_verdict": "passed",
+      "verdict": "passed",
+      "findings": [],
+      "severity": null,
+      "width": {
+        "key": "mobile.remote_sessions.move_pick.no_devices",
+        "english_codepoints": 29,
+        "urdu_codepoints": 31,
+        "ratio": 1.069
+      }
+    },
+    {
+      "key": "mobile.remote_sessions.move_pick.on_this_computer",
+      "english": "On this computer",
+      "current_text": "اس کمپیوٹر پر",
+      "analysis": "اس کمپیوٹر پر is the natural compact locative fragment for the connected relay computer. کمپیوٹر matches existing remote-session copy; پر matches the reused sidebar locative. No phone substitution, punctuation or address-form drift.",
+      "linguistic_verdict": "passed",
+      "verdict": "passed",
+      "findings": [],
+      "severity": null,
+      "width": {
+        "key": "mobile.remote_sessions.move_pick.on_this_computer",
+        "english_codepoints": 16,
+        "urdu_codepoints": 13,
+        "ratio": 0.8125
+      }
+    },
+    {
+      "key": "mobile.remote_sessions.move_pick.right_now",
+      "english": "Right now",
+      "current_text": "اس وقت",
+      "analysis": "اس وقت is idiomatic current-state labeling, not the urgent imperative ابھی کریں. It fits the section above current location; no final punctuation, extra honorific or register mismatch.",
+      "linguistic_verdict": "passed",
+      "verdict": "passed",
+      "findings": [],
+      "severity": null,
+      "width": {
+        "key": "mobile.remote_sessions.move_pick.right_now",
+        "english_codepoints": 9,
+        "urdu_codepoints": 6,
+        "ratio": 0.6667
+      }
+    }
+  ],
+  "rtl_examples": [
+    {
+      "name": "StudioMac",
+      "logical_text": "StudioMac سے رابطہ نہیں ہو رہا",
+      "name_utf8_sha256": "b0db1d30c067bc5f7b94e4f84b90062cdbaca2d1de153ab335fa904e34798c84",
+      "opaque_name_preserved": true,
+      "first_strong_class": "L",
+      "trace": [
+        {
+          "i": 0,
+          "cp": "U+0053",
+          "char": "S",
+          "bidi": "L"
+        },
+        {
+          "i": 1,
+          "cp": "U+0074",
+          "char": "t",
+          "bidi": "L"
+        },
+        {
+          "i": 2,
+          "cp": "U+0075",
+          "char": "u",
+          "bidi": "L"
+        },
+        {
+          "i": 3,
+          "cp": "U+0064",
+          "char": "d",
+          "bidi": "L"
+        },
+        {
+          "i": 4,
+          "cp": "U+0069",
+          "char": "i",
+          "bidi": "L"
+        },
+        {
+          "i": 5,
+          "cp": "U+006F",
+          "char": "o",
+          "bidi": "L"
+        },
+        {
+          "i": 6,
+          "cp": "U+004D",
+          "char": "M",
+          "bidi": "L"
+        },
+        {
+          "i": 7,
+          "cp": "U+0061",
+          "char": "a",
+          "bidi": "L"
+        },
+        {
+          "i": 8,
+          "cp": "U+0063",
+          "char": "c",
+          "bidi": "L"
+        },
+        {
+          "i": 9,
+          "cp": "U+0020",
+          "char": " ",
+          "bidi": "WS"
+        },
+        {
+          "i": 10,
+          "cp": "U+0633",
+          "char": "س",
+          "bidi": "AL"
+        },
+        {
+          "i": 11,
+          "cp": "U+06D2",
+          "char": "ے",
+          "bidi": "AL"
+        },
+        {
+          "i": 12,
+          "cp": "U+0020",
+          "char": " ",
+          "bidi": "WS"
+        },
+        {
+          "i": 13,
+          "cp": "U+0631",
+          "char": "ر",
+          "bidi": "AL"
+        },
+        {
+          "i": 14,
+          "cp": "U+0627",
+          "char": "ا",
+          "bidi": "AL"
+        },
+        {
+          "i": 15,
+          "cp": "U+0628",
+          "char": "ب",
+          "bidi": "AL"
+        },
+        {
+          "i": 16,
+          "cp": "U+0637",
+          "char": "ط",
+          "bidi": "AL"
+        },
+        {
+          "i": 17,
+          "cp": "U+06C1",
+          "char": "ہ",
+          "bidi": "AL"
+        },
+        {
+          "i": 18,
+          "cp": "U+0020",
+          "char": " ",
+          "bidi": "WS"
+        },
+        {
+          "i": 19,
+          "cp": "U+0646",
+          "char": "ن",
+          "bidi": "AL"
+        },
+        {
+          "i": 20,
+          "cp": "U+06C1",
+          "char": "ہ",
+          "bidi": "AL"
+        },
+        {
+          "i": 21,
+          "cp": "U+06CC",
+          "char": "ی",
+          "bidi": "AL"
+        },
+        {
+          "i": 22,
+          "cp": "U+06BA",
+          "char": "ں",
+          "bidi": "AL"
+        },
+        {
+          "i": 23,
+          "cp": "U+0020",
+          "char": " ",
+          "bidi": "WS"
+        },
+        {
+          "i": 24,
+          "cp": "U+06C1",
+          "char": "ہ",
+          "bidi": "AL"
+        },
+        {
+          "i": 25,
+          "cp": "U+0648",
+          "char": "و",
+          "bidi": "AL"
+        },
+        {
+          "i": 26,
+          "cp": "U+0020",
+          "char": " ",
+          "bidi": "WS"
+        },
+        {
+          "i": 27,
+          "cp": "U+0631",
+          "char": "ر",
+          "bidi": "AL"
+        },
+        {
+          "i": 28,
+          "cp": "U+06C1",
+          "char": "ہ",
+          "bidi": "AL"
+        },
+        {
+          "i": 29,
+          "cp": "U+0627",
+          "char": "ا",
+          "bidi": "AL"
+        }
+      ]
+    },
+    {
+      "name": "Studio-Mac 14",
+      "logical_text": "Studio-Mac 14 سے رابطہ نہیں ہو رہا",
+      "name_utf8_sha256": "f5722fd0abaa29452db3a102893b9b3c8540bd41cde3b533c82991c6ba64e658",
+      "opaque_name_preserved": true,
+      "first_strong_class": "L",
+      "trace": [
+        {
+          "i": 0,
+          "cp": "U+0053",
+          "char": "S",
+          "bidi": "L"
+        },
+        {
+          "i": 1,
+          "cp": "U+0074",
+          "char": "t",
+          "bidi": "L"
+        },
+        {
+          "i": 2,
+          "cp": "U+0075",
+          "char": "u",
+          "bidi": "L"
+        },
+        {
+          "i": 3,
+          "cp": "U+0064",
+          "char": "d",
+          "bidi": "L"
+        },
+        {
+          "i": 4,
+          "cp": "U+0069",
+          "char": "i",
+          "bidi": "L"
+        },
+        {
+          "i": 5,
+          "cp": "U+006F",
+          "char": "o",
+          "bidi": "L"
+        },
+        {
+          "i": 6,
+          "cp": "U+002D",
+          "char": "-",
+          "bidi": "ES"
+        },
+        {
+          "i": 7,
+          "cp": "U+004D",
+          "char": "M",
+          "bidi": "L"
+        },
+        {
+          "i": 8,
+          "cp": "U+0061",
+          "char": "a",
+          "bidi": "L"
+        },
+        {
+          "i": 9,
+          "cp": "U+0063",
+          "char": "c",
+          "bidi": "L"
+        },
+        {
+          "i": 10,
+          "cp": "U+0020",
+          "char": " ",
+          "bidi": "WS"
+        },
+        {
+          "i": 11,
+          "cp": "U+0031",
+          "char": "1",
+          "bidi": "EN"
+        },
+        {
+          "i": 12,
+          "cp": "U+0034",
+          "char": "4",
+          "bidi": "EN"
+        },
+        {
+          "i": 13,
+          "cp": "U+0020",
+          "char": " ",
+          "bidi": "WS"
+        },
+        {
+          "i": 14,
+          "cp": "U+0633",
+          "char": "س",
+          "bidi": "AL"
+        },
+        {
+          "i": 15,
+          "cp": "U+06D2",
+          "char": "ے",
+          "bidi": "AL"
+        },
+        {
+          "i": 16,
+          "cp": "U+0020",
+          "char": " ",
+          "bidi": "WS"
+        },
+        {
+          "i": 17,
+          "cp": "U+0631",
+          "char": "ر",
+          "bidi": "AL"
+        },
+        {
+          "i": 18,
+          "cp": "U+0627",
+          "char": "ا",
+          "bidi": "AL"
+        },
+        {
+          "i": 19,
+          "cp": "U+0628",
+          "char": "ب",
+          "bidi": "AL"
+        },
+        {
+          "i": 20,
+          "cp": "U+0637",
+          "char": "ط",
+          "bidi": "AL"
+        },
+        {
+          "i": 21,
+          "cp": "U+06C1",
+          "char": "ہ",
+          "bidi": "AL"
+        },
+        {
+          "i": 22,
+          "cp": "U+0020",
+          "char": " ",
+          "bidi": "WS"
+        },
+        {
+          "i": 23,
+          "cp": "U+0646",
+          "char": "ن",
+          "bidi": "AL"
+        },
+        {
+          "i": 24,
+          "cp": "U+06C1",
+          "char": "ہ",
+          "bidi": "AL"
+        },
+        {
+          "i": 25,
+          "cp": "U+06CC",
+          "char": "ی",
+          "bidi": "AL"
+        },
+        {
+          "i": 26,
+          "cp": "U+06BA",
+          "char": "ں",
+          "bidi": "AL"
+        },
+        {
+          "i": 27,
+          "cp": "U+0020",
+          "char": " ",
+          "bidi": "WS"
+        },
+        {
+          "i": 28,
+          "cp": "U+06C1",
+          "char": "ہ",
+          "bidi": "AL"
+        },
+        {
+          "i": 29,
+          "cp": "U+0648",
+          "char": "و",
+          "bidi": "AL"
+        },
+        {
+          "i": 30,
+          "cp": "U+0020",
+          "char": " ",
+          "bidi": "WS"
+        },
+        {
+          "i": 31,
+          "cp": "U+0631",
+          "char": "ر",
+          "bidi": "AL"
+        },
+        {
+          "i": 32,
+          "cp": "U+06C1",
+          "char": "ہ",
+          "bidi": "AL"
+        },
+        {
+          "i": 33,
+          "cp": "U+0627",
+          "char": "ا",
+          "bidi": "AL"
+        }
+      ]
+    },
+    {
+      "name": "Mac(2)",
+      "logical_text": "Mac(2) سے رابطہ نہیں ہو رہا",
+      "name_utf8_sha256": "df7c687ca6f1b677889772aee4b38a7f56c8920c9a9b5370a0680998f13f0723",
+      "opaque_name_preserved": true,
+      "first_strong_class": "L",
+      "trace": [
+        {
+          "i": 0,
+          "cp": "U+004D",
+          "char": "M",
+          "bidi": "L"
+        },
+        {
+          "i": 1,
+          "cp": "U+0061",
+          "char": "a",
+          "bidi": "L"
+        },
+        {
+          "i": 2,
+          "cp": "U+0063",
+          "char": "c",
+          "bidi": "L"
+        },
+        {
+          "i": 3,
+          "cp": "U+0028",
+          "char": "(",
+          "bidi": "ON"
+        },
+        {
+          "i": 4,
+          "cp": "U+0032",
+          "char": "2",
+          "bidi": "EN"
+        },
+        {
+          "i": 5,
+          "cp": "U+0029",
+          "char": ")",
+          "bidi": "ON"
+        },
+        {
+          "i": 6,
+          "cp": "U+0020",
+          "char": " ",
+          "bidi": "WS"
+        },
+        {
+          "i": 7,
+          "cp": "U+0633",
+          "char": "س",
+          "bidi": "AL"
+        },
+        {
+          "i": 8,
+          "cp": "U+06D2",
+          "char": "ے",
+          "bidi": "AL"
+        },
+        {
+          "i": 9,
+          "cp": "U+0020",
+          "char": " ",
+          "bidi": "WS"
+        },
+        {
+          "i": 10,
+          "cp": "U+0631",
+          "char": "ر",
+          "bidi": "AL"
+        },
+        {
+          "i": 11,
+          "cp": "U+0627",
+          "char": "ا",
+          "bidi": "AL"
+        },
+        {
+          "i": 12,
+          "cp": "U+0628",
+          "char": "ب",
+          "bidi": "AL"
+        },
+        {
+          "i": 13,
+          "cp": "U+0637",
+          "char": "ط",
+          "bidi": "AL"
+        },
+        {
+          "i": 14,
+          "cp": "U+06C1",
+          "char": "ہ",
+          "bidi": "AL"
+        },
+        {
+          "i": 15,
+          "cp": "U+0020",
+          "char": " ",
+          "bidi": "WS"
+        },
+        {
+          "i": 16,
+          "cp": "U+0646",
+          "char": "ن",
+          "bidi": "AL"
+        },
+        {
+          "i": 17,
+          "cp": "U+06C1",
+          "char": "ہ",
+          "bidi": "AL"
+        },
+        {
+          "i": 18,
+          "cp": "U+06CC",
+          "char": "ی",
+          "bidi": "AL"
+        },
+        {
+          "i": 19,
+          "cp": "U+06BA",
+          "char": "ں",
+          "bidi": "AL"
+        },
+        {
+          "i": 20,
+          "cp": "U+0020",
+          "char": " ",
+          "bidi": "WS"
+        },
+        {
+          "i": 21,
+          "cp": "U+06C1",
+          "char": "ہ",
+          "bidi": "AL"
+        },
+        {
+          "i": 22,
+          "cp": "U+0648",
+          "char": "و",
+          "bidi": "AL"
+        },
+        {
+          "i": 23,
+          "cp": "U+0020",
+          "char": " ",
+          "bidi": "WS"
+        },
+        {
+          "i": 24,
+          "cp": "U+0631",
+          "char": "ر",
+          "bidi": "AL"
+        },
+        {
+          "i": 25,
+          "cp": "U+06C1",
+          "char": "ہ",
+          "bidi": "AL"
+        },
+        {
+          "i": 26,
+          "cp": "U+0627",
+          "char": "ا",
+          "bidi": "AL"
+        }
+      ]
+    },
+    {
+      "name": "دفتر Mac(2)",
+      "logical_text": "دفتر Mac(2) سے رابطہ نہیں ہو رہا",
+      "name_utf8_sha256": "ac9f04034e93a8e79ced55c14536404dea0ad7f8f4b17defe0df8c52b6c56e41",
+      "opaque_name_preserved": true,
+      "first_strong_class": "AL",
+      "trace": [
+        {
+          "i": 0,
+          "cp": "U+062F",
+          "char": "د",
+          "bidi": "AL"
+        },
+        {
+          "i": 1,
+          "cp": "U+0641",
+          "char": "ف",
+          "bidi": "AL"
+        },
+        {
+          "i": 2,
+          "cp": "U+062A",
+          "char": "ت",
+          "bidi": "AL"
+        },
+        {
+          "i": 3,
+          "cp": "U+0631",
+          "char": "ر",
+          "bidi": "AL"
+        },
+        {
+          "i": 4,
+          "cp": "U+0020",
+          "char": " ",
+          "bidi": "WS"
+        },
+        {
+          "i": 5,
+          "cp": "U+004D",
+          "char": "M",
+          "bidi": "L"
+        },
+        {
+          "i": 6,
+          "cp": "U+0061",
+          "char": "a",
+          "bidi": "L"
+        },
+        {
+          "i": 7,
+          "cp": "U+0063",
+          "char": "c",
+          "bidi": "L"
+        },
+        {
+          "i": 8,
+          "cp": "U+0028",
+          "char": "(",
+          "bidi": "ON"
+        },
+        {
+          "i": 9,
+          "cp": "U+0032",
+          "char": "2",
+          "bidi": "EN"
+        },
+        {
+          "i": 10,
+          "cp": "U+0029",
+          "char": ")",
+          "bidi": "ON"
+        },
+        {
+          "i": 11,
+          "cp": "U+0020",
+          "char": " ",
+          "bidi": "WS"
+        },
+        {
+          "i": 12,
+          "cp": "U+0633",
+          "char": "س",
+          "bidi": "AL"
+        },
+        {
+          "i": 13,
+          "cp": "U+06D2",
+          "char": "ے",
+          "bidi": "AL"
+        },
+        {
+          "i": 14,
+          "cp": "U+0020",
+          "char": " ",
+          "bidi": "WS"
+        },
+        {
+          "i": 15,
+          "cp": "U+0631",
+          "char": "ر",
+          "bidi": "AL"
+        },
+        {
+          "i": 16,
+          "cp": "U+0627",
+          "char": "ا",
+          "bidi": "AL"
+        },
+        {
+          "i": 17,
+          "cp": "U+0628",
+          "char": "ب",
+          "bidi": "AL"
+        },
+        {
+          "i": 18,
+          "cp": "U+0637",
+          "char": "ط",
+          "bidi": "AL"
+        },
+        {
+          "i": 19,
+          "cp": "U+06C1",
+          "char": "ہ",
+          "bidi": "AL"
+        },
+        {
+          "i": 20,
+          "cp": "U+0020",
+          "char": " ",
+          "bidi": "WS"
+        },
+        {
+          "i": 21,
+          "cp": "U+0646",
+          "char": "ن",
+          "bidi": "AL"
+        },
+        {
+          "i": 22,
+          "cp": "U+06C1",
+          "char": "ہ",
+          "bidi": "AL"
+        },
+        {
+          "i": 23,
+          "cp": "U+06CC",
+          "char": "ی",
+          "bidi": "AL"
+        },
+        {
+          "i": 24,
+          "cp": "U+06BA",
+          "char": "ں",
+          "bidi": "AL"
+        },
+        {
+          "i": 25,
+          "cp": "U+0020",
+          "char": " ",
+          "bidi": "WS"
+        },
+        {
+          "i": 26,
+          "cp": "U+06C1",
+          "char": "ہ",
+          "bidi": "AL"
+        },
+        {
+          "i": 27,
+          "cp": "U+0648",
+          "char": "و",
+          "bidi": "AL"
+        },
+        {
+          "i": 28,
+          "cp": "U+0020",
+          "char": " ",
+          "bidi": "WS"
+        },
+        {
+          "i": 29,
+          "cp": "U+0631",
+          "char": "ر",
+          "bidi": "AL"
+        },
+        {
+          "i": 30,
+          "cp": "U+06C1",
+          "char": "ہ",
+          "bidi": "AL"
+        },
+        {
+          "i": 31,
+          "cp": "U+0627",
+          "char": "ا",
+          "bidi": "AL"
+        }
+      ]
+    },
+    {
+      "name": "Mac دفتر 2",
+      "logical_text": "Mac دفتر 2 سے رابطہ نہیں ہو رہا",
+      "name_utf8_sha256": "7dd0d18c11f92c4435b20cd6ec1864f5d6c1c44f93d550d37af740929c802488",
+      "opaque_name_preserved": true,
+      "first_strong_class": "L",
+      "trace": [
+        {
+          "i": 0,
+          "cp": "U+004D",
+          "char": "M",
+          "bidi": "L"
+        },
+        {
+          "i": 1,
+          "cp": "U+0061",
+          "char": "a",
+          "bidi": "L"
+        },
+        {
+          "i": 2,
+          "cp": "U+0063",
+          "char": "c",
+          "bidi": "L"
+        },
+        {
+          "i": 3,
+          "cp": "U+0020",
+          "char": " ",
+          "bidi": "WS"
+        },
+        {
+          "i": 4,
+          "cp": "U+062F",
+          "char": "د",
+          "bidi": "AL"
+        },
+        {
+          "i": 5,
+          "cp": "U+0641",
+          "char": "ف",
+          "bidi": "AL"
+        },
+        {
+          "i": 6,
+          "cp": "U+062A",
+          "char": "ت",
+          "bidi": "AL"
+        },
+        {
+          "i": 7,
+          "cp": "U+0631",
+          "char": "ر",
+          "bidi": "AL"
+        },
+        {
+          "i": 8,
+          "cp": "U+0020",
+          "char": " ",
+          "bidi": "WS"
+        },
+        {
+          "i": 9,
+          "cp": "U+0032",
+          "char": "2",
+          "bidi": "EN"
+        },
+        {
+          "i": 10,
+          "cp": "U+0020",
+          "char": " ",
+          "bidi": "WS"
+        },
+        {
+          "i": 11,
+          "cp": "U+0633",
+          "char": "س",
+          "bidi": "AL"
+        },
+        {
+          "i": 12,
+          "cp": "U+06D2",
+          "char": "ے",
+          "bidi": "AL"
+        },
+        {
+          "i": 13,
+          "cp": "U+0020",
+          "char": " ",
+          "bidi": "WS"
+        },
+        {
+          "i": 14,
+          "cp": "U+0631",
+          "char": "ر",
+          "bidi": "AL"
+        },
+        {
+          "i": 15,
+          "cp": "U+0627",
+          "char": "ا",
+          "bidi": "AL"
+        },
+        {
+          "i": 16,
+          "cp": "U+0628",
+          "char": "ب",
+          "bidi": "AL"
+        },
+        {
+          "i": 17,
+          "cp": "U+0637",
+          "char": "ط",
+          "bidi": "AL"
+        },
+        {
+          "i": 18,
+          "cp": "U+06C1",
+          "char": "ہ",
+          "bidi": "AL"
+        },
+        {
+          "i": 19,
+          "cp": "U+0020",
+          "char": " ",
+          "bidi": "WS"
+        },
+        {
+          "i": 20,
+          "cp": "U+0646",
+          "char": "ن",
+          "bidi": "AL"
+        },
+        {
+          "i": 21,
+          "cp": "U+06C1",
+          "char": "ہ",
+          "bidi": "AL"
+        },
+        {
+          "i": 22,
+          "cp": "U+06CC",
+          "char": "ی",
+          "bidi": "AL"
+        },
+        {
+          "i": 23,
+          "cp": "U+06BA",
+          "char": "ں",
+          "bidi": "AL"
+        },
+        {
+          "i": 24,
+          "cp": "U+0020",
+          "char": " ",
+          "bidi": "WS"
+        },
+        {
+          "i": 25,
+          "cp": "U+06C1",
+          "char": "ہ",
+          "bidi": "AL"
+        },
+        {
+          "i": 26,
+          "cp": "U+0648",
+          "char": "و",
+          "bidi": "AL"
+        },
+        {
+          "i": 27,
+          "cp": "U+0020",
+          "char": " ",
+          "bidi": "WS"
+        },
+        {
+          "i": 28,
+          "cp": "U+0631",
+          "char": "ر",
+          "bidi": "AL"
+        },
+        {
+          "i": 29,
+          "cp": "U+06C1",
+          "char": "ہ",
+          "bidi": "AL"
+        },
+        {
+          "i": 30,
+          "cp": "U+0627",
+          "char": "ا",
+          "bidi": "AL"
+        }
+      ]
+    }
+  ],
+  "pseudo_examples": {
+    "mobile.remote_sessions.move_pick.cannot_reach": "[{device} سے رابطہ نہیں ہو رہا~~~~~~~~~~~]",
+    "mobile.remote_sessions.move_pick.destination_heading": "[منتقل یا کاپی کرنے کی جگہ~~~~~~~~~]",
+    "mobile.remote_sessions.move_pick.discovery_help": "[یہ ایپ صرف وہ ڈیوائسز دکھا سکتی ہے جن کے سیشن فہرست میں نظر آتے ہیں۔ جس ڈیوائس کا کوئی سیشن نظر نہیں آ رہا، اسے ابھی منتخب نہیں کیا جا سکتا — دوسرے کمپیوٹر پر Local Operator کھولیں، پھر سیشن کی فہرست کو نیچے کھینچ کر تازہ کریں۔~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]",
+    "mobile.remote_sessions.move_pick.no_answer": "[جب اس کمپیوٹر نے رابطہ کیا تو اس نے جواب نہیں دیا۔~~~~~~~~~~~~~~~~~~]",
+    "mobile.remote_sessions.move_pick.no_devices": "[کوئی اور ڈیوائس نظر نہیں آ رہی۔~~~~~~~~~~~]",
+    "mobile.remote_sessions.move_pick.on_this_computer": "[اس کمپیوٹر پر~~~~~]",
+    "mobile.remote_sessions.move_pick.right_now": "[اس وقت~~~]"
+  },
+  "separate_process_gap": {
+    "status": "OPEN",
+    "name": "source-hook evidence gap",
+    "linguistic_failure": false,
+    "fixed_by_audit": false,
+    "source": "Delegation explicitly identifies hook evidence GAP OPEN; hook not executed in this prohibited-execution lane."
+  },
+  "paired_audit": {
+    "A": "passed_with_minors",
+    "B": "pending fresh independent B",
+    "paired_clearance": false
+  },
+  "human_native_speaker": "waived by delegation; Urdu-language LLM linguistic review, not verified human/native-speaker proof",
+  "unverified": [
+    "actual serving-model receipt",
+    "rendered narrow-phone width/height/wrapping",
+    "native RTL base direction/shaping/name ordering/punctuation",
+    "repository ICU parser/compiler/tests/build/hooks",
+    "source-hook process evidence",
+    "fresh independent B audit"
+  ],
+  "repo_edits": false
+}

@@ -1,4 +1,11 @@
 {
+	"mobile.remote_sessions.move_pick.right_now": "اس وقت",
+	"mobile.remote_sessions.move_pick.cannot_reach": "{device} سے رابطہ نہیں ہو رہا",
+	"mobile.remote_sessions.move_pick.no_answer": "جب اس کمپیوٹر نے رابطہ کیا تو اس نے جواب نہیں دیا۔",
+	"mobile.remote_sessions.move_pick.on_this_computer": "اس کمپیوٹر پر",
+	"mobile.remote_sessions.move_pick.no_devices": "کوئی اور ڈیوائس نظر نہیں آ رہی۔",
+	"mobile.remote_sessions.move_pick.discovery_help": "یہ ایپ صرف وہ ڈیوائسز دکھا سکتی ہے جن کے سیشن فہرست میں نظر آتے ہیں۔ جس ڈیوائس کا کوئی سیشن نظر نہیں آ رہا، اسے ابھی منتخب نہیں کیا جا سکتا — دوسرے کمپیوٹر پر Local Operator کھولیں، پھر سیشن کی فہرست کو نیچے کھینچ کر تازہ کریں۔",
+	"mobile.remote_sessions.move_pick.destination_heading": "منتقل یا کاپی کرنے کی جگہ",
 	"mobile.remote_sessions.title": "دور دراز گفتگو",
 	"mobile.remote_sessions.loading": "اس کمپیوٹر پر دور دراز سیشن کی معاونت جانچی جا رہی ہے…",
 	"mobile.remote_sessions.unsupported": "یہ کارروائی ابھی ریموٹ گفتگو میں دستیاب نہیں ہے۔ اسے مالک کمپیوٹر پر استعمال کریں۔",

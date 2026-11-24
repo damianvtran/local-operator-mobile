@@ -1,0 +1,321 @@
+{
+  "record_kind": "i18n-audit",
+  "audit_id": "move-pick-hi-94bfc6fb-r1",
+  "slice": "move-picker-seven-keys",
+  "locale": "hi",
+  "namespace": "mobile.remote_sessions",
+  "audit_date": "2026-11-22",
+  "round": 1,
+  "audit_stream": "A",
+  "allocation": "hotfix <=30 min; requested audit <=10 min",
+  "key_count": 7,
+  "keys_audited": [
+    "mobile.remote_sessions.move_pick.cannot_reach",
+    "mobile.remote_sessions.move_pick.destination_heading",
+    "mobile.remote_sessions.move_pick.discovery_help",
+    "mobile.remote_sessions.move_pick.no_answer",
+    "mobile.remote_sessions.move_pick.no_devices",
+    "mobile.remote_sessions.move_pick.on_this_computer",
+    "mobile.remote_sessions.move_pick.right_now"
+  ],
+  "translator_session": "6b48875431ee",
+  "translator_actual_model": "UNKNOWN",
+  "auditor": {
+    "agent": "translation-auditor (team lopdev)",
+    "session": "94bfc6fb7b61",
+    "model": "UNKNOWN",
+    "actual_model_source": "No per-execution model receipt available. Visible user model-switch notice says temporary openai/gpt-6.1-sol fallback from anthropic/claude-opus-5-5 due to provider failure: quota; disclosed, not elevated to execution receipt.",
+    "visible_fallback_notice": "openai/gpt-6.1-sol",
+    "independent_from_translator_session": true
+  },
+  "draft": {
+    "path": "/Users/damian/.local-operator/sessions/6b48875431ee/scratchpad/draft-hi.json",
+    "sha256": "eedec3de1f87567b35790e88eb62109718fa268fd7654b7592d33ff509cd7f8d",
+    "sha256_verified": true
+  },
+  "brief": {
+    "path": "/Users/damian/.local-operator/sessions/ca8720609fc7/scratchpad/translation-brief.json",
+    "sha256": "5a72dfd72dc820b1fa8e73d78b97807581572334ee0fd25eb2eab346e759ebca",
+    "sha256_verified": true
+  },
+  "brief_sha256": "5a72dfd72dc820b1fa8e73d78b97807581572334ee0fd25eb2eab346e759ebca",
+  "source_commit": "9362cce8a631791b676b2d2c9eda90c43fc7e11c",
+  "source_branch": "feat/i18n-move-sheet-copy",
+  "worktree": "/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy",
+  "read_route": "Ordinary explicitly approved absolute local file reads and dependency-free Python pathlib/json plus git rev-parse. Full source hashes verified. Nested context is non-routable context, not public catalogue keys. No public/keyed-reader receipt claimed. Shared core Hindi style/glossary checked against actual mobile catalogues. No repository writes.",
+  "input_hashes": {
+    "brief": {
+      "path": "/Users/damian/.local-operator/sessions/ca8720609fc7/scratchpad/translation-brief.json",
+      "sha256": "5a72dfd72dc820b1fa8e73d78b97807581572334ee0fd25eb2eab346e759ebca"
+    },
+    "draft": {
+      "path": "/Users/damian/.local-operator/sessions/6b48875431ee/scratchpad/draft-hi.json",
+      "sha256": "eedec3de1f87567b35790e88eb62109718fa268fd7654b7592d33ff509cd7f8d"
+    },
+    "translator_notes": {
+      "path": "/Users/damian/.local-operator/sessions/6b48875431ee/scratchpad/notes-hi.md",
+      "sha256": "3ed4f30594e26fd0e3a627ad66b4f1712976ece4539ef36be9b9730051ca006a"
+    },
+    "translator_verification": {
+      "path": "/Users/damian/.local-operator/sessions/6b48875431ee/scratchpad/verification-hi.json",
+      "sha256": "37088be8dceba335e432a115a66cf985c33602f6762cacd830bf83d524b2c043"
+    },
+    "schema_reference": {
+      "path": "/Users/damian/.local-operator/sessions/e5caed1bcb4e/scratchpad/bundles/fr/mobile.remote_sessions/move-pick-fr-e5caed1b-r1/record.json",
+      "sha256": "a2cb1e7f3fce51b1ae603ab066560c6beec1d7c40f2954d272f8bcdb6f96e85d"
+    },
+    "english": {
+      "path": "/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/i18n/catalogues/en/mobile.remote_sessions.json",
+      "sha256": "436f8ec3bda274431146e7e7cb82b2add418f598bd2a7a6d7426f561a4312984"
+    },
+    "context": {
+      "path": "/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/i18n/catalogues/en/mobile.remote_sessions.context.json",
+      "sha256": "c703dff07b634d3d2d4b7c789e6a4a1eecf192a57618ea8e9e72197d325d08eb"
+    },
+    "usage": {
+      "path": "/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/features/sessions/move-sheet.tsx",
+      "sha256": "6a3f7126eb2fefc5ad0138a1731e3898d66d333ea8ca1b4ac99321da18d495aa"
+    },
+    "hi_existing": {
+      "path": "/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/i18n/catalogues/hi/mobile.remote_sessions.json",
+      "sha256": "882b9552d3711b4bf0de1325a753d446ff99807696e49efa0c43b166df8f8fd4"
+    },
+    "hi_sidebar": {
+      "path": "/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/i18n/catalogues/hi/mobile.sidebar.json",
+      "sha256": "38d9aa1ee75e463ef00ba5ab27d6e6143d0bee692b7efa3d7da63d83834a9bbc"
+    },
+    "hi_computers": {
+      "path": "/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/i18n/catalogues/hi/mobile.computers.json",
+      "sha256": "7bb412b34609a2c18a8a2a4bc49a03b1a0e303b39de0e9b11c250ff0af38b609"
+    },
+    "hi_style_reference": {
+      "path": "/Users/damian/local-operator/i18n/style-guides/hi.md",
+      "sha256": "82292dc8d13fcc93dc752457719264aed3cc20bb65ecfaba0f0e5a31f4cb40d5"
+    },
+    "glossary_reference": {
+      "path": "/Users/damian/local-operator/i18n/glossary.md",
+      "sha256": "0eb34437a8c3d6f564f278ef957a603b1d9f51bb07d5ddae5ea8f37deba962f8"
+    },
+    "core_guidance": {
+      "path": "/Users/damian/local-operator/AGENTS.md",
+      "sha256": "c8c66d86f7603dd4cfbcfc9beb887b369450004f3d9695a7d6e91e0fd58dba44"
+    },
+    "mobile_guidance": {
+      "path": "/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/AGENTS.md",
+      "sha256": "84021f7c9df58bfe01376669c187cbdf777c680d918f9f001201faeae2a14ad7"
+    }
+  },
+  "checks": {
+    "keys_missing": 0,
+    "keys_extra": 0,
+    "brief_vs_en_mismatches": 0,
+    "brief_vs_context_mismatches": 0,
+    "source_authoring_hashes_verified": true,
+    "placeholder_brace_sets": "exact {device} once in cannot_reach; six empty",
+    "negative_controls": "malformed/nested braces rejected; missing/renamed argument, extra key, bidi detector checks passed",
+    "icu_scope": "Simple-message dependency-free grammar only; no repo ICU formatter/parser run; no plural/select/number/date/markup syntax",
+    "CLDR_plural": "N/A all seven: no counts/plural structures; Hindi one/other requires no new branches here",
+    "nfc": "pass",
+    "bidi_control_chars": 0,
+    "RTL_scope": "Hindi is LTR; no RTL layout claim; arbitrary mixed-script names tested only with literal substitution",
+    "product_name": "Local Operator byte-exact once",
+    "pseudo": "Seven source strings bracketed plus 35% tilde padding; preserves argument; synthetic only, no rendered/native fit proof",
+    "repo_validator": "not run per explicit restrictions"
+  },
+  "redaction_marker_hits": {
+    "draft_values": 0,
+    "english_sources": 0,
+    "draft_metadata_regex_hits": 0,
+    "scope": "Semantic copy and metadata separately; not a secret audit or public-copy receipt"
+  },
+  "verdict": "passed_with_minors",
+  "linguistic_verdict": "passed",
+  "namespace_verdicts": {
+    "mobile.remote_sessions (seven move_pick keys only)": "passed_with_minors"
+  },
+  "current_report_verdict": {
+    "status": "passed_with_minors",
+    "unresolved_blocker_major_count": 0,
+    "finding_ids": [
+      "H1",
+      "H2",
+      "H3"
+    ],
+    "verdict_reason": "Seven keys linguistically clean; three non-gating unrendered expansion risks deferred; this is A only, not paired clearance."
+  },
+  "findings": [
+    {
+      "id": "H1",
+      "severity": "minor",
+      "kind": "unverified_width_risk_not_proven_overflow",
+      "key": "mobile.remote_sessions.move_pick.cannot_reach",
+      "current_text": "{device} से संपर्क नहीं हो पा रहा",
+      "proposed_text": "{device} से संपर्क नहीं हो पा रहा",
+      "proposed_action": "Retain accurate wording; verify narrow-phone wrapping/height in the owning rendered-validation lane. No translator rewrite required by this evidence.",
+      "reason": "33 versus 20 source codepoints (65.0% expansion); wrapping is permitted but native fit is unverified; Devanagari codepoints do not measure glyph/cell width.",
+      "disposition": "deferred — rendered validation outside this read-only A linguistic audit; no minor-only remediation round"
+    },
+    {
+      "id": "H2",
+      "severity": "minor",
+      "kind": "unverified_width_risk_not_proven_overflow",
+      "key": "mobile.remote_sessions.move_pick.destination_heading",
+      "current_text": "ले जाने या कॉपी करने की जगह",
+      "proposed_text": "ले जाने या कॉपी करने की जगह",
+      "proposed_action": "Retain accurate wording; verify narrow-phone wrapping/height in the owning rendered-validation lane. No translator rewrite required by this evidence.",
+      "reason": "27 versus 15 source codepoints (80.0% expansion); wrapping is permitted but native fit is unverified; Devanagari codepoints do not measure glyph/cell width.",
+      "disposition": "deferred — rendered validation outside this read-only A linguistic audit; no minor-only remediation round"
+    },
+    {
+      "id": "H3",
+      "severity": "minor",
+      "kind": "unverified_width_risk_not_proven_overflow",
+      "key": "mobile.remote_sessions.move_pick.discovery_help",
+      "current_text": "यह ऐप सिर्फ़ उन डिवाइसों को दिखा सकता है जिनके सत्र आपकी सूची में दिखते हैं। जिस डिवाइस का कोई सत्र नहीं दिखता, उसे अभी नहीं चुन सकते — दूसरे कंप्यूटर पर Local Operator खोलें, फिर सत्रों की सूची नीचे खींचकर रीफ़्रेश करें।",
+      "proposed_text": "यह ऐप सिर्फ़ उन डिवाइसों को दिखा सकता है जिनके सत्र आपकी सूची में दिखते हैं। जिस डिवाइस का कोई सत्र नहीं दिखता, उसे अभी नहीं चुन सकते — दूसरे कंप्यूटर पर Local Operator खोलें, फिर सत्रों की सूची नीचे खींचकर रीफ़्रेश करें।",
+      "proposed_action": "Retain accurate wording; verify narrow-phone wrapping/height in the owning rendered-validation lane. No translator rewrite required by this evidence.",
+      "reason": "221 versus 178 source codepoints (24.2% expansion); wrapping is permitted but native fit is unverified; Devanagari codepoints do not measure glyph/cell width.",
+      "disposition": "deferred — rendered validation outside this read-only A linguistic audit; no minor-only remediation round"
+    }
+  ],
+  "per_key": [
+    {
+      "key": "mobile.remote_sessions.move_pick.cannot_reach",
+      "english": "Can't reach {device}",
+      "current_text": "{device} से संपर्क नहीं हो पा रहा",
+      "analysis": "Natural calm contact-failure status, using the existing संपर्क नहीं हो पा रहा wording; not a phone connection diagnosis. {device} remains once, opaque and uninflected internally. The postposition से follows the entire name.",
+      "linguistic_verdict": "passed",
+      "verdict": "passed_with_minor_width_risk",
+      "severity": "minor",
+      "findings": [
+        "H1"
+      ],
+      "width": {
+        "english_codepoints": 20,
+        "hindi_codepoints": 33,
+        "ratio": 1.65,
+        "measurement": "Unicode codepoints only; NOT cells, glyphs, graphemes, pixels or rendered/native fit"
+      }
+    },
+    {
+      "key": "mobile.remote_sessions.move_pick.destination_heading",
+      "english": "Move or copy to",
+      "current_text": "ले जाने या कॉपी करने की जगह",
+      "analysis": "ले जाने या कॉपी करने की जगह is an idiomatic nominal destination heading: it preserves both operations, matches existing ले जाएँ / कॉपी करें, and neither commands an action nor claims one started. No final punctuation.",
+      "linguistic_verdict": "passed",
+      "verdict": "passed_with_minor_width_risk",
+      "severity": "minor",
+      "findings": [
+        "H2"
+      ],
+      "width": {
+        "english_codepoints": 15,
+        "hindi_codepoints": 27,
+        "ratio": 1.8,
+        "measurement": "Unicode codepoints only; NOT cells, glyphs, graphemes, pixels or rendered/native fit"
+      }
+    },
+    {
+      "key": "mobile.remote_sessions.move_pick.discovery_help",
+      "english": "This app can offer the devices your sessions show. A device with no visible session cannot be picked yet — open Local Operator on the other computer and pull the list to refresh.",
+      "current_text": "यह ऐप सिर्फ़ उन डिवाइसों को दिखा सकता है जिनके सत्र आपकी सूची में दिखते हैं। जिस डिवाइस का कोई सत्र नहीं दिखता, उसे अभी नहीं चुन सकते — दूसरे कंप्यूटर पर Local Operator खोलें, फिर सत्रों की सूची नीचे खींचकर रीफ़्रेश करें।",
+      "analysis": "Accurately limits selectable devices to visible sessions; does not claim network-wide discovery. जिस डिवाइस का कोई सत्र नहीं दिखता preserves the negative eligibility condition and अभी preserves yet. Polite खोलें then करें keeps आप-register and the required order: open Local Operator on the other computer, then pull the session list down to refresh. डिवाइसों/सत्रों are natural oblique inflections, not glossary drift; रीफ़्रेश matches the computer catalogue. Product name is Latin verbatim.",
+      "linguistic_verdict": "passed",
+      "verdict": "passed_with_minor_width_risk",
+      "severity": "minor",
+      "findings": [
+        "H3"
+      ],
+      "width": {
+        "english_codepoints": 178,
+        "hindi_codepoints": 221,
+        "ratio": 1.2416,
+        "measurement": "Unicode codepoints only; NOT cells, glyphs, graphemes, pixels or rendered/native fit"
+      }
+    },
+    {
+      "key": "mobile.remote_sessions.move_pick.no_answer",
+      "english": "It did not answer when this computer asked.",
+      "current_text": "इस कंप्यूटर के अनुरोध पर उसने जवाब नहीं दिया।",
+      "analysis": "इस कंप्यूटर के अनुरोध पर उसने जवाब नहीं दिया naturally distinguishes the requesting relay computer from the previously identified remote computer. अनुरोध is standard UI Hindi, not an invented technical term; जवाब agrees with existing computer-response vocabulary. Source inspection, not execution, confirms this is only the absent/blank server-reason fallback.",
+      "linguistic_verdict": "passed",
+      "verdict": "passed",
+      "severity": null,
+      "findings": [],
+      "width": {
+        "english_codepoints": 43,
+        "hindi_codepoints": 45,
+        "ratio": 1.0465,
+        "measurement": "Unicode codepoints only; NOT cells, glyphs, graphemes, pixels or rendered/native fit"
+      }
+    },
+    {
+      "key": "mobile.remote_sessions.move_pick.no_devices",
+      "english": "No other devices are visible.",
+      "current_text": "कोई दूसरा डिवाइस नहीं दिख रहा।",
+      "analysis": "कोई दूसरा डिवाइस नहीं दिख रहा preserves other and visibility; it does not claim offline devices or absence from the network. Singular grammar under कोई is natural and requires no numeric ICU plural.",
+      "linguistic_verdict": "passed",
+      "verdict": "passed",
+      "severity": null,
+      "findings": [],
+      "width": {
+        "english_codepoints": 29,
+        "hindi_codepoints": 30,
+        "ratio": 1.0345,
+        "measurement": "Unicode codepoints only; NOT cells, glyphs, graphemes, pixels or rendered/native fit"
+      }
+    },
+    {
+      "key": "mobile.remote_sessions.move_pick.on_this_computer",
+      "english": "On this computer",
+      "current_text": "इस कंप्यूटर पर",
+      "analysis": "इस कंप्यूटर पर is the natural location fragment, parallel to existing {device} पर; कंप्यूटर correctly refers to the relay rather than the phone. Compact and unpunctuated.",
+      "linguistic_verdict": "passed",
+      "verdict": "passed",
+      "severity": null,
+      "findings": [],
+      "width": {
+        "english_codepoints": 16,
+        "hindi_codepoints": 14,
+        "ratio": 0.875,
+        "measurement": "Unicode codepoints only; NOT cells, glyphs, graphemes, pixels or rendered/native fit"
+      }
+    },
+    {
+      "key": "mobile.remote_sessions.move_pick.right_now",
+      "english": "Right now",
+      "current_text": "अभी",
+      "analysis": "अभी is idiomatic current-time framing above the location; absent an imperative it does not command immediate action. Short, neutral, and no final punctuation.",
+      "linguistic_verdict": "passed",
+      "verdict": "passed",
+      "severity": null,
+      "findings": [],
+      "width": {
+        "english_codepoints": 9,
+        "hindi_codepoints": 3,
+        "ratio": 0.3333,
+        "measurement": "Unicode codepoints only; NOT cells, glyphs, graphemes, pixels or rendered/native fit"
+      }
+    }
+  ],
+  "separate_process_gap": {
+    "status": "OPEN",
+    "name": "source-hook evidence gap",
+    "linguistic_failure": false,
+    "fixed_by_audit": false,
+    "source": "delegation explicitly leaves this gap open; no source hook executed here"
+  },
+  "high_visibility_fresh_B": {
+    "status": "PENDING",
+    "paired_clearance": false
+  },
+  "human_native_speaker": "waived by delegation; independent LLM Hindi-language assessment, not human-native proof",
+  "unverified": [
+    "actual execution model beyond visible fallback notice",
+    "fresh high-visibility B audit",
+    "source-hook evidence",
+    "runtime ICU/server-reason behavior",
+    "rendering, shaping, cells, glyph/pixel width, native fit and interaction"
+  ],
+  "repo_edits": false
+}

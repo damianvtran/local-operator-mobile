@@ -1,0 +1,315 @@
+{
+  "schema_version": 1,
+  "audit_pass": "B",
+  "audit_id": "move-pick-ru-49058fb4-B-r1",
+  "locale": "ru",
+  "namespace": "mobile.remote_sessions",
+  "key_count": 7,
+  "source_commit": "9362cce8a631791b676b2d2c9eda90c43fc7e11c",
+  "worktree": "/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy",
+  "timestamp_utc": "2026-11-22T05:28:25.658484+00:00",
+  "brief_sha256": "5a72dfd72dc820b1fa8e73d78b97807581572334ee0fd25eb2eab346e759ebca",
+  "draft_sha256": "15070cb7b89f902b53efdcc8e546c8ffce03df4a800cdfe121e59705f2cc627a",
+  "inputs": {
+    "/Users/damian/.local-operator/sessions/ca8720609fc7/scratchpad/translation-brief.json": {
+      "sha256": "5a72dfd72dc820b1fa8e73d78b97807581572334ee0fd25eb2eab346e759ebca"
+    },
+    "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/move-picker-locale-ledger.json": {
+      "sha256": "bfe98c82dc835bd32470d5e744980664cc06cdd0916fbfab0e8affecc6c6139c"
+    },
+    "/Users/damian/.local-operator/sessions/8866a2ce4a5d/scratchpad/draft-ru.json": {
+      "sha256": "15070cb7b89f902b53efdcc8e546c8ffce03df4a800cdfe121e59705f2cc627a"
+    },
+    "/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/i18n/catalogues/en/mobile.remote_sessions.json": {
+      "sha256": "436f8ec3bda274431146e7e7cb82b2add418f598bd2a7a6d7426f561a4312984"
+    },
+    "/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/i18n/catalogues/en/mobile.remote_sessions.context.json": {
+      "sha256": "c703dff07b634d3d2d4b7c789e6a4a1eecf192a57618ea8e9e72197d325d08eb"
+    },
+    "/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/features/sessions/move-sheet.tsx": {
+      "sha256": "6a3f7126eb2fefc5ad0138a1731e3898d66d333ea8ca1b4ac99321da18d495aa"
+    },
+    "/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/i18n/catalogues/ru/mobile.remote_sessions.json": {
+      "sha256": "8b59dabaa9be70dd0b7c6ff3218aa407bdcefbfc4f811e7eb05ad0f6b57e1410"
+    },
+    "/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/i18n/catalogues/ru/mobile.sidebar.json": {
+      "sha256": "0bbfb778b2c378e24faec6588f4563b54451e44f5d783869e6f03f9c7b39c2e3"
+    },
+    "/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/i18n/catalogues/ru/mobile.team_bridge.json": {
+      "sha256": "ed8560582fbcdc2c0a8bdd1b29bda3532d8cc9ae6ddf7a2deb2cf1fcdc78a5e0"
+    },
+    "/Users/damian/local-operator/i18n/style-guides/ru.md": {
+      "sha256": "f20e1cafaf70578c17ce072c71725628808d228e4be5604329f8da30386f1fb5"
+    },
+    "/Users/damian/local-operator/i18n/glossary.md": {
+      "sha256": "0eb34437a8c3d6f564f278ef957a603b1d9f51bb07d5ddae5ea8f37deba962f8"
+    }
+  },
+  "actors": {
+    "translator": {
+      "session": "8866a2ce4a5d",
+      "actual_model_verified_receipt": "UNKNOWN",
+      "reported_model": "openai/gpt-6.1-sol",
+      "source": "draft model disclosure and manager ledger; not independently verified serving receipt"
+    },
+    "auditor_A": {
+      "session": "1956621c6848",
+      "actual_model_verified_receipt": "UNKNOWN",
+      "reported_model": "openai/gpt-6.1-sol",
+      "source": "manager ledger only; A report/reasoning not used to decide this verdict"
+    },
+    "auditor_B": {
+      "session": "49058fb44279",
+      "actual_model_verified_receipt": "UNKNOWN",
+      "visible_model_switch": "openai/gpt-6.1-sol",
+      "initial_model": "anthropic/claude-opus-5-5",
+      "fallback_disclosure": "Visible model-switch message: provider failure: quota; temporary fallback to openai/gpt-6.1-sol. No independent serving receipt available."
+    }
+  },
+  "independence": {
+    "distinct_session_from_translator_and_A": true,
+    "human_native_review": "waived by brief; this is an independent LLM linguistic audit, not a human-native credential",
+    "pair_gate": "NOT CLAIMED; parent must verify both audits"
+  },
+  "read_route": {
+    "method": "ordinary approved UTF-8 local copy reads and standard-library JSON parsing",
+    "context": "nested English context objects read as context, not routable catalogue messages",
+    "public_copy_receipt": null
+  },
+  "per_key": [
+    {
+      "key": "mobile.remote_sessions.move_pick.cannot_reach",
+      "english": "Can't reach {device}",
+      "current_text": "{device}: нет связи",
+      "reasoning": "The name-first label plus colon is natural terse Russian status copy and requires neither case inflection nor gender agreement with an opaque Latin or Cyrillic device name. It reports lost contact with the named computer, not phone connectivity.",
+      "linguistic_verdict": "PASS",
+      "findings": [],
+      "placeholder_tokens": [
+        "{device}"
+      ],
+      "NFC": true,
+      "unicode_bidi_controls": [],
+      "redaction_marker_matches": [],
+      "width_measurement": {
+        "kind": "actual Unicode codepoint count, NOT pixels/cells/native layout",
+        "english": 20,
+        "russian": 19,
+        "ratio": 0.95
+      },
+      "icu_cldr": "N/A: no count/plural/select/number/date skeleton in these seven messages; Russian CLDR plural categories are not exercised.",
+      "markup": "No source or target markup tokens"
+    },
+    {
+      "key": "mobile.remote_sessions.move_pick.destination_heading",
+      "english": "Move or copy to",
+      "current_text": "Куда переместить или скопировать",
+      "reasoning": "Куда introduces destination choice; the two infinitives preserve both operations and match переместить / скопировать in the existing long-press hint. This is a heading, not an instruction that moving has begun.",
+      "linguistic_verdict": "PASS",
+      "findings": [
+        {
+          "id": "RU-B1",
+          "severity": "minor",
+          "category": "overflow_risk",
+          "key": "mobile.remote_sessions.move_pick.destination_heading",
+          "current_text": "Куда переместить или скопировать",
+          "proposed_text": "Куда переместить или скопировать",
+          "reason": "The compact heading is 32 versus 15 codepoints (2.133×); its extra length warrants a narrow-phone wrapping check, not a claim of clipping.",
+          "translator_recommendation": "Retain this accurate text pending rendered measurement; no new wording is authored by this audit.",
+          "disposition": "deferred — rendered/native fit is outside this linguistic-only pass"
+        }
+      ],
+      "placeholder_tokens": [],
+      "NFC": true,
+      "unicode_bidi_controls": [],
+      "redaction_marker_matches": [],
+      "width_measurement": {
+        "kind": "actual Unicode codepoint count, NOT pixels/cells/native layout",
+        "english": 15,
+        "russian": 32,
+        "ratio": 2.133
+      },
+      "icu_cldr": "N/A: no count/plural/select/number/date skeleton in these seven messages; Russian CLDR plural categories are not exercised.",
+      "markup": "No source or target markup tokens"
+    },
+    {
+      "key": "mobile.remote_sessions.move_pick.discovery_help",
+      "english": "This app can offer the devices your sessions show. A device with no visible session cannot be picked yet — open Local Operator on the other computer and pull the list to refresh.",
+      "current_text": "Приложение предлагает устройства, сессии которых видны в списке. Устройство без видимой сессии пока нельзя выбрать — откройте Local Operator на другом компьютере и потяните список сессий вниз, чтобы обновить его.",
+      "reasoning": "The first clause restricts destinations to devices with sessions visible in the list; пока cannot-select correctly preserves the temporary limitation. Both ordered actions remain: откройте Local Operator on the other computer, then потяните the session list вниз. Professional вы-imperatives and сессия / устройство follow the glossary; no technical neologism appears.",
+      "linguistic_verdict": "PASS",
+      "findings": [
+        {
+          "id": "RU-B3",
+          "severity": "minor",
+          "category": "overflow_risk",
+          "key": "mobile.remote_sessions.move_pick.discovery_help",
+          "current_text": "Приложение предлагает устройства, сессии которых видны в списке. Устройство без видимой сессии пока нельзя выбрать — откройте Local Operator на другом компьютере и потяните список сессий вниз, чтобы обновить его.",
+          "proposed_text": "Приложение предлагает устройства, сессии которых видны в списке. Устройство без видимой сессии пока нельзя выбрать — откройте Local Operator на другом компьютере и потяните список сессий вниз, чтобы обновить его.",
+          "reason": "The multi-line help is 212 versus 178 codepoints (1.191×); defer a smallest-phone wrapping/vertical-growth check while retaining the visibility limitation and both instructions.",
+          "translator_recommendation": "Retain this accurate text pending rendered measurement; no new wording is authored by this audit.",
+          "disposition": "deferred — rendered/native fit is outside this linguistic-only pass"
+        }
+      ],
+      "placeholder_tokens": [],
+      "NFC": true,
+      "unicode_bidi_controls": [],
+      "redaction_marker_matches": [],
+      "width_measurement": {
+        "kind": "actual Unicode codepoint count, NOT pixels/cells/native layout",
+        "english": 178,
+        "russian": 212,
+        "ratio": 1.191
+      },
+      "icu_cldr": "N/A: no count/plural/select/number/date skeleton in these seven messages; Russian CLDR plural categories are not exercised.",
+      "markup": "No source or target markup tokens"
+    },
+    {
+      "key": "mobile.remote_sessions.move_pick.no_answer",
+      "english": "It did not answer when this computer asked.",
+      "current_text": "Удалённый компьютер не ответил на запрос этого компьютера.",
+      "reasoning": "Explicit Удалённый компьютер resolves English It, while запрос этого компьютера keeps the requesting relay computer distinct from the phone. The past-tense failure is calm and idiomatic. Source line 484 still prefers trimmed server text, so this is only the empty-reason fallback.",
+      "linguistic_verdict": "PASS",
+      "findings": [
+        {
+          "id": "RU-B2",
+          "severity": "minor",
+          "category": "overflow_risk",
+          "key": "mobile.remote_sessions.move_pick.no_answer",
+          "current_text": "Удалённый компьютер не ответил на запрос этого компьютера.",
+          "proposed_text": "Удалённый компьютер не ответил на запрос этого компьютера.",
+          "reason": "The fallback body is 58 versus 43 codepoints (1.349×); verify narrow-phone wrapping and vertical growth without dropping the distinction between remote and requesting computers.",
+          "translator_recommendation": "Retain this accurate text pending rendered measurement; no new wording is authored by this audit.",
+          "disposition": "deferred — rendered/native fit is outside this linguistic-only pass"
+        }
+      ],
+      "placeholder_tokens": [],
+      "NFC": true,
+      "unicode_bidi_controls": [],
+      "redaction_marker_matches": [],
+      "width_measurement": {
+        "kind": "actual Unicode codepoint count, NOT pixels/cells/native layout",
+        "english": 43,
+        "russian": 58,
+        "ratio": 1.349
+      },
+      "icu_cldr": "N/A: no count/plural/select/number/date skeleton in these seven messages; Russian CLDR plural categories are not exercised.",
+      "markup": "No source or target markup tokens"
+    },
+    {
+      "key": "mobile.remote_sessions.move_pick.no_devices",
+      "english": "No other devices are visible.",
+      "current_text": "Другие устройства не видны.",
+      "reasoning": "Другие устройства не видны describes visibility only, retaining other and not asserting offline status or network absence. It is concise factual Russian.",
+      "linguistic_verdict": "PASS",
+      "findings": [],
+      "placeholder_tokens": [],
+      "NFC": true,
+      "unicode_bidi_controls": [],
+      "redaction_marker_matches": [],
+      "width_measurement": {
+        "kind": "actual Unicode codepoint count, NOT pixels/cells/native layout",
+        "english": 29,
+        "russian": 27,
+        "ratio": 0.931
+      },
+      "icu_cldr": "N/A: no count/plural/select/number/date skeleton in these seven messages; Russian CLDR plural categories are not exercised.",
+      "markup": "No source or target markup tokens"
+    },
+    {
+      "key": "mobile.remote_sessions.move_pick.on_this_computer",
+      "english": "On this computer",
+      "current_text": "На этом компьютере",
+      "reasoning": "На этом компьютере is idiomatic location text. Компьютере preserves relay/computer reference rather than changing it to this phone. Sentence case and absent final punctuation suit the status.",
+      "linguistic_verdict": "PASS",
+      "findings": [],
+      "placeholder_tokens": [],
+      "NFC": true,
+      "unicode_bidi_controls": [],
+      "redaction_marker_matches": [],
+      "width_measurement": {
+        "kind": "actual Unicode codepoint count, NOT pixels/cells/native layout",
+        "english": 16,
+        "russian": 18,
+        "ratio": 1.125
+      },
+      "icu_cldr": "N/A: no count/plural/select/number/date skeleton in these seven messages; Russian CLDR plural categories are not exercised.",
+      "markup": "No source or target markup tokens"
+    },
+    {
+      "key": "mobile.remote_sessions.move_pick.right_now",
+      "english": "Right now",
+      "current_text": "Сейчас",
+      "reasoning": "Сейчас is the normal short temporal section label for the present location and does not turn the heading into an urgent imperative.",
+      "linguistic_verdict": "PASS",
+      "findings": [],
+      "placeholder_tokens": [],
+      "NFC": true,
+      "unicode_bidi_controls": [],
+      "redaction_marker_matches": [],
+      "width_measurement": {
+        "kind": "actual Unicode codepoint count, NOT pixels/cells/native layout",
+        "english": 9,
+        "russian": 6,
+        "ratio": 0.667
+      },
+      "icu_cldr": "N/A: no count/plural/select/number/date skeleton in these seven messages; Russian CLDR plural categories are not exercised.",
+      "markup": "No source or target markup tokens"
+    }
+  ],
+  "findings": [
+    {
+      "id": "RU-B1",
+      "severity": "minor",
+      "category": "overflow_risk",
+      "key": "mobile.remote_sessions.move_pick.destination_heading",
+      "current_text": "Куда переместить или скопировать",
+      "proposed_text": "Куда переместить или скопировать",
+      "reason": "The compact heading is 32 versus 15 codepoints (2.133×); its extra length warrants a narrow-phone wrapping check, not a claim of clipping.",
+      "translator_recommendation": "Retain this accurate text pending rendered measurement; no new wording is authored by this audit.",
+      "disposition": "deferred — rendered/native fit is outside this linguistic-only pass"
+    },
+    {
+      "id": "RU-B2",
+      "severity": "minor",
+      "category": "overflow_risk",
+      "key": "mobile.remote_sessions.move_pick.no_answer",
+      "current_text": "Удалённый компьютер не ответил на запрос этого компьютера.",
+      "proposed_text": "Удалённый компьютер не ответил на запрос этого компьютера.",
+      "reason": "The fallback body is 58 versus 43 codepoints (1.349×); verify narrow-phone wrapping and vertical growth without dropping the distinction between remote and requesting computers.",
+      "translator_recommendation": "Retain this accurate text pending rendered measurement; no new wording is authored by this audit.",
+      "disposition": "deferred — rendered/native fit is outside this linguistic-only pass"
+    },
+    {
+      "id": "RU-B3",
+      "severity": "minor",
+      "category": "overflow_risk",
+      "key": "mobile.remote_sessions.move_pick.discovery_help",
+      "current_text": "Приложение предлагает устройства, сессии которых видны в списке. Устройство без видимой сессии пока нельзя выбрать — откройте Local Operator на другом компьютере и потяните список сессий вниз, чтобы обновить его.",
+      "proposed_text": "Приложение предлагает устройства, сессии которых видны в списке. Устройство без видимой сессии пока нельзя выбрать — откройте Local Operator на другом компьютере и потяните список сессий вниз, чтобы обновить его.",
+      "reason": "The multi-line help is 212 versus 178 codepoints (1.191×); defer a smallest-phone wrapping/vertical-growth check while retaining the visibility limitation and both instructions.",
+      "translator_recommendation": "Retain this accurate text pending rendered measurement; no new wording is authored by this audit.",
+      "disposition": "deferred — rendered/native fit is outside this linguistic-only pass"
+    }
+  ],
+  "current_report_verdict": {
+    "verdict": "PASS_WITH_MINORS",
+    "unresolved_blocker_major_count": 0,
+    "blocker_count": 0,
+    "major_count": 0,
+    "minor_count": 3,
+    "nit_count": 0
+  },
+  "scope_notes": [
+    "Seven new keys only, not whole-app coverage. Neighbor catalogue samples are glossary context, not added audited keys.",
+    "Pre-existing neighbor uses сеансов in owner_unresolved/session_missing, while binding core glossary requires сессия. New discovery_help correctly uses сессии/сессий; do not propagate that pre-existing drift. No unrelated redesign requested.",
+    "RTL-specific paragraph/base-direction proof is N/A to ru LTR; no rendered claim for arbitrary mixed-direction names.",
+    "No numeric width budget provided in these source context rows; codepoint expansion is risk only, never fit proof.",
+    "Redaction marker scan targets the seven copy values; paths/hashes/actor metadata are not user-facing copy. No repository-secret-audit claim."
+  ],
+  "unverified": [
+    "rendered/native fit, layout and runtime formatting",
+    "source-hook evidence gap remains OPEN; linguistic result is not shipping clearance",
+    "public-copy receipt and independent served-model receipt unavailable"
+  ],
+  "prohibited_actions_performed": []
+}

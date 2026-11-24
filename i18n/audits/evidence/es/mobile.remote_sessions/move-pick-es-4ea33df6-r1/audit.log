@@ -1,0 +1,77 @@
+$ python3 /Users/damian/.local-operator/sessions/4ea33df6bad7/scratchpad/audit-es.py
+INITIAL ATTEMPT exit 1 before execution: SyntaxError line 89: list was never closed. Corrected own script by adding the missing closing bracket; no repository writes or bundle creation occurred before failure. Successful retry below.
+
+$ python3 /Users/damian/.local-operator/sessions/4ea33df6bad7/scratchpad/audit-es.py
+Dependency-free Python stdlib only; no repository tests/hooks/builds/browser/native execution.
+$ git -C /Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy rev-parse HEAD
+9362cce8a631791b676b2d2c9eda90c43fc7e11c
+
+$ git -C /Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy status --porcelain=v1
+(empty)
+SHA256 brief 5a72dfd72dc820b1fa8e73d78b97807581572334ee0fd25eb2eab346e759ebca
+SHA256 draft 1e929c06d54c13309587f3f6965165a30943bb381bde41333a636c768a550fb8
+SHA256 translator_notes be8c6b6102fad023a1ad35f8068b0ab4d01a053ea8046864b7cad94e42dd647b
+SHA256 translator_verification 83e776b9b509dd155e03fa408237ec8455006d9c16fae2c096f93d69d09d94ed
+SHA256 schema_reference a2cb1e7f3fce51b1ae603ab066560c6beec1d7c40f2954d272f8bcdb6f96e85d
+SHA256 english 436f8ec3bda274431146e7e7cb82b2add418f598bd2a7a6d7426f561a4312984
+SHA256 context c703dff07b634d3d2d4b7c789e6a4a1eecf192a57618ea8e9e72197d325d08eb
+SHA256 usage 6a3f7126eb2fefc5ad0138a1731e3898d66d333ea8ca1b4ac99321da18d495aa
+SHA256 es_existing 465cb080574f5398ad7a4adb0907239986603c872e9d676bd84e578628c77881
+SHA256 es_sidebar bfeb725cbb579462506ee448bcaf1b7ecb6ee6adad89bf980758d74e2dff150f
+SHA256 es_style_reference 77b9227213802d14c74d4298d6b346ad842bbf2a5ca3b9d46fc6144430d26c3e
+SHA256 glossary_reference 0eb34437a8c3d6f564f278ef957a603b1d9f51bb07d5ddae5ea8f37deba962f8
+SHA256 core_guidance c8c66d86f7603dd4cfbcfc9beb887b369450004f3d9695a7d6e91e0fd58dba44
+SHA256 mobile_guidance 84021f7c9df58bfe01376669c187cbdf777c680d918f9f001201faeae2a14ad7
+SHA256 audit_script 37f9f344e1e6714d1cd71ea7c22c90dde4f6fe42c3fa048cee03fb903004a9bf
+NEGATIVE CONTROL rejected '{device'
+NEGATIVE CONTROL rejected '{device}}'
+NEGATIVE CONTROL rejected '{{device}}'
+REDACTION explicit regex redact(?:ion|ed|ing)?|mask(?:ed|ing)?|\[\s*(?:removed|hidden|secret)\s*\]|<\s*(?:removed|hidden|secret)\s*>
+REDACTION approved EN/context/existing ES copy hits=0; draft copy hits=0; raw metadata-inclusive occurrences={"brief": 2, "draft": 0, "translator_notes": 4, "translator_verification": 8}
+PAIR mobile.remote_sessions.move_pick.cannot_reach
+EN Can't reach {device}
+ES No se puede contactar con {device}
+WIDTH {"english_codepoints": 20, "spanish_codepoints": 34, "ratio": 1.7, "delta_codepoints": 14}
+PSEUDO [No se puede contactar con {device}~~~~~~~~~~~~]
+PLACEHOLDERS ['{device}']; CLDR N/A: simple message; RTL N/A: Spanish LTR
+PAIR mobile.remote_sessions.move_pick.destination_heading
+EN Move or copy to
+ES Mover o copiar a
+WIDTH {"english_codepoints": 15, "spanish_codepoints": 16, "ratio": 1.0667, "delta_codepoints": 1}
+PSEUDO [Mover o copiar a~~~~~~]
+PLACEHOLDERS []; CLDR N/A: simple message; RTL N/A: Spanish LTR
+PAIR mobile.remote_sessions.move_pick.discovery_help
+EN This app can offer the devices your sessions show. A device with no visible session cannot be picked yet — open Local Operator on the other computer and pull the list to refresh.
+ES Esta app solo ofrece los dispositivos que aparecen en tus sesiones. Si un dispositivo no tiene ninguna sesión visible, aún no puedes seleccionarlo. Abre Local Operator en el otro equipo y desliza la lista hacia abajo para actualizarla.
+WIDTH {"english_codepoints": 178, "spanish_codepoints": 235, "ratio": 1.3202, "delta_codepoints": 57}
+PSEUDO [Esta app solo ofrece los dispositivos que aparecen en tus sesiones. Si un dispositivo no tiene ninguna sesión visible, aún no puedes seleccionarlo. Abre Local Operator en el otro equipo y desliza la lista hacia abajo para actualizarla.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]
+PLACEHOLDERS []; CLDR N/A: simple message; RTL N/A: Spanish LTR
+PAIR mobile.remote_sessions.move_pick.no_answer
+EN It did not answer when this computer asked.
+ES No respondió a la solicitud de este equipo.
+WIDTH {"english_codepoints": 43, "spanish_codepoints": 43, "ratio": 1.0, "delta_codepoints": 0}
+PSEUDO [No respondió a la solicitud de este equipo.~~~~~~~~~~~~~~~~]
+PLACEHOLDERS []; CLDR N/A: simple message; RTL N/A: Spanish LTR
+PAIR mobile.remote_sessions.move_pick.no_devices
+EN No other devices are visible.
+ES No hay otros dispositivos visibles.
+WIDTH {"english_codepoints": 29, "spanish_codepoints": 35, "ratio": 1.2069, "delta_codepoints": 6}
+PSEUDO [No hay otros dispositivos visibles.~~~~~~~~~~~~~]
+PLACEHOLDERS []; CLDR N/A: simple message; RTL N/A: Spanish LTR
+PAIR mobile.remote_sessions.move_pick.on_this_computer
+EN On this computer
+ES En este equipo
+WIDTH {"english_codepoints": 16, "spanish_codepoints": 14, "ratio": 0.875, "delta_codepoints": -2}
+PSEUDO [En este equipo~~~~~]
+PLACEHOLDERS []; CLDR N/A: simple message; RTL N/A: Spanish LTR
+PAIR mobile.remote_sessions.move_pick.right_now
+EN Right now
+ES Ahora mismo
+WIDTH {"english_codepoints": 9, "spanish_codepoints": 11, "ratio": 1.2222, "delta_codepoints": 2}
+PSEUDO [Ahora mismo~~~~]
+PLACEHOLDERS []; CLDR N/A: simple message; RTL N/A: Spanish LTR
+OPAQUE DEVICE: four synthetic names including Latin, brace, Arabic and decomposed accent preserved byte-for-byte; string substitution only, not runtime/render proof.
+SOURCE INSPECTION: trimmed server unreachable_reason wins over no_answer fallback; no server-text translation added. No runtime claim.
+$ git -C /Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy status --porcelain=v1
+(empty)
+FINAL seven linguistic passes; 3 deferred minor width risks; unresolved blocker/major=0. Source hook gap OPEN.

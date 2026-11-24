@@ -368,8 +368,9 @@ const NAMESPACES = [
 		 *  plus round-1 remediation (10): the gate's own sentence, the header's
 		 *  owner subtitle, the owner-only control line, five owner-aware health
 		 *  sentences, the Save button's name and the row's long-press hint. */
-		// +2 owner-routed Highlight refusal sentences.
-		expected: 24,
+		// +2 owner-routed Highlight refusal sentences; +7 move-picker client
+		// messages keep its fallback and row copy keyed without changing server text.
+		expected: 31,
 	},
 ] as const;
 

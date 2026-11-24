@@ -1,4 +1,11 @@
 {
+	"mobile.remote_sessions.move_pick.right_now": "Сейчас",
+	"mobile.remote_sessions.move_pick.cannot_reach": "{device}: нет связи",
+	"mobile.remote_sessions.move_pick.no_answer": "Удалённый компьютер не ответил на запрос этого компьютера.",
+	"mobile.remote_sessions.move_pick.on_this_computer": "На этом компьютере",
+	"mobile.remote_sessions.move_pick.no_devices": "Другие устройства не видны.",
+	"mobile.remote_sessions.move_pick.discovery_help": "Приложение предлагает устройства, сессии которых видны в списке. Устройство без видимой сессии пока нельзя выбрать — откройте Local Operator на другом компьютере и потяните список сессий вниз, чтобы обновить его.",
+	"mobile.remote_sessions.move_pick.destination_heading": "Куда переместить или скопировать",
 	"mobile.remote_sessions.title": "Удалённый разговор",
 	"mobile.remote_sessions.loading": "Проверяем поддержку удалённых сеансов…",
 	"mobile.remote_sessions.unsupported": "Это действие пока недоступно в удалённых разговорах. Выполните его на компьютере-владельце.",
