@@ -20,6 +20,12 @@ const SOURCE = readFileSync(
 	),
 	"utf8",
 );
+/** The detail read moved into `useSubagentTranscript` with the transcript's
+ *  own reads; `missing` is derived there now, by the same two arms. */
+const HOOK = readFileSync(
+	fileURLToPath(new URL("./use-subagent-transcript.ts", import.meta.url)),
+	"utf8",
+);
 
 describe("subagent detail screen", () => {
 	it("hands the badge the screen's own missing flag", () => {
@@ -27,7 +33,8 @@ describe("subagent detail screen", () => {
 	});
 
 	it("derives missing from the settled fetch, both an empty answer and a failure", () => {
-		expect(SOURCE).toContain("setMissing(loaded === null)");
-		expect(SOURCE).toContain("if (!cancelled) setMissing(true)");
+		expect(SOURCE).toContain("const { detail, missing } = view;");
+		expect(HOOK).toContain("setMissing(loaded === null)");
+		expect(HOOK).toContain("if (!cancelled) setMissing(true)");
 	});
 });

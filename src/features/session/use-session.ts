@@ -3,6 +3,7 @@ import { AppState } from "react-native";
 import { useStore } from "zustand";
 import type {
 	BridgeCardBody,
+	HistoryResponse,
 	ModelEntry,
 	SlashCommand,
 	SubagentDetail,
@@ -161,6 +162,16 @@ export interface SessionRuntime {
 	loadBridgeBody: (entryId: string) => Promise<BridgeCardBody | null>;
 	/** Loads a child's full detail, which the aggregate roster strips. */
 	loadAgent: (jobId: string) => Promise<SubagentDetail | null>;
+	/** One page of a child's OWN transcript (`GET …/agents/{job}/history`,
+	 *  lineage-checked by the relay; same `{entries, has_more}` paging as the
+	 *  root `/history`). The detail route never carries those rows from a
+	 *  current Core, so this is the subagent screen's only source of them.
+	 *  REJECTS on failure (unlike `loadAgent`) so the caller can tell a 404 —
+	 *  no route, or no transcript to serve — from a dropped link. `null` until
+	 *  the relay endpoints exist, so nothing reads (or fails) before a link. */
+	loadAgentHistory:
+		| ((jobId: string, before?: string) => Promise<HistoryResponse>)
+		| null;
 	/** Turn supplements (memo §2.4/§3.1 row 18): the projection's newest beat
 	 *  per anchor, read through `supplementsFromWire` — absent on an older relay
 	 *  and empty when no anchor carries one. */
@@ -1017,6 +1028,15 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 		[endpoints, sessionId],
 	);
 
+	const loadAgentHistory = useMemo(
+		() =>
+			endpoints === null
+				? null
+				: (jobId: string, before?: string) =>
+						endpoints.agentHistory(sessionId, jobId, { before }),
+		[endpoints, sessionId],
+	);
+
 	/* ------------------------------------------------------- turn supplements */
 	/* The projection's sibling map, re-read through its ONE reader at this trust
 	 * boundary (the store keeps the frame as parsed; a beat whose anchor/state
@@ -1174,6 +1194,7 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 		loadVideo,
 		loadBridgeBody,
 		loadAgent,
+		loadAgentHistory,
 		supplements,
 		projectionPid: projection?.pid ?? 0,
 		loadSupplementDocument,

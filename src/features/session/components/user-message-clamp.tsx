@@ -54,6 +54,7 @@ export const UserMessageClamp = ({
 	onToggle,
 	anchorRef,
 	testID,
+	fadeColor,
 	children,
 }: {
 	expanded?: boolean;
@@ -64,6 +65,11 @@ export const UserMessageClamp = ({
 	 *  as "the message". Omitted, the clamp's own top is used. */
 	anchorRef?: RefObject<View | null>;
 	testID?: string;
+	/** The ground the fade dissolves into. Omitted, the user bubble's own fill
+	 *  (the clamp's original home). The subagent screen's prompt block reuses
+	 *  this clamp on the bare `canvas`, where a bubble-coloured fade would
+	 *  paint a visible band over the last lines. */
+	fadeColor?: string;
 	/** The message. A FUNCTION form is handed the clamp's open-if-closed
 	 *  action (`expand`, below) for a body that must open the clamp itself —
 	 *  the iOS selection mode (PR #237 review, R1-m1). A render function rather
@@ -133,6 +139,7 @@ export const UserMessageClamp = ({
 				</View>
 				{clamped && !expanded ? (
 					<BubbleFade
+						colour={fadeColor}
 						height={
 							USER_MESSAGE_FADE_LINES * userMessageLineHeight(effectiveScale)
 						}
@@ -186,9 +193,15 @@ export const UserMessageClamp = ({
  * assistive tech and transparent to touches, so a press on it still reaches
  * the text beneath.
  */
-const BubbleFade = ({ height }: { height: number }) => {
+const BubbleFade = ({
+	height,
+	colour: override,
+}: {
+	height: number;
+	colour?: string;
+}) => {
 	const { active } = useTheme();
-	const colour = userBubbleFill(active).backgroundColor;
+	const colour = override ?? userBubbleFill(active).backgroundColor;
 	// One id per mounted fade: SVG gradient ids are document-global on web.
 	const id = `user-message-fade-${useId().replace(/:/g, "")}`;
 	return (
