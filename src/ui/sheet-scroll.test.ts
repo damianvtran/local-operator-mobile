@@ -46,20 +46,81 @@ describe("focusScrollTarget", () => {
 	});
 });
 
-/* Design round 4, D1 (#335): a pinned region that appears over a scrolled body
- *  takes its height from the top of the body, so at the same offset the rows
- *  under the reader's finger move down by that height. */
+/* Design round 4, D1 and round 5, D4 (#335): a pinned region that appears over
+ *  a scrolled body moves the body's top down by however much the BODY shrank
+ *  (the surface is bottom-anchored), so the offset follows that measured change
+ *  — not the region's height, which a sheet that grows instead of shrinking
+ *  would over-correct. */
 describe("pinnedRevealScroll", () => {
-	it("moves the offset down by the pinned height, so the rows stay where they were", () => {
+	it("moves the offset down by the body's measured shrink, so the rows stay where they were", () => {
 		// The design frame: 390 pt at 100 %, revealed at 200 under an 83 pt region.
-		expect(pinnedRevealScroll({ y: 200, pinnedHeight: 83 })).toBe(283);
+		expect(
+			pinnedRevealScroll({
+				y: 200,
+				viewportBefore: 400,
+				viewportAfter: 317,
+				content: 1200,
+			}),
+		).toBe(283);
+	});
+
+	it("follows the body, not the region, when the sheet grows instead (320 pt, 200 %, ru)", () => {
+		/* Design round 5, D4 (a): a 122 pt region, but the body stops at its
+		 *  120 pt floor and the sheet grows 29 pt, so the body's top moves 93. */
+		expect(
+			pinnedRevealScroll({
+				y: 180,
+				viewportBefore: 213,
+				viewportAfter: 120,
+				content: 1200,
+			}),
+		).toBe(180 + 93);
+	});
+
+	it("reaches an offset past the old end: the shrink is the new scroll room (D4 b)", () => {
+		/* 21 models in a 1,248 pt body: the reader is at the old maximum (182)
+		 *  when a 61 pt region appears. Measured after the body shrank, the new
+		 *  maximum is 243, and the rows keep their place. */
+		expect(
+			pinnedRevealScroll({
+				y: 182,
+				viewportBefore: 1248,
+				viewportAfter: 1187,
+				content: 1430,
+			}),
+		).toBe(243);
+	});
+
+	it("never asks for more than the body can scroll", () => {
+		expect(
+			pinnedRevealScroll({
+				y: 182,
+				viewportBefore: 1248,
+				viewportAfter: 1187,
+				content: 1400,
+			}),
+		).toBe(1400 - 1187);
 	});
 
 	it("leaves a body at its top alone: a region pinned when the sheet opens moves nothing", () => {
-		expect(pinnedRevealScroll({ y: 0, pinnedHeight: 83 })).toBeNull();
+		expect(
+			pinnedRevealScroll({
+				y: 0,
+				viewportBefore: 400,
+				viewportAfter: 317,
+				content: 1200,
+			}),
+		).toBeNull();
 	});
 
-	it("does nothing before the region has a height", () => {
-		expect(pinnedRevealScroll({ y: 200, pinnedHeight: 0 })).toBeNull();
+	it("moves nothing when the body kept its height (the sheet grew by the whole region)", () => {
+		expect(
+			pinnedRevealScroll({
+				y: 180,
+				viewportBefore: 120,
+				viewportAfter: 120,
+				content: 1200,
+			}),
+		).toBeNull();
 	});
 });

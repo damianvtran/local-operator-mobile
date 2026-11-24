@@ -805,15 +805,37 @@ export const Sheet = ({
 	 *  `scrollTo` takes — and no window frame or offset is involved. */
 	const bodyRef = useRef<ScrollView>(null);
 	/* Whether the current `pinned` region has been laid out once. Its FIRST
-	 *  layout over a scrolled body moves the body's top down by its height, so
-	 *  the body scrolls by the same amount and the rows stay put (design round
-	 *  4, D1; `pinnedRevealScroll`). A later re-measure (rotation, text size) is
-	 *  not an appearance, and a region that goes away arms the next one. */
+	 *  layout over a scrolled body shrinks the body, which moves the body's top
+	 *  and every row under the reader's finger; the body then scrolls by the
+	 *  measured shrink and the rows stay put (design round 4, D1; round 5, D4;
+	 *  `pinnedRevealScroll`). A later re-measure (rotation, text size) is not an
+	 *  appearance, and a region that goes away arms the next one — its stale
+	 *  height too, so the next appearance is a CHANGE the check below sees. */
 	const pinnedLaidOut = useRef(false);
+	/* The body's height when the region appeared over a scrolled body, until the
+	 *  body's own `onLayout` reports the height it shrank to. Only then does the
+	 *  larger offset exist to scroll to (D4 b). */
+	const pendingReveal = useRef<number | null>(null);
 	const pinnedPresent = pinned !== undefined;
 	useEffect(() => {
-		if (!pinnedPresent) pinnedLaidOut.current = false;
+		if (pinnedPresent) return;
+		pinnedLaidOut.current = false;
+		pendingReveal.current = null;
+		setPinnedHeight(0);
 	}, [pinnedPresent]);
+	/* Under a pinned region the body is HELD at the cap (min = max, below), so
+	 *  its new height is known once the region's height is. When the hold equals
+	 *  the height it measured before — the body was at its floor and the sheet
+	 *  grew by the whole region — no re-layout is coming, the rows did not move,
+	 *  and a later resize (the keyboard) is not this appearance's to correct. */
+	const heldBodyHeight =
+		pinned === undefined || resizable ? undefined : maxContentHeight;
+	useEffect(() => {
+		const before = pendingReveal.current;
+		if (before === null || pinnedHeight === 0) return;
+		if (heldBodyHeight !== undefined && Math.abs(heldBodyHeight - before) < 1)
+			pendingReveal.current = null;
+	}, [pinnedHeight, heldBodyHeight]);
 	/* The last field asked to be revealed, so the reveal can be repeated once the
 	 *  keyboard has finished moving the sheet (see the effect below). */
 	const lastReveal = useRef<{ block: View | null; field: View | null } | null>(
@@ -940,6 +962,16 @@ export const Sheet = ({
 	 *  while another modal is up (`shouldAnimateExit`), so it cannot paint over
 	 *  the modal that covers this one. */
 	const shown = (visible || exiting) && !covered;
+	/* The Modal unmounts the body while hidden, so the next visit starts at
+	 *  offset 0 — and a fresh ScrollView reports its size, never a scroll. Facts
+	 *  kept from the last visit would reach `onBodyScroll` (and the bottom fade)
+	 *  with that visit's offset: the run-settings sheet pinned its search at
+	 *  open and the reveal scrolled to the old models (#335, review R6-1). */
+	useEffect(() => {
+		if (shown) return;
+		scrollFacts.current = { contentH: 0, viewportH: 0, y: 0 };
+		pendingReveal.current = null;
+	}, [shown]);
 	/* The LEDGER stays keyed on the caller's close, not on `shown`: a dismissal
 	 *  is owed from the commit that closes the sheet — the exit animation only
 	 *  moves the `onDismiss` that settles it later. Keyed on `shown`, the debt
@@ -1389,12 +1421,9 @@ export const Sheet = ({
 											setPinnedHeight(height);
 											if (pinnedLaidOut.current) return;
 											pinnedLaidOut.current = true;
-											const y = pinnedRevealScroll({
-												y: scrollFacts.current.y,
-												pinnedHeight: height,
-											});
-											if (y !== null)
-												bodyRef.current?.scrollTo({ y, animated: false });
+											const { y, viewportH } = scrollFacts.current;
+											if (y > 0 && viewportH > 0)
+												pendingReveal.current = viewportH;
 										}}
 									>
 										{pinned}
@@ -1449,8 +1478,25 @@ export const Sheet = ({
 									 *  position. A ref, not state — the state they collapse to is the one
 									 *  boolean below. */
 									onLayout={(event) => {
-										scrollFacts.current.viewportH =
-											event.nativeEvent.layout.height;
+										const height = event.nativeEvent.layout.height;
+										const before = pendingReveal.current;
+										pendingReveal.current = null;
+										scrollFacts.current.viewportH = height;
+										const y =
+											before === null
+												? null
+												: pinnedRevealScroll({
+														y: scrollFacts.current.y,
+														viewportBefore: before,
+														viewportAfter: height,
+														content: scrollFacts.current.contentH,
+													});
+										if (y !== null) {
+											bodyRef.current?.scrollTo({ y, animated: false });
+											/* The scroll's own event follows; the cue reads the
+											 *  offset the reader now sees. */
+											scrollFacts.current.y = y;
+										}
 										syncBodyCue();
 									}}
 									onContentSizeChange={(_width, height) => {

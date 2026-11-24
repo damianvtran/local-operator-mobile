@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { Pressable, Text, View } from "react-native";
 
 import type { ModelEntry } from "@/contracts";
@@ -307,10 +307,30 @@ export const RunSettingsSheet = ({
 	 *  field that holds the reader's query — and the next visit starts clean. */
 	const [modelTop, setModelTop] = useState<number | null>(null);
 	const [searchShown, setSearchShown] = useState(false);
+	/* The body's last scroll facts this visit. The decision is asked again when
+	 *  the models section is measured: in the browser the body reports first,
+	 *  and a body that fits never scrolls, so the facts alone would never ask
+	 *  it once the section has a place (design round 5, D3). */
+	const bodyFacts = useRef<{
+		y: number;
+		viewport: number;
+		content: number;
+	} | null>(null);
+	/* Nothing from the last visit decides this one: the section is measured
+	 *  afresh, and a search pinned from its stale place reopened the sheet at
+	 *  the models (review R6-1). */
 	useEffect(() => {
-		if (!visible) setSearchShown(false);
+		if (visible) return;
+		setSearchShown(false);
+		setModelTop(null);
+		bodyFacts.current = null;
 	}, [visible]);
 	const searchable = modelSearch !== null;
+	useEffect(() => {
+		const facts = bodyFacts.current;
+		if (!visible || !searchable || searchShown || facts === null) return;
+		if (modelSearchReached({ ...facts, modelTop })) setSearchShown(true);
+	}, [visible, searchable, searchShown, modelTop]);
 	/* The summary leads with the model's Latin name, so on an RTL page its base
 	 *  would follow that letter and sit on the left under right-aligned
 	 *  headings (design round 4, D2). */
@@ -326,8 +346,10 @@ export const RunSettingsSheet = ({
 			testID={SURFACE.runSettingsSheet}
 			pinned={searchable && searchShown ? modelSearch : undefined}
 			onBodyScroll={
-				searchable && !searchShown
+				/* Not while closing: the exit's events carry this visit's offset. */
+				visible && searchable && !searchShown
 					? (facts) => {
+							bodyFacts.current = facts;
 							if (modelSearchReached({ ...facts, modelTop }))
 								setSearchShown(true);
 						}

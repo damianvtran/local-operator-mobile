@@ -62,17 +62,30 @@ export const focusScrollTarget = ({
 /**
  * The body offset that keeps the rows still when a `pinned` region APPEARS over
  * a scrolled body (design round 4, D1: the run-settings sheet pins its model
- * search only once the reader reaches the models, #335). The region takes its
- * height from the top of the body, so at the same offset everything under the
- * reader's finger moved down by that height — 43 to 62 pt in the design frames,
- * with the models' heading left half under the region's divider. `null` when
- * nothing moved: a body at its top (a region pinned as the sheet opens), or a
- * region not yet measured.
+ * search only once the reader reaches the models, #335). The surface is
+ * bottom-anchored, so the body's top moves down by however much the BODY
+ * shrank, and at the same offset every row moves down with it.
+ *
+ * The change is measured, not assumed (design round 5, D4). The region's own
+ * height over-corrects a sheet that grows instead (a body at its floor: 122 pt
+ * asked, 93 pt moved at 320 pt and 200 %). And it is applied once the body has
+ * its NEW height, because the shrink is exactly the scroll room the larger
+ * offset needs: asked for before, it was clamped to the old end of a tall body
+ * (+61 pt asked, 0 given, with 21 models). `null` when nothing moved: a body at
+ * its top (a region pinned as the sheet opens), or one that kept its height.
  */
 export const pinnedRevealScroll = ({
 	y,
-	pinnedHeight,
+	viewportBefore,
+	viewportAfter,
+	content,
 }: {
 	y: number;
-	pinnedHeight: number;
-}): number | null => (y > 0 && pinnedHeight > 0 ? y + pinnedHeight : null);
+	viewportBefore: number;
+	viewportAfter: number;
+	content: number;
+}): number | null => {
+	const shrink = viewportBefore - viewportAfter;
+	if (y <= 0 || viewportAfter <= 0 || Math.abs(shrink) < 1) return null;
+	return Math.max(0, Math.min(y + shrink, content - viewportAfter));
+};
