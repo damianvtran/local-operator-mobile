@@ -751,6 +751,13 @@ describe("a keyboard drag over a pinned card (PR C)", () => {
 		slashSheet: false,
 	});
 
+	it("the keyboard being up pins the card by itself, focus or not", () => {
+		/* Release that closes the keyboard blurs the field, but the keyboard fact
+		 *  alone must hold the card for every frame of the drag before it. */
+		expect(composerPinsCard({ ...facts(true), focused: false })).toBe(true);
+		expect(composerPinsCard({ ...facts(false), focused: false })).toBe(false);
+	});
+
 	it("scrolling the transcript while the keyboard is up never shrinks the dock, and the pin lifting at didHide does not either", () => {
 		const c = createComposerCompaction();
 		const seen = flips(c);
