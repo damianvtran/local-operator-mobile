@@ -12,10 +12,7 @@ import { TodosPanel } from "@/features/session/components/todos-panel";
 import { TranscriptList } from "@/features/session/components/transcript-list";
 import { UserMessageClamp } from "@/features/session/components/user-message-clamp";
 import { middleTruncate, projectTodos } from "@/features/session/projection";
-import {
-	SUBAGENT_PROMPT_LINES,
-	subagentPromptScrollMax,
-} from "@/features/session/subagent-prompt";
+import { subagentPromptLayout } from "@/features/session/subagent-prompt";
 import { subagentBadge } from "@/features/session/subagent-status";
 import { useSessionRuntime } from "@/features/session/use-session";
 import {
@@ -83,7 +80,7 @@ export default function Subagent() {
 	const onRegionLayout = useCallback((event: LayoutChangeEvent) => {
 		setRegionHeight(event.nativeEvent.layout.height);
 	}, []);
-	const promptScrollMax = subagentPromptScrollMax({
+	const promptLayout = subagentPromptLayout({
 		windowHeight,
 		regionHeight,
 		scale: effectiveScale,
@@ -301,8 +298,8 @@ export default function Subagent() {
 							</Text>
 							<UserMessageClamp
 								fadeColor={canvas}
-								lines={SUBAGENT_PROMPT_LINES}
-								expandedMaxHeight={promptScrollMax}
+								lines={promptLayout.collapsedLines}
+								expandedMaxHeight={promptLayout.expandedMaxHeight}
 							>
 								<Text className="text-body-sm text-ink-muted">
 									{detail.prompt}

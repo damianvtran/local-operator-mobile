@@ -1,11 +1,16 @@
 import { describe, expect, it } from "vitest";
 import {
+	SUBAGENT_PROMPT_LINES,
 	SUBAGENT_PROMPT_MAX_SHARE,
 	SUBAGENT_TRANSCRIPT_MIN_SHARE,
 	subagentPromptChrome,
+	subagentPromptLayout,
 	subagentPromptScrollMax,
 } from "@/features/session/subagent-prompt";
-import { userMessageLineHeight } from "@/features/session/user-message-clamp";
+import {
+	userMessageClipHeight,
+	userMessageLineHeight,
+} from "@/features/session/user-message-clamp";
 
 /**
  * The open subagent prompt's bound, as geometry (PR #390 design round 1, D1;
@@ -100,5 +105,128 @@ describe("the open subagent prompt's bound", () => {
 				touchFloor: FLOOR,
 			}),
 		).toBe(Math.floor(userMessageLineHeight(scale)));
+	});
+});
+
+/** PR #390 review m1: the `Show less` row is `minHeight: TOUCH_FLOOR` around a
+ *  `text-meta` label, so past the floor the label's line box sets its height.
+ *  Modelled independently of `subagentPromptChrome` (12 x 1.4 is meta's step),
+ *  so the test cannot inherit the function's own arithmetic. */
+describe("the open prompt's chrome at large text (m1)", () => {
+	const metaBox = (scale: number) => 12 * 1.4 * scale;
+	const independentChrome = (scale: number) =>
+		8 + 8 + 1 + metaBox(scale) + 4 + Math.max(FLOOR, metaBox(scale));
+
+	it.each([1, 2, 2.5, 3])(
+		"counts the taller of floor and label at %s x",
+		(scale) => {
+			expect(subagentPromptChrome(scale, FLOOR)).toBeCloseTo(
+				independentChrome(scale),
+				6,
+			);
+		},
+	);
+
+	it("keeps the transcript its 40 % at the 3x scale ceiling", () => {
+		const windowHeight = 932;
+		const regionHeight = windowHeight - 241.2;
+		const body = subagentPromptScrollMax({
+			windowHeight,
+			regionHeight,
+			scale: 3,
+			touchFloor: FLOOR,
+		});
+		const transcript = regionHeight - independentChrome(3) - body;
+		expect(transcript).toBeGreaterThanOrEqual(
+			windowHeight * SUBAGENT_TRANSCRIPT_MIN_SHARE - 1,
+		);
+	});
+});
+
+/** PR #390 design D5: at 320x692 and 200 % text `Show more` opened a 72 pt
+ *  scroller (~1.7 lines) under a 3-line collapsed clamp — the control that
+ *  promises more showed less. The layout must keep open >= collapsed AND the
+ *  transcript's 40 % while open. */
+describe("the prompt's collapsed and open heights together (D5)", () => {
+	const columnFor = (windowHeight: number, above: number, scale: number) => {
+		const regionHeight = windowHeight - above;
+		const input = { windowHeight, regionHeight, scale, touchFloor: FLOOR };
+		const layout = subagentPromptLayout(input);
+		return {
+			layout,
+			collapsedPt: userMessageClipHeight(scale, layout.collapsedLines),
+			openTranscript:
+				regionHeight -
+				subagentPromptChrome(scale, FLOOR) -
+				layout.expandedMaxHeight,
+			boundTranscript:
+				regionHeight -
+				subagentPromptChrome(scale, FLOOR) -
+				subagentPromptScrollMax(input),
+		};
+	};
+
+	it("never opens shorter than it collapses at the 320x692, 200 % corner", () => {
+		const { layout, collapsedPt, openTranscript } = columnFor(692, 241.2, 2);
+		expect(layout.expandedMaxHeight).toBeGreaterThanOrEqual(collapsedPt);
+		expect(openTranscript).toBeGreaterThanOrEqual(
+			692 * SUBAGENT_TRANSCRIPT_MIN_SHARE - 1,
+		);
+		// Flooring at three lines would have cost the transcript its share here,
+		// so the collapsed clamp shrinks to what the open bound shows instead.
+		expect(layout.collapsedLines).toBe(1);
+	});
+
+	it("leaves a roomy window at three lines and the plain bound", () => {
+		const input = {
+			windowHeight: 932,
+			regionHeight: 932 - 140,
+			scale: 1,
+			touchFloor: FLOOR,
+		};
+		expect(subagentPromptLayout(input)).toEqual({
+			collapsedLines: SUBAGENT_PROMPT_LINES,
+			expandedMaxHeight: subagentPromptScrollMax(input),
+		});
+	});
+
+	it("floors the open scroller at the collapsed clip when only the window bound binds", () => {
+		// No region measured yet and a window whose 45 % is under three lines at
+		// 2x: the 40 % transcript bound is not in play, so the floor is free.
+		const layout = subagentPromptLayout({
+			windowHeight: 250,
+			regionHeight: null,
+			scale: 2,
+			touchFloor: FLOOR,
+		});
+		expect(layout.collapsedLines).toBe(SUBAGENT_PROMPT_LINES);
+		expect(layout.expandedMaxHeight).toBe(
+			Math.ceil(userMessageClipHeight(2, SUBAGENT_PROMPT_LINES)),
+		);
+	});
+
+	it("keeps both promises across phone sizes and text scales", () => {
+		for (const windowHeight of [568, 667, 692, 844, 932])
+			for (const above of [120, 241.2])
+				for (const scale of [1, 1.5, 2, 2.5, 3]) {
+					const column = columnFor(windowHeight, above, scale);
+					const where = `${windowHeight}/${above}/${scale}x`;
+					expect(column.layout.expandedMaxHeight, where).toBeGreaterThanOrEqual(
+						column.collapsedPt,
+					);
+					expect(column.layout.collapsedLines, where).toBeGreaterThanOrEqual(1);
+					expect(column.layout.collapsedLines, where).toBeLessThanOrEqual(
+						SUBAGENT_PROMPT_LINES,
+					);
+					// The transcript keeps its 40 % wherever the plain bound kept it;
+					// where the window is too short for that, it loses at most the
+					// rounding up to one whole line of brief.
+					expect(column.openTranscript, where).toBeGreaterThanOrEqual(
+						Math.min(
+							windowHeight * SUBAGENT_TRANSCRIPT_MIN_SHARE,
+							column.boundTranscript,
+						) - 1,
+					);
+				}
 	});
 });
