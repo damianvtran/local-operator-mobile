@@ -991,8 +991,11 @@ export type CatalogueKey =
 	| "mobile.session.slash.load_failed"
 	| "mobile.session.slash.no_matches"
 	| "mobile.session.status_tray.hint"
+	| "mobile.session.subagent.load_failed"
 	| "mobile.session.subagent.no_rows"
+	| "mobile.session.subagent.not_kept"
 	| "mobile.session.subagent.prompt_label"
+	| "mobile.session.subagent.queued_next"
 	| "mobile.session.subagent.result_label"
 	| "mobile.session.subagent.screen_title"
 	| "mobile.session.subagent.status"
@@ -2296,8 +2299,11 @@ export type NoParamKey =
 	| "mobile.session.slash.load_failed"
 	| "mobile.session.slash.no_matches"
 	| "mobile.session.status_tray.hint"
+	| "mobile.session.subagent.load_failed"
 	| "mobile.session.subagent.no_rows"
+	| "mobile.session.subagent.not_kept"
 	| "mobile.session.subagent.prompt_label"
+	| "mobile.session.subagent.queued_next"
 	| "mobile.session.subagent.result_label"
 	| "mobile.session.subagent.screen_title"
 	| "mobile.session.subagent.unavailable_headline"
@@ -3672,8 +3678,11 @@ export type MessageParams = {
 	"mobile.session.slash.load_failed": NoParams;
 	"mobile.session.slash.no_matches": NoParams;
 	"mobile.session.status_tray.hint": NoParams;
+	"mobile.session.subagent.load_failed": NoParams;
 	"mobile.session.subagent.no_rows": NoParams;
+	"mobile.session.subagent.not_kept": NoParams;
 	"mobile.session.subagent.prompt_label": NoParams;
+	"mobile.session.subagent.queued_next": NoParams;
 	"mobile.session.subagent.result_label": NoParams;
 	"mobile.session.subagent.screen_title": NoParams;
 	"mobile.session.subagent.status": { status: string };
@@ -5157,8 +5166,11 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.session.slash.load_failed": "Couldn’t load commands from your computer. Reopen this conversation to try again.",
 	"mobile.session.slash.no_matches": "No matching commands",
 	"mobile.session.status_tray.hint": "Opens the working line, tasks and subagents",
+	"mobile.session.subagent.load_failed": "This subagent’s messages could not be loaded.",
 	"mobile.session.subagent.no_rows": "This subagent has no transcript rows of its own.",
+	"mobile.session.subagent.not_kept": "This subagent’s transcript wasn’t kept, or the computer isn’t answering.",
 	"mobile.session.subagent.prompt_label": "prompt",
+	"mobile.session.subagent.queued_next": "Not started yet. Its messages appear here once it runs.",
 	"mobile.session.subagent.result_label": "result",
 	"mobile.session.subagent.screen_title": "Subagent",
 	"mobile.session.subagent.status": "{status, select, queued {queued} running {running} completed {completed} failed {failed} parked {parked} cancelled {cancelled} loading {loading} unavailable {unavailable} other {unknown}}",
@@ -6627,8 +6639,11 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.session.slash.load_failed": { role: "status", note: "Muted line in the commands sheet when this phone could not read the list of slash commands from the reader's computer and holds none. It replaces the list, so it must not suggest that nothing matched. The second sentence is the remedy: leaving and reopening the conversation reads the list again. Two short sentences with final full stops; the apostrophe is a typographic ’." },
 	"mobile.session.slash.no_matches": { role: "status", note: "Muted line in the commands sheet when the filter text matches none of the slash commands the computer offers. A short status in sentence case, no final full stop." },
 	"mobile.session.status_tray.hint": { role: "help", note: "Accessibility hint read after the status tray's label. Describes what activating the tray opens; no final full stop. \"Subagents\" is a product term." },
+	"mobile.session.subagent.load_failed": { role: "status", note: "Muted line on a subagent's screen when this phone could not read the subagent's messages (the link dropped); a Try again button follows. Nothing has been shown yet, so it must not say 'the latest' messages. One sentence with a final full stop; the apostrophe is a typographic ’." },
 	"mobile.session.subagent.no_rows": { role: "status", note: "Muted line shown when a subagent's transcript is empty. One sentence." },
+	"mobile.session.subagent.not_kept": { role: "status", note: "Dim line on a subagent's screen when the computer has no saved messages for this subagent: either they were not kept, or the computer is not answering. Stands alone (no headline above it), so it names the subagent. One sentence with a final full stop; apostrophes are typographic ’." },
 	"mobile.session.subagent.prompt_label": { role: "meta", note: "Lower-case label above the instruction the subagent was given. One word, lower case to match its sibling label." },
+	"mobile.session.subagent.queued_next": { role: "status", note: "Muted line on a subagent's screen while the subagent is queued and has not started, so it has no messages yet. Replaces a loading placeholder: it must say the subagent has not run, not that the phone is slow. 'Its' is the subagent. Two short sentences with final full stops." },
 	"mobile.session.subagent.result_label": { role: "meta", note: "Lower-case label above the text the subagent returned. One word, lower case to match its sibling label." },
 	"mobile.session.subagent.screen_title": { role: "heading", note: "Title of the screen that shows one subagent's run. One word; 'subagent' is the product's word for a helper agent started by the main agent." },
 	"mobile.session.subagent.status": { role: "status", note: "The status badge beside a subagent's name on its own screen. {status} selects the arm and is never shown itself. queued: waiting to start; running: working now; completed: finished successfully; failed: finished with an error; parked: paused, can resume later; cancelled: stopped by someone before it finished; loading: this phone is still fetching the subagent's details; unavailable: the fetch finished and the computer has no record of this subagent (the screen's body says so too); other: a state this app does not know yet. Each arm is one short lower-case word (no full stop) that fits a small pill beside a title on a 320 pt phone." },
@@ -8111,8 +8126,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.slash.load_failed": "No se pudieron cargar los comandos desde tu máquina. Vuelve a abrir esta conversación para intentarlo de nuevo.",
 		"mobile.session.slash.no_matches": "Ningún comando coincide",
 		"mobile.session.status_tray.hint": "Abre la línea de trabajo, las tareas y los subagentes",
+		"mobile.session.subagent.load_failed": "No se pudieron cargar los mensajes de este subagente.",
 		"mobile.session.subagent.no_rows": "Este subagente no tiene entradas propias en la transcripción.",
+		"mobile.session.subagent.not_kept": "No se conservó la transcripción de este subagente o la máquina no responde.",
 		"mobile.session.subagent.prompt_label": "prompt",
+		"mobile.session.subagent.queued_next": "Todavía no ha empezado. Sus mensajes aparecerán aquí cuando se ejecute.",
 		"mobile.session.subagent.result_label": "resultado",
 		"mobile.session.subagent.screen_title": "Subagente",
 		"mobile.session.subagent.status": "{status, select, queued {en cola} running {en curso} completed {completado} failed {fallido} parked {en pausa} cancelled {cancelado} loading {cargando} unavailable {no disponible} other {desconocido}}",
@@ -9579,8 +9597,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.slash.load_failed": "Impossible de charger les commandes depuis votre ordinateur. Rouvrez cette conversation pour réessayer.",
 		"mobile.session.slash.no_matches": "Aucune commande ne correspond",
 		"mobile.session.status_tray.hint": "Ouvre la ligne d’activité, les tâches et les sous-agents",
+		"mobile.session.subagent.load_failed": "Impossible de charger les messages de ce sous-agent.",
 		"mobile.session.subagent.no_rows": "Ce sous-agent n’a aucune ligne de transcription qui lui soit propre.",
+		"mobile.session.subagent.not_kept": "La transcription de ce sous-agent n’a pas été conservée, ou l’ordinateur ne répond pas.",
 		"mobile.session.subagent.prompt_label": "prompt",
+		"mobile.session.subagent.queued_next": "Pas encore démarré. Ses messages s’afficheront ici dès qu’il s’exécutera.",
 		"mobile.session.subagent.result_label": "résultat",
 		"mobile.session.subagent.screen_title": "Sous-agent",
 		"mobile.session.subagent.status": "{status, select, queued {en attente} running {en cours} completed {terminé} failed {en échec} parked {en pause} cancelled {annulé} loading {chargement} unavailable {indisponible} other {inconnu}}",
@@ -11047,8 +11068,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.slash.load_failed": "आपके कंप्यूटर से कमांड लोड नहीं हो सकीं। फिर से कोशिश करने के लिए यह बातचीत दोबारा खोलें।",
 		"mobile.session.slash.no_matches": "कोई कमांड मेल नहीं खाती",
 		"mobile.session.status_tray.hint": "कार्यरत पंक्ति, कार्य और उप-एजेंट खोलता है",
+		"mobile.session.subagent.load_failed": "इस उप-एजेंट के संदेश लोड नहीं हो सके।",
 		"mobile.session.subagent.no_rows": "इस उप-एजेंट की ट्रांसक्रिप्ट में अपनी कोई पंक्ति नहीं है।",
+		"mobile.session.subagent.not_kept": "इस उप-एजेंट का ट्रांसक्रिप्ट सहेजा नहीं गया था, या कंप्यूटर जवाब नहीं दे रहा है।",
 		"mobile.session.subagent.prompt_label": "प्रॉम्प्ट",
+		"mobile.session.subagent.queued_next": "अभी शुरू नहीं हुआ। चलने पर इसके संदेश यहाँ दिखेंगे।",
 		"mobile.session.subagent.result_label": "परिणाम",
 		"mobile.session.subagent.screen_title": "उप-एजेंट",
 		"mobile.session.subagent.status": "{status, select, queued {कतार में} running {चल रहा} completed {पूरा} failed {विफल} parked {रुका हुआ} cancelled {रद्द} loading {लोड हो रहा} unavailable {उपलब्ध नहीं} other {अज्ञात}}",
@@ -12515,8 +12539,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.slash.load_failed": "Не удалось загрузить команды с вашего компьютера. Откройте эту беседу снова, чтобы повторить попытку.",
 		"mobile.session.slash.no_matches": "Нет подходящих команд",
 		"mobile.session.status_tray.hint": "Открывает строку текущей работы, задачи и субагентов",
+		"mobile.session.subagent.load_failed": "Не удалось загрузить сообщения этого субагента.",
 		"mobile.session.subagent.no_rows": "У этого субагента нет собственных строк транскрипта.",
+		"mobile.session.subagent.not_kept": "Транскрипт этого субагента не сохранён или компьютер не отвечает.",
 		"mobile.session.subagent.prompt_label": "промпт",
+		"mobile.session.subagent.queued_next": "Ещё не запущен. Его сообщения появятся здесь, когда он начнёт работу.",
 		"mobile.session.subagent.result_label": "результат",
 		"mobile.session.subagent.screen_title": "Субагент",
 		"mobile.session.subagent.status": "{status, select, queued {в очереди} running {выполняется} completed {завершён} failed {ошибка} parked {приостановлен} cancelled {отменён} loading {загрузка} unavailable {недоступен} other {неизвестно}}",
@@ -13983,8 +14010,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.slash.load_failed": "آپ کے کمپیوٹر سے کمانڈز لوڈ نہیں ہو سکیں۔ دوبارہ کوشش کے لیے یہ گفتگو پھر سے کھولیں۔",
 		"mobile.session.slash.no_matches": "کوئی کمانڈ مماثل نہیں",
 		"mobile.session.status_tray.hint": "جاری سرگرمی کی لائن، کام اور ذیلی ایجنٹس کھولتا ہے",
+		"mobile.session.subagent.load_failed": "اس ذیلی ایجنٹ کے پیغامات لوڈ نہیں ہو سکے۔",
 		"mobile.session.subagent.no_rows": "اس ذیلی ایجنٹ کے اپنے ٹرانسکرپٹ میں کوئی سطر نہیں۔",
+		"mobile.session.subagent.not_kept": "اس ذیلی ایجنٹ کا ٹرانسکرپٹ محفوظ نہیں رکھا گیا، یا کمپیوٹر جواب نہیں دے رہا۔",
 		"mobile.session.subagent.prompt_label": "پرامپٹ",
+		"mobile.session.subagent.queued_next": "ابھی شروع نہیں ہوا۔ چلنے پر اس کے پیغامات یہاں نظر آئیں گے۔",
 		"mobile.session.subagent.result_label": "نتیجہ",
 		"mobile.session.subagent.screen_title": "ذیلی ایجنٹ",
 		"mobile.session.subagent.status": "{status, select, queued {قطار میں} running {جاری} completed {مکمل} failed {ناکام} parked {موقوف} cancelled {منسوخ} loading {لوڈ ہو رہا} unavailable {دستیاب نہیں} other {نامعلوم}}",
@@ -15451,8 +15481,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.slash.load_failed": "Không thể tải lệnh từ máy tính của bạn. Hãy mở lại cuộc trò chuyện này để thử lại.",
 		"mobile.session.slash.no_matches": "Không có lệnh phù hợp",
 		"mobile.session.status_tray.hint": "Mở dòng làm việc, tác vụ và tác nhân con",
+		"mobile.session.subagent.load_failed": "Không thể tải tin nhắn của tác nhân con này.",
 		"mobile.session.subagent.no_rows": "Tác nhân con này không có dòng bản ghi riêng nào.",
+		"mobile.session.subagent.not_kept": "Bản ghi của tác nhân con này không được lưu giữ hoặc máy tính không phản hồi.",
 		"mobile.session.subagent.prompt_label": "prompt",
+		"mobile.session.subagent.queued_next": "Chưa bắt đầu. Tin nhắn của nó sẽ hiện ở đây khi nó chạy.",
 		"mobile.session.subagent.result_label": "kết quả",
 		"mobile.session.subagent.screen_title": "Tác nhân con",
 		"mobile.session.subagent.status": "{status, select, queued {đang chờ} running {đang chạy} completed {đã xong} failed {thất bại} parked {tạm dừng} cancelled {đã hủy} loading {đang tải} unavailable {không khả dụng} other {không rõ}}",
@@ -16919,8 +16952,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.slash.load_failed": "无法从你的电脑加载命令。请重新打开此对话以重试。",
 		"mobile.session.slash.no_matches": "没有匹配的命令",
 		"mobile.session.status_tray.hint": "打开工作状态行、任务和子智能体",
+		"mobile.session.subagent.load_failed": "无法加载此子智能体的消息。",
 		"mobile.session.subagent.no_rows": "此子智能体没有自己的会话记录条目。",
+		"mobile.session.subagent.not_kept": "此子智能体的会话记录未保留，或电脑没有响应。",
 		"mobile.session.subagent.prompt_label": "提示词",
+		"mobile.session.subagent.queued_next": "尚未开始。运行后，它的消息会显示在这里。",
 		"mobile.session.subagent.result_label": "结果",
 		"mobile.session.subagent.screen_title": "子智能体",
 		"mobile.session.subagent.status": "{status, select, queued {排队中} running {运行中} completed {已完成} failed {失败} parked {已暂停} cancelled {已取消} loading {加载中} unavailable {不可用} other {未知}}",

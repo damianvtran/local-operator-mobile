@@ -1,12 +1,21 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useCallback, useMemo } from "react";
-import { Text, View } from "react-native";
+import { useCallback, useMemo, useState } from "react";
+import {
+	type LayoutChangeEvent,
+	Text,
+	useWindowDimensions,
+	View,
+} from "react-native";
 
 import { backToParentLabel } from "@/features/session/back-label";
 import { TodosPanel } from "@/features/session/components/todos-panel";
 import { TranscriptList } from "@/features/session/components/transcript-list";
 import { UserMessageClamp } from "@/features/session/components/user-message-clamp";
 import { middleTruncate, projectTodos } from "@/features/session/projection";
+import {
+	SUBAGENT_PROMPT_LINES,
+	subagentPromptScrollMax,
+} from "@/features/session/subagent-prompt";
 import { subagentBadge } from "@/features/session/subagent-status";
 import { useSessionRuntime } from "@/features/session/use-session";
 import {
@@ -27,7 +36,8 @@ import {
 	Skeleton,
 } from "@/ui/components";
 import { BackIcon } from "@/ui/components/back-icon";
-import { useCompactChrome } from "@/ui/layout";
+import { TOUCH_FLOOR, useCompactChrome } from "@/ui/layout";
+import { useTextScale } from "@/ui/text-scale-provider";
 
 /**
  * A subagent's own view (`docs/ux/flows.md` F-7).
@@ -64,6 +74,21 @@ export default function Subagent() {
 	const runtime = useSessionRuntime(sessionId);
 	const compact = useCompactChrome();
 	const canvas = useTokenColor("canvas");
+	const { height: windowHeight } = useWindowDimensions();
+	const { effectiveScale } = useTextScale();
+	/** The height the pinned prompt and the transcript share, measured, so the
+	 *  open prompt can be bounded to leave the transcript its share of the
+	 *  window (`subagent-prompt.ts`, D1). Null until the first layout. */
+	const [regionHeight, setRegionHeight] = useState<number | null>(null);
+	const onRegionLayout = useCallback((event: LayoutChangeEvent) => {
+		setRegionHeight(event.nativeEvent.layout.height);
+	}, []);
+	const promptScrollMax = subagentPromptScrollMax({
+		windowHeight,
+		regionHeight,
+		scale: effectiveScale,
+		touchFloor: TOUCH_FLOOR,
+	});
 
 	const { loadAgent, loadAgentHistory } = runtime;
 	/** `null` until the relay endpoints exist (`loadAgentHistory`'s contract), so
@@ -111,40 +136,78 @@ export default function Subagent() {
 
 	/* What the list shows with no rows. Only a SUCCESSFUL empty read may say the
 	   child has no rows; a 404 with nothing inline says the transcript is not
-	   kept; a dropped link offers a retry; a read in flight is a skeleton. */
-	const empty =
-		view.state === "empty" ? (
-			<View className="px-4 py-3">
-				<Text className="text-body-sm text-ink-dim">
-					{t("mobile.session.subagent.no_rows")}
-				</Text>
-			</View>
-		) : view.state === "unavailable" ? (
-			<View className="px-4 py-3">
-				<Text className="text-body-sm text-ink-dim">
-					{t("mobile.session.subagent.unavailable_next")}
-				</Text>
-			</View>
-		) : view.state === "failed" ? (
-			<View className="gap-2 px-4 py-3">
-				<Text
-					accessibilityLiveRegion="polite"
-					className="text-body-sm text-ink-muted"
+	   kept; a dropped link offers a retry; a read in flight is a skeleton. A
+	   QUEUED child still waiting on its rows says it has not started instead: it
+	   can wait for minutes, and a skeleton that long reads as "something is slow"
+	   when the truth is "nothing has run yet" (D2). */
+	const queuedWait =
+		detail?.status === "queued" &&
+		(view.state === "loading" || view.state === "unavailable");
+	const empty = queuedWait ? (
+		<View className="px-4 py-3">
+			<Text className="text-body-sm text-ink-dim">
+				{t("mobile.session.subagent.queued_next")}
+			</Text>
+		</View>
+	) : view.state === "empty" ? (
+		<View className="px-4 py-3">
+			<Text className="text-body-sm text-ink-dim">
+				{t("mobile.session.subagent.no_rows")}
+			</Text>
+		</View>
+	) : view.state === "unavailable" ? (
+		<View className="px-4 py-3">
+			<Text className="text-body-sm text-ink-dim">
+				{t("mobile.session.subagent.not_kept")}
+			</Text>
+		</View>
+	) : view.state === "failed" ? (
+		<View className="gap-2 px-4 py-3">
+			<Text
+				accessibilityLiveRegion="polite"
+				className="text-body-sm text-ink-muted"
+			>
+				{t("mobile.session.subagent.load_failed")}
+			</Text>
+			<Button
+				label={t("mobile.common.try_again")}
+				onPress={view.retry}
+				variant="outline"
+				testID={CONTROL.subagentRetry}
+			/>
+		</View>
+	) : (
+		<View className="px-4 py-3">
+			<Skeleton lines={3} testID={SURFACE.subagentLoading} />
+		</View>
+	);
+
+	/* The child's final answer. At the END of a settled transcript, after the
+	   newest row, as in the main view (D3): a reader lands at the newest edge,
+	   and as the list's header the answer sat above the OLDEST row, reachable
+	   only by paging through everything. It stays the header while there are no
+	   rows (not kept, retry), where it is the only thing to read, and while the
+	   child still runs. Memoised: the list compares header and footer by
+	   identity (`transcript-list.tsx`), so a fresh element per poll would tell
+	   it they changed on every tick. */
+	const resultText = detail?.result_text ?? "";
+	const resultAtEnd = view.state === "rows" && !view.live;
+	const result = useMemo(
+		() =>
+			resultText.length > 0 ? (
+				<View
+					className={
+						resultAtEnd ? "border-t border-hairline px-4 py-2" : "px-4 py-2"
+					}
 				>
-					{t("mobile.session.history.refresh_failed")}
-				</Text>
-				<Button
-					label={t("mobile.common.try_again")}
-					onPress={view.retry}
-					variant="outline"
-					testID={CONTROL.subagentRetry}
-				/>
-			</View>
-		) : (
-			<View className="px-4 py-3">
-				<Skeleton lines={3} testID={SURFACE.subagentLoading} />
-			</View>
-		);
+					<Text className="pb-1 text-meta text-ink-dim">
+						{t("mobile.session.subagent.result_label")}
+					</Text>
+					<Text className="text-body-sm text-ink">{resultText}</Text>
+				</View>
+			) : null,
+		[resultText, resultAtEnd],
+	);
 
 	return (
 		<Screen
@@ -219,74 +282,75 @@ export default function Subagent() {
 					</View>
 				) : null}
 
-				{/* The child's prompt, which the roster strips. Clamped with the
-				    transcript's own Show more / Show less (`UserMessageClamp`), so a
-				    long brief cannot push the transcript off the screen. */}
-				{detail !== null && detail.prompt.length > 0 ? (
-					<View
-						className="border-b border-hairline px-4 py-2"
-						testID={SURFACE.subagentPrompt}
-					>
-						<Text className="pb-1 text-meta text-ink-dim">
-							{t("mobile.session.subagent.prompt_label")}
-						</Text>
-						<UserMessageClamp fadeColor={canvas}>
-							<Text className="text-body-sm text-ink-muted">
-								{detail.prompt}
+				{/* The prompt and the transcript share this region; measuring it is
+				    what lets the open prompt leave the transcript its share (D1). */}
+				<View className="min-h-0 flex-1" onLayout={onRegionLayout}>
+					{/* The child's prompt, which the roster strips. Clamped with the
+				    transcript's own Show more / Show less (`UserMessageClamp`), but
+				    to three lines and, open, inside a bounded scroller with Show less
+				    below it: pinned chrome on a screen that does not scroll, so a
+				    long brief must never push the transcript off it
+				    (`subagent-prompt.ts`, D1). */}
+					{detail !== null && detail.prompt.length > 0 ? (
+						<View
+							className="border-b border-hairline px-4 py-2"
+							testID={SURFACE.subagentPrompt}
+						>
+							<Text className="pb-1 text-meta text-ink-dim">
+								{t("mobile.session.subagent.prompt_label")}
 							</Text>
-						</UserMessageClamp>
-					</View>
-				) : null}
+							<UserMessageClamp
+								fadeColor={canvas}
+								lines={SUBAGENT_PROMPT_LINES}
+								expandedMaxHeight={promptScrollMax}
+							>
+								<Text className="text-body-sm text-ink-muted">
+									{detail.prompt}
+								</Text>
+							</UserMessageClamp>
+						</View>
+					) : null}
 
-				{missing && detail === null ? (
-					<EmptyState
-						headline={t("mobile.session.subagent.unavailable_headline")}
-						next={t("mobile.session.subagent.unavailable_next")}
-						testID={EMPTY.subagent}
-					/>
-				) : detail === null ? (
-					<View className="px-4 py-3">
-						<Skeleton lines={3} testID={SURFACE.subagentLoading} />
-					</View>
-				) : (
-					<TranscriptList
-						sessionId={`${sessionId}:${childId}`}
-						entries={view.entries}
-						// The main view's paging props, from the main view's reader
-						// (`HistoryWindow`): older pages load on scroll to the top, and a
-						// failed newest refresh is retried at the newest edge. Absent while
-						// the rows are an older Core's inline fallback, which has no
-						// journal behind it to page.
-						loadOlder={view.paging?.loadOlder}
-						hasOlder={view.paging?.hasOlder}
-						loadingOlder={view.paging?.loadingOlder}
-						historyError={view.paging?.historyError ?? null}
-						historyErrorScope={view.paging?.historyErrorScope ?? null}
-						retryHistory={view.paging?.retryHistory}
-						healHistory={view.paging?.healHistory}
-						historyGap={view.paging?.historyGap}
-						historyGapBefore={view.paging?.historyGapBefore ?? null}
-						streamingRowId={null}
-						onOpenAgent={openAgent}
-						// A child's run state is its status, not a stream: a running or
-						// queued child keeps its turn open; a settled one condenses.
-						turnLive={view.live}
-						testID={SURFACE.subagentTranscript}
-						header={
-							detail.result_text.length > 0 ? (
-								<View className="px-4 py-2">
-									<Text className="pb-1 text-meta text-ink-dim">
-										{t("mobile.session.subagent.result_label")}
-									</Text>
-									<Text className="text-body-sm text-ink">
-										{detail.result_text}
-									</Text>
-								</View>
-							) : null
-						}
-						empty={empty}
-					/>
-				)}
+					{missing && detail === null ? (
+						<EmptyState
+							headline={t("mobile.session.subagent.unavailable_headline")}
+							next={t("mobile.session.subagent.unavailable_next")}
+							testID={EMPTY.subagent}
+						/>
+					) : detail === null ? (
+						<View className="px-4 py-3">
+							<Skeleton lines={3} testID={SURFACE.subagentLoading} />
+						</View>
+					) : (
+						<TranscriptList
+							sessionId={`${sessionId}:${childId}`}
+							entries={view.entries}
+							// The main view's paging props, from the main view's reader
+							// (`HistoryWindow`): older pages load on scroll to the top, and a
+							// failed newest refresh is retried at the newest edge. Absent while
+							// the rows are an older Core's inline fallback, which has no
+							// journal behind it to page.
+							loadOlder={view.paging?.loadOlder}
+							hasOlder={view.paging?.hasOlder}
+							loadingOlder={view.paging?.loadingOlder}
+							historyError={view.paging?.historyError ?? null}
+							historyErrorScope={view.paging?.historyErrorScope ?? null}
+							retryHistory={view.paging?.retryHistory}
+							healHistory={view.paging?.healHistory}
+							historyGap={view.paging?.historyGap}
+							historyGapBefore={view.paging?.historyGapBefore ?? null}
+							streamingRowId={null}
+							onOpenAgent={openAgent}
+							// A child's run state is its status, not a stream: a running or
+							// queued child keeps its turn open; a settled one condenses.
+							turnLive={view.live}
+							testID={SURFACE.subagentTranscript}
+							header={resultAtEnd ? null : result}
+							footer={resultAtEnd ? result : null}
+							empty={empty}
+						/>
+					)}
+				</View>
 
 				<TodosPanel
 					todos={todos}

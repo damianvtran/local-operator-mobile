@@ -41,10 +41,15 @@ export function userMessageLineHeight(scale: number): number {
 	return step.size * step.lineHeight * scale;
 }
 
-/** The clipped block's height: exactly `USER_MESSAGE_CLAMP_LINES` lines, so
- *  the clip lands on a line boundary rather than through a glyph. */
-export function userMessageClipHeight(scale: number): number {
-	return USER_MESSAGE_CLAMP_LINES * userMessageLineHeight(scale);
+/** The clipped block's height: exactly `lines` lines (the transcript's
+ *  `USER_MESSAGE_CLAMP_LINES` unless a caller pins fewer — the subagent
+ *  screen's prompt, PR #390 D1), so the clip lands on a line boundary rather
+ *  than through a glyph. */
+export function userMessageClipHeight(
+	scale: number,
+	lines: number = USER_MESSAGE_CLAMP_LINES,
+): number {
+	return lines * userMessageLineHeight(scale);
 }
 
 /**
@@ -56,8 +61,9 @@ export function userMessageClipHeight(scale: number): number {
 export function needsUserMessageClamp(
 	contentHeight: number,
 	scale: number,
+	lines: number = USER_MESSAGE_CLAMP_LINES,
 ): boolean {
-	return contentHeight > userMessageClipHeight(scale) + 1;
+	return contentHeight > userMessageClipHeight(scale, lines) + 1;
 }
 
 /** The control's state after a press: a plain flip, named so the row and its

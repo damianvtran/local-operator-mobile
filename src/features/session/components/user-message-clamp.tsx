@@ -6,7 +6,13 @@ import {
 	useRef,
 	useState,
 } from "react";
-import { type LayoutChangeEvent, Pressable, Text, View } from "react-native";
+import {
+	type LayoutChangeEvent,
+	Pressable,
+	ScrollView,
+	Text,
+	View,
+} from "react-native";
 import Svg, { Defs, LinearGradient, Rect, Stop } from "react-native-svg";
 import { userBubbleFill } from "@/features/session/user-bubble";
 import {
@@ -55,6 +61,8 @@ export const UserMessageClamp = ({
 	anchorRef,
 	testID,
 	fadeColor,
+	lines,
+	expandedMaxHeight,
 	children,
 }: {
 	expanded?: boolean;
@@ -70,6 +78,20 @@ export const UserMessageClamp = ({
 	 *  this clamp on the bare `canvas`, where a bubble-coloured fade would
 	 *  paint a visible band over the last lines. */
 	fadeColor?: string;
+	/** How many lines stay visible while clamped. Omitted, the transcript's
+	 *  `USER_MESSAGE_CLAMP_LINES` (the desktop's eight). The subagent screen pins
+	 *  its prompt ABOVE the list as fixed chrome, where eight lines at 200 % text
+	 *  left the transcript 26 px of a 692 pt window (PR #390 D1 / Q1), so it
+	 *  passes fewer. A transcript row never does: there the list scrolls past it. */
+	lines?: number;
+	/** The tallest the OPEN message may draw, in points; past it the message
+	 *  scrolls inside its own `ScrollView` and `Show less` stays below that
+	 *  scroller, always on screen. Omitted, an open message draws in full — right
+	 *  inside the transcript, whose list scrolls it. A caller that pins the clamp
+	 *  outside any scroller (the subagent prompt) must pass it: opening a long
+	 *  brief there pushed `Show less` and the whole transcript below a
+	 *  non-scrolling screen, and on native the only way out was Back (D1). */
+	expandedMaxHeight?: number;
 	/** The message. A FUNCTION form is handed the clamp's open-if-closed
 	 *  action (`expand`, below) for a body that must open the clamp itself —
 	 *  the iOS selection mode (PR #237 review, R1-m1). A render function rather
@@ -84,10 +106,10 @@ export const UserMessageClamp = ({
 			: ownExpanded;
 	const [contentHeight, setContentHeight] = useState<number | null>(null);
 	const { effectiveScale } = useTextScale();
-	const clipHeight = userMessageClipHeight(effectiveScale);
+	const clipHeight = userMessageClipHeight(effectiveScale, lines);
 	const clamped =
 		contentHeight !== null &&
-		needsUserMessageClamp(contentHeight, effectiveScale);
+		needsUserMessageClamp(contentHeight, effectiveScale, lines);
 
 	const keepInView = useContext(UserMessageCollapseContext);
 	const ownRef = useRef<View | null>(null);
@@ -126,26 +148,44 @@ export const UserMessageClamp = ({
 		if (clamped && !expanded) setExpanded(true);
 	}, [clamped, expanded, setExpanded]);
 
+	const body = (
+		<View
+			ref={ownRef}
+			style={
+				expanded ? undefined : { maxHeight: clipHeight, overflow: "hidden" }
+			}
+		>
+			<View onLayout={onContentLayout}>
+				{typeof children === "function" ? children(expand) : children}
+			</View>
+			{clamped && !expanded ? (
+				<BubbleFade
+					colour={fadeColor}
+					height={
+						USER_MESSAGE_FADE_LINES * userMessageLineHeight(effectiveScale)
+					}
+				/>
+			) : null}
+		</View>
+	);
+
 	return (
 		<>
-			<View
-				ref={ownRef}
-				style={
-					expanded ? undefined : { maxHeight: clipHeight, overflow: "hidden" }
-				}
-			>
-				<View onLayout={onContentLayout}>
-					{typeof children === "function" ? children(expand) : children}
-				</View>
-				{clamped && !expanded ? (
-					<BubbleFade
-						colour={fadeColor}
-						height={
-							USER_MESSAGE_FADE_LINES * userMessageLineHeight(effectiveScale)
-						}
-					/>
-				) : null}
-			</View>
+			{/* Bounded only while open: closed, the clip already bounds it. The
+			    control is a SIBLING of the scroller, never inside it, so it cannot
+			    scroll away from the reader who needs it to close the message.
+			    `flexGrow: 0` because a ScrollView grows by default, and this one
+			    must be no taller than its content when the content is short. */}
+			{expanded && expandedMaxHeight !== undefined ? (
+				<ScrollView
+					style={{ maxHeight: expandedMaxHeight, flexGrow: 0 }}
+					nestedScrollEnabled
+				>
+					{body}
+				</ScrollView>
+			) : (
+				body
+			)}
 			{clamped ? (
 				<Pressable
 					testID={testID}

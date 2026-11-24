@@ -43,6 +43,10 @@ const host = vi.hoisted(() => ({
 	/** The route's params; a test reuses the mounted screen for a sibling by
 	 *  changing `jobId` and re-rendering (R1-5). */
 	params: { id: "root", jobId: "job-qa" },
+	/** The props the screen handed the prompt's clamp (design round 1, D1). */
+	clamp: null as null | Record<string, unknown>,
+	/** What `useWindowDimensions` reports. */
+	window: { width: 430, height: 932 },
 }));
 
 vi.mock("expo-router", () => ({
@@ -72,7 +76,12 @@ vi.mock("@/features/session/components/todos-panel", () => ({
 	TodosPanel: () => null,
 }));
 vi.mock("@/features/session/components/user-message-clamp", () => ({
-	UserMessageClamp: ({ children }: { children: ReactNode }) => children,
+	UserMessageClamp: (
+		props: Record<string, unknown> & { children: ReactNode },
+	) => {
+		host.clamp = props;
+		return props.children;
+	},
 }));
 vi.mock("@/features/team-bridge/thread-chrome", () => ({
 	BridgeThreadTitle: () => null,
@@ -130,6 +139,7 @@ vi.mock("react-native", async () => {
 	const { createElement: draw } = await import("react");
 	return {
 		View: ({ children }: { children?: ReactNode }) => children ?? null,
+		useWindowDimensions: () => host.window,
 		// Records the words AND draws a span with the caller's class, so the
 		// header test can read the real title's typographic step from markup (a
 		// null here drew the title as '' and that test could never pass).
@@ -267,6 +277,8 @@ beforeEach(() => {
 	historyCalls.length = 0;
 	detailCalls.length = 0;
 	host.params = { id: "root", jobId: "job-qa" };
+	host.clamp = null;
+	host.window = { width: 430, height: 932 };
 });
 afterEach(async () => {
 	await act(async () => root.unmount());
@@ -400,7 +412,7 @@ describe("the subagent screen's transcript", () => {
 		await mount();
 		await settle();
 		expect(say("This subagent has no transcript rows of its own.")).toBe(false);
-		expect(say("Its transcript was not kept")).toBe(true);
+		expect(say("This subagent’s transcript wasn’t kept")).toBe(true);
 	});
 
 	it("only a successful EMPTY read says the child has no rows", async () => {
@@ -425,7 +437,7 @@ describe("the subagent screen's transcript", () => {
 		await mount();
 		await settle();
 		expect(say("This subagent has no transcript rows of its own.")).toBe(false);
-		expect(say("The latest messages could not be loaded.")).toBe(true);
+		expect(say("This subagent’s messages could not be loaded.")).toBe(true);
 		const retry = host.presses.get(CONTROL.subagentRetry);
 		expect(retry).toBeTypeOf("function");
 		fail = false;
@@ -545,8 +557,16 @@ describe("the subagent screen under a slow, flaky or reused link", () => {
 		};
 		await mount();
 		await settle();
-		expect(say("Its transcript was not kept")).toBe(false);
-		expect(say("skeleton:")).toBe(true);
+		expect(say("This subagent’s transcript wasn’t kept")).toBe(false);
+		// Queued, so it says it has not started rather than a skeleton that can
+		// sit there for as long as the child waits (design round 1, D2). A fresh
+		// frame: the opening render's skeleton (detail in flight) is history.
+		host.texts = [];
+		await act(async () => root.render(createElement(Subagent)));
+		expect(say("Not started yet. Its messages appear here once it runs.")).toBe(
+			true,
+		);
+		expect(say("skeleton:")).toBe(false);
 		// Still polled: the 404 is "not yet", and the rows arrive once it starts.
 		started = true;
 		await tick();
@@ -563,8 +583,8 @@ describe("the subagent screen under a slow, flaky or reused link", () => {
 		};
 		await mount();
 		await settle();
-		expect(say("Its transcript was not kept")).toBe(false);
-		expect(say("The latest messages could not be loaded.")).toBe(true);
+		expect(say("This subagent’s transcript wasn’t kept")).toBe(false);
+		expect(say("This subagent’s messages could not be loaded.")).toBe(true);
 		expect(host.presses.get(CONTROL.subagentRetry)).toBeTypeOf("function");
 	});
 
@@ -599,7 +619,7 @@ describe("the subagent screen under a slow, flaky or reused link", () => {
 		// A fresh frame, so the assertions read the hook's state as it now is.
 		host.texts = [];
 		await act(async () => root.render(createElement(Subagent)));
-		expect(say("Its transcript was not kept")).toBe(false);
+		expect(say("This subagent’s transcript wasn’t kept")).toBe(false);
 		expect(say("skeleton:")).toBe(true);
 		expect(say("badge:completed")).toBe(true);
 		expect(
@@ -689,5 +709,113 @@ describe("the subagent screen's header", () => {
 		]) {
 			expect(source).toContain(id);
 		}
+	});
+});
+
+/** Design review round 1 (PR #390): the pinned prompt's bound (D1), the queued
+ *  line (D2), where the final result sits (D3) and the empty-state copy (D4). */
+describe("the subagent screen after design round 1", () => {
+	it("clamps the pinned prompt to three lines and bounds it when open (D1)", async () => {
+		const { SUBAGENT_PROMPT_LINES, subagentPromptScrollMax } = await import(
+			"./subagent-prompt"
+		);
+		const { TOUCH_FLOOR } = await import("@/ui/layout");
+		relay = {
+			detail: async () => detailOf({ status: "completed" }),
+			history: async () => ({ entries: [row("e1")], has_more: false }),
+		};
+		await mount();
+		await settle();
+		expect(SUBAGENT_PROMPT_LINES).toBe(3);
+		expect(host.clamp?.lines).toBe(3);
+		// No layout has run in this host, so only the window bound applies; the
+		// same function the geometry test proves is what reaches the clamp.
+		expect(host.clamp?.expandedMaxHeight).toBe(
+			subagentPromptScrollMax({
+				windowHeight: 932,
+				regionHeight: null,
+				scale: 1,
+				touchFloor: TOUCH_FLOOR,
+			}),
+		);
+		host.window = { width: 320, height: 692 };
+		await act(async () => root.render(createElement(Subagent)));
+		expect(host.clamp?.expandedMaxHeight).toBe(Math.floor(692 * 0.45));
+	});
+
+	it("draws the final result AFTER the newest row once a child with rows has finished (D3)", async () => {
+		relay = {
+			detail: async () =>
+				detailOf({ status: "completed", result_text: "All 12 rows PASS." }),
+			history: async () => ({
+				entries: [row("e1"), row("e2")],
+				has_more: false,
+			}),
+		};
+		await mount();
+		await settle();
+		expect(listIds()).toEqual(["e1", "e2"]);
+		expect(host.list?.header).toBeNull();
+		const footer = renderToStaticMarkup(
+			host.list?.footer as React.ReactElement,
+		);
+		expect(footer).toContain("All 12 rows PASS.");
+		expect(footer).toContain("result");
+	});
+
+	it("keeps the result as the header when there are no rows, or the child still runs (D3)", async () => {
+		for (const [status, history] of [
+			[
+				"completed",
+				async () => {
+					throw new RelayError("rejected", "Not Found", { status: 404 });
+				},
+			],
+			["running", async () => ({ entries: [row("e1")], has_more: false })],
+		] as const) {
+			relay = {
+				detail: async () => detailOf({ status, result_text: "partial answer" }),
+				history: history as Relay["history"],
+			};
+			await mount();
+			await settle();
+			expect(host.list?.footer).toBeNull();
+			expect(
+				renderToStaticMarkup(host.list?.header as React.ReactElement),
+			).toContain("partial answer");
+			await act(async () => root.unmount());
+			root = createRoot(dom.container as Element);
+		}
+	});
+
+	it("says what failed in the subagent's own words, not borrowed strings (D4)", async () => {
+		relay = {
+			detail: async () => detailOf({ status: "completed" }),
+			history: async () => {
+				throw new RelayError("transport", "offline");
+			},
+		};
+		await mount();
+		await settle();
+		expect(say("This subagent’s messages could not be loaded.")).toBe(true);
+		expect(say("The latest messages could not be loaded.")).toBe(false);
+		await act(async () => root.unmount());
+		root = createRoot(dom.container as Element);
+
+		host.texts = [];
+		relay = {
+			detail: async () => detailOf({ status: "completed" }),
+			history: async () => {
+				throw new RelayError("rejected", "Not Found", { status: 404 });
+			},
+		};
+		await mount();
+		await settle();
+		expect(
+			say(
+				"This subagent’s transcript wasn’t kept, or the computer isn’t answering.",
+			),
+		).toBe(true);
+		expect(say("Its transcript was not kept")).toBe(false);
 	});
 });
