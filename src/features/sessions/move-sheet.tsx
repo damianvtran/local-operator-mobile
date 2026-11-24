@@ -26,7 +26,7 @@ import { CONTROL, ROLE, SURFACE, sessionMoveDestId, state } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
 import { Button } from "@/ui/components/button";
 import { Sheet } from "@/ui/components/sheet";
-import { TEXT_END_CLASS } from "@/ui/direction";
+import { TEXT_END_CLASS, useComposedDir } from "@/ui/direction";
 
 /**
  * The move/offload sheet: one conversation's move, copy, or recall.
@@ -456,6 +456,12 @@ const PickBody = ({
 	// client-owned copy updates without reopening; relay reasons stay verbatim.
 	useLocaleFrame();
 	const accent = useTokenColor("accent");
+	// The "where it is now" line composes translated prose around a device name
+	// that is usually Latin (and whose fallbacks always are). Urdu's unreachable
+	// line (`move_pick.cannot_reach`) leads with that name, so first-strong
+	// detection would set the paragraph LTR and misorder the postposition. State
+	// the page's base instead; called before the early return (rules of hooks).
+	const composedDir = useComposedDir();
 	if (session === null) return null;
 	const remote = isRemoteRow(session);
 	const unreachable = remote && session.reachable === false;
@@ -467,7 +473,7 @@ const PickBody = ({
 				</Text>
 				{remote ? (
 					<>
-						<Text className="text-body text-ink">
+						<Text className="text-body text-ink" {...composedDir}>
 							{unreachable
 								? t("mobile.remote_sessions.move_pick.cannot_reach", {
 										device: remoteDeviceLabel(session),
