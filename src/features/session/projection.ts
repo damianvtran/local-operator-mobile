@@ -93,12 +93,36 @@ export const visibleTranscriptEntries = (
 	entries: readonly TranscriptEntry[],
 ): readonly TranscriptEntry[] => {
 	const visible = (entry: TranscriptEntry) =>
-		!(
-			entry.kind === "notice" &&
-			(entry.custom_type || entry.details.custom_kind) === "session_state"
-		);
+		!(entry.kind === "notice" && hiddenNotice(entry));
 	return entries.every(visible) ? entries : entries.filter(visible);
 };
+
+/** The credential-binding notice Core's fold emits ("[session credential] This
+ * session is now using <account> on <host>.") — Core
+ * `harness/message_types.py` `SESSION_BINDING_NOTICE_MESSAGE_TYPE`. It is
+ * harness chrome about the desktop's credential routing: on a phone it is not
+ * actionable, local or remote (operator, TestFlight). Core is dropping it from
+ * the phone fold separately; this keeps phones on older Cores clean too. */
+export const SESSION_CREDENTIAL_NOTICE_TYPE =
+	"session_credential_binding_notice.v1";
+/** The legacy head of the same notice from a Core that predates the typed
+ *  stamp. Core's own `harness/rows.py` `_HARNESS_NOTICE_HEADS` treats this head
+ *  as harness-authored, so it is not the reader's words. Matched on NOTICE rows
+ *  only, after leading whitespace as Core does: a user or peer quoting the
+ *  words still owns them (the session_state rule above). */
+const SESSION_CREDENTIAL_NOTICE_HEAD = "[session credential] ";
+
+const HIDDEN_NOTICE_TYPES: ReadonlySet<string> = new Set([
+	"session_state",
+	SESSION_CREDENTIAL_NOTICE_TYPE,
+]);
+
+/** A notice row that is harness metadata, not a conversation event. Display
+ *  only, and filtered BEFORE condensing so it adds no rows or group counts. */
+const hiddenNotice = (entry: TranscriptEntry): boolean =>
+	HIDDEN_NOTICE_TYPES.has(
+		entry.custom_type || entry.details.custom_kind || "",
+	) || entry.text.trimStart().startsWith(SESSION_CREDENTIAL_NOTICE_HEAD);
 
 /** Whether the row is one the reader wrote. Used for alignment, and for the one
  *  place the transcript puts a bubble around text. */
