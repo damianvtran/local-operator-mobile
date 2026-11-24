@@ -124,5 +124,6 @@ describe("state()", () => {
 		expect(state({ disabled: true })).toEqual({ disabled: true });
 		expect(state({ busy: false })).toEqual({ busy: false });
 		expect(Object.keys(state({}))).toHaveLength(0);
+		expect(state({ checked: true })).toEqual({ checked: true });
 	});
 });

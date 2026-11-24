@@ -53,9 +53,7 @@
 	"mobile.home.startup_queue.not_started": "未启动",
 	"mobile.home.startup_queue.sending": "正在发送排队消息……",
 	"mobile.home.startup_queue.unconfirmed": "启动未确认",
-	"mobile.home.suggestion.last_turn": "看看上一轮",
 	"mobile.home.suggestion.linear_mcp": "设置Linear MCP",
-	"mobile.home.suggestion.phone_access": "开启手机访问",
 	"mobile.home.suggestion.review_repo": "审查此仓库",
 	"mobile.home.suggestion.team_of_agents": "创建智能体团队",
 	"mobile.home.suggestion.wake_summary": "用摘要唤醒我",
@@ -90,5 +88,10 @@
 	"mobile.home.identity.refused_fallback": "无法在这台电脑上以 {name} 开始。请另选一个，或使用默认智能体。",
 	"mobile.home.identity.refused_unlicensed": "这台电脑现在无法以 {name} 开始对话。请选择默认智能体后发送。",
 	"mobile.home.identity.refused_connecting": "这台电脑仍在连接，因此尚未开始任何对话。点按你的消息将其取回，稍后重新发送即可以 {name} 开始。",
-	"mobile.home.identity.announce_picked": "此对话将以 {name} 开始"
+	"mobile.home.identity.announce_picked": "此对话将以 {name} 开始",
+	"mobile.home.work.needs_you": "待你处理",
+	"mobile.home.work.recent": "最近",
+	"mobile.home.work.try": "试试",
+	"mobile.home.work.all_conversations": "全部对话",
+	"mobile.home.work.all_conversations_new": "全部对话，{count, plural, other {# 个新对话}}"
 }

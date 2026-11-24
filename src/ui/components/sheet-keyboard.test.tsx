@@ -23,6 +23,21 @@ import type { HomeModelRow } from "@/features/home/home-defaults";
 import type { KeyboardFrame } from "@/features/session/keyboard-frame";
 import { type DomShim, installDomShim } from "@/testing/dom-shim";
 
+/* `Sheet` imports reanimated and gesture-handler; Node has neither (see the
+ * shared reduction's own note). */
+vi.mock("react-native-reanimated", async () => {
+	const { reanimatedModuleMock } = await import(
+		"@/testing/native-gesture-mocks"
+	);
+	return reanimatedModuleMock();
+});
+vi.mock("react-native-gesture-handler", async () => {
+	const { gestureHandlerModuleMock } = await import(
+		"@/testing/native-gesture-mocks"
+	);
+	return gestureHandlerModuleMock();
+});
+
 const WINDOW = { width: 390, height: 844 };
 const INSETS = { top: 47, bottom: 34, left: 0, right: 0 };
 const KEYBOARD = 336;
@@ -218,8 +233,10 @@ vi.mock("@/ui/components", async () => ({
 const { Sheet } = await import("./sheet");
 const { SURFACE, CONTROL } = await import("@/ui/a11y");
 const { ModelPicker } = await import("@/features/home/home-pickers");
-const { modelOptionId } = await import("@/ui/a11y");
-const { MODEL_SEARCH_THRESHOLD } = await import("@/features/home/picker-model");
+const { modelOptionId, slashCommandId } = await import("@/ui/a11y");
+const { MODEL_SEARCH_THRESHOLD } = await import(
+	"@/features/home/picker-search-threshold"
+);
 
 const node = (key: string) => host.nodes.get(key);
 const spacerHeight = () =>
@@ -531,7 +548,7 @@ describe("ModelPicker search (TestFlight 1295)", () => {
 });
 
 describe("SlashSheet with the keyboard up (review R1-m2)", () => {
-	it("lets its nested results list take a row tap in one tap", async () => {
+	it("lets its results take a row tap in one tap", async () => {
 		const { SlashSheet } = await import(
 			"@/features/session/components/slash-sheet"
 		);
@@ -546,13 +563,17 @@ describe("SlashSheet with the keyboard up (review R1-m2)", () => {
 				/>,
 			),
 		);
-		/* Body + the nested list: RN's tap capture is per ScrollView, so BOTH
-		 *  must persist handled taps. */
+		/* RN's tap capture is per ScrollView, so every scroller between the
+		 *  keyboard and a row must persist handled taps. #312 removed the nested
+		 *  `max-h-72` list: the rows sit in the Sheet body, so the body is the
+		 *  only scroller, and a second one coming back would need `handled` too. */
 		const latest = new Map<string, Record<string, unknown>>();
 		for (const p of host.scrollViews)
 			latest.set((p.testID as string | undefined) ?? "nested", p);
-		expect(latest.size).toBe(2);
+		expect([...latest.keys()]).toEqual([SURFACE.sheetBody]);
 		for (const p of latest.values())
 			expect(p.keyboardShouldPersistTaps).toBe("handled");
+		const row = node(slashCommandId("goal"));
+		expect(row?.path).toContain(SURFACE.sheetBody);
 	});
 });

@@ -53,9 +53,7 @@
 	"mobile.home.startup_queue.not_started": "शुरू नहीं हुआ",
 	"mobile.home.startup_queue.sending": "कतार के संदेश भेजे जा रहे हैं…",
 	"mobile.home.startup_queue.unconfirmed": "शुरू होना पक्का नहीं",
-	"mobile.home.suggestion.last_turn": "पिछला टर्न दिखाएँ",
 	"mobile.home.suggestion.linear_mcp": "Linear MCP सेट करें",
-	"mobile.home.suggestion.phone_access": "फ़ोन एक्सेस चालू करें",
 	"mobile.home.suggestion.review_repo": "यह repo रिव्यू करें",
 	"mobile.home.suggestion.team_of_agents": "एजेंटों की टीम बनाएँ",
 	"mobile.home.suggestion.wake_summary": "सारांश के साथ मुझे जगाएँ",
@@ -90,5 +88,10 @@
 	"mobile.home.identity.refused_fallback": "{name} इस कंप्यूटर पर शुरू नहीं हो सका। कोई दूसरा चुनें, या डिफ़ॉल्ट एजेंट का उपयोग करें।",
 	"mobile.home.identity.refused_unlicensed": "यह कंप्यूटर अभी {name} के साथ चैट शुरू नहीं कर सकता। भेजने के लिए डिफ़ॉल्ट एजेंट चुनें।",
 	"mobile.home.identity.refused_connecting": "यह कंप्यूटर अभी कनेक्ट हो रहा है, इसलिए अभी कुछ शुरू नहीं हुआ। अपने संदेश पर टैप करके उसे वापस लाएँ, फिर {name} के साथ शुरू करने के लिए थोड़ी देर में दोबारा भेजें।",
-	"mobile.home.identity.announce_picked": "यह चैट {name} के साथ शुरू होगी"
+	"mobile.home.identity.announce_picked": "यह चैट {name} के साथ शुरू होगी",
+	"mobile.home.work.needs_you": "आपका इंतज़ार",
+	"mobile.home.work.recent": "हाल के",
+	"mobile.home.work.try": "आज़माएँ",
+	"mobile.home.work.all_conversations": "सभी बातचीत",
+	"mobile.home.work.all_conversations_new": "सभी बातचीत, {count, plural, one {# नई बातचीत} other {# नई बातचीत}}"
 }

@@ -22,6 +22,7 @@ import { anchorBottomVisible } from "@/features/session/completion-visibility";
 import type { BridgeBodyLoader } from "@/features/session/components/bridge-card-body";
 import { FoldBar } from "@/features/session/components/fold-bar";
 import { GroupGuides } from "@/features/session/components/group-guides";
+import { ChartDataResizeContext } from "@/features/session/components/inline-ui-preview";
 import { JumpToLatestChip } from "@/features/session/components/jump-to-latest-chip";
 import { OlderHistoryEdge } from "@/features/session/components/older-history-edge";
 import { QuietGroupBar } from "@/features/session/components/quiet-group-bar";
@@ -43,6 +44,7 @@ import {
 } from "@/features/session/components/transcript-edge-fades";
 import { TranscriptRow } from "@/features/session/components/transcript-row";
 import { TurnBar } from "@/features/session/components/turn-bar";
+import type { ComposerCompaction } from "@/features/session/composer-compaction";
 import { type RevealSubject, revealTarget } from "@/features/session/find";
 import { groupContainment } from "@/features/session/group-containment";
 import {
@@ -75,6 +77,7 @@ import {
 } from "@/features/session/reader-scroll-hold";
 import { reuseRows } from "@/features/session/row-identity";
 import { scrollAnchorFromHook } from "@/features/session/scroll-hook";
+import { useStreamArrival } from "@/features/session/stream-arrival";
 import { beatLive, type SupplementBeat } from "@/features/session/supplements";
 import {
 	textSelectionContainerScroll,
@@ -116,6 +119,7 @@ import {
 	REGION,
 	transcriptRowId,
 } from "@/ui/a11y";
+import { useReducedMotion } from "@/ui/appearance";
 import { Button } from "@/ui/components/button";
 import { cx } from "@/ui/variants";
 
@@ -185,6 +189,8 @@ export type TranscriptListProps = {
 	historyError?: string | null;
 	/** The row that carries `transcript-streaming`, or `null` when settled. */
 	streamingRowId: string | null;
+	streamArrivalEpoch?: number | null;
+	streamArrivalTail?: TranscriptEntry | null;
 	/** Whether a turn is running in this transcript right now. Decides whether
 	 *  the NEWEST turn may condense: an idle session condenses its finished last
 	 *  turn immediately (the relay's `!live` rule), a live one never touches it.
@@ -267,6 +273,12 @@ export type TranscriptListProps = {
 	 *  checkpoint rail (`transcript-presence.ts`). Optional: a host with no rail
 	 *  to drive simply keeps its marks static. */
 	presence?: ScrollPresence;
+	/** The composer's scroll-compaction signal (`composer-compaction.ts`), owned
+	 *  by the screen. The list reports the READER'S gestures into it — drag
+	 *  begin/end with release velocity, momentum, offset and distance to the
+	 *  tail — and asks it to grow on a jump/send. Optional: a host with no
+	 *  composer to shrink passes none. */
+	compaction?: ComposerCompaction;
 	testID: string;
 };
 
@@ -387,6 +399,8 @@ export const TranscriptList = ({
 	historyGapBefore = null,
 	historyError = null,
 	streamingRowId,
+	streamArrivalEpoch = null,
+	streamArrivalTail = null,
 	turnLive,
 	loadImage,
 	loadFile,
@@ -407,8 +421,19 @@ export const TranscriptList = ({
 	highlightId = null,
 	reveal = null,
 	presence,
+	compaction,
 	testID,
 }: TranscriptListProps) => {
+	// This reveal is optional; don't start one before the OS preference arrives.
+	const reduceMotion = useReducedMotion(true);
+	const { arrival, motion } = useStreamArrival(
+		sessionId,
+		streamArrivalEpoch,
+		streamArrivalTail,
+		streamingRowId,
+		entries,
+		reduceMotion,
+	);
 	const listRef = useRef<FlatList<TranscriptItem>>(null);
 	const webRows = useRef(new Map<string, View>());
 	/* The row the reader was looking at when an older page was requested, held
@@ -771,6 +796,10 @@ export const TranscriptList = ({
 	/* Set by a reader's own expand or collapse, consumed by the content-size
 	 *  change that toggle causes: see `onContentSizeChange`. */
 	const foldResizeRef = useRef(false);
+	const chartResizeAt = useRef<typeof previousRows.current>(null);
+	const markChartResize = useCallback(() => {
+		chartResizeAt.current = previousRows.current;
+	}, []);
 	/* The resize mark is set ONLY when the open state really changes (round 2,
 	 *  U10 / Q9 / m-r2-1). A press that asks for the state the row already has
 	 *  produces no content-size change to consume it, so the mark would sit armed
@@ -1389,12 +1418,20 @@ export const TranscriptList = ({
 			 *  included; the presence itself discards the ones no reader gesture
 			 *  made. */
 			presence?.noteMovement(contentOffset.y);
+			/* Every offset, the tail pin's included: the signal itself shrinks only
+			 *  inside a reader's drag and records the rest as a distance. */
+			compaction?.noteOffset(
+				contentOffset.y,
+				distance,
+				layoutMeasurement.height,
+			);
 			driveFades();
 			recompute();
 		},
 		[
 			driveFades,
 			presence,
+			compaction,
 			sessionId,
 			recompute,
 			requestOlder,
@@ -1418,7 +1455,11 @@ export const TranscriptList = ({
 		snapArriving.current = false;
 		scrollHold.current.beginDrag();
 		presence?.setHeld(true);
-	}, [presence, releaseWebAnchor]);
+		/* The compaction's net distance is measured from where the finger went
+		 *  down: the offset the last scroll event reported, which is the one the
+		 *  finger is holding. */
+		compaction?.beginDrag(factsRef.current.offsetY);
+	}, [presence, compaction, releaseWebAnchor]);
 	/* The rest offset from the drag/momentum END event (TestFlight 1157):
 	 *  scroll events can lag a glide, and the end events carry the offset the
 	 *  list actually stopped at. Content height keeps its own, newer source. */
@@ -1435,8 +1476,14 @@ export const TranscriptList = ({
 			observeRest(event);
 			scrollHold.current.endDrag();
 			presence?.setHeld(false);
+			/* `velocity` is points per MILLISECOND on both platforms (Android's is
+			 *  converted to dp in `ScrollEvent.kt`); the policy reads points/s. Its
+			 *  SIGN is platform-dependent (iOS: the offset's rate; Android: the
+			 *  finger's, so opposite) and is not used: the policy takes the
+			 *  direction from the drag's own offset motion. */
+			compaction?.endDrag((event?.nativeEvent?.velocity?.y ?? 0) * 1000);
 		},
-		[presence, observeRest],
+		[presence, compaction, observeRest],
 	);
 	/* The glide after a flick is still the reader's gesture: the presence counts
 	 *  movement only inside a drag or its momentum, which is what keeps the tail
@@ -1444,14 +1491,16 @@ export const TranscriptList = ({
 	const onMomentumScrollBegin = useCallback(() => {
 		scrollHold.current.beginMomentum();
 		presence?.setCoasting(true);
-	}, [presence]);
+		compaction?.setCoasting(true);
+	}, [presence, compaction]);
 	const onMomentumScrollEnd = useCallback(
 		(event?: NativeSyntheticEvent<NativeScrollEvent>) => {
 			observeRest(event);
 			scrollHold.current.endMomentum();
 			presence?.setCoasting(false);
+			compaction?.setCoasting(false);
 		},
-		[presence, observeRest],
+		[presence, compaction, observeRest],
 	);
 
 	/**
@@ -1506,7 +1555,10 @@ export const TranscriptList = ({
 			offset: TAIL_CLAMP_OFFSET_PT,
 			animated: false,
 		});
-	}, [markAtTail, releaseWebAnchor]);
+		/* Jump-to-latest and a send both land here, and both are the reader asking
+		 *  for the composer back: it does not wait for the dwell at the tail. */
+		compaction?.grow();
+	}, [markAtTail, releaseWebAnchor, compaction]);
 	/* SENDING IS A SNAP (operator, 2026-11-21): the reader who just pressed send
 	 *  is done reading where they were. Typing never moves the list. The mark
 	 *  changes only when the composer admits a message (a prompt, or a typed slash
@@ -1746,7 +1798,17 @@ export const TranscriptList = ({
 						return;
 					}
 				}
-				if (foldResizeRef.current) {
+				// A small disclosure may not change total content height. Scope its
+				// mark to the rows the reader acted on so it cannot handle the next
+				// incoming message in place of a resize that never fired.
+				const chartResize = chartResizeAt.current;
+				chartResizeAt.current = null;
+				if (
+					foldResizeRef.current ||
+					(chartResize !== null &&
+						chartResize.session === sessionId &&
+						chartResize.rows === previousRows.current?.rows)
+				) {
 					/* A READER'S EXPAND IS NOT CONTENT ARRIVING (review round 1, m4 /
 					 *  U4). Opening a fold at the tail grew the content, the tail pin
 					 *  below followed it, and the header the reader just tapped slid
@@ -2023,19 +2085,25 @@ export const TranscriptList = ({
 					{/* Always provided (0 outside a group), so opening or closing a
 					 *  bar never changes the row's element tree and never remounts it. */}
 					<GroupInsetContext.Provider value={depth * GROUP_STEP_PT}>
-						<TranscriptRow
-							entry={item.entry}
-							condensed={item.condensed === true}
-							streaming={streamingRowId !== null && item.id === streamingRowId}
-							loadImage={loadImage}
-							loadFile={loadFile}
-							onOpenAgent={onOpenAgent}
-							onOpenVideo={onOpenVideo}
-							loadBridgeBody={loadBridgeBody}
-							onCancelTurn={onCancelTurn}
-							open={rowOpen.get(canonicalRowKey(item.entry))}
-							onToggleOpen={toggleRowOpen}
-						/>
+						<ChartDataResizeContext.Provider value={markChartResize}>
+							<TranscriptRow
+								entry={item.entry}
+								condensed={item.condensed === true}
+								streaming={
+									streamingRowId !== null && item.id === streamingRowId
+								}
+								streamArrival={item.id === streamingRowId ? arrival : null}
+								streamMotion={item.id === streamingRowId ? motion : null}
+								loadImage={loadImage}
+								loadFile={loadFile}
+								onOpenAgent={onOpenAgent}
+								onOpenVideo={onOpenVideo}
+								loadBridgeBody={loadBridgeBody}
+								onCancelTurn={onCancelTurn}
+								open={rowOpen.get(canonicalRowKey(item.entry))}
+								onToggleOpen={toggleRowOpen}
+							/>
+						</ChartDataResizeContext.Provider>
 					</GroupInsetContext.Provider>
 					{/* The completion anchor: a zero-size sibling at the row's bottom edge
 					 * (an element carries one testID, so the anchor is its own element —
@@ -2065,6 +2133,8 @@ export const TranscriptList = ({
 			rowOpen,
 			toggleRowOpen,
 			streamingRowId,
+			arrival,
+			motion,
 			loadImage,
 			loadFile,
 			onOpenAgent,
@@ -2081,6 +2151,7 @@ export const TranscriptList = ({
 			gapMarker,
 			spacingTiers,
 			containment,
+			markChartResize,
 		],
 	);
 

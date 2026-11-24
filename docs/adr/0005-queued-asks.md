@@ -118,6 +118,14 @@ derived index live on the computer (core `docs/design/ask-nonblocking.md` §2.2:
 `sessions/<sid>/asks.jsonl` plus a non-authoritative index); nothing about an ask
 is durably stored on the phone.
 
+- **Amended 2026-11-22 (operator, ask a-5712: "Keep it").** A typed `Other`
+  answer now survives a close and a reopen **in memory only**, keyed by
+  conversation + ask. This narrows the earlier rule that the expanded form
+  "re-expands empty": what changed is the reader's half-typed answer, not what
+  the app knows about the queue. Nothing reaches the disk, the rule below still
+  stands unchanged, and the record is dropped the moment the ask is settled or
+  is no longer outstanding (and on restart). A SECRET question's answer is never
+  kept at all.
 - **The app caches nothing durably for asks.** No ask list, no ask body, no
   answered/declined history in `expo-file-system`, `expo-secure-store`, or
   AsyncStorage. A cold start re-reads from the relay: the SSE seed frame carries

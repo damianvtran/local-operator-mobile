@@ -15,9 +15,9 @@ import {
 	filterModels,
 	folderName,
 	folderRows,
-	MODEL_SEARCH_THRESHOLD,
 	typedFolder,
 } from "@/features/home/picker-model";
+import { MODEL_SEARCH_THRESHOLD } from "@/features/home/picker-search-threshold";
 import {
 	type IdentityRoster,
 	type IdentityRow,

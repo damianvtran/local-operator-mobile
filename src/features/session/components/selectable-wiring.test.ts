@@ -29,7 +29,13 @@ const OUTPUT_WELL =
 	/<SelectableMessage text=\{joined\}[^>]*>\s*<SelectableLeafText/;
 const MARKDOWN = /export const Markdown = /;
 const ANSWER_WRAPPER = /<SelectableMessage\s+text=\{plainText\}/;
-const CODE_BLOCK_USE = /<CodeBlock\b/;
+const ANSWER_CLOSE = "</SelectableMessage>";
+const MARKDOWN_BLOCK = /const MarkdownBlock = /;
+const MARKDOWN_BLOCK_USE = /<MarkdownBlock\b/;
+const BLOCK_BODY = /const BlockBody = /;
+const STREAM_BLOCK_BODY =
+	/<StreamBlock\b[^>]*>\s*<BlockBody\b[^>]*\/>\s*<\/StreamBlock>/;
+const CODE_BLOCK_USE = /case "code": \{\s*const listing = \(\s*<CodeBlock\b/;
 const CODE_BLOCK_MEMO = /const CodeBlock = memo\(\s*CodeBlockView\b/;
 const CODE_BLOCK_VIEW = /function CodeBlockView\(/;
 const FORWARDS_HOLD = /onLongPress=\{enter\}/;
@@ -66,6 +72,27 @@ const component = (source: string, name: RegExp): string => {
 	return next < 0 ? rest : rest.slice(0, next + 1);
 };
 
+function assertAssistantSelection(markdown: string) {
+	const answer = component(markdown, MARKDOWN);
+	const open = answer.search(ANSWER_WRAPPER);
+	const close = answer.indexOf(ANSWER_CLOSE, open);
+	expect(open, "answer selection surface is missing").toBeGreaterThanOrEqual(0);
+	expect(close, "answer selection surface is not closed").toBeGreaterThan(open);
+	expect(
+		answer.slice(open, close),
+		"MarkdownBlock is outside selection",
+	).toMatch(MARKDOWN_BLOCK_USE);
+	expect(component(markdown, MARKDOWN_BLOCK)).toMatch(STREAM_BLOCK_BODY);
+	expect(component(markdown, BLOCK_BODY)).toMatch(CODE_BLOCK_USE);
+	expect(markdown).toMatch(CODE_BLOCK_MEMO);
+	// The code copy Pressable is the deepest responder under a hold. It must
+	// route the hold back to the selection surface that owns the Markdown.
+	expect(
+		component(markdown, CODE_BLOCK_VIEW),
+		"code hold is not forwarded",
+	).toMatch(FORWARDS_HOLD);
+}
+
 describe("every message surface routes through SelectableMessage", () => {
 	it("the user bubble selects its own prompt, inside the Show-more clamp", () => {
 		const row = code("./transcript-row.tsx");
@@ -81,15 +108,21 @@ describe("every message surface routes through SelectableMessage", () => {
 	});
 
 	it("an assistant answer, and so its code blocks, render inside one SelectableMessage", () => {
+		assertAssistantSelection(code("./markdown.tsx"));
+	});
+
+	it("rejects detached Markdown blocks and dropped code hold wiring", () => {
 		const markdown = code("./markdown.tsx");
-		const answer = component(markdown, MARKDOWN);
-		expect(answer).toMatch(ANSWER_WRAPPER);
-		expect(answer).toMatch(CODE_BLOCK_USE);
-		expect(markdown).toMatch(CODE_BLOCK_MEMO);
-		// The code block's copy Pressable is the deepest responder under a hold,
-		// so it must forward the long-press into the message's mode.
-		const block = component(markdown, CODE_BLOCK_VIEW);
-		expect(block).toMatch(FORWARDS_HOLD);
+		const detached = markdown
+			.replace(ANSWER_CLOSE, "")
+			.replace(MARKDOWN_BLOCK_USE, `${ANSWER_CLOSE}<MarkdownBlock`);
+		expect(() => assertAssistantSelection(detached)).toThrow(
+			"MarkdownBlock is outside selection",
+		);
+		const unforwarded = markdown.replace(FORWARDS_HOLD, "");
+		expect(() => assertAssistantSelection(unforwarded)).toThrow(
+			"code hold is not forwarded",
+		);
 	});
 
 	it("Team Bridge bodies (thread messages and the bridge card) render through Markdown", () => {

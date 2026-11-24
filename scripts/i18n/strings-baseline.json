@@ -144,18 +144,6 @@
 		},
 		{
 			"file": "src/features/past/past.tsx",
-			"text": "Search",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/features/past/past.tsx",
-			"text": "Search past sessions",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/features/past/past.tsx",
 			"text": "Some conversations could not be read just now, so this list may be",
 			"owner": "damianvtran",
 			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
@@ -163,12 +151,6 @@
 		{
 			"file": "src/features/past/past.tsx",
 			"text": "We couldn't load these",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/features/past/past.tsx",
-			"text": "Words or title",
 			"owner": "damianvtran",
 			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
 		},
@@ -181,96 +163,6 @@
 		{
 			"file": "src/features/session/components/ask-response-row.tsx",
 			"text": "what the agent was told",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/features/session/components/asks-sheet.tsx",
-			"text": "Answer",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/features/session/components/asks-sheet.tsx",
-			"text": "Decline",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/features/session/components/asks-sheet.tsx",
-			"text": "Dismiss",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/features/session/components/asks-sheet.tsx",
-			"text": "Open conversation",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/features/session/components/asks-sheet.tsx",
-			"text": "Other",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/features/session/components/asks-sheet.tsx",
-			"text": "Showing the newest questions — open a conversation to see the rest",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/features/session/components/asks-sheet.tsx",
-			"text": "This app shows queued questions while it is open. It cannot reach you",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/features/session/components/asks-sheet.tsx",
-			"text": "Your answer",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/features/session/components/asks-sheet.tsx",
-			"text": "choose any that apply",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/features/session/components/asks-sheet.tsx",
-			"text": "no answer was recorded for this ask.",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/features/session/components/asks-sheet.tsx",
-			"text": "no answer — decide yourself",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/features/session/components/asks-sheet.tsx",
-			"text": "nothing left to answer here — another surface has already taken",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/features/session/components/asks-sheet.tsx",
-			"text": "secret — sent directly, not shown in the transcript",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/features/session/components/asks-sheet.tsx",
-			"text": "· recommended",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/features/session/components/asks-sheet.tsx",
-			"text": "· urgent",
 			"owner": "damianvtran",
 			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
 		},
@@ -353,30 +245,6 @@
 			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
 		},
 		{
-			"file": "src/features/session/components/slash-sheet.tsx",
-			"text": "Filter commands",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/features/session/components/slash-sheet.tsx",
-			"text": "filter commands",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/features/session/components/slash-sheet.tsx",
-			"text": "loading…",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/features/session/components/slash-sheet.tsx",
-			"text": "no matching commands",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
 			"file": "src/features/session/components/subagents-panel.tsx",
 			"text": "subagents",
 			"owner": "damianvtran",
@@ -423,66 +291,6 @@
 			"text": "Play video",
 			"owner": "damianvtran",
 			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/features/sessions/conversations-pane.tsx",
-			"text": "A session is one conversation with the agent on your machine. Start one and it will appear here.",
-			"owner": "Mobile i18n",
-			"payoff": "Key this literal in the catalogue",
-			"ruleVersion": "copy-props-v1"
-		},
-		{
-			"file": "src/features/sessions/conversations-pane.tsx",
-			"text": "Move or copy…",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/features/sessions/conversations-pane.tsx",
-			"text": "No computer is connected yet.",
-			"owner": "Mobile i18n",
-			"payoff": "Key this literal in the catalogue",
-			"ruleVersion": "copy-props-v1"
-		},
-		{
-			"file": "src/features/sessions/conversations-pane.tsx",
-			"text": "No sessions yet.",
-			"owner": "Mobile i18n",
-			"payoff": "Key this literal in the catalogue",
-			"ruleVersion": "copy-props-v1"
-		},
-		{
-			"file": "src/features/sessions/conversations-pane.tsx",
-			"text": "Nothing matches that.",
-			"owner": "Mobile i18n",
-			"payoff": "Key this literal in the catalogue",
-			"ruleVersion": "copy-props-v1"
-		},
-		{
-			"file": "src/features/sessions/conversations-pane.tsx",
-			"text": "Open",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/features/sessions/conversations-pane.tsx",
-			"text": "Search covers the loaded sessions' names, ids and folders.",
-			"owner": "Mobile i18n",
-			"payoff": "Key this literal in the catalogue",
-			"ruleVersion": "copy-props-v1"
-		},
-		{
-			"file": "src/features/sessions/conversations-pane.tsx",
-			"text": "Tags…",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/features/sessions/conversations-pane.tsx",
-			"text": "This app drives the sessions on your own computer, so it needs one first.",
-			"owner": "Mobile i18n",
-			"payoff": "Key this literal in the catalogue",
-			"ruleVersion": "copy-props-v1"
 		},
 		{
 			"file": "src/features/sessions/move-sheet.tsx",

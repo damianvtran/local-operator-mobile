@@ -14,7 +14,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import type { ModelEntry } from "@/contracts";
+import type { ModelEntry, SessionSummary } from "@/contracts";
 import { HeaderComputerChip } from "@/features/auth/computer-entry-points";
 import {
 	useConnection,
@@ -72,6 +72,7 @@ import {
 } from "@/features/home/start-targets";
 import { useHomeDrawer } from "@/features/home/use-home-drawer";
 import { useStartTarget } from "@/features/home/use-start-target";
+import { workListSlot } from "@/features/home/work-list";
 import { startupEchoes } from "@/features/new-session/startup-echoes";
 import {
 	StartupPreview,
@@ -79,7 +80,11 @@ import {
 } from "@/features/new-session/startup-transcript";
 import { useStartup } from "@/features/new-session/use-startup";
 import { notificationsEnabled } from "@/features/notifications/notifications-model";
-import { readImageFrom, readWebImageFile } from "@/features/session/attach";
+import {
+	readImageFrom,
+	readPastedImages,
+	readWebImageFile,
+} from "@/features/session/attach";
 import { createAttachLatch } from "@/features/session/attach-latch";
 import type { AttachSource, PasteVia } from "@/features/session/attach-rule";
 import { Composer } from "@/features/session/components/composer";
@@ -93,11 +98,11 @@ import { heldTimer } from "@/features/session/resume-hold";
 import { deviceOnline } from "@/features/session/runtime";
 import { useHomeDictation } from "@/features/session/use-dictation";
 import { ConversationsPane } from "@/features/sessions/conversations-pane";
+import { sessionLocation } from "@/features/sessions/session-navigation";
 import { inboxBadgeCount } from "@/features/sessions/session-projection";
-import {
-	useWorkspaceDrawer,
-	WorkspaceDrawerButton,
-} from "@/features/sessions/workspace-drawer";
+import { useSidebarView } from "@/features/sessions/use-sidebar-view";
+import { WorkspaceDrawerButton } from "@/features/sessions/workspace-drawer";
+import { useWorkspaceDrawer } from "@/features/sessions/workspace-drawer-context";
 import { t } from "@/i18n";
 import { listLabel } from "@/lib/route-label";
 import type { RelayError } from "@/relay/errors";
@@ -214,6 +219,11 @@ export default function Home({
 	 *  nothing. */
 	const effortSupported = capabilities?.session_start?.effort === true;
 	const liveFrameAt = useListState((state) => state.liveFrameAt);
+	const listStale = useListState((state) => state.stale);
+	/* This computer's conversations, off the frame the drawer paints from — no
+	 *  request of the home's own. `workListSlot` decides whether they show. */
+	const sessions = useListState((state) => state.sessions);
+	const { view: sidebarView } = useSidebarView();
 	const _showToast = useUiStore((state) => state.showToast);
 
 	const workspaceDrawer = useWorkspaceDrawer();
@@ -446,6 +456,16 @@ export default function Home({
 	const putBackStartup = useCallback(() => {
 		void restoreQueueRef.current();
 	}, []);
+	/* STABLE for the work list's memoised `SessionRow`s (session-row.tsx):
+	 *  Home re-renders on every keystroke and stream tick, and an inline closure
+	 *  would re-render every row each time. `router` is read through a ref. */
+	const routerRef = useRef(router);
+	routerRef.current = router;
+	const openWorkListSession = useCallback((session: SessionSummary) => {
+		routerRef.current.navigate(
+			sessionLocation(session) as `/session/${string}`,
+		);
+	}, []);
 	const witnessRef = useRef(startup.witness);
 	witnessRef.current = startup.witness;
 	const witnessStartup = useCallback((ids: ReadonlySet<string>) => {
@@ -501,6 +521,38 @@ export default function Home({
 		refusal,
 	});
 	const namedRefusal = homeNamedRefusal(homeRecovery, refusal);
+	/* The work list above the composer. `recovery` is the refusal and recovery
+	 *  states together: they render INSTEAD of the splash below, and the decision
+	 *  refuses them again by itself so the list can never be drawn behind one
+	 *  (phone access off is a refusal — `refusal.ts`). */
+	const workListSlotNow = useMemo(
+		() =>
+			workListSlot({
+				connected,
+				recovery: homeRecovery !== null || namedRefusal !== null,
+				draft,
+				editing,
+				starting,
+				frameLive: liveFrameAt !== null,
+				stale: listStale,
+				sessions,
+				scale: effectiveScale,
+				basis: sidebarView.basis,
+			}),
+		[
+			connected,
+			homeRecovery,
+			namedRefusal,
+			draft,
+			editing,
+			starting,
+			liveFrameAt,
+			listStale,
+			sessions,
+			effectiveScale,
+			sidebarView.basis,
+		],
+	);
 
 	/* The computer's two reads, each kept as the state it really is.
 	 *
@@ -713,6 +765,29 @@ export default function Home({
 					if (!endAttach.current()) return;
 					/* Said, never swallowed — the composer's own error line. */
 					setComposerError(attachFailureLine(source));
+				} finally {
+					endAttach();
+				}
+			})();
+		},
+		[attachLatch, setImages],
+	);
+
+	/** Images pasted into the message field on a phone (`paste-image-field.tsx`):
+	 *  the same latch, strip and failure line as the sheet's rows
+	 *  (`use-composer.ts`'s `pasteImages` is the session view's copy). */
+	const pasteImages = useCallback(
+		(uris: string[]) => {
+			void (async () => {
+				const endAttach = attachLatch.begin();
+				setComposerError(null);
+				try {
+					const pasted = await readPastedImages(uris);
+					if (!endAttach.current()) return;
+					setImages((current) => [...current, ...pasted]);
+				} catch {
+					if (!endAttach.current()) return;
+					setComposerError(composerCopy().attachError);
 				} finally {
 					endAttach();
 				}
@@ -987,9 +1062,11 @@ export default function Home({
 					<HomeSplash
 						draft={draft}
 						editing={editing}
-						connected={connected}
+						workList={workListSlotNow}
 						onPick={editDraft}
-						onConnect={() => router.push("/tunnels")}
+						onOpenSession={openWorkListSession}
+						homeDirectory={homeDirectory}
+						basis={sidebarView.basis}
 						starting={starting}
 						focusRequest={heroFocus}
 						identity={
@@ -1152,6 +1229,7 @@ export default function Home({
 				}
 				onAttach={attach}
 				onPasteFile={pasteFile}
+				onPasteImages={pasteImages}
 				attaching={attaching}
 				onAttachOpen={attachLatch.abandon}
 				/* A send takes the composer: a take still live is dropped and said at
@@ -1226,6 +1304,11 @@ export default function Home({
 				}
 				slashQuery={null}
 				slashSheet={null}
+				/* No `skills` here on purpose: `$skill` autocomplete asks
+				 *  `GET /api/skills?session_id=`, and a new chat has no session id yet
+				 *  (discovery is per conversation directory). The session composer
+				 *  has it; extending it to the home needs the relay to answer for a
+				 *  folder, which it does not today. */
 				fieldRef={fieldRef}
 			/>
 		</ReadableColumn>

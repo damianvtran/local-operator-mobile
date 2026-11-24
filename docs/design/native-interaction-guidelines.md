@@ -44,6 +44,14 @@ an older queued message succeeded. Keep Stop independent from Send while both
 are available. Recording, transcription, retries and permission failures retain
 their specific messages and accessible controls.
 
+While the reader scrolls the transcript the composer may shrink to its one-row
+pill and return at rest (`components.md` § 12, "Scroll compaction"). The shrink
+follows only the reader's own gesture, never a scroll the app made, and never
+touches content: a draft keeps its text (the pill shows its first line), the same
+TextInput stays mounted, and an attachment, a dictation take, an error, an open
+`$`/`/` list or focus keeps the full card. It is off under a screen reader, on a
+tablet or split layout, and wherever the pill is already the resting form.
+
 Context, costs, tasks and agents may sit behind a calm, labelled disclosure,
 but counts and destinations stay reachable. Urgent asks/approvals keep their
 arrival-open policy and cannot disappear behind an unlabelled overflow menu.

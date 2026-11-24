@@ -37,6 +37,10 @@ export const ROLE = {
 	tab: "tab",
 	tablist: "tablist",
 	radiogroup: "radiogroup",
+	/* A control with a size or a value the reader steps through (ARIA's
+	 *  `adjustable`, RN's own role): the resizable sheet's grab bar is the one
+	 *  this slice renders, and VoiceOver/TalkBack read its value and actions. */
+	adjustable: "adjustable",
 	radio: "radio",
 	switch: "switch",
 	checkbox: "checkbox",
@@ -262,6 +266,8 @@ export const CONTROL = {
 	// z ladder allows no more), so their parts are unambiguous without a
 	// discriminator; the surface itself is named by whichever screen opens it.
 	sheetClose: "sheet-close",
+	/** The resizable sheet's two-size control: a drag target AND a tap toggle. */
+	sheetGrabBar: "sheet-grab-bar",
 	sheetScrim: "sheet-scrim",
 	dialogConfirm: "dialog-confirm",
 	dialogCancel: "dialog-cancel",
@@ -423,6 +429,10 @@ export const CONTROL = {
 	askRespond: "ask-respond",
 	askDecline: "ask-decline",
 	askDismiss: "ask-dismiss",
+	/** Back out of the reasons a waiting ask's dismissal asks for. */
+	askDismissCancel: "ask-dismiss-cancel",
+	/** Re-run the asks sheet's failed read. */
+	asksReadRetry: "asks-read-retry",
 	askOpenConversation: "ask-open-conversation",
 	settingsTunnelCancel: "settings-tunnel-cancel",
 	settingsBack: "settings-back",
@@ -516,6 +526,9 @@ export const CONTROL = {
 	composerPasteImage: "composer-paste-image",
 	composerResume: "composer-resume",
 	composerInput: "composer-input",
+	/** The scroll-made pill's tap target over its one-line field: a tap opens the
+	 *  card with the field focused. Exists only while the pill stands. */
+	composerPillField: "composer-pill-field",
 	composerContext: "composer-context",
 	composerOpenQueue: "composer-open-queue",
 	composerContextModel: "composer-context-model",
@@ -719,7 +732,9 @@ export const CONTROL = {
 	sidebarViewGroup: "sidebar-view-group",
 	sidebarViewGroupSection: "sidebar-view-group-section",
 	sidebarViewGroupFlat: "sidebar-view-group-flat",
+	sidebarViewGroupTag: "sidebar-view-group-tag",
 	sidebarViewShowEnded: "sidebar-view-show-ended",
+	sidebarViewShowTags: "sidebar-view-show-tags",
 	sidebarViewMore: "sidebar-view-more",
 	settingsSidebarOrder: "settings-sidebar-order",
 	settingsSidebarOrderActiveFirst: "settings-sidebar-order-active-first",
@@ -727,10 +742,12 @@ export const CONTROL = {
 	settingsSidebarGroup: "settings-sidebar-group",
 	settingsSidebarGroupSection: "settings-sidebar-group-section",
 	settingsSidebarGroupFlat: "settings-sidebar-group-flat",
+	settingsSidebarGroupTag: "settings-sidebar-group-tag",
 	settingsSidebarBasis: "settings-sidebar-basis",
 	settingsSidebarBasisActive: "settings-sidebar-basis-active",
 	settingsSidebarBasisCreated: "settings-sidebar-basis-created",
 	settingsSidebarShowEnded: "settings-sidebar-show-ended",
+	settingsSidebarShowTags: "settings-sidebar-show-tags",
 	sidebarPast: "sidebar-past",
 	/** At >= 200 % text the destinations strip collapses to ONE "More" row that
 	 *  opens a sheet with the same destinations (record §3) — labels are never
@@ -1177,6 +1194,8 @@ export const SURFACE = {
 	modelSheet: "model-sheet",
 	effortSheet: "effort-sheet",
 	slashSheet: "slash-sheet",
+	/** The `$skill` list docked above the session composer's field. */
+	skillTray: "skill-tray",
 	todosPanel: "todos-panel",
 	todosBody: "todos-body",
 	subagentsPanel: "subagents-panel",
@@ -1308,7 +1327,14 @@ export const SURFACE = {
 	/** The scroll cap around the notices above the composer (QA Q-R2-1). */
 	homeNoticeStack: "home-notice-stack",
 	homeGreeting: "home-greeting",
-	homeSuggestions: "home-suggestions",
+	/** The work list above the composer (needs you · running · recent, or the
+	 *  brand-new account's TRY rows): an id so a capture can measure it against
+	 *  the hero and the composer's top. */
+	homeWorkList: "home-work-list",
+	/** One TRY row or the "All conversations" footer inside the work list. The
+	 *  session rows keep the drawer's own `sessionRowId`. */
+	homeWorkRow: "home-work-row",
+	homeWorkAll: "home-work-all",
 	homeStarting: "home-starting",
 	/** The decorative brand mark beside the header's computer chip: an id so a
 	 *  capture can measure its alignment and its yield at large text. */
@@ -1483,6 +1509,11 @@ export const IDENTIFIER_FAMILIES: readonly string[] = [
 	"asks-badge-",
 	"ask-field-",
 	"ask-other-",
+	/* The id a reader can MATCH: one chip per ask id quoted in prose, and the
+	 *  copy affordance at the foot of an ask row or receipt. Keyed by the ask id,
+	 *  so a flow reaches the chip of the id the transcript carries. */
+	"ask-chip-",
+	"ask-id-copy-",
 	/* The find sheet's result rows: one per hit, keyed by the message the row
 	 *  will land on, so a flow (or the capture's press) reaches a specific hit
 	 *  without counting rows. */
@@ -1583,22 +1614,28 @@ export const state = (options: {
 	busy?: boolean;
 	selected?: boolean;
 	expanded?: boolean;
+	/** A checkbox's own state (a multi-select option): `selected` is what a radio
+	 *  or a list row reports, `checked` is what ARIA's checkbox role reads. */
+	checked?: boolean;
 }): {
 	disabled?: boolean;
 	busy?: boolean;
 	selected?: boolean;
 	expanded?: boolean;
+	checked?: boolean;
 } => {
 	const out: {
 		disabled?: boolean;
 		busy?: boolean;
 		selected?: boolean;
 		expanded?: boolean;
+		checked?: boolean;
 	} = {};
 	if (options.disabled !== undefined) out.disabled = options.disabled;
 	if (options.busy !== undefined) out.busy = options.busy;
 	if (options.selected !== undefined) out.selected = options.selected;
 	if (options.expanded !== undefined) out.expanded = options.expanded;
+	if (options.checked !== undefined) out.checked = options.checked;
 	return out;
 };
 
@@ -2509,6 +2546,9 @@ export const effortRungId = (rung: string): string => `effort-rung-${rung}`;
 /** One command in the slash sheet. */
 export const slashCommandId = (name: string): string => `slash-command-${name}`;
 
+/** One row of the `$skill` tray, by skill name. */
+export const skillTrayRowId = (name: string): string => `skill-tray-${name}`;
+
 /** One attached image in the composer, by its position. */
 export const composerAttachmentId = (index: number): string =>
 	`composer-attachment-${index}`;
@@ -2526,6 +2566,14 @@ export const subagentChipId = (jobId: string): string =>
 
 /** One ask's row in the asks sheet, keyed by the ask's own id. */
 export const askRowId = (askId: string): string => `ask-row-${askId}`;
+
+/** An ask id quoted in an agent's prose: the chip that names its state and opens
+ *  the ask. Keyed by the id the agent wrote (ids are unique per session only). */
+export const askIdChipId = (askId: string): string => `ask-chip-${askId}`;
+
+/** The copy affordance at the foot of an ask card, row or transcript receipt —
+ *  the same id, where it can be pressed as a real box rather than as prose. */
+export const askIdCopyId = (askId: string): string => `ask-id-copy-${askId}`;
 
 /** One file-callout row of a supplement block: its index within the row's
  *  featured `files` list (the recorded order, newest job version first). */
@@ -2566,6 +2614,12 @@ export const askOtherId = (questionId: string): string =>
 export const askOtherFieldId = (questionId: string): string =>
 	`ask-other-field-${questionId}`;
 
+/** The field of a question that has no options (the free-text door). Its own
+ *  family beside `ask-other-field-`, because a flow that focuses "the second
+ *  field of a multi-question ask" must reach it without guessing a coordinate. */
+export const askAnswerFieldId = (questionId: string): string =>
+	`ask-answer-field-${questionId}`;
+
 /** One row of the todos panel, by its position in the list. */
 export const todosRowId = (index: number): string => `todos-row-${index}`;
 
@@ -2585,6 +2639,12 @@ export const homeIdentityRowId = (
 	band: "recent" | "main" = "main",
 ): string =>
 	`home-identity-${band === "recent" ? "recent-" : ""}${kind}-${name}`;
+
+/** One reason row of a waiting ask's dismissal (`moot` | `answered_in_chat`),
+ *  keyed by the reason the wire carries so a flow picks one without counting
+ *  rows. */
+export const askDismissReasonId = (reason: string): string =>
+	`ask-dismiss-reason-${reason}`;
 
 /** One question of a multi-question ask: `ask-question-<n>-of-<total>`. */
 export const askQuestionId = (index: number, total: number): string =>

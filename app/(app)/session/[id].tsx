@@ -10,7 +10,7 @@ import {
 	View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import type { PromptImage } from "@/contracts";
+import type { PendingAsk, PromptImage } from "@/contracts";
 import { avatarRefOf } from "@/features/agent-avatar/agent-avatar";
 import { HeaderAgentAvatar } from "@/features/agent-avatar/agent-avatar-view";
 import { useListState } from "@/features/auth/connection-provider";
@@ -20,6 +20,12 @@ import {
 	activityCounts,
 	activityCountsStack,
 } from "@/features/session/activity-counts";
+import { askChipFacts } from "@/features/session/ask-chip";
+import {
+	AskChipDrawnContext,
+	AskChipHostContext,
+	useAskChipHostValue,
+} from "@/features/session/ask-chip-host";
 import {
 	askBarLabel,
 	blockingPending,
@@ -69,6 +75,7 @@ import {
 	PinnedWorkingLine,
 	WorkingLine,
 } from "@/features/session/components/working-line";
+import { createComposerCompaction } from "@/features/session/composer-compaction";
 import { isRouteRefused } from "@/features/session/connection-view";
 import { headerHealth, healthDetailKey } from "@/features/session/health";
 import {
@@ -100,6 +107,7 @@ import {
 import { RemoteSessionGate } from "@/features/session/remote-session-gate";
 import { sessionSupplementsAvailable } from "@/features/session/remote-supplements";
 import { sessionChipLabels } from "@/features/session/session-chips";
+import { useSkills } from "@/features/session/skills/use-skills";
 import { sessionFactsFrom } from "@/features/session/state-marker";
 import { createScrollPresence } from "@/features/session/transcript-presence";
 import { useAsksSheet } from "@/features/session/use-asks-sheet";
@@ -153,6 +161,11 @@ import {
 	statusTrayVisible,
 } from "@/ui/size-class";
 import { useTextScale } from "@/ui/text-scale-provider";
+
+/** A chip's tap where the asks sheet cannot open. Stable at module scope so the
+ *  host's identity memo (`useAskChipHostValue`) is not broken by a new function
+ *  on every render. */
+const NO_ASK_CHIP_OPEN = () => {};
 
 /** The context-window fact, keyed as whole strings. The old inline version
  *  stitched `%` + "ctx"/"context" + "(est.)" onto a number, which no other
@@ -305,7 +318,14 @@ function Session() {
 			ownerLabel === null,
 		ended: headerHealth(runtime.projection, runtime.link) === "ended",
 	});
+	/* The `$skill` licence for THIS conversation: the relay's top-level
+	 *  `capabilities.skill_invocation` (absent = an older relay = no `$`), already
+	 *  withheld for a remote conversation by `sessionCapabilities`. One value feeds
+	 *  the tray, the catalogue fetch and the `expand_skills` flag, so they cannot
+	 *  disagree. */
+	const skillsAvailable = capabilities.skill_invocation?.available === true;
 	const composer = useComposer({
+		expandSkills: skillsAvailable,
 		beforeSend: storedModel.prepare,
 		sessionId,
 		source: runtime.source,
@@ -326,6 +346,17 @@ function Session() {
 			ownerLabel !== null && !controlPolicy.allows("slash")
 				? remoteOwnerOnlyCopy(ownerLabel)
 				: null,
+	});
+	/* The `$skill` tray: catalogue fetched once per session, caret read from the
+	 *  field, a pick rewrites only the token. A leading `/` belongs to the slash
+	 *  sheet (one caret, one list). */
+	const skills = useSkills({
+		sessionId,
+		endpoints: runtime.source.endpoints,
+		available: skillsAvailable,
+		text: composer.draft,
+		setText: composer.setDraft,
+		slashDraft: draftSlashQuery(composer.draft) !== null,
 	});
 	/* Stop is withheld when the relay does not forward `abort`: every Stop on this
 	 *  screen (composer ■, pinned line, image-gen Cancel) reads this one gate. */
@@ -414,6 +445,12 @@ function Session() {
 	 *  controls (R1-1/U2). */
 	const asksOpen = asksSheet.visible && asksAnswerable;
 
+	/** The asks the sheet last READ (`GET /api/asks`). Kept for the ask-id chips
+	 *  in the agent's prose: a WITHDRAWN ask leaves the frame when it settles and
+	 *  the transcript draws no row for it, so this sheet's read is the only place
+	 *  the app can learn its state (design: ask ids you can match). */
+	const [sheetAskRows, setSheetAskRows] = useState<readonly PendingAsk[]>([]);
+
 	/* The list frame's rows: names for the sheet's foreign-ask rows, which the
 	 *  aggregate route deliberately does not carry. */
 	const listSessions = useListState((state) => state.sessions);
@@ -450,6 +487,11 @@ function Session() {
 	 */
 	const scrollPresence = useMemo(() => createScrollPresence(), []);
 	useEffect(() => () => scrollPresence.dispose(), [scrollPresence]);
+	/* The composer's scroll compaction: the transcript reports the reader's
+	 *  gestures here and the Composer subscribes to the one boolean it yields
+	 *  (`composer-compaction.ts`) — never React state at scroll rate. */
+	const composerCompaction = useMemo(() => createComposerCompaction(), []);
+	useEffect(() => () => composerCompaction.dispose(), [composerCompaction]);
 
 	/** Whether the completion's anchor row bottom is inside the transcript's
 	 *  viewport — measured by `TranscriptList` (the list owns the geometry; this
@@ -488,6 +530,33 @@ function Session() {
 	});
 
 	const projection = runtime.projection;
+
+	/* The ids THIS conversation can answer for, in the precedence the chips
+	 *  document (`askChipFacts`): the live frame, then the transcript's own
+	 *  receipts, then the sheet's read. Recomputed per frame because the frame is
+	 *  the live reading; the CONTEXT it feeds is keyed by a signature instead, so
+	 *  a frame that changes no id's state re-renders no chip. */
+	const chipFacts = useMemo(
+		() =>
+			askChipFacts(
+				{
+					frame: projection?.asks,
+					transcript: runtime.entries,
+					settled: sheetAskRows,
+				},
+				sessionId,
+			),
+		[projection?.asks, runtime.entries, sheetAskRows, sessionId],
+	);
+	/* A chip's tap is a door only where the sheet can open (review round 1, m4a): a
+	 *  relay that forwards no `ask_respond` has no answerable sheet (`asksOpen`),
+	 *  so opening the controller would do nothing now and pop a sheet later if the
+	 *  capability flipped. The chip still RESOLVES — its state word is true and
+	 *  useful — it just does not act. */
+	const chipHost = useAskChipHostValue(
+		chipFacts,
+		asksAnswerable ? asksSheet.openAt : NO_ASK_CHIP_OPEN,
+	);
 
 	/* The effort ladder, read once: the chip's availability and the sheet's rows are
 	 * the same fact, and an empty ladder means the selected model has no effort
@@ -1088,76 +1157,83 @@ function Session() {
 						: undefined
 				}
 			>
-				<TranscriptList
-					testID={SURFACE.sessionTranscript}
-					sessionId={sessionId}
-					entries={runtime.entries}
-					loadOlder={runtime.loadOlder}
-					healHistory={runtime.healHistory}
-					retryHistory={runtime.retryHistory}
-					historyErrorScope={runtime.historyErrorScope}
-					loadingOlder={runtime.loadingOlder}
-					hasOlder={runtime.hasOlder}
-					olderFillReady={runtime.olderFillReady}
-					historyError={runtime.historyError}
-					historyGap={runtime.historyGap}
-					historyGapBefore={runtime.historyGapBefore}
-					footer={transcriptNotice}
-					pending={pendingRows}
-					sendMark={composer.sendMark}
-					streamingRowId={runtime.streamingRowId}
-					loadImage={runtime.loadImage}
-					loadFile={runtime.loadFile}
-					onOpenAgent={openAgent}
-					supplements={sessionSupplements}
-					projectionPid={runtime.projectionPid}
-					supplementClient={sessionSupplementClient(
-						remoteConversation,
-						supplementClient,
-						capabilities,
-					)}
-					onOpenVideo={openVideo}
-					/* Inbound Team Bridge bodies: only where the relay serves the
+				<AskChipDrawnContext.Provider value>
+					<AskChipHostContext.Provider value={chipHost}>
+						<TranscriptList
+							testID={SURFACE.sessionTranscript}
+							sessionId={sessionId}
+							entries={runtime.entries}
+							loadOlder={runtime.loadOlder}
+							healHistory={runtime.healHistory}
+							retryHistory={runtime.retryHistory}
+							historyErrorScope={runtime.historyErrorScope}
+							loadingOlder={runtime.loadingOlder}
+							hasOlder={runtime.hasOlder}
+							olderFillReady={runtime.olderFillReady}
+							historyError={runtime.historyError}
+							historyGap={runtime.historyGap}
+							historyGapBefore={runtime.historyGapBefore}
+							footer={transcriptNotice}
+							pending={pendingRows}
+							sendMark={composer.sendMark}
+							streamingRowId={runtime.streamingRowId}
+							streamArrivalEpoch={runtime.streamArrivalEpoch}
+							streamArrivalTail={runtime.streamArrivalTail}
+							loadImage={runtime.loadImage}
+							loadFile={runtime.loadFile}
+							onOpenAgent={openAgent}
+							supplements={sessionSupplements}
+							projectionPid={runtime.projectionPid}
+							supplementClient={sessionSupplementClient(
+								remoteConversation,
+								supplementClient,
+								capabilities,
+							)}
+							onOpenVideo={openVideo}
+							/* Inbound Team Bridge bodies: only where the relay serves the
 					   route AND can resolve this conversation — the route answers
 					   durable sessions on its own machine, so a remote conversation
 					   keeps today's receipt row rather than a guaranteed failure. */
-					loadBridgeBody={
-						!remoteConversation && bridgeCardBodyServed(capabilities)
-							? runtime.loadBridgeBody
-							: undefined
-					}
-					/* The image-gen card's Cancel is the composer's OWN stop path (the
+							loadBridgeBody={
+								!remoteConversation && bridgeCardBodyServed(capabilities)
+									? runtime.loadBridgeBody
+									: undefined
+							}
+							/* The image-gen card's Cancel is the composer's OWN stop path (the
 					   one turn-interrupt — no second mechanism). The gate is the
 					   composer's own (`stopVisible` = a turn is running), so the two
 					   controls cannot diverge about when a cancel is real: while the
 					   gate is closed the card hides the control rather than offering
 					   a dead one. */
-					onCancelTurn={
-						composerControls.stopVisible ? composer.stop : undefined
-					}
-					anchorId={attentionRecord(runtime.projection)?.anchor_id ?? null}
-					onAnchorVisible={setCompletionVisible}
-					// The scroll signal the edge fades and the transient rail both read
-					// (design items 8 and 10).
-					presence={scrollPresence}
-					// The find session's two outputs into the list: the wash on the current
-					// hit, and the jump to reveal it (opening a condensed turn on the way
-					// when one hides it).
-					highlightId={find.activeHit?.id ?? null}
-					reveal={find.reveal}
-					/* A first message in flight is not "nothing here": its pending row
-					 *  is in the footer, and the empty state beside it would contradict
-					 *  it (the relay hides its empty state on the same rule). */
-					empty={
-						pendingEchoes.length > 0 ? null : (
-							<EmptyState
-								headline={t("mobile.session.empty.headline")}
-								next={t("mobile.session.empty.next")}
-								testID={SURFACE.sessionTranscriptEmpty}
-							/>
-						)
-					}
-				/>
+							onCancelTurn={
+								composerControls.stopVisible ? composer.stop : undefined
+							}
+							anchorId={attentionRecord(runtime.projection)?.anchor_id ?? null}
+							onAnchorVisible={setCompletionVisible}
+							// The scroll signal the edge fades and the transient rail both read
+							// (design items 8 and 10).
+							presence={scrollPresence}
+							compaction={composerCompaction}
+							// The find session's two outputs into the list: the wash on the current
+							// hit, and the jump to reveal it (opening a condensed turn on the way
+							// when one hides it).
+							highlightId={find.activeHit?.id ?? null}
+							reveal={find.reveal}
+							/* A first message in flight is not "nothing here": its pending row
+							 *  is in the footer, and the empty state beside it would contradict
+							 *  it (the relay hides its empty state on the same rule). */
+							empty={
+								pendingEchoes.length > 0 ? null : (
+									<EmptyState
+										headline={t("mobile.session.empty.headline")}
+										next={t("mobile.session.empty.next")}
+										testID={SURFACE.sessionTranscriptEmpty}
+									/>
+								)
+							}
+						/>
+					</AskChipHostContext.Provider>
+				</AskChipDrawnContext.Provider>
 				<CheckpointRail
 					manifest={checkpoints.manifest}
 					readFailed={checkpoints.readFailed}
@@ -1888,6 +1964,7 @@ function Session() {
 					</View>
 
 					<Composer
+						compaction={composerCompaction}
 						glass={chromeGlass}
 						onLayout={(event) =>
 							measureRecovery("composer", event.nativeEvent.layout.height)
@@ -1921,11 +1998,22 @@ function Session() {
 						testID={SURFACE.sessionComposer}
 						controls={composerControls}
 						draft={composer.draft}
-						onDraftChange={composer.setDraft}
+						onDraftChange={skills.onChangeText}
+						skills={{
+							rows: skills.rows,
+							onPick: skills.pick,
+							onHold: skills.hold,
+							onRelease: skills.release,
+							onSelectionChange: skills.onSelectionChange,
+							selection: skills.selection,
+							onFocus: skills.onFocus,
+							onBlur: skills.onBlur,
+						}}
 						images={composer.images}
 						onRemoveImage={composer.removeImage}
 						onAttach={composer.attach}
 						onPasteFile={composer.pasteFile}
+						onPasteImages={composer.pasteImages}
 						attaching={composer.attaching}
 						onAttachOpen={composer.abandonAttach}
 						voice={composer.voice}
@@ -1983,6 +2071,8 @@ function Session() {
 								onClose={() => undefined}
 								commands={runtime.commands}
 								query={slash ?? ""}
+								loading={runtime.commandsLoading}
+								failed={runtime.commandsFailed}
 								busy={composer.sending}
 								onPick={composer.slash}
 							/>
@@ -2089,8 +2179,12 @@ function Session() {
 				visible={asksOpen}
 				onClose={asksSheet.close}
 				initialOpenAsk={asksSheet.initialOpenAsk}
-				seedRows={asksSheet.seedRows}
+				frameRows={asksSheet.frameRows}
 				onReadFailed={asksSheet.readFailed}
+				/* The queue's own read, back to the screen: the ask-id chips in the
+				   prose resolve an id against what this sheet can show — the one
+				   place a WITHDRAWN ask is named at all. */
+				onRows={setSheetAskRows}
 				client={runtime.source.endpoints}
 				currentSessionId={sessionId}
 				sessions={listSessions}

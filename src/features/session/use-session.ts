@@ -114,6 +114,10 @@ export interface SessionRuntime {
 	historyErrorScope: "newest" | "older" | null;
 	streaming: boolean;
 	streamingRowId: string | null;
+	/** Motion can only be attributed to arrivals on this accepted wire stream. */
+	streamArrivalEpoch: number | null;
+	/** The wire tail, not a row introduced by history paging or gap healing. */
+	streamArrivalTail: TranscriptEntry | null;
 	/** True while the frame on screen came from the warm cache and no live frame
 	 *  has arrived yet: the conversation is shown as it was when saved, not live. */
 	hydrated: boolean;
@@ -125,6 +129,12 @@ export interface SessionRuntime {
 	 *  client has given up — fed by the same facts as the connection banner. */
 	link: HealthLink;
 	commands: SlashCommand[];
+	/** The last `GET /api/commands` read failed. The slash sheet says so rather
+	 *  than "No matching commands" when it holds none (QA round 1, Q1). */
+	commandsFailed: boolean;
+	/** A `GET /api/commands` read is in flight. Not `loading`, which the first
+	 *  stream frame clears while the catalogue read may still be running. */
+	commandsLoading: boolean;
 	models: ModelEntry[];
 	loading: boolean;
 	/** Whether the conversation provably runs deeper than the rows this device
@@ -300,7 +310,7 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 			(before) => {
 				if (!endpoints || !sameProjectionOwner(owner, currentIdentity.current))
 					return Promise.reject(new Error("History is unavailable."));
-				return endpoints.history(sessionId, { before });
+				return endpoints.history(sessionId, { before, inlineUi: true });
 			},
 			() => historyChanged((revision) => revision + 1),
 			// A hole left by a background, a network change or a stream reconnect
@@ -329,6 +339,13 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 	);
 	const healHistory = useCallback(() => historyWindow.heal(), [historyWindow]);
 	const [commands, setCommands] = useSessionValue<SlashCommand[]>(identity, []);
+	const [commandsFailed, setCommandsFailed] = useSessionValue(identity, false);
+	/* Starts false, not true: the read below is what sets it, and a read that
+	 *  never starts (no relay yet) must not leave the sheet saying "Loading". */
+	const [commandsLoading, setCommandsLoading] = useSessionValue(
+		identity,
+		false,
+	);
 	const [models, setModels] = useSessionValue<ModelEntry[]>(identity, []);
 	const [error, setError] = useSessionValue<RelayError | null>(identity, null);
 	const [loading, setLoading] = useSessionValue(identity, true);
@@ -457,6 +474,10 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 				lastFrameAt.current = null;
 			}
 			sessions.getState().beginStream(sessionId);
+			// The reader can reopen an HTTP body inside this one stream object.
+			// Mark its accepted seed as already-present paint, without resetting
+			// the projection fence or changing how this connection retries.
+			let pendingAttemptSeed = true;
 			setError(null);
 			let retired = false;
 			let cancelDeadline: (() => void) | null = null;
@@ -465,6 +486,7 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 				active &&
 				sameProjectionOwner(owner, currentIdentity.current);
 			const stream = endpoints.sessionStream(sessionId, {
+				inlineUi: true,
 				// Read per connect, not per effect: a stream opened before the first
 				// live list frame declares on its next reconnect (`steer-journal-order.ts`).
 				steerJournalOrder: steerJournalOrderDeclared(listStore.getState()),
@@ -494,7 +516,10 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 							gateOpen: resumeGateOpen,
 							frameOverlapsHeld: historyRef.current.overlapsHeld(frame.data),
 						});
-					sessions.getState().applyFrame(sessionId, frame.data);
+					const decision = sessions
+						.getState()
+						.applyFrame(sessionId, frame.data, pendingAttemptSeed);
+					if (decision !== "dropped-older") pendingAttemptSeed = false;
 					if (readOnResume) {
 						const reader = historyRef.current;
 						heldHistoryRead.current?.();
@@ -531,6 +556,7 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 				},
 				onState: (status) => {
 					if (!isCurrent()) return;
+					if (status.state === "open") pendingAttemptSeed = true;
 					cancelDeadline?.();
 					cancelDeadline = null;
 					if (status.state === "connecting" || status.state === "open") {
@@ -735,6 +761,7 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 				return;
 			let cancelled = false;
 			setLoading(true);
+			setCommandsLoading(true);
 			const readHistory = history
 				? historyWindow.load(true)
 				: Promise.resolve();
@@ -747,6 +774,7 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 				.then(([, commandList, modelList]) => {
 					if (cancelled) return;
 					if (commandList) setCommands(commandList.commands);
+					setCommandsFailed(commandList === null);
 					if (modelList) setModels(modelList.models);
 					/* A failed catalogue read is the one reason a RETURN re-reads
 					 * them (the AppState handler above); a good read waits for a
@@ -755,6 +783,7 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 				})
 				.finally(() => {
 					if (!cancelled) setLoading(false);
+					if (!cancelled) setCommandsLoading(false);
 				});
 			return () => {
 				cancelled = true;
@@ -772,6 +801,8 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 		setLoading,
 		historyWindow,
 		setCommands,
+		setCommandsFailed,
+		setCommandsLoading,
 		setModels,
 	]);
 
@@ -882,7 +913,10 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 	const projection = entry.projection;
 	/** The frame on screen is the warm cache's, not a live one. */
 	const hydrated = entry.hydrated === true;
-	if (ownsProjection) historyWindow.accept(projection);
+	if (ownsProjection) {
+		if (hydrated) historyWindow.seedFromCache(projection);
+		else historyWindow.accept(projection);
+	}
 	/* Turn end is a save moment: the conversation's shape just settled. A
 	 * hydrated frame never counts as running, so it can neither trigger this nor
 	 * offer the composer a "steer" for a turn that may long be over. */
@@ -1127,6 +1161,11 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 		 *  above stays on the raw flag — it marks where streamed TEXT lands. */
 		streaming: running,
 		streamingRowId,
+		streamArrivalEpoch:
+			ownsProjection && entry.connected && !entry.awaitingSnapshot
+				? (entry.streamEpoch ?? null)
+				: null,
+		streamArrivalTail: projection?.transcript.at(-1) ?? null,
 		hydrated,
 		connection,
 		/** The session stream's own liveness, for the header's status dot
@@ -1136,6 +1175,8 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 		connected: entry.connected,
 		link,
 		commands: ownsProjection ? commands : [],
+		commandsFailed: ownsProjection ? commandsFailed : false,
+		commandsLoading: ownsProjection ? commandsLoading : false,
 		models: ownsProjection ? models : [],
 		loading,
 		olderThanLoaded: olderRowClaim,

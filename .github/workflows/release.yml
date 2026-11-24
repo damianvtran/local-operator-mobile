@@ -61,14 +61,25 @@ permissions:
 
 env:
   NODE_VERSION: "24"
-  # fastlane is preinstalled on both runner images (2.238.0 on macos-26, 2.240.1
-  # on ubuntu-latest, read from the image manifests 2026-09-29), so the uploader
-  # is a pinned property of the runner rather than a `gem install` racing the
-  # network at release time. The consequence to know: upgrading fastlane means
-  # moving the runner image label, which is also where Xcode and the Android SDK
-  # are pinned — one place, not three.
+  # fastlane is NOT taken from the runner image. It used to be: the image
+  # manifests listed it on macos-26 and ubuntu-latest (2026-09-29), until
+  # `ubuntu-latest` moved to ubuntu-26.04, which ships none, and tag v0.1.0 failed
+  # at its TestFlight step with `fastlane: command not found` — after the GitHub
+  # Release had been created (run 45128303563). The version now lives in the
+  # repository: `Gemfile` pins fastlane, `Gemfile.lock` pins its whole dependency
+  # tree, and `.github/actions/setup-fastlane` installs exactly that (frozen,
+  # cached) in every job that runs a lane, on Linux and macOS, before any lane runs
+  # as `bundle exec fastlane`. Upgrading fastlane is a Gemfile + lock change, not a
+  # runner-image move. The `fastlane` job below proves it resolves on every run,
+  # dry runs included.
   FASTLANE_DISABLE_COLORS: "1"
   FASTLANE_SKIP_UPDATE_CHECK: "1"
+  # fastlane phones home (`Sending anonymous analytics information`) from every
+  # invocation, lanes and `--version` alike — including the `fastlane` job below,
+  # which exists to prove the pinned tree resolves and nothing more. A CI job whose
+  # only permitted network calls are the store endpoints it was handed should not
+  # also be filing a usage report.
+  FASTLANE_OPT_OUT_USAGE: "1"
 
 jobs:
   version:
@@ -110,7 +121,9 @@ jobs:
             # `workflow_dispatch` is the branch the run was started from.
             tag="$DISPATCH_TAG"
           else
-            tag="$REF_NAME"
+            # On a tag push there is no dispatch input; GitHub exports the
+            # short tag name as GITHUB_REF_NAME (nounset rejects unbound names).
+            tag="$GITHUB_REF_NAME"
           fi
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
 
@@ -210,6 +223,31 @@ jobs:
         run: |
           node scripts/ci/check-secrets.ts --mode release --need ANDROID_KEYSTORE_BASE64,ANDROID_KEYSTORE_PASSWORD,ANDROID_KEY_ALIAS,ANDROID_KEY_PASSWORD,PLAY_SERVICE_ACCOUNT_JSON_BASE64 --optional GOOGLE_SERVICES_JSON_BASE64
 
+  fastlane:
+    name: The pinned fastlane resolves (${{ matrix.os }})
+    # Runs on EVERY run, dry runs included, and needs no secret and no environment:
+    # a dry run skips `publish` and `ios`, which are the only jobs that run a lane,
+    # so without this job a dry run says nothing about whether the uploader exists
+    # — which is how v0.1.0 reached its TestFlight step with no fastlane on the
+    # runner. Both images that run lanes are covered: ubuntu-latest (`publish`)
+    # and macos-26 (`ios`, through `ios-signed-ipa`). `publish` needs this job, so
+    # a missing uploader stops the release before its GitHub Release is created.
+    # `fastlane lanes` loads the real Fastfile under the pinned version without
+    # running a lane: no credential, no store call.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-26]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ./.github/actions/setup-fastlane
+
+      - name: Load the Fastfile under the pinned fastlane
+        run: bundle exec fastlane lanes
+
   gate:
     name: Full gate
     needs: [version, credentials]
@@ -217,6 +255,11 @@ jobs:
     # The same workflow a pull request runs, called rather than copied. A release
     # that gated on a second, slightly different list of checks is how "green CI"
     # and "what shipped" drift apart.
+    # The called release-staging job lists this run's artefacts. Its token
+    # cannot exceed the caller's permissions, so grant the read only here.
+    permissions:
+      contents: read
+      actions: read
     uses: ./.github/workflows/ci.yml
 
   android:
@@ -413,17 +456,18 @@ jobs:
 
   publish:
     name: GitHub Release, then the stores
-    needs: [version, credentials, gate, android, ios]
+    needs: [version, credentials, fastlane, gate, android, ios]
     # `always()` is what lets a SKIPPED platform job (one `RELEASE_PLATFORMS` did not
     # enable) not skip the Release with it: without it a skipped `needs` entry skips
     # this job. Everything `always()` would otherwise forgive is then required
     # EXPLICITLY, because `!failure()` alone is only a transitive guarantee:
-    # `credentials` and `gate` must be `success` (a gate that was skipped or never
-    # resolved must not publish), and `!failure()` still stops the Release when an
-    # enabled platform failed to build. Only a platform's own SKIP is tolerated. An
-    # enabled platform whose artefact is absent still fails loudly at its
-    # `download-artifact` step.
-    if: ${{ always() && !cancelled() && !failure() && needs.credentials.result == 'success' && needs.gate.result == 'success' && inputs.dry_run != true }}
+    # `credentials`, `fastlane` and `gate` must be `success` (a gate that was
+    # skipped or never resolved must not publish, and an uploader that never
+    # resolved must not create the Release it exists to fill), and `!failure()`
+    # still stops the Release when an enabled platform failed to build. Only a
+    # platform's own SKIP is tolerated. An enabled platform whose artefact is
+    # absent still fails loudly at its `download-artifact` step.
+    if: ${{ always() && !cancelled() && !failure() && needs.credentials.result == 'success' && needs.fastlane.result == 'success' && needs.gate.result == 'success' && inputs.dry_run != true }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
     environment: release
@@ -434,6 +478,11 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
+
+      # Before the Release is created, not just before the upload: a runner that
+      # cannot install the uploader must fail while there is still nothing
+      # published to clean up (v0.1.0 created its Release, then died here).
+      - uses: ./.github/actions/setup-fastlane
 
       - uses: actions/download-artifact@v8
         if: contains(needs.credentials.outputs.platforms, 'android')
@@ -537,7 +586,7 @@ jobs:
           # The SAME path the staging step produced, which is the whole of QA Q1:
           # the store steps used to be handed the pre-rename location.
           LO_ANDROID_AAB: ${{ github.workspace }}/artifacts/local-operator-${{ needs.version.outputs.version }}.aab
-        run: fastlane android internal
+        run: bundle exec fastlane android internal
 
       - name: Upload the IPA to TestFlight (fastlane)
         id: testflight
@@ -549,7 +598,7 @@ jobs:
           # The directory, not the file: the lane globs `*.ipa` in it, and after the
           # staging step that directory holds `local-operator-<version>.ipa`.
           LO_IOS_IPA_DIR: ${{ github.workspace }}/artifacts
-        run: fastlane ios testflight
+        run: bundle exec fastlane ios testflight
 
       - name: Remove the decoded credentials
         if: always()

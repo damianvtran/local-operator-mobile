@@ -1,8 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { Pressable, Text, TextInput, View } from "react-native";
 
 import type { SlashCommand } from "@/contracts";
-import { argumentHint, filterCommands } from "@/features/session/slash";
+import {
+	argumentHint,
+	filterCommands,
+	slashSheetStatus,
+} from "@/features/session/slash";
 import { t } from "@/i18n";
 import { CONTROL, ROLE, SURFACE, slashCommandId, state } from "@/ui/a11y";
 import { Sheet } from "@/ui/components";
@@ -27,7 +31,10 @@ export type SlashSheetProps = {
 	commands: SlashCommand[];
 	/** The token after `/` in the composer, which seeds the filter. */
 	query: string;
+	/** The catalogue read is in flight (`slashSheetStatus` decides what that says). */
 	loading?: boolean;
+	/** The last catalogue read failed. */
+	failed?: boolean;
 	/** `submit` runs the command immediately; otherwise the fill waits for text. */
 	/** The command the reader tapped. The caller derives both the draft effect and
 	 *  the request from it (`slashTap`/`slashTapRequest`), never from the draft — the
@@ -45,6 +52,7 @@ export const SlashSheet = ({
 	commands,
 	query,
 	loading = false,
+	failed = false,
 	onPick,
 	busy = false,
 }: SlashSheetProps) => {
@@ -62,6 +70,12 @@ export const SlashSheet = ({
 		() => filterCommands(commands, filter),
 		[commands, filter],
 	);
+	const status = slashSheetStatus({
+		held: commands.length,
+		shown: rows.length,
+		loading,
+		failed,
+	});
 
 	return (
 		<Sheet
@@ -74,20 +88,26 @@ export const SlashSheet = ({
 				className="mx-2 mb-1 min-h-11 rounded-sm border border-control bg-surface px-3 text-body text-ink"
 				value={filter}
 				onChangeText={setFilter}
-				placeholder="filter commands"
+				placeholder={t("mobile.session.slash.filter")}
 				// A phone keyboard would otherwise capitalise and autocorrect a command
 				// name into something the relay does not have.
 				autoCapitalize="none"
 				autoCorrect={false}
 				style={{ fontSize: 16 }}
 				testID={CONTROL.slashFilter}
-				accessibilityLabel="Filter commands"
+				accessibilityLabel={t("mobile.session.slash.filter")}
 			/>
-			{/* `handled`, like the Sheet body's own (review R1-m2): RN's tap capture
-			 *  runs per ScrollView, so the outer body's setting does not reach this
-			 *  nested list, and with the keyboard up its first tap only dismissed
-			 *  the keyboard — the pick took two taps. */}
-			<ScrollView className="max-h-72" keyboardShouldPersistTaps="handled">
+			{/* The rows sit directly in the Sheet's own body, which already scrolls
+			    and is capped at the detent. The nested `max-h-72` ScrollView they
+			    used to sit in was a second scroll region on the same axis: it cut
+			    the list to 288 pt inside a taller sheet, drew no edge cue of its
+			    own, and on Android a vertical ScrollView inside another does not
+			    scroll without `nestedScrollEnabled`. With it gone, the body's own
+			    `keyboardShouldPersistTaps="handled"` reaches the rows, so a pick
+			    with the keyboard up still takes one tap (review R1-m2). The cost is
+			    that the filter scrolls away with the list; it is the first thing in
+			    the body, so it is back at the top. */}
+			<View>
 				{rows.map(({ command }) => {
 					const hint = argumentHint(command);
 					return (
@@ -103,31 +123,44 @@ export const SlashSheet = ({
 							}}
 							testID={slashCommandId(command.name)}
 						>
-							<View className="min-h-11 flex-row items-center gap-2 px-3">
-								<Text className="shrink-0 font-mono text-mono-sm text-ink">
+							{/* The description sits on its own line UNDER the name, not
+							    beside it (design review round 1, D1). Beside it, a wrapped
+							    description hung at whatever x the name ended — eleven
+							    different indents at 390 pt — and at 320 pt / 200 % a long
+							    name left it a 52 pt column that broke words apart (QA Q2).
+							    Stacked, every description shares the name's leading edge
+							    and the row's full width. */}
+							<View className="min-h-11 justify-center gap-1 px-3 py-2">
+								<Text className="font-mono text-mono-sm text-ink">
 									/{command.name}
 									{hint !== null ? (
 										<Text className="text-ink-dim">{hint}</Text>
 									) : null}
 								</Text>
-								<Text
-									className="min-w-0 flex-1 text-body-sm text-ink-dim"
-									numberOfLines={1}
-								>
-									{command.description}
-								</Text>
+								{/* Up to three lines: one line cut most descriptions to a
+								    fragment ("Summarise the conversation so…"), and the
+								    description is the only explanation of what a tap will
+								    run. Three keeps a long one from turning a row into a
+								    paragraph. */}
+								{command.description.length > 0 ? (
+									<Text className="text-body-sm text-ink-dim" numberOfLines={3}>
+										{command.description}
+									</Text>
+								) : null}
 							</View>
 						</Pressable>
 					);
 				})}
-				{loading ? (
-					<Text className="px-3 py-2 text-body-sm text-ink-dim">loading…</Text>
-				) : rows.length === 0 ? (
+				{status === null ? null : (
 					<Text className="px-3 py-2 text-body-sm text-ink-dim">
-						no matching commands
+						{status === "loading"
+							? t("mobile.common.loading")
+							: status === "failed"
+								? t("mobile.session.slash.load_failed")
+								: t("mobile.session.slash.no_matches")}
 					</Text>
-				) : null}
-			</ScrollView>
+				)}
+			</View>
 		</Sheet>
 	);
 };

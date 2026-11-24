@@ -215,17 +215,9 @@
 		"role": "status",
 		"note": "Queue-row state when the create may or may not have happened and no automatic retry is possible. Must not imply anything is waiting."
 	},
-	"mobile.home.suggestion.last_turn": {
-		"role": "button",
-		"note": "Suggestion chip. Sentence case, no final full stop, at most 24 characters at the source locale, and it must not begin with a verb another chip in the pool already uses."
-	},
 	"mobile.home.suggestion.linear_mcp": {
 		"role": "button",
 		"note": "Suggestion chip. 'Linear MCP' is a product name and a protocol name: do not translate either word. No final full stop, at most 24 characters at the source locale."
-	},
-	"mobile.home.suggestion.phone_access": {
-		"role": "button",
-		"note": "Suggestion chip. 'phone access' is the feature name used across the product. No final full stop, at most 24 characters at the source locale."
 	},
 	"mobile.home.suggestion.review_repo": {
 		"role": "button",
@@ -366,5 +358,25 @@
 	"mobile.home.identity.announce_picked": {
 		"role": "status",
 		"note": "Announced to screen readers after a pick closes the sheet. {name} is the chosen agent or team, or \"Default agent\". New in the new-chat identity picker; the non-English text awaits the translation audit."
+	},
+	"mobile.home.work.needs_you": {
+		"role": "heading",
+		"note": "Home work-list section heading over conversations waiting on the reader for an approval or an answer. Shown upper-case in a small label; keep it to one to three words and address the reader directly."
+	},
+	"mobile.home.work.recent": {
+		"role": "heading",
+		"note": "Home work-list section heading over the most recently active conversations. Shown upper-case in a small label; one or two words."
+	},
+	"mobile.home.work.try": {
+		"role": "heading",
+		"note": "Home section heading over two example prompts shown only on a brand-new account. Shown upper-case in a small label; one word, an invitation."
+	},
+	"mobile.home.work.all_conversations": {
+		"role": "button",
+		"note": "Footer row on the home work list that opens the conversations drawer. A noun phrase; the drawer's own word for conversations, not a new term."
+	},
+	"mobile.home.work.all_conversations_new": {
+		"role": "button",
+		"note": "Spoken label of the same footer row when the drawer button carries a count of new conversations. {count} is a number. Preserve ICU plural arms and placeholder; use the drawer's word for conversations."
 	}
 }

@@ -13,5 +13,11 @@
 	"mobile.common.copied": "कॉपी हो गया",
 	"mobile.common.copy_command_hint": "“{label}” वाली कमांड कॉपी करता है",
 	"mobile.common.close": "बंद करें",
-	"mobile.common.loading": "लोड हो रहा है"
+	"mobile.common.loading": "लोड हो रहा है",
+	"mobile.common.no_matches": "कोई नतीजा नहीं मिला।",
+	"mobile.common.resize_panel": "पैनल का आकार बदलें",
+	"mobile.common.size.medium": "मध्यम",
+	"mobile.common.size.large": "बड़ा",
+	"mobile.common.size.taller": "ज़्यादा ऊँचा",
+	"mobile.common.size.shorter": "कम ऊँचा"
 }

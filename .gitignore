@@ -5,6 +5,14 @@ node_modules
 .pnpm-store/
 .pnpm-debug.log*
 
+# Ruby / fastlane. `.github/actions/setup-fastlane` installs the pinned Gemfile
+# with `bundle config set --local path vendor/bundle`, so a CI job grows a gem tree
+# at the repository root. It is an install artefact, never source; `metro.config.js`
+# blocks the same path, because a signed iOS archive bundles the JS while the tree
+# is sitting there. Anchored to the root: a dependency's own `vendor/bundle` is
+# part of that dependency.
+/vendor/bundle/
+
 # Expo / React Native
 .expo/
 .expo-shared/

@@ -96,7 +96,7 @@ describe("D11: the drawer footer is two rows and shared across Agents and Team B
 			"<WorkspaceDrawerProvider bridgeAdapter={useTeamBridgeDrawerAdapter()}>",
 		);
 		expect(root).toContain(
-			"<BridgeWorkspaceDrawer> <Stack screenOptions={{ headerShown: false }} /> </BridgeWorkspaceDrawer>",
+			"<BridgeWorkspaceDrawer> <Stack screenOptions={STACK_SCREEN_OPTIONS} /> </BridgeWorkspaceDrawer>",
 		);
 	});
 
@@ -156,7 +156,7 @@ describe("D11: the drawer footer is two rows and shared across Agents and Team B
 	});
 
 	it("the drawer's mode selector uses a minimal sunken track, keeps the label and count apart, and never stacks bg-accent on bg-accent", () => {
-		const drawer = flat(read("sessions/workspace-drawer.tsx"));
+		const drawer = flat(read("sessions/workspace-mode-bar.tsx"));
 		expect(drawer).toContain("rounded-md bg-sunken p-1");
 		expect(drawer).toContain('{t("mobile.team_bridge.title")}');
 		expect(drawer).toContain("accessibilityLabel={bridgeBadge.a11yLabel}");

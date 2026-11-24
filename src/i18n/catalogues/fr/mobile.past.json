@@ -1,0 +1,6 @@
+{
+	"mobile.past.search_label": "Rechercher dans les sessions passées",
+	"mobile.past.empty_headline": "Pas encore de conversation passée.",
+	"mobile.past.empty_next": "Les conversations que vous avez terminées apparaîtront ici, et vous pourrez en reprendre une.",
+	"mobile.past.no_matches_next": "La recherche porte sur ce qui a été dit et sur les titres, un mot plus court peut donc correspondre."
+}

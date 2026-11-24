@@ -5,8 +5,10 @@ import {
 	answeredBySurface,
 	answeredPairs,
 	askActions,
+	askBands,
 	askBarLabel,
 	askBarRows,
+	askProgress,
 	askResponseBody,
 	askStateLine,
 	asksPopulationSignature,
@@ -14,6 +16,8 @@ import {
 	askToneInk,
 	blockingPending,
 	composedAnswer,
+	DISMISS_REASONS,
+	dismissNeedsReason,
 	dockAsk,
 	durationLabel,
 	EMPTY_OTHER,
@@ -249,6 +253,66 @@ describe("orderedForDisplay", () => {
 	});
 });
 
+describe("askBands (the sheet's two bands, ask-panel parity N1)", () => {
+	it("puts settled asks under Earlier, never among the asks that still show a card", () => {
+		const open = ask({ ask_id: "o", status: "open" });
+		const lapsed = ask({ ask_id: "t", status: "timed_out" });
+		const answered = ask({ ask_id: "a", status: "answered" });
+		const declined = ask({ ask_id: "d", status: "declined" });
+		const bands = askBands([answered, lapsed, declined, open]);
+		expect(bands.current.map((r) => r.ask_id)).toEqual(["o", "t"]);
+		expect(bands.earlier.map((r) => r.ask_id)).toEqual(["a", "d"]);
+	});
+
+	it("keeps the ask the bar names first in its band", () => {
+		const newer = ask({ ask_id: "n", status: "open", created_at: 20 });
+		const older = ask({ ask_id: "old", status: "open", created_at: 10 });
+		expect(askBands([newer, older]).current.map((r) => r.ask_id)).toEqual([
+			"old",
+			"n",
+		]);
+	});
+
+	it("has no opinion of its own when the list is absent", () => {
+		expect(askBands(undefined)).toEqual({ current: [], earlier: [] });
+		expect(askBands(null)).toEqual({ current: [], earlier: [] });
+	});
+
+	it("draws an expired ask read-only in the current band, not as an answered one", () => {
+		const bands = askBands([ask({ ask_id: "e", status: "expired" })]);
+		expect(bands.current).toHaveLength(1);
+		expect(bands.earlier).toHaveLength(0);
+	});
+});
+
+describe("askProgress (why Send is grey)", () => {
+	it("says nothing once every question has an answer", () => {
+		expect(askProgress({ total: 2, unfilled: 0, hasOptions: true })).toBeNull();
+	});
+
+	it("tallies a multi-question ask, counting questions taken elsewhere as answered", () => {
+		expect(askProgress({ total: 3, unfilled: 2, hasOptions: true })).toEqual({
+			kind: "tally",
+			answered: 1,
+			total: 3,
+		});
+	});
+
+	it("names what a single question takes, by whether it offers options", () => {
+		expect(askProgress({ total: 1, unfilled: 1, hasOptions: true })).toEqual({
+			kind: "pick_or_type",
+		});
+		expect(askProgress({ total: 1, unfilled: 1, hasOptions: false })).toEqual({
+			kind: "type",
+		});
+	});
+
+	it("never reports more answered than there are questions", () => {
+		const p = askProgress({ total: 2, unfilled: 5, hasOptions: true });
+		expect(p).toEqual({ kind: "tally", answered: 0, total: 2 });
+	});
+});
+
 describe("nextActionableAsk (the walk after a settle, U1)", () => {
 	it("advances a lapsed-only sheet to the next ask that still has Dismiss", () => {
 		const rows = [
@@ -357,12 +421,21 @@ describe("outstanding / answerable", () => {
 		});
 	});
 
-	it("leaves an open ask's controls unchanged: answer and decline, no dismiss", () => {
+	it("offers a waiting ask answer, decline AND a dismissal that must say why", () => {
+		/* Ask-panel parity N4: the relay card's open-ask door, now the phone's. */
 		expect(askActions("open")).toEqual({
 			respond: true,
 			decline: true,
-			dismiss: false,
+			dismiss: true,
 		});
+		expect(dismissNeedsReason("open")).toBe(true);
+		/* A lapsed ask keeps its one-tap dismissal — no reason to give. */
+		expect(dismissNeedsReason("timed_out")).toBe(false);
+		/* The two reasons the runtime accepts, in the order the sheet offers. */
+		expect([...DISMISS_REASONS]).toEqual(["moot", "answered_in_chat"]);
+	});
+
+	it("leaves every settled status without a verb", () => {
 		for (const settled of [
 			"answered",
 			"late",

@@ -413,7 +413,10 @@ export function SessionHealthControl({
 				titleLines={2}
 				testID={CONTROL.sessionHealthSheet}
 			>
-				<View className="gap-3 px-4 pb-4">
+				{/* No horizontal inset here: the Sheet's body already pads 16 pt, the
+				    title's own inset, and a second `px-4` put this text 16 pt right
+				    of the title (`session-health-inset.test.ts`). */}
+				<View className="gap-3 pb-4">
 					<Text className="text-body-sm text-ink-muted">
 						{detail ?? healthCopy()[healthDetailKey(health, projection)]}
 					</Text>
@@ -548,7 +551,8 @@ export function SessionHeaderActions({
 				title={t("mobile.session_health.menu_title")}
 				testID={CONTROL.sessionHeaderMenuSheet}
 			>
-				<View className="gap-2 px-4 pb-4">
+				{/* The Sheet's body inset only, as in the health sheet above. */}
+				<View className="gap-2 pb-4">
 					{onTags !== undefined ? (
 						<Button
 							testID={CONTROL.sessionMenuTags}

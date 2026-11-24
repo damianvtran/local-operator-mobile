@@ -57,6 +57,9 @@ const host = vi.hoisted(() => ({
 	 *  the position where it was cannot pull a reader. */
 	writes: [] as number[],
 }));
+/* This host exercises list/anchor policy, not platform accessibility or paint.
+ * Answer the preference at the same appearance boundary as the footer test. */
+vi.mock("@/ui/appearance", () => ({ useReducedMotion: () => true }));
 vi.mock("react-native", async () => {
 	const React = await import("react");
 	const passthrough = ({ children }: { children?: React.ReactNode }) =>
@@ -177,6 +180,11 @@ vi.mock("@/features/session/components/transcript-edge-fades", () => ({
 }));
 vi.mock("@/features/session/components/transcript-row", () => ({
 	TranscriptRow: () => null,
+}));
+/* The null rows cannot open a chart; leave the provider in the tree without
+ * importing native SVG into this anchor/tail-policy harness. */
+vi.mock("@/features/session/components/inline-ui-preview", async () => ({
+	ChartDataResizeContext: (await import("react")).createContext(null),
 }));
 vi.mock("@/features/session/components/turn-bar", () => ({
 	TurnBar: () => null,

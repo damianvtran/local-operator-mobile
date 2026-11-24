@@ -96,6 +96,7 @@ import {
 	writeStoredTunnelSession,
 } from "@/features/auth/tunnel-storage";
 import { routeInvalidSentence } from "@/features/auth/tunnel-verdict";
+import { forgetAskDrafts } from "@/features/session/ask-drafts";
 import { reconnectDelay } from "@/features/session/connection-view";
 import { clearAuthorizationData } from "@/features/session/device-storage";
 import {
@@ -193,6 +194,10 @@ export const configStore = createConfigStore();
 // Registration outlives route/provider mounts, just like the credential store.
 // Startup storage registers independently, avoiding an auth/coordinator cycle.
 registerStartupAuthorizationCleanup(clearAuthorizationData);
+/* An answer typed into the ask sheet is kept in memory for the app run (a-5712);
+ *  at the same boundary as the warm cache it must go, or a signed-out session's
+ *  typed text would outlive its account (review r1 F8). */
+registerStartupAuthorizationCleanup(async () => forgetAskDrafts());
 
 /* The warm cache's owner key for the route in force (`state/warm-cache.ts`): the
  * Radient account (null on a custom tunnel) plus the durable route key. Set when a

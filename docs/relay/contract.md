@@ -221,7 +221,8 @@ transports** (`daemon.py:3485-3491`). The phone's home screen reads the SSE one.
   "capabilities": {
     "features": { "auth": 1, "commands": 2, "session_catalogue": 3, ... },
     "stt": { "available": false, "path": null, "reason": "..." },
-    "session_tags": { "available": true }   // v0.82.3; ABSENT on an older relay
+    "session_tags": { "available": true },  // v0.82.3; ABSENT on an older relay
+    "skill_invocation": { "available": true }  // `$skill`: GET /api/skills + `expand_skills`; ABSENT on an older relay
   },
   "unread": {                           // S1 (ADR 0006 §1.1); absent on an older relay
     "count": 2,                         // conversations with unread completions; ABSENT when degraded
@@ -250,6 +251,16 @@ transports** (`daemon.py:3485-3491`). The phone's home screen reads the SSE one.
   client. The distinction is visible in one live frame:
   `fixtures/relay/http/list-with-tags.json` carries BOTH
   `features.session_tags: 1` and `capabilities.session_tags.available: true`.
+- `capabilities.skill_invocation` (SKM-D3) is the `$skill` licence, a TOP-LEVEL
+  capability and **not** `remote_sessions.skill_invocation` (which is `false`:
+  remote conversations answer `expand_skills` with `409 remote_unsupported`).
+  It gates three things together: `GET /api/skills?session_id=` (rows
+  `{name, description, hidden}`, sorted by name, at most 500, description cut to
+  160 characters; `404 unknown_session` for an unknown id), the `expand_skills:
+  true` flag on a prompt/steer body, and the ack's additive `skills:
+  {attached, skipped}` block (names without `$`; `422 skills_too_large` when the
+  expansion is over budget). An older relay omits the key and silently drops the
+  flag, so a client must gate the `$` affordance on it, never default it.
 - `unread` is the machine's own aggregate (push/ack-sync S1), a TOP-LEVEL
   sibling of `degraded` — deliberately not a `capabilities` flag, because a
   missing key there means "this build does not have it" while an older relay's

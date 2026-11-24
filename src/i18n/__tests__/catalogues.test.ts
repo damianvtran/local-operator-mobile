@@ -1,4 +1,4 @@
-import { readdirSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
@@ -16,6 +16,8 @@ import accountRoutingContext from "@/i18n/catalogues/en/mobile.account_routing.c
 import accountRouting from "@/i18n/catalogues/en/mobile.account_routing.json";
 import agentAvatarContext from "@/i18n/catalogues/en/mobile.agent_avatar.context.json";
 import agentAvatar from "@/i18n/catalogues/en/mobile.agent_avatar.json";
+import asksContext from "@/i18n/catalogues/en/mobile.asks.context.json";
+import asks from "@/i18n/catalogues/en/mobile.asks.json";
 import chromeContext from "@/i18n/catalogues/en/mobile.chrome.context.json";
 import chrome from "@/i18n/catalogues/en/mobile.chrome.json";
 import commonContext from "@/i18n/catalogues/en/mobile.common.context.json";
@@ -34,6 +36,8 @@ import notificationsContext from "@/i18n/catalogues/en/mobile.notifications.cont
 import notifications from "@/i18n/catalogues/en/mobile.notifications.json";
 import oauthContext from "@/i18n/catalogues/en/mobile.oauth.context.json";
 import oauth from "@/i18n/catalogues/en/mobile.oauth.json";
+import pastContext from "@/i18n/catalogues/en/mobile.past.context.json";
+import past from "@/i18n/catalogues/en/mobile.past.json";
 import projectsContext from "@/i18n/catalogues/en/mobile.projects.context.json";
 import projects from "@/i18n/catalogues/en/mobile.projects.json";
 import refusalContext from "@/i18n/catalogues/en/mobile.refusal.context.json";
@@ -62,6 +66,8 @@ import relayComposerContext from "@/i18n/catalogues/en/relay.composer.context.js
 import relayComposer from "@/i18n/catalogues/en/relay.composer.json";
 import healthContext from "@/i18n/catalogues/en/relay.health.context.json";
 import health from "@/i18n/catalogues/en/relay.health.json";
+import relaySkillsContext from "@/i18n/catalogues/en/relay.skills.context.json";
+import relaySkills from "@/i18n/catalogues/en/relay.skills.json";
 import relayTranscriptContext from "@/i18n/catalogues/en/relay.transcript.context.json";
 import relayTranscript from "@/i18n/catalogues/en/relay.transcript.json";
 
@@ -98,6 +104,18 @@ const NAMESPACES = [
 		expected: 32, // M3 S4 −1: the dead mobile.signin.diagnostics (no call site; the panel uses show_/hide_diagnostics) removed (33 − 1 = 32). M3 S2a +1: the loopback-unavailable detail (32 + 1 = 33); 18 + 14: S1 sign-in panel, sign-in/welcome screens (M3 slice S1)
 	},
 	{
+		name: "mobile.asks",
+		messages: asks,
+		context: asksContext,
+		// Ask-panel parity: send/decline/dismiss labels and hints, the dismiss
+		// reasons, the "Settled" heading, the footer progress lines, and every
+		// string the panel used to hardcode (14 in the first slice, + 23 in the
+		// review remediation = 37), counted over the en JSON.
+		// +13 ask-id chips: the eight state words, the two chip labels, the
+		// not-found sentence, the copy label and the copied toast (37 + 13 = 50).
+		expected: 50,
+	},
+	{
 		name: "mobile.oauth",
 		messages: oauth,
 		context: oauthContext,
@@ -107,13 +125,13 @@ const NAMESPACES = [
 		name: "mobile.common",
 		messages: common,
 		context: commonContext,
-		expected: 15, // O3-b +2: the shared sheet Close and skeleton Loading labels (13 + 2 = 15, counted over the en JSON). M3 S2b-1 +3: the command block's Copy / Copied / copy hint (10 + 3 = 13); +4: the not-found screen (app/ scan)
+		expected: 21, // fix/session-list-nav-polish +1: the shared search empty-state headline "Nothing matches that." (20 + 1 = 21, counted over the merged en JSON). O3-b +2: the shared sheet Close and skeleton Loading labels (13 + 2 = 15, counted over the en JSON). M3 S2b-1 +3: the command block's Copy / Copied / copy hint (10 + 3 = 13); +4: the not-found screen (app/ scan); +5 the resizable sheet's Resize panel / Medium / Large / Taller / Shorter (#378: 15 + 5 = 20)
 	},
 	{
 		name: "mobile.composer_input",
 		messages: composerInput,
 		context: composerInputContext,
-		expected: 24, // +2: the failure notice's short Retry / Dismiss actions (visual audit D6); +10: the attach sheet's row labels and Take Photo's notices/error
+		expected: 25, // +2: the failure notice's short Retry / Dismiss actions (visual audit D6); +10: the attach sheet's row labels and Take Photo's notices/error
 	},
 	{
 		name: "mobile.library",
@@ -135,7 +153,15 @@ const NAMESPACES = [
 		 *  92 with the new-chat identity picker (PR #358): 25 `identity.*` keys
 		 *  for the pill, the "Start this chat with" sheet and its refusals, and 1
 		 *  from its round-1 remediation (`refused_connecting`, F2): 66 + 26. */
-		expected: 92,
+		expected: 95,
+	},
+	{
+		/* The Past sessions screen: its search field's label and its empty
+		 *  states (fix/session-list-nav-polish). */
+		name: "mobile.past",
+		messages: past,
+		context: pastContext,
+		expected: 4, // review round 1: −1, the search placeholder dropped (operator ruling: the visible label stays, no duplicate hint) (5 − 1 = 4)
 	},
 	{
 		name: "mobile.projects",
@@ -231,7 +257,7 @@ const NAMESPACES = [
 		name: "mobile.session",
 		messages: session,
 		context: sessionContext,
-		expected: 103, // feat/jump-to-latest +2: the "Jump to latest" chip's full and narrow labels (100 + 2 = 102), and +1 for its round-1 remediation's arrow-free accessible name (jump_to_latest_name); PR #353 +1: composer.settings_not_applied (99 + 1 = 100); feat/pele-diagrams +8: the mermaid diagram block (label, titled label, open hint, copy, copied marker, could-not-draw notice, viewer name, viewer close) (91 + 8 = 99); O3-a +2: the commands and attach sheet titles; PR #275 +8: background sending (outbox) — waiting / exhausted / discarded captions, Retry, Discard, and three composer hints (wait, stopped, discarding) (81 + 2 + 8 = 91); +3: Title-case sheet titles (visual audit D14); +1: newest-edge gap notice; +1: reload hint; +1: newest-refresh failure copy; +1: explicit history reload; +7: lazy history states; +1: default-closed reasoning disclosure; +1: retry-attempt storage receipt; +1: definitely-not-sent storage receipt; +3: the ended-session chip hints (TestFlight 578); +9: the pending echo; +16: session route literals keyed by the app/ scan (subagent screen, empty states, find, chip errors, retained notice); +2: the user message's Show more / Show less (iOS build 836); +15: scanner-blind expression literals (context tray, scroll cues, video title, fallback names, region labels, back-to labels); +1: the new-conversation "not confirmed" caption (PR #256 Q3)
+		expected: 109, // fix/session-view-polish (#312) +4: the subagent badge words (subagent.status), the find sheet title (sheet_title.search) and the slash sheet filter / no-match lines, and +1 for its round-1 remediation's failed-read line (slash.load_failed) (104 + 5 = 109, counted over the merged en JSON); PR #376 +1: inline_chart_data (103 + 1 = 104); feat/jump-to-latest +2: the "Jump to latest" chip's full and narrow labels (100 + 2 = 102), and +1 for its round-1 remediation's arrow-free accessible name (jump_to_latest_name); PR #353 +1: composer.settings_not_applied (99 + 1 = 100); feat/pele-diagrams +8: the mermaid diagram block (label, titled label, open hint, copy, copied marker, could-not-draw notice, viewer name, viewer close) (91 + 8 = 99); O3-a +2: the commands and attach sheet titles; PR #275 +8: background sending (outbox) — waiting / exhausted / discarded captions, Retry, Discard, and three composer hints (wait, stopped, discarding) (81 + 2 + 8 = 91); +3: Title-case sheet titles (visual audit D14); +1: newest-edge gap notice; +1: reload hint; +1: newest-refresh failure copy; +1: explicit history reload; +7: lazy history states; +1: default-closed reasoning disclosure; +1: retry-attempt storage receipt; +1: definitely-not-sent storage receipt; +3: the ended-session chip hints (TestFlight 578); +9: the pending echo; +16: session route literals keyed by the app/ scan (subagent screen, empty states, find, chip errors, retained notice); +2: the user message's Show more / Show less (iOS build 836); +15: scanner-blind expression literals (context tray, scroll cues, video title, fallback names, region labels, back-to labels); +1: the new-conversation "not confirmed" caption (PR #256 Q3)
 	},
 	{
 		/* The relay's own two namespaces, under its own keys. They are here rather
@@ -254,6 +280,16 @@ const NAMESPACES = [
 		messages: relayComposer,
 		context: relayComposerContext,
 		expected: 3,
+	},
+	{
+		/* The relay's `$skill` picker vocabulary (tray label, hidden tag, the
+		 * skipped-skills notice, the too-large remedy), mirrored key for key from the
+		 * core (`local_operator/i18n/catalogues/<locale>/relay.skills.json`) so the
+		 * phone and relay web describe a `$skill` send in the same words. */
+		name: "relay.skills",
+		messages: relaySkills,
+		context: relaySkillsContext,
+		expected: 4,
 	},
 	{
 		/* The relay's transcript condensing and tool-fold vocabulary, mirrored key
@@ -292,7 +328,7 @@ const NAMESPACES = [
 		name: "mobile.sidebar",
 		messages: sidebar,
 		context: sidebarContext,
-		expected: 53, // On-device slice +2: the remote row's device line (row.on_device) and the screen-reader label separator (row_label.join) (51 + 2 = 53, counted over the en JSON). O3-c +9: the row's five status words (row_status.*) and four screen-reader label fragments (row_label.*) (42 + 9 = 51, counted over the en JSON). O3-b +15: the Tags sheet and row tag announcement (10) and the row's new marker and plural counts (5) (27 + 15 = 42, counted over the en JSON). PR #275 +2: the conversation row's outbox lines, sending and stopped (25 + 2 = 27)
+		expected: 68, // fix/session-list-nav-polish +10: the row long-press menu (5) and the drawer's empty states (5) (58 + 10 = 68, counted over the merged en JSON). Sidebar tag view options (2026-11-22): +5 (group.tag, show_tags, show_tags_hint, section.untagged, tag_group.announcement) (53 + 5 = 58, counted over the en JSON). On-device slice +2: the remote row's device line (row.on_device) and the screen-reader label separator (row_label.join) (51 + 2 = 53, counted over the en JSON). O3-c +9: the row's five status words (row_status.*) and four screen-reader label fragments (row_label.*) (42 + 9 = 51, counted over the en JSON). O3-b +15: the Tags sheet and row tag announcement (10) and the row's new marker and plural counts (5) (27 + 15 = 42, counted over the en JSON). PR #275 +2: the conversation row's outbox lines, sending and stopped (25 + 2 = 27)
 	},
 	{
 		/* This app's own short chrome words the relay has no key for: the sidebar
@@ -372,282 +408,18 @@ describe("the English catalogues", () => {
 	});
 
 	it("merges into one map without a duplicate key", () => {
+		/* Derived, never pinned: the merged map has exactly as many keys as the
+		 * namespaces hold between them, so a key defined in two namespaces (one
+		 * silently overwriting the other) fails. There is deliberately no global
+		 * key total here: it was edited by every PR that added a key and conflicted
+		 * on every convergence. The guards that replace what it protected are
+		 * "every locale has exactly the English keys" and "catalogue.gen.ts holds
+		 * the keys the JSON holds", below. */
 		const total = NAMESPACES.reduce(
 			(sum, namespace) => sum + Object.keys(namespace.messages).length,
 			0,
 		);
 		expect(Object.keys(ENGLISH_CATALOGUE)).toHaveLength(total);
-		/* Exact merged union: main's 542 (538 plus #206's four editor-only
-		 * clear/dismiss labels and hints) and the eleven lazy-history keys this
-		 * branch adds; verified by counting the generated catalogue after the merge. */
-		/* Plus two from the header/drawer/secondary-screens polish: the
-		 * Settings "Text size" label and the Library filter sheet's "Source".
-		 * Merged with the polish-composer branch (563 on its own): 563 + 2,
-		 * verified by counting unique `en` keys over the merged tree. */
-		/* Plus one: More's Questions row, the door to timed-out asks now that
-		 * they paint no ask bar (PR #211, TestFlight build 753 feedback). */
-		/* Plus three from the workspace drawer's Team Bridge mode (#212): the
-		 * Bridge entry's loading and unavailable names and "Open Team Bridge".
-		 * PR #211 merged with main a563a6f3: 566 + 3, verified by counting
-		 * unique `en` keys over the merged tree. */
-		/* Minus one: TestFlight 773 retired `mobile.team_bridge.thread.placeholder`
-		 * — the Bridge composer shows its field label, the title names the
-		 * channel. 569 - 1. */
-		/* Plus seven for refused-connect feedback on the own-tunnel screen: the
-		 * inline "Couldn't connect" title and generic body, the secure-storage
-		 * refusal sentence with and without a platform code, and the "Connected,
-		 * but not saved" title, consequence and Continue. 569 + 7, verified by the
-		 * generator's own count (576 keys). PR #220 round-1 remediation: + the
-		 * wrong-password body, and the not-saved body (with and without a code)
-		 * replacing its "until restart" tail: 576 + 3 - 1 = 578, the generator's
-		 * count. */
-		/* PR #220 merged with main becb972b (#219 retired one key): 568 + 9 (this
-		 * branch's net) = 577, verified by counting unique `en` keys over the merged tree. */
-		/* PR #223 merged with main 56831114 (#220): 568 + 19 (this branch's
-		 * relay.transcript keys) + 9 (#220's net) = 596, verified by the
-		 * generated catalogue's own count over the merged tree. */
-		/* feat/bridge-last-target: + `mobile.team_bridge.thread.jump_newest`, the
-		 *  anchored open's way back to the newest edge: 596 + 1 = 597, the
-		 *  generated catalogue's own count over this tree. Round-1 remediation
-		 *  adds `mobile.team_bridge.thread.anchor_missing` (the "no longer
-		 *  available" toast): 597 + 1 = 598.
-		 * Plus 53 keyed by the app/ scan (the new `app/` coverage in
-		 * scan-strings.ts plus the Settings and add-a-computer literals): 598 + 53
-		 * = 651, the generator's own count. */
-		/* fix/user-message-show-more: + `mobile.session.user_message.show_more`
-		 *  and `.show_less`: 651 + 2 = 653, the generated catalogue's own count
-		 *  (integration of #235 onto #227). */
-		/* Minus one: `mobile.session_health.ended_placeholder` retired — an ended
-		 * session's composer shows the standard placeholder (operator feedback,
-		 * 2026-11-11). 653 - 1 = 652 (integration of #239). */
-		/* feat/bridge-push-readiness (#231) merged with main fa2bc5e0 (#227): + the
-		 *  five `mobile.notifications.permission.*` Settings sentences: 651 + 5 = 656.
-		 *  Integrated with #235 (+2) and #239 (-1): 652 + 5 = 657. */
-		/* M2 (#236) expression-literal keys (4 computers + 15 session + 14
-		 * settings = 33), rebased onto main 2b508d9d: 657 + 33 = 690. */
-		/* M3 slice S1 (sign-in & computers): +17 mobile.computers + 14 mobile.signin
-		 * = 31 English keys, plus 13 from the unflagged-literal sweep (status/reach
-		 * badges, row a11y, billing fallback, Try now, Remove): 690 + 44 = 734. */
-		/* M3 slice S2a (English-first): +36 mobile.computers (titles, discovery
-		 * banners, the "Your own tunnel" screen) + 1 mobile.signin (loopback
-		 * unavailable detail) = 37: 734 + 37 = 771, counted over the en JSON. */
-		/* TestFlight 906 mobile fixes: + mobile.home.transcript.needs_answer and
-		 * mobile.chrome.clear_search = 2: 771 + 2 = 773. */
-		/* PR #256 QA round 1, Q3: + mobile.session.pending_echo.not_confirmed_plain
-		 * (the new-conversation caption with no retry to point at) = 774. */
-		/* M3 slice S2b-1 (English-first): +27 mobile.computers (own-tunnel
-		 * commands, verdicts, remedy, password slot) + 3 mobile.common (command
-		 * block) + 11 mobile.settings (own-tunnel section) = 41: 774 + 41 = 815,
-		 * counted over the en JSON. */
-		/* M3 slice S2b-2b (English-first): +27 mobile.computers (set-up-a-computer
-		 * screen 17, refused-address reasons 9, "Your computer" subject 1):
-		 * 812 + 27 = 839, counted over the en JSON. */
-		/* M3 slice S2b-2a (English-first): +24 mobile.computers (the refusal
-		 * surface's headlines, next lines, wait line and buttons): 812 + 24 = 836,
-		 * counted over the en JSON. */
-		/* TestFlight 906 drawer View options: + the 21 `mobile.sidebar.*` keys
-		 * (order, grouping, clock, ended, sections, link, heading): 771 + 21 = 792,
-		 * the generator's own count. */
-		/* PR #255 review round 1: + "N sections hidden" and the emptied-by-view
-		 * state's headline, line and action (D2, M1): 792 + 4 = 796. */
-		/* Merge of origin/main (#254, d5831603) into #255: 771 + 41 (S2b-1)
-		 * + 25 (mobile.sidebar: 21 + 4) = 837. */
-		/* Convergence of #257 onto main f8d0d8dd (#255): both comment chains kept;
-		 * 812 + 24 (S2b-2a) + 25 (mobile.sidebar) = 861, counted over the en JSON. */
-		/* fix/session-push-register: +6 mobile.notifications (the Settings
-		 * sentence for this phone's registration with the routed computer):
-		 * 812 + 6 = 818. */
-		/* Merge of origin/main (#255, f8d0d8dd) into #259: 837 on main + 6
-		 * mobile.notifications = 843. */
-		/* M1 no-terminal: +2 mobile.computers (set-up's two lines) + 30
-		 * mobile.refusal (new namespace) = 32: 812 + 32 = 844, counted over the
-		 * en JSON. */
-		/* M1 scope additions: +9 mobile.refusal, +1 mobile.computers, +4
-		 * mobile.settings = 14: 844 + 14 = 858. */
-		/* PR #261 round-1 remediation: +3 mobile.refusal (the suspended body,
-		 * the relay-refused title and body), +2 mobile.computers (Check again,
-		 * Checking…), +1 mobile.settings (Couldn't copy) = 6: 858 + 6 = 864. */
-		/* Merge of origin/main (#259, 9ef19ccd) into #261: 843 on main + the
-		 * branch's 52 (864 - 812) = 895. */
-		/* Convergence of #257 onto main 9ef19ccd (#259): both comment chains kept;
-		 * 861 + 6 (mobile.notifications) = 867, counted over the en JSON. */
-		/* fix/settings-signin-status-badge: +1 mobile.settings
-		 * (`diagnostics.reason`, the label of the raw reason-code row; the code
-		 * itself is never a key): 812 + 1 = 813. Review round 1: +4 (the signed-in
-		 * account title and the sign-in confirm's title, body and button):
-		 * 813 + 4 = 817. */
-		/* Merge of origin/main (#255, f8d0d8dd) into #258: 837 on main + 5
-		 * mobile.settings = 842. */
-		/* Merge of origin/main (#259, 9ef19ccd) into #258: 843 on main + 5
-		 * mobile.settings = 848. */
-		/* Merge of origin/main (#255, f8d0d8dd) into #256: 837 on main + 3
-		 * (mobile.home, mobile.chrome, mobile.session) = 840. */
-		/* Merge of origin/main (#259, 9ef19ccd) into #256: 843 on main + 3
-		 * (mobile.home, mobile.chrome, mobile.session) = 846. */
-		/* Merge of origin/main (#258, 8ca71d54) into #256: 848 on main + 3
-		 * (mobile.home, mobile.chrome, mobile.session) = 851. */
-		/* Convergence of #257 onto main 8ca71d54 (#258): both comment chains kept;
-		 * 867 + 5 (mobile.settings) = 872, counted over the en JSON. */
-		/* Merge of origin/main (#257, caae98bc) into #256: 872 on main + 3
-		 * (mobile.home, mobile.chrome, mobile.session) = 875. */
-		/* Merge of origin/main (#258, 8ca71d54) into #261: 848 on main + the
-		 * branch's 52 (895 - 843) = 900, counted over the merged en JSON. */
-		/* Convergence of #257 onto main 8ca71d54 (#258): both comment chains kept;
-		 * 867 + 5 (mobile.settings) = 872, counted over the en JSON. */
-		/* Merge of origin/main (#257, caae98bc) into #261: 872 on main + the
-		 * branch's 52 (900 - 848) = 924, counted over the merged en JSON. */
-		/* Convergence of #260 onto main caae98bc (#257): both comment chains kept;
-		 * 872 + 27 (S2b-2b) = 899, counted over the en JSON. */
-		/* Convergence of #260 onto main f340368a (#261): both comment chains kept;
-		 * 924 on main + 27 (S2b-2b) = 951, counted over the en JSON. */
-		/* Merge of origin/main (#261, f340368a) into #256: 924 on main + 3
-		 * (mobile.home, mobile.chrome, mobile.session) = 927. */
-		/* Convergence of #260 onto main 9214ff9b (#256): both comment chains kept;
-		 * 927 on main + 27 (S2b-2b) = 954, counted over the en JSON. */
-		/* feat/notification-onboarding: +5 mobile.notifications (the first-run
-		 * primer sheet's title, body, settings hint and its two buttons):
-		 * 872 + 5 = 877, the generator's own count. Plus the five Settings
-		 * notification preference keys (`preferences.*`: master, completions,
-		 * errors, Team Bridge, update note): 877 + 5 = 882. PR #264 R1:
-		 * 882 − 1 + 3 + 3 = 887 (same keys as the namespace count above). */
-		/* Merge of origin/main d92515ff (#263) into #264: main added no keys,
-		 * so 887 carried. PR #264 design/UX R1: 887 + 1 − 2 + 3 = 889, the
-		 * generator's own count (same keys as the namespace count above). */
-		/* Merge of origin/main (#246, c0b6a4da) into #264: 954 on main + the
-		 * branch's 17 (889 - 872) = 971, the generator's own count. */
-		/* M3 S2c audit gap: -2 mobile.computers (the unused setup.billing_title
-		 * and setup.billing_fallback) = 952, counted over the en JSON. */
-		/* Merge of origin/main (#265, 51debe8e) into #264: both comment chains
-		 * kept; 952 on main + the branch's 17 (889 - 872) = 969, the
-		 * generator's own count. */
-		/* PR #271: + 22 mobile.remote_sessions (new namespace) = 991,
-		 * the generator's own count. */
-		/* PR #272: +4 mobile.notifications group headings/guidance = 973,
-		 * independently counted over the authored English JSON (969 + 4). */
-		/* Merge of origin/main (#268 eaa49a3e, #272 b190244f) into #271: both
-		 * comment chains kept; #268 added no keys; 973 on main + the branch's 22
-		 * mobile.remote_sessions = 995, recounted over the merged en JSON. */
-		/* M3 S4: −1 mobile.signin (the dead `mobile.signin.diagnostics`,
-		 *  no call site) = 968, the generator's own count. */
-		/* PR #272: +4 mobile.notifications group headings/guidance = 973,
-		 * independently counted over the authored English JSON (969 + 4). */
-		/* Merge of origin/main (#272, b190244f) into S4 (#270): both comment
-		 * chains kept; 968 + 4 = 972, derived by summing the keys of all 23
-		 * merged en catalogue files (mobile.notifications 59, mobile.signin 32). */
-		/* Merge of origin/main (#270, 0e32160f) into #271: both comment chains
-		 * kept; 972 on main (S4 dropped mobile.signin.diagnostics) + the branch's
-		 * 22 mobile.remote_sessions = 994, derived by summing the keys of all 24
-		 * merged en catalogue files (mobile.remote_sessions 22, mobile.signin 32). */
-		/* Rebase of O3-a onto origin/main (#271, 57b129c8): both comment chains
-		 * kept; O3-a: +40 English keys (mobile.time 23, mobile.notifications 6,
-		 * mobile.projects 4, mobile.schedules 4, mobile.session 2,
-		 * mobile.settings 1): 994 on main + 40 = 1034, derived by summing the keys
-		 * of all 25 en catalogue files (mobile.time 23, mobile.remote_sessions 22). */
-		/* PR #275 (background sending): +8 mobile.session (outbox captions,
-		 * Retry/Discard, three composer hints) + 2 mobile.sidebar (row outbox
-		 * lines) = 1004, derived by summing the keys of all 24 en catalogue
-		 * files (mobile.session 89, mobile.sidebar 27). */
-		/* Merge of origin/main (#275, b1fbb813) into O3-a: both comment chains
-		 * kept; 1034 on O3-a + #275's 10 (mobile.session 8, mobile.sidebar 2) =
-		 * 1044, derived by summing the keys of all 25 merged en catalogue files
-		 * (mobile.session 91, mobile.sidebar 27, mobile.time 23). */
-		// Remote Highlight operation-local refusals: +2 = 1006 (generator count).
-		// iOS notification category summaries/placeholders: +6 = 1012.
-		// fix/push-device-dedupe: +3 mobile.notifications.devices.* = 1015.
-		// PR #287 design D2: +5 mobile.notifications.device_state.* = 1020.
-		/* Merge of origin/main (08025e10, #277-#287) into O3-a: both comment
-		 * chains kept; 1044 on O3-a + main's 16 since b1fbb813 (mobile.notifications
-		 * 14, mobile.remote_sessions 2) = 1060, derived by summing the keys of all
-		 * 25 merged en catalogue files (mobile.notifications 79). */
-		/* O3-b (English-first): +2 mobile.common, +23 mobile.projects,
-		 * +15 mobile.sidebar = 40: 1060 + 40 = 1100, counted over the en JSON. */
-		/* fix/bridge-429 (#297): + mobile.team_bridge.list.catching_up, the calm
-		 * "Catching up…" rate-limit status: 1060 + 1 = 1061, derived by summing
-		 * the keys of all 25 en catalogue files (mobile.team_bridge 160). */
-		/* Convergence of PR #302 with main 8a4d3048 (#297): both chains above
-		 * kept; O3-b's 40 + #297's 1 on 1060 = 1101, derived by summing the keys of
-		 * all 25 merged en catalogue files (mobile.common 15, mobile.projects 59,
-		 * mobile.sidebar 42, mobile.team_bridge 160); every shipped locale also
-		 * sums to 1101. */
-		/* O3-c (English-first): +9 mobile.sidebar (5 row_status, 4 row_label):
-		 * 1101 + 9 = 1110, derived by summing the keys of all 25 en catalogue
-		 * files (mobile.sidebar 51). */
-		/* feat/bridge-mention-suggestions (#305) adds the nine
-		 * mobile.team_bridge.mentions.* keys for @-mention suggestions; merged with
-		 * main's 1101: 1101 + 9 = 1110, derived by summing the keys of all 25 merged
-		 * en catalogue files (mobile.team_bridge 169). */
-		// PR #303 adds ten mobile.team_bridge.reply_thread keys (nine, plus
-		// reply_thread.more for the 500-reply continuation, review R2):
-		// 1101 + 10 = 1111, re-derived with generate.ts over the merged tree.
-		// feat/pele-diagrams: +8 mobile.session.diagram.* on main's 1111 = 1119,
-		// re-derived with generate.ts over the merged tree.
-		// Merge of main into #305 (feat/bridge-mention-suggestions): +9
-		// mobile.team_bridge.mentions.* on main's 1119 = 1128, re-derived with
-		// generate.ts over the merged tree.
-		/* ADR 0010 S2/S4 (Android push parity): + 5 mobile.notifications keys
-		 * (channel.team_bridge{,_description}, team_bridge.self_name,
-		 * preferences.bridge_system_{off,open}): 1061 + 5 = 1066, as
-		 * `generate.ts --check` reports for the merged tree. */
-		/* Convergence of PR #304 with main 198ac368 (#306, #310): both chains
-		 * above kept; main's 1101 + ADR 0010's 5 = 1106, derived by summing the
-		 * keys of all 25 merged en catalogue files. */
-		/* Convergence #2 of PR #304 with main 52ca6f24 (#303 reply threads +10,
-		 * #292 Pele diagrams +8, #305 mentions +9): all chains kept; main's 1128
-		 * + ADR 0010's 5 = 1133, as `generate.ts --check` reports for the merged
-		 * tree. */
-		/* Convergence of PR #313 (O3-c) with main 2e975773: both chains kept;
-		 * main's 1133 + O3-c's 9 mobile.sidebar keys = 1142, derived by summing
-		 * the keys of all 25 merged en catalogue files (mobile.sidebar 51,
-		 * mobile.team_bridge 179). */
-		// feat/community: +140 mobile.community.* (the public community client)
-		// and +10 more from its review round 1 remediation, on main's 1133
-		// (ADR 0010 chain above) = 1283, re-derived over the rebased tree.
-		/* PR #339 (Team Bridge message actions sheet): + 5 mobile.team_bridge
-		 * actions.* keys (title, reply_in_thread, copy_text, select_text,
-		 * copied): 1283 + 5 = 1288. */
-		/* Convergence of PR #344 (feat/bridge-card-body) with main ce8ca546
-		 * (#339): both chains kept; main's 1288 + sixteen
-		 * mobile.team_bridge.card_body.* = 1304, as `generate.ts` reports for
-		 * the merged tree. */
-		/* Reactions slice PR b (#345): + actions.a11y_react and ten
-		 * reactions.* keys: 1304 + 11 = 1315. */
-		/* Inspection/thread slice (#348): reactions.details, hint_inspect,
-		 * sample, sample_none, sample_notice, show_less, show_more, you_reacted,
-		 * plus reply_thread.last_reply: 1315 + 9 = 1324. Independently counted
-		 * across the 26 JSON namespaces in each of the eight shipped locales;
-		 * retain an explicit total, not a self-adjusting catalogue expectation. */
-		/* PR #353 (settings refusal after resume): + mobile.session
-		 * composer.settings_not_applied: 1324 + 1 = 1325, as `generate.ts
-		 * --check` reports for the tree merged with main 2c3aee9a. */
-		/* Attach camera (Take Photo): mobile.composer_input.attach.library,
-		 * camera, files, paste, choose_image, camera_denied, camera_refused,
-		 * open_settings, camera_unavailable, camera_error: 1325 + 10 = 1335. */
-		/* Convergence #2 of PR #313 (O3-c) with main e1888bd6 (#355): both
-		 * chains above kept; main's 1335 + O3-c's 9 mobile.sidebar keys = 1344,
-		 * derived by summing the keys of all 26 merged en catalogue files
-		 * (mobile.sidebar 51, mobile.team_bridge 220); every shipped locale also
-		 * sums to 1344. */
-		/* On-device slice (English-first): +2 mobile.sidebar (row.on_device,
-		 * row_label.join): 1344 + 2 = 1346, derived by summing the keys of all
-		 * 26 en catalogue files (mobile.sidebar 53). With the translations
-		 * every shipped locale also sums to 1346 (counted over each locale's
-		 * 26 JSON files). */
-		/* New-chat identity picker (PR #358): + mobile.chrome
-		 * composer.row_identity and 26 mobile.home.identity.* keys (25, plus
-		 * refused_connecting from its round-1 remediation): 1344 + 27 = 1371, as
-		 * the suite's own sum over the tree merged with main 29cbbef2 reports. */
-		/* Convergence retains both upstream sidebar keys and the inline
-		 * received-card context: 1373 + card_body.thread_reply = 1374,
-		 * counted over all 26 English JSON catalogues (sidebar 53, home 92,
-		 * chrome 28, team_bridge 221). Keep this explicit total as an
-		 * independent guard against an accidentally dropped key. */
-		/* feat/jump-to-latest: +2 mobile.session (the chip's full and narrow
-		 * labels): 1374 + 2 = 1376, the generated catalogue's own count over
-		 * this tree. */
-		/* …plus its round-1 remediation: + mobile.session.jump_to_latest_name, the
-		 * arrow-free ACCESSIBLE name (a screen reader read the visible "↓" as
-		 * "down arrow"): 1376 + 1 = 1377. */
-		expect(total).toBe(1377);
 	});
 
 	it("lists every catalogue file this suite checks", () => {
@@ -680,6 +452,56 @@ describe("the English catalogues", () => {
 			.map((entry) => entry.name)
 			.sort();
 		expect(directories).toEqual([...SHIPPED_LOCALES].sort());
+	});
+
+	/* Key parity, read from the JSON on disk, so it needs no key count. A key
+	 * dropped from, or invented in, one locale is a named failure instead of a
+	 * total that moved by one. */
+	describe("every locale carries exactly the English keys", () => {
+		const catalogueRoot = fileURLToPath(
+			new URL("../../i18n/catalogues", import.meta.url),
+		);
+		const namespaceFiles = (locale: string) =>
+			readdirSync(`${catalogueRoot}/${locale}`)
+				.filter(
+					(name) => name.endsWith(".json") && !name.endsWith(".context.json"),
+				)
+				.sort();
+		const keysOf = (locale: string, file: string) =>
+			Object.keys(
+				JSON.parse(readFileSync(`${catalogueRoot}/${locale}/${file}`, "utf8")),
+			).sort();
+		const translated = SHIPPED_LOCALES.filter((locale) => locale !== "en");
+
+		it.each(translated)("%s has every English namespace file", (locale) => {
+			expect(namespaceFiles(locale)).toEqual(namespaceFiles("en"));
+		});
+
+		it.each(translated)("%s has no missing or unknown key", (locale) => {
+			const problems: string[] = [];
+			for (const file of namespaceFiles("en")) {
+				const source = keysOf("en", file);
+				const target = keysOf(locale, file);
+				const missing = source.filter((key) => !target.includes(key));
+				const unknown = target.filter((key) => !source.includes(key));
+				if (missing.length > 0 || unknown.length > 0) {
+					problems.push(
+						`${locale}/${file}: missing [${missing.join(", ")}] unknown [${unknown.join(", ")}]`,
+					);
+				}
+			}
+			expect(problems).toEqual([]);
+		});
+
+		it.each(SHIPPED_LOCALES)(
+			"%s's generated catalogue holds the keys its JSON holds (catalogue.gen.ts in sync)",
+			(locale) => {
+				const onDisk = namespaceFiles(locale).flatMap((file) =>
+					keysOf(locale, file),
+				);
+				expect(Object.keys(CATALOGUES[locale]).sort()).toEqual(onDisk.sort());
+			},
+		);
 	});
 });
 
@@ -729,6 +551,10 @@ const IDENTICAL_BY_DESIGN_JUDGED: Readonly<
 > = {
 	en: {},
 	fr: {
+		"mobile.asks.title_fallback":
+			"« Questions » is the French word too, spelled as in English; the relay page's French catalogue uses it for the same panel.",
+		"mobile.asks.urgent":
+			"« · Urgent » is the French word, spelled as in English (the relay page's French suffix is the lowercase `relay.asks.card.urgent`).",
 		"mobile.sidebar.sections":
 			"« Sections » is the French word for the drawer's sections, spelled as in English; the desktop's French catalogue uses the same word (`ui.chat.sidebar_view.sections`).",
 		"mobile.settings.account.app_name":

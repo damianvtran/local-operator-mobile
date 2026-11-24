@@ -16,6 +16,9 @@ const host = vi.hoisted(() => ({
 	mounts: 0,
 	unmounts: 0,
 }));
+/* The null host has no accessibility or theme engine. Answer only the motion
+ * preference so the real list can still exercise its footer/tail policies. */
+vi.mock("@/ui/appearance", () => ({ useReducedMotion: () => true }));
 /* The list renders the "Jump to latest" chip, whose label ladder reads the app's
  * resolved text scale. This suite exercises tail policy, not type size, so the
  * provider is answered here rather than through `uniwind` (the same seam every
@@ -51,6 +54,11 @@ vi.mock("@/features/session/components/transcript-edge-fades", () => ({
 }));
 vi.mock("@/features/session/components/transcript-row", () => ({
 	TranscriptRow: () => null,
+}));
+/* Rows are null here, so keep the resize provider's shape without loading the
+ * chart renderer (native SVG). The chart's mounted test drives its consumer. */
+vi.mock("@/features/session/components/inline-ui-preview", async () => ({
+	ChartDataResizeContext: (await import("react")).createContext(null),
 }));
 vi.mock("@/features/session/components/turn-bar", () => ({
 	TurnBar: () => null,

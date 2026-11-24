@@ -152,7 +152,7 @@ describe("history reader production wiring", () => {
 		expect(create(identity, current, endpoints)).toBe(historyWindow);
 		expect(endpoints.history).toHaveBeenCalledExactlyOnceWith(
 			identity.sessionId,
-			{ before: undefined },
+			{ before: undefined, inlineUi: true },
 		);
 		expect(JSON.stringify(composer)).toBe(before);
 		expect(declaration).not.toMatch(NON_READER_MUTATIONS);
@@ -281,8 +281,9 @@ describe("history reader production wiring", () => {
 		expect(list).not.toContain("onStartReached=");
 		expect(runtime).toContain("return () => historyWindow.retire();");
 		expect(runtime).toContain(
-			"if (ownsProjection) historyWindow.accept(projection);",
+			"if (hydrated) historyWindow.seedFromCache(projection);",
 		);
+		expect(runtime).toContain("else historyWindow.accept(projection);");
 		expect(runtime).toContain(
 			"ownsProjection ? historyWindow.visibleRows : EMPTY_HISTORY",
 		);

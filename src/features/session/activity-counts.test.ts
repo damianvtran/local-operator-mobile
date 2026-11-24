@@ -69,8 +69,22 @@ describe("activityCountsStack (one line, or the counts under it)", () => {
 	const stack = (width: number, scale: number, counts = all) =>
 		activityCountsStack({ width, scale, counts, touchFloor: 44 });
 
-	it("shares one line at 390 pt and 100 % text — the band is gone, not moved", () => {
-		expect(stack(390, 1)).toBe(false);
+	it("shares one line at 390 pt and 100 % text while the intent keeps a few words", () => {
+		const tasksOnly = activityCounts(
+			{ tasks: { open: 2, total: 5 }, agents: null },
+			0,
+		);
+		expect(stack(390, 1, tasksOnly)).toBe(false);
+	});
+
+	it("gives all three counts their own line at 390 pt rather than cut the intent to a fragment", () => {
+		/* Measured before this rule (captures A-session-tool-cards, iphone-15):
+		 *  timer, 3/5, 1/6, 2 and Stop on one line left "reading the…" — eleven
+		 *  characters, too few to say what the agent is doing. The activity is
+		 *  the line's point; the counts are one tap from the same sheet either
+		 *  way, so they are what moves. */
+		expect(stack(390, 1)).toBe(true);
+		expect(stack(430, 1)).toBe(true);
 	});
 
 	it("takes its own line at 200 % text and never squeezes the status", () => {

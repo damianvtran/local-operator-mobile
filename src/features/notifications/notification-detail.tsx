@@ -18,6 +18,7 @@ import {
 	conversationName,
 	detailMetaLine,
 	OPEN_LABEL,
+	openAskIdFor,
 	RETRY_LABEL,
 	readLoadedDetail,
 	VANISHED_BODY,
@@ -347,10 +348,12 @@ export default function NotificationDetail({ itemId }: { itemId: string }) {
 				currentSessionId={
 					state.kind === "ready" ? state.detail.session.id : undefined
 				}
+				/* The sheet expands the row whose `ask_id` equals this, so it takes the
+				 * BARE id: the item's own id is the relay's composite
+				 * (`ask:<session>:<ask_id>`) and matched no row, which is why the card's
+				 * "Answer in conversation" opened a collapsed list (Ben, 2026-11-23). */
 				initialOpenAsk={
-					state.kind === "ready" && state.detail.item.source === "ask"
-						? state.detail.item.id
-						: null
+					state.kind === "ready" ? openAskIdFor(state.detail) : null
 				}
 				onOpenConversation={(target) => {
 					setAsksOpen(false);

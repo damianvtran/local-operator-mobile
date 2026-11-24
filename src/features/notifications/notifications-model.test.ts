@@ -1,6 +1,10 @@
 import { afterEach, describe, expect, it } from "vitest";
 
-import type { NotificationItem, NotificationsResponse } from "@/contracts";
+import type {
+	NotificationDetailResponse,
+	NotificationItem,
+	NotificationsResponse,
+} from "@/contracts";
 import {
 	canDismiss,
 	conversationName,
@@ -15,6 +19,7 @@ import {
 	markAllTarget,
 	mergePage,
 	notificationsEnabled,
+	openAskIdFor,
 	readLoadedDetail,
 	relativeTime,
 	rowAccessibilityLabel,
@@ -578,5 +583,70 @@ describe("the dismiss receipt's footer slot (#321)", () => {
 		for (const [kind, { phase, showing }] of Object.entries(RECEIPT_PHASES)) {
 			expect([kind, dismissReceiptShowing(phase)]).toEqual([kind, showing]);
 		}
+	});
+});
+
+/**
+ * Answering from the inbox expands THAT ask (Ben, 2026-11-23).
+ *
+ * The card's "Answer in conversation" opens `AsksSheet` with the item's id as
+ * `initialOpenAsk`, and the sheet expands a row whose `ask_id` equals it. The
+ * item's id is the relay's COMPOSITE (`ask:<session>:<ask_id>`); the read's rows
+ * carry the bare `ask_id`. They are never equal, so the sheet opened collapsed
+ * on an ask the reader had just pressed to answer.
+ *
+ * The detail is shaped like the synthetic list fixture
+ * (`fixtures/relay/synthetic/notifications-populated.json:187`): composite id
+ * `ask:3f2a9c1b:a1`, and the conversation's asks read carrying `a1`.
+ */
+describe("an inbox ask opens itself in the ask sheet (Ben, 2026-11-23)", () => {
+	const askDetail = (): NotificationDetailResponse => ({
+		item: item({
+			id: "ask:3f2a9c1b:a1",
+			source: "ask",
+			ask: {
+				status: "open",
+				deadline_at: 0,
+				question_count: 2,
+				dismissible: true,
+			},
+		}),
+		history: [],
+		session: {
+			id: "s_0003",
+			title: "Payments migration",
+			agent_id: "aida",
+			cwd: "/work/payments",
+		},
+		anchor: null,
+		projects: [],
+		asks: [{ ask_id: "a1", session_id: "s_0003", status: "open" }],
+	});
+
+	it("hands the sheet an id the conversation's asks read returns", () => {
+		const detail = askDetail();
+		expect(detail.asks.map((row) => row.ask_id)).toContain(
+			openAskIdFor(detail),
+		);
+	});
+
+	it("takes the last segment of the relay's composite id", () => {
+		/* The composite is `ask:<session>:<ask_id>`; the ask id is its tail. */
+		expect(openAskIdFor(askDetail())).toBe("a1");
+	});
+
+	it("expands nothing for an update, nor for an unreadable id", () => {
+		/* An update's card opens the conversation, so the sheet is not asked to
+		 * pre-expand an ask it does not have. */
+		expect(openAskIdFor({ item: { id: "n_1", source: "notify" } })).toBeNull();
+		/* A truncated id names no ask: the sheet then keeps its collapsed walk. */
+		expect(
+			openAskIdFor({
+				item: {
+					id: "ask:3f2a9c1b:",
+					source: "ask",
+				},
+			}),
+		).toBeNull();
 	});
 });

@@ -490,6 +490,35 @@ export async function readLoadedDetail<
 }
 
 /**
+ * The bare `ask_id` an inbox ASK's detail names, for `AsksSheet.initialOpenAsk`.
+ *
+ * The detail's item carries the relay's COMPOSITE id (`ask:<session>:<ask_id>`,
+ * the format `RelayEndpoints.notification` escapes), while the sheet expands a
+ * row whose `ask_id` EQUALS `initialOpenAsk`. Handing it the composite compared
+ * two different vocabularies, so the sheet opened collapsed on the ask the
+ * reader had just pressed to answer (Ben, 2026-11-23).
+ *
+ * WHY THE ID AND NOT `detail.asks[0]`: that array is the CONVERSATION's asks
+ * INCLUDING settled ones, and the contract states no order, so its first row
+ * need not be the ask this card is about — expanding the wrong ask would be
+ * worse than expanding none. The item's own id is the only field that names
+ * THIS ask; its ask id is the last colon-separated segment.
+ *
+ * A card that is not an ask expands nothing, and an id the sheet's own read does
+ * not return still expands nothing there: the sheet keeps its collapsed walk
+ * rather than inventing a row (`AsksSheet` doc, "an id the read does not
+ * return").
+ */
+export function openAskIdFor(detail: {
+	item: Pick<NotificationItem, "id" | "source">;
+}): string | null {
+	if (detail.item.source !== "ask") return null;
+	const cut = detail.item.id.lastIndexOf(":");
+	const askId = cut < 0 ? "" : detail.item.id.slice(cut + 1);
+	return askId === "" ? null : askId;
+}
+
+/**
  * A clock as an age, or `""` when there is NO clock.
  *
  * `0` is the wire's "this field carries nothing" (an ask's `expires_at: 0` means
