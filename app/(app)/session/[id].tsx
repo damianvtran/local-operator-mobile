@@ -650,7 +650,7 @@ function Session() {
 		sessionChips.model = {
 			kind: "value",
 			text: name,
-			accessibilityLabel: `Model, ${name}`,
+			accessibilityLabel: t("mobile.session.chip.model_label", { model: name }),
 		};
 	}
 	if (storedPicker) {
@@ -711,7 +711,13 @@ function Session() {
 		chips: chipLabels,
 		ladder: effortLadder,
 		ended: headerHealth(projection, runtime.link) === "ended",
-		stored: storedPicker ? { loading: storedModel.loading } : null,
+		stored: storedPicker
+			? {
+					loading: storedModel.loading,
+					failed: storedModel.failed,
+					modelKnown: selectedModel !== null,
+				}
+			: null,
 	});
 
 	/* The strip exists when it has something true to say: a context read, or a
@@ -2162,7 +2168,7 @@ function Session() {
 				loading={storedPicker && storedModel.loading}
 				failed={storedPicker && storedModel.failed}
 				onRetry={storedPicker ? storedModel.retry : undefined}
-				/* Locked, ladder or none — decided once in `sessionRunSettings`
+				/* Locked, ladder, none or hidden — decided once in `sessionRunSettings`
 				 *  (an ended session's recorded effort is shown, round 1 R1). */
 				{...runSettings}
 				/* A refused change shows inside the open sheet (round 1 R2). */

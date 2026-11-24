@@ -295,6 +295,14 @@
 		"role": "status",
 		"note": "Inline error under the composer when changing the session's effort level failed. 'Effort' is the product's word for how hard the model works."
 	},
+	"mobile.session.chip.model_label": {
+		"role": "meta",
+		"note": "Spoken label of a conversation's model (the composer's run-settings button reads it). {model} is the model's name, untranslated. Use the same word for 'model' as mobile.home.chip.model_chosen."
+	},
+	"mobile.session.chip.effort_label": {
+		"role": "meta",
+		"note": "Spoken label of a conversation's effort (reasoning effort) level (the composer's run-settings button reads it). {effort} is the level's name. Use the same word for 'effort' as mobile.home.chip.effort_chosen."
+	},
 	"mobile.session.composer.retained_instruction": {
 		"role": "confirm",
 		"note": "Notice above the composer when an earlier instruction is retained and may already have been delivered, so the user must retry it before sending the current draft. Two sentences."

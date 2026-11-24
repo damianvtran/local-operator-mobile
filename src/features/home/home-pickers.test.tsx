@@ -62,6 +62,11 @@ vi.mock("react-native", () => ({
 			kids(props),
 		),
 	ScrollView: (props: Props) => createElement("div", null, kids(props)),
+	/* `@/ui/direction` (the run-settings summary's base) reads it at import. */
+	Platform: {
+		OS: "web",
+		select: (o: Record<string, unknown>) => o.web ?? o.default,
+	},
 }));
 vi.mock("lucide-react-native", () => ({ Folder: () => null }));
 /* The identity picker's avatar (main #358) shares the module; it reaches the

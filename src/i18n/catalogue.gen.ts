@@ -918,9 +918,11 @@ export type CatalogueKey =
 	| "mobile.session.back_to"
 	| "mobile.session.back_to_session"
 	| "mobile.session.chip.effort_change_failed"
+	| "mobile.session.chip.effort_label"
 	| "mobile.session.chip.effort_resume_hint"
 	| "mobile.session.chip.model_change_failed"
 	| "mobile.session.chip.model_default"
+	| "mobile.session.chip.model_label"
 	| "mobile.session.chip.model_resume_hint"
 	| "mobile.session.chip.model_unknown"
 	| "mobile.session.chip.model_unrecorded_hint"
@@ -3633,9 +3635,11 @@ export type MessageParams = {
 	"mobile.session.back_to": { name: string | number };
 	"mobile.session.back_to_session": NoParams;
 	"mobile.session.chip.effort_change_failed": NoParams;
+	"mobile.session.chip.effort_label": { effort: string | number };
 	"mobile.session.chip.effort_resume_hint": NoParams;
 	"mobile.session.chip.model_change_failed": NoParams;
 	"mobile.session.chip.model_default": NoParams;
+	"mobile.session.chip.model_label": { model: string | number };
 	"mobile.session.chip.model_resume_hint": NoParams;
 	"mobile.session.chip.model_unknown": NoParams;
 	"mobile.session.chip.model_unrecorded_hint": NoParams;
@@ -5137,9 +5141,11 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.session.back_to": "Back to {name}",
 	"mobile.session.back_to_session": "Back to session",
 	"mobile.session.chip.effort_change_failed": "Could not change the effort.",
+	"mobile.session.chip.effort_label": "Effort, {effort}",
 	"mobile.session.chip.effort_resume_hint": "Resume this session to change the effort",
 	"mobile.session.chip.model_change_failed": "Could not change the model.",
 	"mobile.session.chip.model_default": "Default",
+	"mobile.session.chip.model_label": "Model, {model}",
 	"mobile.session.chip.model_resume_hint": "Resume this session to change the model",
 	"mobile.session.chip.model_unknown": "Unknown",
 	"mobile.session.chip.model_unrecorded_hint": "This session has not recorded a model",
@@ -6626,9 +6632,11 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.session.back_to": { role: "button", note: "Back-navigation label on the video and agent-job screens; {name} is the parent session's own name or the noun phrase from mobile.session.fallback_name ('session') when unknown. Must read grammatically with BOTH (mind case/article: e.g. ru dative). Sentence case, no full stop." },
 	"mobile.session.back_to_session": { role: "button", note: "Back-navigation label on the video and agent-job screens when the parent session has no name of its own (replaces 'Back to {name}' in that case). Full phrase, sentence case, no full stop; free to adapt article/case/word order. Reuse the locale's 'session' term." },
 	"mobile.session.chip.effort_change_failed": { role: "status", note: "Inline error under the composer when changing the session's effort level failed. 'Effort' is the product's word for how hard the model works." },
+	"mobile.session.chip.effort_label": { role: "meta", note: "Spoken label of a conversation's effort (reasoning effort) level (the composer's run-settings button reads it). {effort} is the level's name. Use the same word for 'effort' as mobile.home.chip.effort_chosen." },
 	"mobile.session.chip.effort_resume_hint": { role: "help", note: "Accessibility hint on the effort (reasoning effort) chip of an ENDED session: shown but disabled until the session is resumed. Use the same word for 'effort' as mobile.home effort copy. Imperative, no final full stop." },
 	"mobile.session.chip.model_change_failed": { role: "status", note: "Inline error under the composer when changing the session's model failed. One short sentence." },
 	"mobile.session.chip.model_default": { role: "meta", note: "The model chip when the reader has chosen no model: the computer's configured default is what a start uses. One word, sentence case, no final full stop — it sits in a chip beside the folder name and must stay short enough for a 320 pt row." },
+	"mobile.session.chip.model_label": { role: "meta", note: "Spoken label of a conversation's model (the composer's run-settings button reads it). {model} is the model's name, untranslated. Use the same word for 'model' as mobile.home.chip.model_chosen." },
 	"mobile.session.chip.model_resume_hint": { role: "help", note: "Accessibility hint on the model chip of an ENDED session: the chip shows the model it last ran with but is disabled, because nothing can change a model until the session is resumed. Imperative, no final full stop." },
 	"mobile.session.chip.model_unknown": { role: "meta", note: "The model chip when the model list could not be read at all. One word, sentence case, no final full stop: the accessible name carries the explanation. Never renders as a model name." },
 	"mobile.session.chip.model_unrecorded_hint": { role: "help", note: "Accessibility hint on the model chip of an ended session when no model was ever recorded; the chip itself shows a dash. A statement, no final full stop." },
@@ -8129,9 +8137,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.back_to": "Volver a {name}",
 		"mobile.session.back_to_session": "Volver a la sesión",
 		"mobile.session.chip.effort_change_failed": "No se pudo cambiar el esfuerzo.",
+		"mobile.session.chip.effort_label": "Esfuerzo, {effort}",
 		"mobile.session.chip.effort_resume_hint": "Reanuda esta sesión para cambiar el esfuerzo",
 		"mobile.session.chip.model_change_failed": "No se pudo cambiar el modelo.",
 		"mobile.session.chip.model_default": "Predeterminado",
+		"mobile.session.chip.model_label": "Modelo, {model}",
 		"mobile.session.chip.model_resume_hint": "Reanuda esta sesión para cambiar el modelo",
 		"mobile.session.chip.model_unknown": "Desconocido",
 		"mobile.session.chip.model_unrecorded_hint": "Esta sesión no ha registrado ningún modelo",
@@ -9616,9 +9626,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.back_to": "Retour à {name}",
 		"mobile.session.back_to_session": "Retour à la session",
 		"mobile.session.chip.effort_change_failed": "Impossible de changer le niveau d’effort.",
+		"mobile.session.chip.effort_label": "Effort, {effort}",
 		"mobile.session.chip.effort_resume_hint": "Reprenez cette session pour changer l’effort",
 		"mobile.session.chip.model_change_failed": "Impossible de changer de modèle.",
 		"mobile.session.chip.model_default": "Par défaut",
+		"mobile.session.chip.model_label": "Modèle, {model}",
 		"mobile.session.chip.model_resume_hint": "Reprenez cette session pour changer de modèle",
 		"mobile.session.chip.model_unknown": "Inconnu",
 		"mobile.session.chip.model_unrecorded_hint": "Cette session n’a enregistré aucun modèle",
@@ -11103,9 +11115,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.back_to": "{name} पर वापस जाएँ",
 		"mobile.session.back_to_session": "सत्र पर वापस जाएँ",
 		"mobile.session.chip.effort_change_failed": "प्रयास नहीं बदला जा सका।",
+		"mobile.session.chip.effort_label": "प्रयास, {effort}",
 		"mobile.session.chip.effort_resume_hint": "प्रयास बदलने के लिए यह सत्र फिर से शुरू करें",
 		"mobile.session.chip.model_change_failed": "मॉडल नहीं बदला जा सका।",
 		"mobile.session.chip.model_default": "डिफ़ॉल्ट",
+		"mobile.session.chip.model_label": "मॉडल, {model}",
 		"mobile.session.chip.model_resume_hint": "मॉडल बदलने के लिए यह सत्र फिर से शुरू करें",
 		"mobile.session.chip.model_unknown": "अज्ञात",
 		"mobile.session.chip.model_unrecorded_hint": "इस सत्र ने कोई मॉडल दर्ज नहीं किया है",
@@ -12590,9 +12604,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.back_to": "Назад: {name}",
 		"mobile.session.back_to_session": "Назад к сессии",
 		"mobile.session.chip.effort_change_failed": "Не удалось изменить усилие.",
+		"mobile.session.chip.effort_label": "Усилие, {effort}",
 		"mobile.session.chip.effort_resume_hint": "Возобновите этот сеанс, чтобы изменить усилие",
 		"mobile.session.chip.model_change_failed": "Не удалось сменить модель.",
 		"mobile.session.chip.model_default": "По умолчанию",
+		"mobile.session.chip.model_label": "Модель, {model}",
 		"mobile.session.chip.model_resume_hint": "Возобновите этот сеанс, чтобы сменить модель",
 		"mobile.session.chip.model_unknown": "Неизвестно",
 		"mobile.session.chip.model_unrecorded_hint": "Этот сеанс не сохранил модель",
@@ -14077,9 +14093,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.back_to": "{name} پر واپس جائیں",
 		"mobile.session.back_to_session": "سیشن پر واپس جائیں",
 		"mobile.session.chip.effort_change_failed": "استدلال کی شدت تبدیل نہیں ہو سکی۔",
+		"mobile.session.chip.effort_label": "استدلال کی شدت، {effort}",
 		"mobile.session.chip.effort_resume_hint": "کوشش بدلنے کے لیے یہ سیشن دوبارہ شروع کریں",
 		"mobile.session.chip.model_change_failed": "ماڈل تبدیل نہیں ہو سکا۔",
 		"mobile.session.chip.model_default": "ڈیفالٹ",
+		"mobile.session.chip.model_label": "ماڈل، {model}",
 		"mobile.session.chip.model_resume_hint": "ماڈل بدلنے کے لیے یہ سیشن دوبارہ شروع کریں",
 		"mobile.session.chip.model_unknown": "نامعلوم",
 		"mobile.session.chip.model_unrecorded_hint": "اس سیشن نے کوئی ماڈل درج نہیں کیا",
@@ -15564,9 +15582,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.back_to": "Quay lại {name}",
 		"mobile.session.back_to_session": "Quay lại phiên",
 		"mobile.session.chip.effort_change_failed": "Không thể đổi mức suy luận.",
+		"mobile.session.chip.effort_label": "Mức suy luận, {effort}",
 		"mobile.session.chip.effort_resume_hint": "Tiếp tục phiên này để đổi mức suy luận",
 		"mobile.session.chip.model_change_failed": "Không thể đổi mô hình.",
 		"mobile.session.chip.model_default": "Mặc định",
+		"mobile.session.chip.model_label": "Mô hình, {model}",
 		"mobile.session.chip.model_resume_hint": "Tiếp tục phiên này để đổi mô hình",
 		"mobile.session.chip.model_unknown": "Không rõ",
 		"mobile.session.chip.model_unrecorded_hint": "Phiên này chưa ghi lại mô hình nào",
@@ -17051,9 +17071,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.back_to": "返回{name}",
 		"mobile.session.back_to_session": "返回会话",
 		"mobile.session.chip.effort_change_failed": "无法更改推理强度。",
+		"mobile.session.chip.effort_label": "推理强度，{effort}",
 		"mobile.session.chip.effort_resume_hint": "恢复此会话以更改推理强度",
 		"mobile.session.chip.model_change_failed": "无法更改模型。",
 		"mobile.session.chip.model_default": "默认",
+		"mobile.session.chip.model_label": "模型，{model}",
 		"mobile.session.chip.model_resume_hint": "恢复此会话以更改模型",
 		"mobile.session.chip.model_unknown": "未知",
 		"mobile.session.chip.model_unrecorded_hint": "此会话未记录模型",

@@ -8,6 +8,7 @@ import {
 	FOCUS_FOOTER_GAP,
 	FOCUS_HEADER_GAP,
 	focusScrollTarget,
+	pinnedRevealScroll,
 } from "@/ui/sheet-scroll";
 
 /** The production path: `measureLayout` yields CONTENT coordinates (the numbers
@@ -42,5 +43,23 @@ describe("focusScrollTarget", () => {
 		expect(
 			focusScrollTarget({ ...content, blockTop: 2, blockHeight: 200 }),
 		).toBe(0);
+	});
+});
+
+/* Design round 4, D1 (#335): a pinned region that appears over a scrolled body
+ *  takes its height from the top of the body, so at the same offset the rows
+ *  under the reader's finger move down by that height. */
+describe("pinnedRevealScroll", () => {
+	it("moves the offset down by the pinned height, so the rows stay where they were", () => {
+		// The design frame: 390 pt at 100 %, revealed at 200 under an 83 pt region.
+		expect(pinnedRevealScroll({ y: 200, pinnedHeight: 83 })).toBe(283);
+	});
+
+	it("leaves a body at its top alone: a region pinned when the sheet opens moves nothing", () => {
+		expect(pinnedRevealScroll({ y: 0, pinnedHeight: 83 })).toBeNull();
+	});
+
+	it("does nothing before the region has a height", () => {
+		expect(pinnedRevealScroll({ y: 200, pinnedHeight: 0 })).toBeNull();
 	});
 });

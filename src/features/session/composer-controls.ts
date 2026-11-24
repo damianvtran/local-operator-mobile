@@ -36,6 +36,26 @@ export type ControlsPlan = {
 	queued: { form: "label" | "count"; width: number } | null;
 };
 
+/**
+ * Whether More carries rows of its own, apart from controls the row displaced.
+ * Every field is required so a new More row cannot be left out of the decision
+ * that keeps More on the card: Home passes only the identity row, the "second
+ * door" to the agent-or-team picker once the hero pill has scrolled away
+ * (D-S2/D-S15), and an older relay explains itself only there (round 5, R5-1).
+ */
+export const moreHasRows = (input: {
+	context: boolean;
+	cost: boolean;
+	queued: number;
+	questions: boolean;
+	identity: boolean;
+}): boolean =>
+	input.context ||
+	input.cost ||
+	input.queued > 0 ||
+	input.questions ||
+	input.identity;
+
 export const composerControlsPlan = (input: {
 	/** The zone's measured width, pt. `<= 0` is "not measured yet". */
 	width: number;
@@ -47,7 +67,8 @@ export const composerControlsPlan = (input: {
 	/** The field has the keyboard: the trailing slot is the way to put it down,
 	 *  and a displaced control waits in More, one blur away. */
 	dismiss: boolean;
-	/** More has rows of its own (usage, cost, queue, questions). */
+	/** More has rows of its own (`moreHasRows`: usage, cost, queue,
+	 *  questions, identity). */
 	moreRows: boolean;
 	/** The queued count's two widths, when the card carries it. */
 	queued: { label: number; count: number } | null;
@@ -203,7 +224,11 @@ export type RunSettingSection =
 	| { kind: "list" }
 	| { kind: "ladder"; rungs: readonly string[] }
 	| { kind: "none" }
-	| { kind: "locked"; lock: RunSettingLock };
+	| { kind: "locked"; lock: RunSettingLock }
+	/** Nothing to say: the phone does not know the model's effort (an ended
+	 *  local chat whose model is not in the stored catalogue, or whose catalogue
+	 *  could not be read). The section is not drawn, as main hid the chip. */
+	| { kind: "hidden" };
 
 /**
  * The sheet's current-value line ("Opus 5 · High") and More's run-settings row
@@ -243,8 +268,10 @@ export const sessionRunSettings = (input: {
 	ended: boolean;
 	/** An ended LOCAL chat on main's stored-model lane (PR #350/#353): it
 	 *  chooses before it reopens, so a missing effort is the stored catalogue
-	 *  loading or a model without rungs, never "resume to change". */
-	stored?: { loading: boolean } | null;
+	 *  loading, a model without rungs, or a model the phone cannot look up —
+	 *  never "resume to change". `modelKnown`: the chat's model is in the
+	 *  stored catalogue (or was just picked from it). */
+	stored?: { loading: boolean; failed: boolean; modelKnown: boolean } | null;
 }): {
 	model: RunSettingSection;
 	effort: RunSettingSection;
@@ -275,7 +302,14 @@ export const sessionRunSettings = (input: {
 				? { kind: "locked", lock: effortLock }
 				: input.ladder.length > 0
 					? { kind: "ladder", rungs: input.ladder }
-					: { kind: "none" },
+					: /* "No effort setting" is a claim about a known model; with
+						 *  no catalogue row, or no catalogue, the phone cannot make it
+						 *  (round 5, R5-3 / QA Q1). */
+						effortChip === null &&
+							input.stored &&
+							(input.stored.failed || !input.stored.modelKnown)
+						? { kind: "hidden" }
+						: { kind: "none" },
 		summary: runSettingsSummary(input.chips.model, effortChip),
 	};
 };
@@ -312,8 +346,16 @@ export const sessionFolderControl = (
  * at all, it keeps #343's fix (the field stays above the keyboard, TestFlight
  * 1295). Reached once the reader has scrolled and the models' heading is at the
  * top of the body, or the body is at its end when it is too short to bring the
- * heading up. Nothing is decided before the body and the section are measured:
- * an unmeasured or uncapped first frame must not pin a field at the top.
+ * heading up. A body that does not scroll already shows the models, so the
+ * search is there from the start (design round 4, D3). Nothing is decided
+ * before the body and the section are measured: an unmeasured first frame must
+ * not pin a field at the top.
+ *
+ * The slack is the Sheet's own for the same facts (`syncBodyCue`): a body
+ * scrolls when its content exceeds the viewport by more than 1 pt, and is at
+ * its end within 2 pt. The end offset is converted from device pixels and the
+ * end is a difference of two measured heights, so the last scroll event can
+ * land a fraction short (round 5, R5-2).
  */
 export const modelSearchReached = (input: {
 	y: number;
@@ -324,8 +366,11 @@ export const modelSearchReached = (input: {
 }): boolean => {
 	if (input.modelTop === null || input.viewport <= 0 || input.content <= 0)
 		return false;
+	if (input.content <= input.viewport + 1) return true;
 	if (input.y <= 0) return false;
-	return input.y >= Math.min(input.modelTop, input.content - input.viewport);
+	return (
+		input.y >= input.modelTop || input.y >= input.content - input.viewport - 2
+	);
 };
 
 /**

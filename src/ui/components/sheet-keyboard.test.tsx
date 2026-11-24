@@ -201,6 +201,8 @@ vi.mock("@/ui/direction", async () => {
 			React.createElement(View, { ...p, testID: "column" }),
 		/* The run-settings sheet's section headings (`SectionHeader`) read it. */
 		useDirection: () => "ltr",
+		/* Its summary line states the page's base; `{}` on an LTR page. */
+		useComposedDir: () => ({}),
 	};
 });
 vi.mock("@/ui/components/modal-stack-entry", async () => {
@@ -570,6 +572,37 @@ describe("RunSettingsPicker model search (TestFlight 1295, #335)", () => {
 		await layoutModels();
 		await scrollBody(0);
 		expect(node(CONTROL.homeModelSearch)).toBeUndefined();
+	});
+
+	it("shows the search at once when the body does not scroll: the models are already on screen (D3)", async () => {
+		await mountPicker(() => {});
+		await layoutModels();
+		await scrollBody(0, 1200, 1100);
+		expect(node(CONTROL.homeModelSearch)?.path).toContain(SURFACE.sheetPinned);
+	});
+
+	it("keeps the rows still when the search appears over a scrolled body (design D1)", async () => {
+		await mountPicker(() => {});
+		await layoutModels();
+		/* The mocked ScrollView keeps no instance; React 19 hands the Sheet's
+		 *  ref through as a prop, so the test gives it the one method used. */
+		const scrollTo = vi.fn();
+		const body = node(SURFACE.sheetBody)?.props.ref as {
+			current: unknown;
+		};
+		body.current = { scrollTo };
+		await scrollBody(MODEL_TOP);
+		expect(scrollTo).not.toHaveBeenCalled();
+		await layout(SURFACE.sheetPinned, PINNED);
+		expect(scrollTo).toHaveBeenCalledTimes(1);
+		expect(scrollTo).toHaveBeenCalledWith({
+			y: MODEL_TOP + PINNED,
+			animated: false,
+		});
+		/* A later re-measure of the same region (rotation, text size) is not a
+		 *  second appearance. */
+		await layout(SURFACE.sheetPinned, PINNED + 10);
+		expect(scrollTo).toHaveBeenCalledTimes(1);
 	});
 
 	it("never pins a search over a list short enough to see whole", async () => {

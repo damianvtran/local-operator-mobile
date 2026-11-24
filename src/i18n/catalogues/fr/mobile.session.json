@@ -73,6 +73,8 @@
 	"mobile.session.find.hint": "Recherche les messages dans la transcription chargée sur cet appareil",
 	"mobile.session.chip.model_change_failed": "Impossible de changer de modèle.",
 	"mobile.session.chip.effort_change_failed": "Impossible de changer le niveau d’effort.",
+	"mobile.session.chip.model_label": "Modèle, {model}",
+	"mobile.session.chip.effort_label": "Effort, {effort}",
 	"mobile.session.composer.retained_instruction": "Une instruction précédente a peut-être été transmise. Réessayez d’envoyer cette instruction avant de transmettre votre brouillon actuel.",
 	"mobile.session.composer.settings_not_applied": "La session a été rouverte, mais le modèle ou le niveau d’effort choisi n’a pas pu être appliqué : rien n’a donc été envoyé. Réessayez, ou choisissez un autre modèle ou niveau d’effort.",
 	"mobile.session.tray.context": "{percent} % du contexte",

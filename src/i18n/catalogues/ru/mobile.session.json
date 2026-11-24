@@ -73,6 +73,8 @@
 	"mobile.session.find.hint": "Ищет сообщения в транскрипте, загруженном на это устройство",
 	"mobile.session.chip.model_change_failed": "Не удалось сменить модель.",
 	"mobile.session.chip.effort_change_failed": "Не удалось изменить усилие.",
+	"mobile.session.chip.model_label": "Модель, {model}",
+	"mobile.session.chip.effort_label": "Усилие, {effort}",
 	"mobile.session.composer.retained_instruction": "Предыдущее указание, возможно, уже доставлено. Отправьте это указание ещё раз, прежде чем отправлять текущий черновик.",
 	"mobile.session.composer.settings_not_applied": "Сессия снова открыта, но выбранную модель или усилие применить не удалось, поэтому ничего не отправлено. Повторите попытку или выберите другую модель или усилие.",
 	"mobile.session.tray.context": "{percent}% контекста",

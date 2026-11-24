@@ -77,6 +77,7 @@ import {
 	customMarkInset,
 	type FolderSource,
 	folderControlLabel,
+	moreHasRows,
 	runSettingsControl,
 	runSettingsSummary,
 } from "@/features/session/composer-controls";
@@ -2009,8 +2010,13 @@ export const Composer = ({
 	 *  row) has no shape to take. `composerControlsPlan` decides who fits from
 	 *  the zone's width, which is `flex-1` between fixed siblings and so cannot
 	 *  feed itself; what does not fit becomes a row in More. */
-	const moreRows =
-		!!contextLabel || !!costLabel || queuedCount > 0 || questions !== null;
+	const moreRows = moreHasRows({
+		context: !!contextLabel,
+		cost: !!costLabel,
+		queued: queuedCount,
+		questions: questions !== null,
+		identity: identityRow !== null,
+	});
 	const queuedOnCard = queueOnCard && queuedCount > 0;
 	const controlsPlan = composerControlsPlan({
 		width: zoneWidth,

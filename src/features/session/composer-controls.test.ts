@@ -7,6 +7,7 @@ import {
 	folderControlLabel,
 	folderSource,
 	modelSearchReached,
+	moreHasRows,
 	runSettingsControl,
 	runSettingsSummary,
 	sessionFolderControl,
@@ -74,6 +75,35 @@ describe("composerControlsPlan (issue #325)", () => {
 			settings: true,
 			trailing: "more",
 		});
+	});
+
+	it("keeps More on Home when its only row is the agent-or-team picker (round 5, R5-1)", () => {
+		/* Home passes no usage, cost, queue or questions; the identity row is
+		 *  the "second door" once the hero pill has scrolled away (D-S2/D-S15),
+		 *  and an older relay explains itself only there. */
+		const none = {
+			context: false,
+			cost: false,
+			queued: 0,
+			questions: false,
+			identity: false,
+		};
+		expect(moreHasRows(none)).toBe(false);
+		const home = moreHasRows({ ...none, identity: true });
+		expect(home).toBe(true);
+		expect(plan({ width: ZONE.w390idle, moreRows: home })).toStrictEqual({
+			folder: true,
+			settings: true,
+			trailing: "more",
+			queued: null,
+		});
+		for (const own of [
+			{ context: true },
+			{ cost: true },
+			{ queued: 2 },
+			{ questions: true },
+		])
+			expect(moreHasRows({ ...none, ...own })).toBe(true);
 	});
 
 	it("moves the folder into More first, never More itself, when the zone is short", () => {
@@ -375,7 +405,7 @@ describe("sessionRunSettings: what the session's run-settings sheet shows", () =
 				chips: { model, effort: null },
 				ladder: [],
 				ended: true,
-				stored: { loading: true },
+				stored: { loading: true, failed: false, modelKnown: false },
 			}).effort,
 		).toStrictEqual({
 			kind: "locked",
@@ -386,7 +416,7 @@ describe("sessionRunSettings: what the session's run-settings sheet shows", () =
 				chips: { model, effort: null },
 				ladder: [],
 				ended: true,
-				stored: { loading: false },
+				stored: { loading: false, failed: false, modelKnown: true },
 			}).effort,
 		).toStrictEqual({ kind: "none" });
 		expect(
@@ -394,12 +424,36 @@ describe("sessionRunSettings: what the session's run-settings sheet shows", () =
 				chips: { model, effort: value("High", "Effort, High") },
 				ladder: ["low", "high"],
 				ended: true,
-				stored: { loading: false },
+				stored: { loading: false, failed: false, modelKnown: true },
 			}),
 		).toMatchObject({
 			model: { kind: "list" },
 			effort: { kind: "ladder", rungs: ["low", "high"] },
 		});
+	});
+
+	it("hides an ended local chat's effort when the phone cannot know it, as main did (R5-3/Q1)", () => {
+		/* Main hid the effort chip here. "This model has no effort setting"
+		 *  would be a claim about a model the stored catalogue does not hold. */
+		const model = value("mock", "Model, mock");
+		// The recorded model is not in the stored catalogue.
+		expect(
+			sessionRunSettings({
+				chips: { model, effort: null },
+				ladder: [],
+				ended: true,
+				stored: { loading: false, failed: false, modelKnown: false },
+			}).effort,
+		).toStrictEqual({ kind: "hidden" });
+		// The stored catalogue could not be read (Retry is in the model section).
+		expect(
+			sessionRunSettings({
+				chips: { model, effort: null },
+				ladder: [],
+				ended: true,
+				stored: { loading: false, failed: true, modelKnown: false },
+			}).effort,
+		).toStrictEqual({ kind: "hidden" });
 	});
 
 	it("says a value still loading is loading, before the first frame", () => {
@@ -547,7 +601,7 @@ describe("modelSearchReached: the run-settings sheet pins its model search only 
 				viewport: 400,
 				content: 520,
 				modelTop: 180,
-				y: 119,
+				y: 117,
 			}),
 		).toBe(false);
 		expect(
@@ -558,6 +612,31 @@ describe("modelSearchReached: the run-settings sheet pins its model search only 
 				y: 120,
 			}),
 		).toBe(true);
+	});
+	it("treats a fractional end offset as the end, with the Sheet's own 2 pt tolerance (R5-2)", () => {
+		/* The native end offset is converted from device pixels and the end is a
+		 *  difference of two separately measured heights, so the last scroll
+		 *  event can land a fraction short of `content - viewport`. */
+		const short = { viewport: 400, content: 520, modelTop: 180 };
+		expect(modelSearchReached({ ...short, y: 119.5 })).toBe(true);
+		expect(modelSearchReached({ ...short, y: 118 })).toBe(true);
+		expect(modelSearchReached({ ...short, y: 117.9 })).toBe(false);
+	});
+	it("shows the search at once when the body does not scroll: the models are on screen (D3)", () => {
+		expect(
+			modelSearchReached({ viewport: 900, content: 860, modelTop: 180, y: 0 }),
+		).toBe(true);
+		// Within the Sheet's 1 pt "scrollable" slack it still fits.
+		expect(
+			modelSearchReached({ viewport: 900, content: 901, modelTop: 180, y: 0 }),
+		).toBe(true);
+		expect(
+			modelSearchReached({ viewport: 900, content: 902, modelTop: 180, y: 0 }),
+		).toBe(false);
+		// Still nothing before the section is measured.
+		expect(
+			modelSearchReached({ viewport: 900, content: 860, modelTop: null, y: 0 }),
+		).toBe(false);
 	});
 	it("decides nothing before the body and the section are measured", () => {
 		expect(modelSearchReached({ ...facts, modelTop: null, y: 300 })).toBe(

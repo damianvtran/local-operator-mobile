@@ -73,6 +73,8 @@
 	"mobile.session.find.hint": "Busca mensajes en la transcripción cargada en este dispositivo",
 	"mobile.session.chip.model_change_failed": "No se pudo cambiar el modelo.",
 	"mobile.session.chip.effort_change_failed": "No se pudo cambiar el esfuerzo.",
+	"mobile.session.chip.model_label": "Modelo, {model}",
+	"mobile.session.chip.effort_label": "Esfuerzo, {effort}",
 	"mobile.session.composer.retained_instruction": "Puede que ya se haya entregado una instrucción anterior. Reintenta enviarla antes de enviar tu borrador actual.",
 	"mobile.session.composer.settings_not_applied": "La sesión se reabrió, pero no se pudo aplicar el modelo o el esfuerzo que elegiste, así que no se envió nada. Vuelve a intentarlo o elige otro modelo u otro esfuerzo.",
 	"mobile.session.tray.context": "{percent}% de contexto",

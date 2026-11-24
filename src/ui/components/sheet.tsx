@@ -74,7 +74,11 @@ import {
 	settleResize,
 	sheetResizeSizes,
 } from "@/ui/sheet-resize";
-import { FOCUS_HEADER_GAP, focusScrollTarget } from "@/ui/sheet-scroll";
+import {
+	FOCUS_HEADER_GAP,
+	focusScrollTarget,
+	pinnedRevealScroll,
+} from "@/ui/sheet-scroll";
 import { useTextScale } from "@/ui/text-scale-provider";
 import { DURATIONS, EASINGS } from "@/ui/tokens.gen";
 import {
@@ -800,6 +804,16 @@ export const Sheet = ({
 	 *  AGAINST THE SCROLL VIEW, so the numbers are content positions — the space
 	 *  `scrollTo` takes — and no window frame or offset is involved. */
 	const bodyRef = useRef<ScrollView>(null);
+	/* Whether the current `pinned` region has been laid out once. Its FIRST
+	 *  layout over a scrolled body moves the body's top down by its height, so
+	 *  the body scrolls by the same amount and the rows stay put (design round
+	 *  4, D1; `pinnedRevealScroll`). A later re-measure (rotation, text size) is
+	 *  not an appearance, and a region that goes away arms the next one. */
+	const pinnedLaidOut = useRef(false);
+	const pinnedPresent = pinned !== undefined;
+	useEffect(() => {
+		if (!pinnedPresent) pinnedLaidOut.current = false;
+	}, [pinnedPresent]);
 	/* The last field asked to be revealed, so the reveal can be repeated once the
 	 *  keyboard has finished moving the sheet (see the effect below). */
 	const lastReveal = useRef<{ block: View | null; field: View | null } | null>(
@@ -1370,9 +1384,18 @@ export const Sheet = ({
 										 *  boundary, mirrored. */
 										className="px-4 border-b border-hairline"
 										testID={SURFACE.sheetPinned}
-										onLayout={(event) =>
-											setPinnedHeight(event.nativeEvent.layout.height)
-										}
+										onLayout={(event) => {
+											const height = event.nativeEvent.layout.height;
+											setPinnedHeight(height);
+											if (pinnedLaidOut.current) return;
+											pinnedLaidOut.current = true;
+											const y = pinnedRevealScroll({
+												y: scrollFacts.current.y,
+												pinnedHeight: height,
+											});
+											if (y !== null)
+												bodyRef.current?.scrollTo({ y, animated: false });
+										}}
 									>
 										{pinned}
 									</View>

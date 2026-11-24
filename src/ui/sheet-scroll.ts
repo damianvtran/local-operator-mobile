@@ -58,3 +58,21 @@ export const focusScrollTarget = ({
 	if (fieldHeight <= 0) return Math.max(0, blockTop - headerGap);
 	return Math.max(0, fieldTop + fieldHeight - (viewportHeight - footerGap));
 };
+
+/**
+ * The body offset that keeps the rows still when a `pinned` region APPEARS over
+ * a scrolled body (design round 4, D1: the run-settings sheet pins its model
+ * search only once the reader reaches the models, #335). The region takes its
+ * height from the top of the body, so at the same offset everything under the
+ * reader's finger moved down by that height — 43 to 62 pt in the design frames,
+ * with the models' heading left half under the region's divider. `null` when
+ * nothing moved: a body at its top (a region pinned as the sheet opens), or a
+ * region not yet measured.
+ */
+export const pinnedRevealScroll = ({
+	y,
+	pinnedHeight,
+}: {
+	y: number;
+	pinnedHeight: number;
+}): number | null => (y > 0 && pinnedHeight > 0 ? y + pinnedHeight : null);

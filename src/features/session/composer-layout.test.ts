@@ -527,7 +527,7 @@ describe("the card's icon controls (issue #325)", () => {
 		expect(plan).toContain("moreRows,");
 		/* More is shown for its own rows or a displaced control, never empty. */
 		expect(code).toContain(
-			"const moreRows = !!contextLabel || !!costLabel || queuedCount > 0 || questions !== null;",
+			"const moreRows = moreHasRows({ context: !!contextLabel, cost: !!costLabel, queued: queuedCount, questions: questions !== null, identity: identityRow !== null, });",
 		);
 		expect(zone).toContain('controlsPlan.trailing === "more" ? (');
 	});

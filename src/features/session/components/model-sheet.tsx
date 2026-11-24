@@ -22,6 +22,7 @@ import { Alert } from "@/ui/components/alert";
 import { Badge } from "@/ui/components/badge";
 import { Button } from "@/ui/components/button";
 import { SectionHeader } from "@/ui/components/section-header";
+import { useComposedDir } from "@/ui/direction";
 import { CONTROL_DISABLED_INK, cx } from "@/ui/variants";
 
 /**
@@ -289,6 +290,7 @@ export const RunSettingsSheet = ({
 	/** A line that applies to both sections (the home's "options are fixed"). */
 	preface?: ReactNode;
 	model: ReactNode;
+	/** `null` draws no effort section at all (`{ kind: "hidden" }`). */
 	effort: ReactNode;
 	/** A search over the model list (the home's long catalogue). Pinned under
 	 *  the title, but only once the reader reaches the models: see below. */
@@ -309,6 +311,10 @@ export const RunSettingsSheet = ({
 		if (!visible) setSearchShown(false);
 	}, [visible]);
 	const searchable = modelSearch !== null;
+	/* The summary leads with the model's Latin name, so on an RTL page its base
+	 *  would follow that letter and sit on the left under right-aligned
+	 *  headings (design round 4, D2). */
+	const composedDir = useComposedDir();
 	return (
 		<Sheet
 			visible={visible}
@@ -330,7 +336,14 @@ export const RunSettingsSheet = ({
 		>
 			{summary !== null ? (
 				<View className="px-3 pb-2" testID={SURFACE.runSettingsSummary}>
-					<Text className="font-mono text-mono text-ink">{summary}</Text>
+					<Text
+						/* No caller style prop may join this element: the spread IS the
+						 *  native style (`@/ui/direction`). */
+						{...composedDir}
+						className="font-mono text-mono text-ink"
+					>
+						{summary}
+					</Text>
 				</View>
 			) : null}
 			{error !== null ? (
@@ -339,14 +352,16 @@ export const RunSettingsSheet = ({
 				</View>
 			) : null}
 			{preface}
-			<View testID={effortTestID}>
-				{/* On the rows' own 12 pt inset, so a heading and its rows share one
-				 *  leading edge. */}
-				<View className="px-3">
-					<SectionHeader label={headings.effort} />
+			{effort === null ? null : (
+				<View testID={effortTestID}>
+					{/* On the rows' own 12 pt inset, so a heading and its rows share one
+					 *  leading edge. */}
+					<View className="px-3">
+						<SectionHeader label={headings.effort} />
+					</View>
+					{effort}
 				</View>
-				{effort}
-			</View>
+			)}
 			<View
 				testID={modelTestID}
 				onLayout={(event) => setModelTop(event.nativeEvent.layout.y)}
@@ -429,7 +444,7 @@ export const SessionRunSettingsSheet = ({
 			modelTestID={SURFACE.modelSheet}
 			effortTestID={SURFACE.effortSheet}
 			effort={
-				effort.kind === "locked" ? (
+				effort.kind === "hidden" ? null : effort.kind === "locked" ? (
 					<LockedSetting lock={effort.lock} />
 				) : effort.kind === "ladder" ? (
 					<EffortRungGroup>

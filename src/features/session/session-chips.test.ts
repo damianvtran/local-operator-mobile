@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
 import type { ModelEntry } from "@/contracts/types.gen";
 import {
@@ -9,6 +9,7 @@ import {
 	friendlyModelName,
 	sessionChipLabels,
 } from "@/features/session/session-chips";
+import { resetLocaleSource, setLocaleSource } from "@/i18n";
 
 /**
  * TestFlight 578: an ended session ("Disk: recl… Ended") showed `n/a` / `n/a`
@@ -203,5 +204,27 @@ describe("sessionChipLabels — an attached session", () => {
 			ended: false,
 		});
 		expect(model.kind).toBe("loading");
+	});
+});
+
+/* QA round 4, Q2 (#335): the ended chat's chips are the run-settings icon's
+ *  spoken name too. */
+/** The Russian effort name's lead word. */
+const RU_EFFORT = /^Усилие, /;
+
+describe("sessionChipLabels — keyed spoken names", () => {
+	afterEach(() => resetLocaleSource());
+
+	it("names an ended chat's model and effort in the reader's catalogue (ru)", () => {
+		setLocaleSource(() => "ru");
+		const { model, effort } = sessionChipLabels({
+			projection: DURABLE,
+			row: { model_label: "claude-opus-5-5", effort: "medium" },
+			models: [OPUS],
+			connection: "connected",
+			ended: true,
+		});
+		expect(model.accessibilityLabel).toBe("Модель, Claude Opus 5.5");
+		expect(effort?.accessibilityLabel).toMatch(RU_EFFORT);
 	});
 });

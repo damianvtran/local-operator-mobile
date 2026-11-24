@@ -30,7 +30,12 @@ vi.mock("react-native", () => ({
 			{ "data-testid": props.testID as string | undefined },
 			kids(props),
 		),
-	Text: (props: Props) => createElement("span", null, kids(props)),
+	Text: (props: Props) =>
+		createElement(
+			"span",
+			{ dir: props.dir as string | undefined },
+			kids(props),
+		),
 	Pressable: (props: Props) =>
 		createElement(
 			"button",
@@ -43,6 +48,11 @@ vi.mock("react-native", () => ({
 			kids(props),
 		),
 	ScrollView: (props: Props) => createElement("div", null, kids(props)),
+	/* `@/ui/direction` reads it at import; the web branch emits `dir`. */
+	Platform: {
+		OS: "web",
+		select: (o: Record<string, unknown>) => o.web ?? o.default,
+	},
 }));
 const sheet = (props: Props) =>
 	props.visible
@@ -68,6 +78,13 @@ vi.mock("@/ui/components/button", () => ({
 			{ type: "button", "data-testid": props.testID as string },
 			props.label as string,
 		),
+}));
+/* The page's direction for composed lines (`useComposedDir`): `{}` on an LTR
+ *  page, `{ dir: "rtl" }` on web under Urdu. */
+const page = vi.hoisted(() => ({ composed: {} as { dir?: "rtl" } }));
+vi.mock("@/ui/direction", async (importOriginal) => ({
+	...(await importOriginal<typeof import("@/ui/direction")>()),
+	useComposedDir: () => page.composed,
 }));
 vi.mock("@/ui/components/section-header", () => ({
 	SectionHeader: (props: Props) =>
@@ -144,6 +161,27 @@ describe("the session's run-settings sheet (issue #325)", () => {
 		const html = draw({ effort: { kind: "none" } });
 		expect(html).toContain("This model has no effort setting.");
 		expect(html).not.toContain(effortRungId("high"));
+	});
+
+	it("draws no effort section when the phone cannot know the effort (R5-3/Q1)", () => {
+		const html = draw({ effort: { kind: "hidden" }, summary: "mock" });
+		expect(html).not.toContain(`data-testid="${SURFACE.effortSheet}"`);
+		expect(html).not.toContain("This model has no effort setting.");
+		expect(html).not.toContain("<h3>Effort</h3>");
+		expect(html).toContain(`data-testid="${SURFACE.modelSheet}"`);
+	});
+
+	it("lays the summary out on the page's base, like the headings (design D2)", () => {
+		/* `Claude Opus 5 · درمیانی` starts with a Latin letter, so `dir="auto"`
+		 *  gave it an LTR base on an RTL sheet. */
+		page.composed = { dir: "rtl" };
+		try {
+			const html = draw({ summary: "Opus 5 · زیادہ" });
+			expect(html).toContain('<span dir="rtl">Opus 5 · زیادہ</span>');
+		} finally {
+			page.composed = {};
+		}
+		expect(draw({})).toContain("<span>Opus 5 · High</span>");
 	});
 
 	it("shows a value that cannot change read-only, with the reason, instead of dead rows (R1)", () => {
