@@ -253,8 +253,10 @@ describe("use-session wiring", () => {
 		new URL("./use-session.ts", import.meta.url),
 		"utf8",
 	);
-	it("routes both report timers through the hold, and only them", () => {
-		expect(source.match(HELD_TIMER_CALL)?.length).toBe(2);
+	it("routes the drop report, reconnect deadline and retry through the hold", () => {
+		// Three sites: the graced drop report, a reconnect's overdue deadline and
+		// the backoff retry (#369 R2-2: a retry must not open while backgrounded).
+		expect(source.match(HELD_TIMER_CALL)?.length).toBe(3);
 		expect(source).toContain("OUTAGE_GRACE_MS,");
 		expect(source).toMatch(DEADLINE_HELD);
 		// The refusal path stays direct: a typed failure is never held.

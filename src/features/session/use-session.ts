@@ -53,7 +53,6 @@ import {
 } from "@/features/session/supplements";
 import type { ImageBytes, RelayError } from "@/relay";
 import { createRefusalGrace, isSilentGatewayWait } from "@/relay/refusal-grace";
-import { STREAM_SILENCE_MS } from "@/relay/sse";
 import { readEntry } from "@/state";
 import { isUsable } from "@/state/connection-store";
 import type { WarmScope } from "@/state/warm-cache";
@@ -431,15 +430,11 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 		 * effect: a new owner starts with no health to vouch for it. */
 		const grace = createRefusalGrace();
 		let retireStream: (() => void) | null = null;
-		let retryTimer: ReturnType<typeof setTimeout> | null = null;
-		// Widen only for missed seeds on this owner. HTTP/route failures still
-		// count for backoff but are not evidence that a body needs more time.
-		let missedSeeds = 0;
+		let cancelRetry: (() => void) | null = null;
 		const scheduleRetry = (
 			missedProjection: boolean,
 			retryAfterMs?: number,
 		) => {
-			if (missedProjection) missedSeeds += 1;
 			recovering.current = true;
 			setFacts((current) => ({
 				...current,
@@ -450,7 +445,13 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 			}));
 			const delay = reconnectDelay(retries.current, retryAfterMs);
 			retries.current += 1;
-			retryTimer = setTimeout(() => connect(), delay);
+			// A retry can become due while iOS is suspended too; do not open a
+			// replacement until the same resume hold used by failure deadlines clears.
+			cancelRetry?.();
+			cancelRetry = heldTimer(resumeClock.current, delay, () => {
+				cancelRetry = null;
+				connect();
+			});
 		};
 		const connect = () => {
 			if (!active || !sameProjectionOwner(owner, currentIdentity.current))
@@ -461,8 +462,8 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 			}
 			// A reload replaces the stream: leaving the old one open would put two
 			// subscribers on one projection and let a stale frame overtake a fresh one.
-			if (retryTimer !== null) clearTimeout(retryTimer);
-			retryTimer = null;
+			cancelRetry?.();
+			cancelRetry = null;
 			retireStream?.();
 			// The age is only reset for a session this screen has not shown before. It must
 			// NOT be reset per reconnect: `ageS` is "how long since anything arrived", and a
@@ -481,28 +482,53 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 			setError(null);
 			let retired = false;
 			let cancelDeadline: (() => void) | null = null;
+			let awaitingSeed = false;
 			const isCurrent = () =>
 				!retired &&
 				active &&
 				sameProjectionOwner(owner, currentIdentity.current);
+			/* The relay daemon writes NOTHING between this response's headers and
+			 * its seed frame (`daemon.py` `api_session_events`: the durable capture
+			 * runs first, keepalives start only after it). So silence after the
+			 * headers is a seed still being built -- slow under machine load or for
+			 * a cold conversation -- and the transport's byte watchdog
+			 * (`STREAM_SILENCE_MS`, the relay web app's `SILENCE_MS`) already bounds
+			 * it; a client timer here cut slow and still-arriving seeds (#369 R2-1).
+			 * A keepalive, or a finished projection we cannot use, BEFORE the seed
+			 * proves the daemon skipped this seed, and waiting cannot help: only
+			 * that evidence retires the body, through the held backoff. */
+			const missedSeed = () => {
+				if (!isCurrent() || !awaitingSeed) return;
+				retireStream?.();
+				sessions.getState().endStream(sessionId);
+				scheduleRetry(true);
+			};
 			const stream = endpoints.sessionStream(sessionId, {
 				inlineUi: true,
 				// Read per connect, not per effect: a stream opened before the first
 				// live list frame declares on its next reconnect (`steer-journal-order.ts`).
 				steerJournalOrder: steerJournalOrderDeclared(listStore.getState()),
 				onFrame: (frame) => {
+					if (!isCurrent()) return;
 					if (
-						!isCurrent() ||
 						frame.kind !== "projection" ||
 						frame.data.session_id !== sessionId
-					)
+					) {
+						// Unknown events stay ignorable: the streams are additive.
+						if (
+							(frame.kind === "ignorable" && frame.reason === "keepalive") ||
+							(frame.kind === "malformed" && frame.event === "projection") ||
+							frame.kind === "projection"
+						)
+							missedSeed();
 						return;
+					}
 					cancelDeadline?.();
 					cancelDeadline = null;
+					awaitingSeed = false;
 					projectionOwner.current = owner;
 					lastFrameAt.current = Date.now();
 					grace.healthy(lastFrameAt.current);
-					missedSeeds = 0;
 					retries.current = 0;
 					/* The first frame after a return. Decided BEFORE the frame is
 					 * applied, against what the reader holds: a frame that reaches back
@@ -559,43 +585,21 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 					if (status.state === "open") pendingAttemptSeed = true;
 					cancelDeadline?.();
 					cancelDeadline = null;
-					if (status.state === "connecting" || status.state === "open") {
-						const opened = status.state === "open";
-						const openedAt = Date.now();
-						// Give the first stalled body a quick retry, then widen the next
-						// body's seed window so retrying can't starve a consistently slow
-						// projection. Cap it at the existing SSE silence budget, but do
-						// not renew it on keepalives as the byte watchdog does.
-						const seedBudget = Math.min(
-							RECONNECT_DEADLINE_MS * 2 ** missedSeeds,
-							STREAM_SILENCE_MS,
-						);
-						const retryUnseeded = () => {
-							if (!isCurrent()) return;
-							retireStream?.();
-							sessions.getState().endStream(sessionId);
-							scheduleRetry(true);
-						};
+					awaitingSeed = status.state === "open";
+					/* Only a RECONNECT that gets no answer is `C2` (connection-view
+					 * rule 2). A first load stays quiet like the relay web app, which
+					 * reports only a failed leg after its outage grace (`store.ts`
+					 * `openEventStream`): under machine load the first answer is slow,
+					 * not lost, and a real failure still arrives via `onError`. */
+					const reconnecting =
+						recovering.current || lastFrameAt.current !== null;
+					if (status.state === "connecting" && reconnecting) {
 						cancelDeadline = heldTimer(
 							resumeClock.current,
 							RECONNECT_DEADLINE_MS,
 							() => {
-								if (!isCurrent()) return;
-								setFacts((current) => ({ ...current, overdue: true }));
-								// Before HTTP headers, this is presentation only: let the
-								// transport handle timeouts and typed refusals.
-								if (!opened) return;
-								const elapsed = Math.max(
-									RECONNECT_DEADLINE_MS,
-									Date.now() - openedAt,
-								);
-								const remaining = seedBudget - elapsed;
-								if (remaining <= 0) {
-									retryUnseeded();
-									return;
-								}
-								const timer = setTimeout(retryUnseeded, remaining);
-								cancelDeadline = () => clearTimeout(timer);
+								if (isCurrent())
+									setFacts((current) => ({ ...current, overdue: true }));
 							},
 						);
 					}
@@ -645,18 +649,16 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 				retired = true;
 				cancelDeadline?.();
 				cancelDeadline = null;
+				awaitingSeed = false;
 				stream.stop();
 			};
 			stream.connection.start();
 		};
-		reconnectRef.current = () => {
-			missedSeeds = 0;
-			connect();
-		};
+		reconnectRef.current = connect;
 		connect();
 		return () => {
 			active = false;
-			if (retryTimer !== null) clearTimeout(retryTimer);
+			cancelRetry?.();
 			retireStream?.();
 			sessions.getState().endStream(sessionId);
 		};
