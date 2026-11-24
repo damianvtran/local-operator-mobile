@@ -222,3 +222,96 @@ describe("the composer's worklets run on the UI runtime", () => {
 		expect(declaresWorklet(bodyOf("composerPresentation"))).toBe(false);
 	});
 });
+
+/**
+ * `react-native-keyboard-controller` does NOT workletize the handlers it is
+ * given: reanimated's plugin only rewrites the hooks it knows by name, and
+ * `useKeyboardHandler` is not one of them. A handler without its own directive
+ * is a plain JS function handed to the UI runtime, which throws at the first
+ * keyboard event. So every handler body must open with `"worklet"`.
+ */
+const KEYBOARD_MOTION = read("src/features/session/keyboard-motion.ts");
+
+const keyboardHandlers = (() => {
+	/* The handlers live in `keyboard-motion.ts` (`keyboardMotionHandlers`), so a
+	 *  Node test can drive them; the scan reads them there. */
+	const found: { name: string; body: string }[] = [];
+	const text = stripComments(KEYBOARD_MOTION);
+	for (const match of text.matchAll(
+		/\b(on[A-Z]\w*)\s*:\s*(?:\([^)]*\)|\w+)\s*=>/g,
+	)) {
+		found.push({ name: match[1] ?? "", body: text.slice(match.index) });
+	}
+	return found;
+})();
+
+describe("the composer's keyboard handlers run on the UI runtime", () => {
+	it("finds the handlers, so an empty scan cannot pass this file", () => {
+		expect(keyboardHandlers.map((handler) => handler.name)).toEqual([
+			"onStart",
+			"onMove",
+			"onEnd",
+		]);
+	});
+
+	it("opens every handler with its own worklet directive", () => {
+		const plain = keyboardHandlers
+			.filter((handler) => !declaresWorklet(handler.body))
+			.map((handler) => handler.name);
+		expect(plain).toEqual([]);
+	});
+
+	it("marks every motion helper a worklet", () => {
+		const names = [
+			"rideOffset",
+			"shouldHoldLift",
+			"frameAction",
+			"settleOffset",
+			"settleDecision",
+		];
+		for (const name of names) {
+			const at = KEYBOARD_MOTION.indexOf(`export const ${name} =`);
+			expect(at).toBeGreaterThan(-1);
+			expect(declaresWorklet(KEYBOARD_MOTION.slice(at))).toBe(true);
+		}
+		/* The UI-thread handlers call these two. */
+		const handlers = stripComments(KEYBOARD_MOTION);
+		expect(
+			calledIn(handlers.slice(handlers.indexOf("onStart")), "shouldHoldLift"),
+		).toBe(true);
+		expect(
+			calledIn(handlers.slice(handlers.indexOf("onMove")), "rideOffset"),
+		).toBe(true);
+	});
+
+	/* WIRING PINS. The handlers' behaviour is tested by driving them in
+	 * `keyboard-motion.test.ts`; the component cannot mount in Node, so only the
+	 * wiring between it and them is a source pin. */
+	const componentText = stripComments(COMPONENT).replace(/\s+/g, " ");
+
+	it("registers the handlers the module builds, with the component's own callbacks", () => {
+		expect(componentText).toContain(
+			"useKeyboardHandler( keyboardMotionHandlers({ keyboardOffset, motionActive, cancelAnimation, runOnJS, holdLift, settleLift, }), [], );",
+		);
+	});
+
+	it("keeps the store's timed lift as the fallback, decided by `frameAction`", () => {
+		/* Two writers of one shared value: the handlers while the keyboard moves,
+		 *  the store's `withTiming` otherwise. */
+		expect(componentText).toContain(
+			"const action = frameAction(frame.visible, motionActive.value);",
+		);
+		expect(componentText).toContain(
+			'if (action === "hold") { frameSeenDuringMotion.current = true; return; } keyboardOffset.value = withTiming(',
+		);
+		expect(componentText).toContain(
+			'if (action === "snap") { motionActive.value = false; frameSeenDuringMotion.current = false; keyboardOffset.value = 0;',
+		);
+	});
+
+	it("settles on the frame held during the motion and clears it", () => {
+		expect(componentText).toContain(
+			"frameSeenDuringMotion: frameSeenDuringMotion.current, }); frameSeenDuringMotion.current = false;",
+		);
+	});
+});

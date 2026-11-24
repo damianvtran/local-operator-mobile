@@ -334,6 +334,9 @@ const config: ExpoConfig = {
 		// instead slide the whole window up under the header, and should the window
 		// ever resize, the overlap reads 0 against an already-shortened window, so
 		// the ceiling stays right either way.
+		// `react-native-keyboard-controller` (the composer's per-frame lift) also
+		// requires `adjustResize`: it reads the IME's inset animation and sets the
+		// same mode itself. It ships no config plugin, so nothing else is declared.
 		softwareKeyboardLayoutMode: "resize",
 		// FCM for Team Bridge push; absent unless a config file exists (see
 		// `resolveGoogleServicesFile` for why absence is the safe default).

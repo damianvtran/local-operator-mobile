@@ -25,6 +25,7 @@ export const reanimatedModuleMock = () => ({
 	useAnimatedStyle: <T extends object>(factory: () => T) => factory(),
 	withSpring: <T>(toValue: T) => toValue,
 	withTiming: <T>(toValue: T) => toValue,
+	cancelAnimation: () => {},
 	runOnJS: <A extends unknown[]>(fn: (...args: A) => void) => fn,
 });
 
@@ -54,4 +55,40 @@ export const gestureHandlerModuleMock = () => ({
 	 *  host a test looks for. */
 	GestureDetector: ({ children }: { children?: ReactNode }) => children ?? null,
 	GestureHandlerRootView: View,
+});
+
+/** What a `useKeyboardHandler` call registered, in call order. */
+export type KeyboardHandlers = {
+	onStart?: (event: { height: number; progress: number }) => void;
+	onMove?: (event: { height: number; progress: number }) => void;
+	onInteractive?: (event: { height: number; progress: number }) => void;
+	onEnd?: (event: { height: number; progress: number }) => void;
+};
+
+/**
+ * `react-native-keyboard-controller` reduced for the Node runner (its entry
+ * point is untranspiled native source, like reanimated's).
+ *
+ * `useKeyboardHandler` RECORDS the handlers it is given in `registeredHandlers`,
+ * so a test can drive a keyboard motion (`onStart` → `onMove`… → `onEnd`) and read
+ * what the component did with it; the library itself never calls them without a
+ * native keyboard. The providers are passthroughs, as `GestureDetector` is above.
+ */
+export const registeredHandlers: KeyboardHandlers[] = [];
+
+export const keyboardControllerModuleMock = () => ({
+	__esModule: true,
+	KeyboardProvider: ({ children }: { children?: ReactNode }) =>
+		children ?? null,
+	KeyboardGestureArea: ({ children }: { children?: ReactNode }) =>
+		children ?? null,
+	useKeyboardHandler: (handlers: KeyboardHandlers) => {
+		registeredHandlers.push(handlers);
+	},
+	KeyboardController: {
+		setInputMode: () => {},
+		setDefaultMode: () => {},
+		dismiss: async () => {},
+		isVisible: () => false,
+	},
 });
