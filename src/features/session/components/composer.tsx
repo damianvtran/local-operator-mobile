@@ -1129,6 +1129,9 @@ export const Composer = ({
 	 *  are writing `keyboardOffset`, so the store's timed lift must not start a
 	 *  second tween over them. */
 	const motionActive = useSharedValue(false);
+	/* A finger is dragging the keyboard (`onInteractive`), so no library `onEnd`
+	 *  will follow it: the store's release frame ends it (`frameAction`). */
+	const interactive = useSharedValue(false);
 	/* A store frame arrived while a library motion ran (`frameAction` -> hold) and
 	 *  is not yet applied: the end of the motion brings the offset to it
 	 *  (`settleDecision`). JS thread only, like both of its writers. */
@@ -1295,9 +1298,14 @@ export const Composer = ({
 			 *  (`frameAction`). This subscriber stays the whole driver when no motion
 			 *  runs (a frame the library never reports, a platform without the
 			 *  native module). */
-			const action = frameAction(frame.visible, motionActive.value);
+			const action = frameAction(
+				frame.visible,
+				motionActive.value,
+				interactive.value,
+			);
 			if (action === "snap") {
 				motionActive.value = false;
+				interactive.value = false;
 				frameSeenDuringMotion.current = false;
 				keyboardOffset.value = 0;
 				remeasure();
@@ -1313,6 +1321,13 @@ export const Composer = ({
 			if (action === "hold") {
 				frameSeenDuringMotion.current = true;
 				return;
+			}
+			/* The release of a finger-driven drag: the drag is over, and this frame
+			 *  is where the keyboard is going (back up on a cancel, away on a
+			 *  dismissal, whose `onStart` takes the offset over from here). */
+			if (interactive.value) {
+				interactive.value = false;
+				motionActive.value = false;
 			}
 			keyboardOffset.value = withTiming(
 				frame.overlap,
@@ -1334,7 +1349,7 @@ export const Composer = ({
 		keyboardOffset.value = liftTarget.current;
 		if (present.visible) remeasure();
 		return unsubscribe;
-	}, [keyboardOffset, motionActive]);
+	}, [keyboardOffset, motionActive, interactive]);
 	const publishSoon = useCallback(() => {
 		requestAnimationFrame(() => publishBoxRef.current());
 	}, []);
@@ -1393,6 +1408,7 @@ export const Composer = ({
 		keyboardMotionHandlers({
 			keyboardOffset,
 			motionActive,
+			interactive,
 			cancelAnimation,
 			runOnJS,
 			holdLift,
@@ -1506,19 +1522,29 @@ export const Composer = ({
 	 *  device fact rather than a spacing decision, and U-42 reads a padding equal
 	 *  to the declared inset as the inset but a margin of inset + 8 (28 pt on a
 	 *  20 pt-inset tablet) as an off-scale step — the same split `dialog.tsx`
-	 *  makes. The painted position is unchanged: carrier padding + this margin is
-	 *  the old `inset + 8`, and with the keyboard up the carrier pays nothing. */
+	 *  makes. The painted position is unchanged at rest: carrier padding + this
+	 *  margin is the old `inset + 8`. With the keyboard up the carrier STILL pays
+	 *  the inset and the margin pays only the excess (`dockLift`), so the total is
+	 *  `8 + max(keyboard overlap, inset)` on every frame. */
 	/* The side margin rides the shell's `progress`: the scroll-made pill is inset
 	 *  `COMPOSER_PILL_MARGIN`, the card `COMPOSER_CARD_MARGIN`. Short landscape's
 	 *  pill is its resting form and keeps the card's margin (`pillMargin`). */
 	const pillMargin =
 		compact === null ? COMPOSER_PILL_MARGIN : COMPOSER_CARD_MARGIN;
+	/* ALWAYS the resting inset, keyboard up or not (PR C, `dockLift`): the dock's
+	 *  margin pays only the keyboard's excess over it, so a keyboard dragged to 0
+	 *  leaves the dock at its rest instead of 34 pt below it. */
+	const dockInset = Math.max(0, bottomInset ?? 0);
 	/* Longhand margins from one worklet (`dockMotionStyle`, review W2): the
 	 *  `marginHorizontal` shorthand this was never reached the DOM on web. */
 	const dockMotion = useAnimatedStyle(() =>
-		dockMotionStyle(progress.value, keyboardOffset.value, pillMargin),
+		dockMotionStyle(
+			progress.value,
+			keyboardOffset.value,
+			pillMargin,
+			dockInset,
+		),
 	);
-	const dockInset = keyboardVisible ? 0 : Math.max(0, bottomInset ?? 0);
 
 	const dangerInk = useTokenColor("danger");
 	const attachInk = useTokenColor("ink-muted");

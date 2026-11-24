@@ -16,6 +16,7 @@ import {
 	View,
 	type ViewStyle,
 } from "react-native";
+import { KeyboardGestureArea } from "react-native-keyboard-controller";
 
 import type { TranscriptEntry } from "@/contracts";
 import { anchorBottomVisible } from "@/features/session/completion-visibility";
@@ -66,6 +67,7 @@ import {
 	withArrival,
 	withAtTail,
 } from "@/features/session/jump-cue";
+import { keyboardDragPlan } from "@/features/session/keyboard-drag";
 import {
 	canonicalRowKey,
 	visibleTranscriptEntries,
@@ -306,6 +308,12 @@ const keyOfItem = (item: TranscriptItem): string => item.id;
 const CONTENT_CONTAINER_STYLE: ViewStyle = {
 	paddingBottom: TRANSCRIPT_FADE_PT + 16,
 };
+
+/** Resolved once: the platform does not change under a running app. */
+const KEYBOARD_DRAG = keyboardDragPlan(Platform.OS, Platform.Version);
+/** The gesture area is a layout participant: the list's column contract
+ *  (`flex-1 min-h-0`) must pass through it unchanged. */
+const GESTURE_AREA_STYLE: ViewStyle = { flex: 1, minHeight: 0 };
 
 /**
  * The capture hook's turn keys: `lo-expand` on the page's query string names
@@ -2314,86 +2322,93 @@ export const TranscriptList = ({
 		[newestEdgeNotice, pending, footer],
 	);
 
+	const body = (
+		<View className="flex-1 min-h-0">
+			{/* The way back that is not a yank (operator, 2026-11-21). An
+			 *  overlay above the fades, so it adds no layout and its press
+			 *  cannot reach anything but itself. Declared BEFORE the list so the
+			 *  reading (and Tab) order reaches it first instead of after every
+			 *  mounted row (UX round 1, U2); `zIndex` keeps it painted above them.
+			 *  It is handed this viewport's height and hides itself when that is
+			 *  too short to hold it above the fade (design round 1, D1). */}
+			{jumpCueShown(jumpCue) ? (
+				<JumpToLatestChip onPress={snapToTail} viewportPt={viewportPt} />
+			) : null}
+			<FlatList
+				ref={listRef}
+				testID={testID}
+				data={folded.items}
+				keyExtractor={keyOfItem}
+				renderItem={renderItem}
+				onLayout={onLayout}
+				maintainVisibleContentPosition={loadOlder ? HISTORY_ANCHOR : undefined}
+				onScroll={onScroll}
+				onScrollBeginDrag={onScrollBeginDrag}
+				// A TAP outside the selecting message ends the select mode; a
+				// drag that scrolls does not (start/end/cancel, `text-selection.ts`).
+				onTouchStart={textSelectionContainerTouch}
+				onTouchEnd={textSelectionContainerTouchEnd}
+				onTouchCancel={textSelectionContainerTouchCancel}
+				onScrollEndDrag={onScrollEndDrag}
+				onMomentumScrollBegin={onMomentumScrollBegin}
+				onMomentumScrollEnd={onMomentumScrollEnd}
+				// Web: wheel, pointer (incl. touch) and scroll keys hold the
+				// list until idle (TestFlight 1139); empty on native.
+				{...scrollHold.current.webHandlers}
+				scrollEventThrottle={16}
+				onContentSizeChange={onContentSizeChange}
+				/* The two props that make the FIRST frame the one the reader came for.
+				 *
+				 * `initialScrollIndex` mounts the LAST screenful, and `getItemLayout`
+				 * tells the list where that screenful sits — so the open renders its
+				 * final rows and the tail `onContentSizeChange` clamp is a correction
+				 * rather than the mechanism that gets there. Frozen once rows have laid
+				 * out (`frozenInitialIndexRef`, Q-RF1). Omitted when this mount is
+				 * headed somewhere else (`openElsewhere`): a restored offset or the
+				 * capture hook's top. There is deliberately no
+				 * `onScrollToIndexFailed` beside them — the list never reports a failed
+				 * jump when it has metrics, so the deep-jump recovery lives in
+				 * `revealToIndex`, which is the only place that knows a target is
+				 * unmeasured. */
+				initialScrollIndex={openElsewhereAtMount ? undefined : initialIndex}
+				getItemLayout={getItemLayout}
+				// Keyboard stays open while scrolling: the reader is scrolling to read the
+				// answer to what they just typed.
+				keyboardShouldPersistTaps="handled"
+				keyboardDismissMode={KEYBOARD_DRAG.dismissMode}
+				ListHeaderComponent={listHeader}
+				// A permanent footer host lets recovery grow inside this scroller. It is
+				// not a transcript row/completion anchor; existing tail-vs-away policy
+				// receives the content-size change without forcing a non-tail reader down.
+				ListFooterComponent={listFooter}
+				ListEmptyComponent={empty ?? undefined}
+				// `removeClippedSubviews` is left OFF deliberately: it detaches rows that
+				// scroll out of view, and a detached row loses the open/closed state of its
+				// tool-row disclosure — so a reader who expands a diff, scrolls away and
+				// comes back finds it shut. The window already bounds what is mounted.
+				initialNumToRender={policy.initialNumToRender}
+				maxToRenderPerBatch={policy.maxToRenderPerBatch}
+				windowSize={policy.windowSize}
+				updateCellsBatchingPeriod={40}
+				// 16 pt: the `between-sections` floor. 8 pt was the last prose row's bottom
+				// padding with nothing on the other side of it, so the transcript met the
+				// todos strip with an unmeasured gap — every other band in the column starts
+				// from a 16 pt rail (§3.2 of the design pass).
+				contentContainerStyle={CONTENT_CONTAINER_STYLE}
+			/>
+			{/* The two edge fades: a picture of the cut edge, never a control. */}
+			<TranscriptEdgeFades ref={fadesRef} />
+		</View>
+	);
 	return (
 		<UserMessageCollapseContext.Provider value={keepCollapsedTopInView}>
-			<View className="flex-1 min-h-0">
-				{/* The way back that is not a yank (operator, 2026-11-21). An
-				 *  overlay above the fades, so it adds no layout and its press
-				 *  cannot reach anything but itself. Declared BEFORE the list so the
-				 *  reading (and Tab) order reaches it first instead of after every
-				 *  mounted row (UX round 1, U2); `zIndex` keeps it painted above them.
-				 *  It is handed this viewport's height and hides itself when that is
-				 *  too short to hold it above the fade (design round 1, D1). */}
-				{jumpCueShown(jumpCue) ? (
-					<JumpToLatestChip onPress={snapToTail} viewportPt={viewportPt} />
-				) : null}
-				<FlatList
-					ref={listRef}
-					testID={testID}
-					data={folded.items}
-					keyExtractor={keyOfItem}
-					renderItem={renderItem}
-					onLayout={onLayout}
-					maintainVisibleContentPosition={
-						loadOlder ? HISTORY_ANCHOR : undefined
-					}
-					onScroll={onScroll}
-					onScrollBeginDrag={onScrollBeginDrag}
-					// A TAP outside the selecting message ends the select mode; a
-					// drag that scrolls does not (start/end/cancel, `text-selection.ts`).
-					onTouchStart={textSelectionContainerTouch}
-					onTouchEnd={textSelectionContainerTouchEnd}
-					onTouchCancel={textSelectionContainerTouchCancel}
-					onScrollEndDrag={onScrollEndDrag}
-					onMomentumScrollBegin={onMomentumScrollBegin}
-					onMomentumScrollEnd={onMomentumScrollEnd}
-					// Web: wheel, pointer (incl. touch) and scroll keys hold the
-					// list until idle (TestFlight 1139); empty on native.
-					{...scrollHold.current.webHandlers}
-					scrollEventThrottle={16}
-					onContentSizeChange={onContentSizeChange}
-					/* The two props that make the FIRST frame the one the reader came for.
-					 *
-					 * `initialScrollIndex` mounts the LAST screenful, and `getItemLayout`
-					 * tells the list where that screenful sits — so the open renders its
-					 * final rows and the tail `onContentSizeChange` clamp is a correction
-					 * rather than the mechanism that gets there. Frozen once rows have laid
-					 * out (`frozenInitialIndexRef`, Q-RF1). Omitted when this mount is
-					 * headed somewhere else (`openElsewhere`): a restored offset or the
-					 * capture hook's top. There is deliberately no
-					 * `onScrollToIndexFailed` beside them — the list never reports a failed
-					 * jump when it has metrics, so the deep-jump recovery lives in
-					 * `revealToIndex`, which is the only place that knows a target is
-					 * unmeasured. */
-					initialScrollIndex={openElsewhereAtMount ? undefined : initialIndex}
-					getItemLayout={getItemLayout}
-					// Keyboard stays open while scrolling: the reader is scrolling to read the
-					// answer to what they just typed.
-					keyboardShouldPersistTaps="handled"
-					keyboardDismissMode="interactive"
-					ListHeaderComponent={listHeader}
-					// A permanent footer host lets recovery grow inside this scroller. It is
-					// not a transcript row/completion anchor; existing tail-vs-away policy
-					// receives the content-size change without forcing a non-tail reader down.
-					ListFooterComponent={listFooter}
-					ListEmptyComponent={empty ?? undefined}
-					// `removeClippedSubviews` is left OFF deliberately: it detaches rows that
-					// scroll out of view, and a detached row loses the open/closed state of its
-					// tool-row disclosure — so a reader who expands a diff, scrolls away and
-					// comes back finds it shut. The window already bounds what is mounted.
-					initialNumToRender={policy.initialNumToRender}
-					maxToRenderPerBatch={policy.maxToRenderPerBatch}
-					windowSize={policy.windowSize}
-					updateCellsBatchingPeriod={40}
-					// 16 pt: the `between-sections` floor. 8 pt was the last prose row's bottom
-					// padding with nothing on the other side of it, so the transcript met the
-					// todos strip with an unmeasured gap — every other band in the column starts
-					// from a 16 pt rail (§3.2 of the design pass).
-					contentContainerStyle={CONTENT_CONTAINER_STYLE}
-				/>
-				{/* The two edge fades: a picture of the cut edge, never a control. */}
-				<TranscriptEdgeFades ref={fadesRef} />
-			</View>
+			{KEYBOARD_DRAG.gestureArea ? (
+				<KeyboardGestureArea interpolator="ios" style={GESTURE_AREA_STYLE}>
+					{body}
+				</KeyboardGestureArea>
+			) : (
+				body
+			)}
 		</UserMessageCollapseContext.Provider>
 	);
 };

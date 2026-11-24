@@ -22,6 +22,7 @@ import {
 	controlsTrailing,
 	dictationDropsSend,
 	dictationSlots,
+	dockLift,
 	dockMotionStyle,
 	fieldSelectionOverride,
 	keyboardOverlap,
@@ -416,9 +417,47 @@ describe("the dock's animated margins (W2)", () => {
 		});
 	});
 
+	it("rides the keyboard rigidly: painted bottom = 8 + max(offset, resting inset)", () => {
+		/* The carrier pays the inset as padding; the margin pays the excess. Both
+		 *  rests are the old numbers: inset + 8 down, overlap + 8 up (PR C). */
+		const painted = (offset: number, inset: number) =>
+			inset + dockMotionStyle(0, offset, 16, inset).marginBottom;
+		expect(painted(0, 34)).toBe(42);
+		expect(painted(336, 34)).toBe(344);
+		/* The margin is exactly 8 at rest: U-42 never sees an `inset + 8` margin. */
+		expect(dockMotionStyle(0, 0, 16, 34).marginBottom).toBe(8);
+		/* A finger drags the keyboard from 336 to 0: one slope above the inset, a
+		 *  floor at the rest below it, never the 8 pt over the home indicator the
+		 *  old `offset + 8` painted at offset 0. */
+		for (const offset of [336, 200, 100, 35, 34]) {
+			expect(painted(offset, 34)).toBe(offset + 8);
+		}
+		for (const offset of [33, 20, 5, 0]) expect(painted(offset, 34)).toBe(42);
+		/* No inset (a device without one): the old `offset + 8`, unchanged. */
+		expect(painted(0, 0)).toBe(8);
+		expect(painted(300, 0)).toBe(308);
+	});
+
+	it("dockLift ignores a negative inset and a negative offset", () => {
+		expect(dockLift(100, -20)).toBe(108);
+		expect(dockLift(-5, 34)).toBe(8);
+	});
+
 	it("is what the dock paints, and the shorthand is gone from it", () => {
 		const component = read("src/features/session/components/composer.tsx");
 		expect(component).toContain("dockMotionStyle(");
+		/* The inset is the carrier's padding ALWAYS (the margin pays only the
+		 *  excess), and the same number is the margin's `restInset`: the two halves
+		 *  that sum to `8 + max(offset, inset)` read one value. */
+		const flat = component.replace(/\s+/g, " ");
+		expect(flat).toContain("const dockInset = Math.max(0, bottomInset ?? 0);");
+		expect(flat).toContain(
+			"dockMotionStyle( progress.value, keyboardOffset.value, pillMargin, dockInset, )",
+		);
+		expect(flat).toContain(
+			"<View style={{ paddingBottom: dockInset }}>{dock}</View>",
+		);
+		expect(flat).not.toContain("keyboardVisible ? 0 : Math.max(0, bottomInset");
 		expect(component).not.toContain("marginHorizontal: morphHeight");
 	});
 });

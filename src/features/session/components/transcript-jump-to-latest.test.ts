@@ -59,6 +59,14 @@ const host = vi.hoisted(() => ({
 }));
 /* This host exercises list/anchor policy, not platform accessibility or paint.
  * Answer the preference at the same appearance boundary as the footer test. */
+/* `TranscriptList` wraps the host in the keyboard-controller's gesture area on
+ *  Android 11+; the real module is native source Node cannot load. */
+vi.mock("react-native-keyboard-controller", async () => {
+	const { keyboardControllerModuleMock } = await import(
+		"@/testing/native-gesture-mocks"
+	);
+	return keyboardControllerModuleMock();
+});
 vi.mock("@/ui/appearance", () => ({ useReducedMotion: () => true }));
 vi.mock("react-native", async () => {
 	const React = await import("react");
