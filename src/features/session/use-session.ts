@@ -1233,6 +1233,9 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 			olderState: historyWindow.olderState,
 			frameRows: projection?.transcript.length ?? 0,
 			frameHeadPinned: projection?.transcript_head_pinned,
+			// Fill evidence only: the reader's cursor seeding keeps reading the
+			// pin alone, so a compaction marker at row 0 is never detached.
+			frameHasOlder: projection?.transcript_has_older,
 		}),
 		// The notice is for a hole the automatic fill could not close; while the
 		// fill runs the list shows nothing (no flash, no layout jump).

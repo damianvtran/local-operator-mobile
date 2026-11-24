@@ -970,6 +970,10 @@ export const sessionProjectionSchema = z.looseObject({
 	 *  only safe reading of null is "no signal" (QA round 1, Q5). */
 	heartbeat_stale: z.boolean().nullish(),
 	transcript_head_pinned: z.boolean().optional(),
+	/** Core #4521: older journal rows exist behind this transcript. Optional
+	 *  and additive — Core pops it when false and older Core never sends it,
+	 *  so absence must not be defaulted (types.gen.ts carries the full why). */
+	transcript_has_older: z.boolean().optional(),
 	transcript: z.array(transcriptEntrySchema),
 	todos: z.array(todoPhaseSchema),
 	subagents: z.array(subagentRowSchema),

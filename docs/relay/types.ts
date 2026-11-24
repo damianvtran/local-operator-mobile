@@ -501,6 +501,15 @@ export interface SessionProjection {
    *  and daemons older than the field never send it. A client must therefore
    *  read absence as "no statement", not as "not capped". */
   transcript_head_pinned?: boolean;
+  /** Core's statement (local-operator #4521) that the journal holds rows older
+   *  than `transcript`'s oldest unpinned row: the render opens at a compaction
+   *  marker, or a cap trimmed its head. A client must offer "load earlier" and
+   *  may page from the tail's oldest row. Distinct from
+   *  `transcript_head_pinned`, which says row 0 is the detached opener.
+   *
+   *  ABSENT when false, and from Core older than the field: absence is "no
+   *  statement". */
+  transcript_has_older?: boolean;
   /** The render tail: at most `PROJECTION_TRANSCRIPT_LIMIT = 80` entries, with
    *  the conversation's opening user message pinned at the head
    *  (`types.py:980`, `projection.py:3127-3153`). Older rows page in from

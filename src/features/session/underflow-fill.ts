@@ -43,6 +43,10 @@ export interface OlderFillEvidence {
 	frameRows: number;
 	/** `transcript_head_pinned`, absent on an older relay. */
 	frameHeadPinned: boolean | undefined;
+	/** `transcript_has_older` (Core #4521), absent on an older relay and when
+	 *  false. Read ONLY here, never as a pin: a compacted render opens at its
+	 *  marker, and treating that as a pinned opener would detach it. */
+	frameHasOlder?: boolean | undefined;
 }
 
 /**
@@ -51,8 +55,14 @@ export interface OlderFillEvidence {
  * `hasMore` starts TRUE before any older page has answered, so it alone would
  * page every short conversation once on open. A live frame under the relay's
  * cap (opener + 79 rows) is the whole conversation; only a frame at the cap,
- * one that says it pinned its opener, or a before-page that said "more" can
- * have older rows behind it.
+ * one that says it pinned its opener, one that says older rows exist, or a
+ * before-page that said "more" can have older rows behind it.
+ *
+ * The "older rows exist" statement is what a compacted conversation needs
+ * (operator report 2026-11-24: scrolling up showed no condensed agent turns
+ * and no final answers between historical user messages). Its render opens at
+ * the compaction marker with a short kept window and no pin, so by row count
+ * it looked like the whole conversation and nothing paged in on its own.
  */
 export const olderFillReady = (evidence: OlderFillEvidence): boolean =>
 	evidence.read === "ok" &&
@@ -60,6 +70,7 @@ export const olderFillReady = (evidence: OlderFillEvidence): boolean =>
 	evidence.hasMore &&
 	(evidence.olderState === "more" ||
 		evidence.frameHeadPinned === true ||
+		evidence.frameHasOlder === true ||
 		evidence.frameRows >= FRAME_CAP - 1);
 
 /** A row a reader recognises as the conversation: their own message or steer,
