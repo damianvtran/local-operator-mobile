@@ -247,6 +247,18 @@
 		"role": "status",
 		"note": "Muted line shown when a subagent's transcript is empty. One sentence."
 	},
+	"mobile.session.subagent.queued_next": {
+		"role": "status",
+		"note": "Muted line on a subagent's screen while the subagent is queued and has not started, so it has no messages yet. Replaces a loading placeholder: it must say the subagent has not run, not that the phone is slow. 'Its' is the subagent. Two short sentences with final full stops."
+	},
+	"mobile.session.subagent.load_failed": {
+		"role": "status",
+		"note": "Muted line on a subagent's screen when this phone could not read the subagent's messages (the link dropped); a Try again button follows. Nothing has been shown yet, so it must not say 'the latest' messages. One sentence with a final full stop; the apostrophe is a typographic ’."
+	},
+	"mobile.session.subagent.not_kept": {
+		"role": "status",
+		"note": "Dim line on a subagent's screen when the computer has no saved messages for this subagent: either they were not kept, or the computer is not answering. Stands alone (no headline above it), so it names the subagent. One sentence with a final full stop; apostrophes are typographic ’."
+	},
 	"mobile.session.not_connected.headline": {
 		"role": "status",
 		"note": "Empty-state headline on a session screen opened with no computer connected. Sentence with a final full stop."

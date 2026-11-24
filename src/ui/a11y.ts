@@ -258,6 +258,9 @@ export const CONTROL = {
 	// because two screens are on the navigation stack at once during a transition.
 	sessionBack: "session-back",
 	subagentBack: "subagent-back",
+	/** The subagent screen's "Try again" when its first transcript read was
+	 *  dropped and there is nothing to draw (`useSubagentTranscript` `failed`). */
+	subagentRetry: "subagent-detail-retry",
 	videoBack: "video-back",
 
 	// Settings: the theme override, the one setting that needs no connection.
