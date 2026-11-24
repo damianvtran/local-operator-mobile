@@ -38,6 +38,7 @@ import {
 	createResumeClock,
 	heldTimer,
 	OUTAGE_GRACE_MS,
+	reconnectTimer,
 } from "@/features/session/resume-hold";
 import {
 	deviceOnline,
@@ -77,11 +78,13 @@ import { warmCache } from "./warm-store";
  * Everything a session screen reads: the relay client, the projection stream, the
  * connection state, and the two catalogues the composer's sheets need.
  *
- * **The reconnect deadline measures readiness, not merely transport.**
- * `C1` — the gateway's 60-second lease ending — must be invisible. This hook
- * watches for `C2`: a stream that takes too long to open or that opens without
- * a projection. HTTP headers and keepalives are transport progress, not a
- * conversation snapshot.
+ * **`C2` is reported from evidence, not from a seed timer.** `C1` — the
+ * gateway's 60-second lease ending — must be invisible. This hook reports `C2`
+ * for a held drop, or for a RECONNECT whose headers do not arrive within
+ * `RECONNECT_DEADLINE_MS` (a first load stays quiet). Once headers arrive, a
+ * seed that is still being built is waited for (the transport's byte watchdog
+ * bounds it); only a keepalive, a foreign or a malformed projection before the
+ * seed proves it was skipped, and that retires the stream into the backoff.
  *
  * **The snapshot age ticks locally**, once a second, because `C3` is an absence:
  * nothing arrives to tell the screen that nothing arrived, so the screen has to
@@ -445,10 +448,12 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 			}));
 			const delay = reconnectDelay(retries.current, retryAfterMs);
 			retries.current += 1;
-			// A retry can become due while iOS is suspended too; do not open a
-			// replacement until the same resume hold used by failure deadlines clears.
+			// A retry can become due while iOS is suspended too, so it never opens a
+			// replacement while backgrounded (R2-2) -- but it does NOT wait out the
+			// resume window like a report: the retries inside it are what keep the
+			// held drop report from ever firing (R3-1, `reconnectTimer`).
 			cancelRetry?.();
-			cancelRetry = heldTimer(resumeClock.current, delay, () => {
+			cancelRetry = reconnectTimer(resumeClock.current, delay, () => {
 				cancelRetry = null;
 				connect();
 			});
@@ -473,6 +478,10 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 			if (!sameProjectionOwner(ageOwner.current, owner)) {
 				ageOwner.current = owner;
 				lastFrameAt.current = null;
+				// A recovery belongs to the session it was for: carried into the
+				// next one, it would make that session's slow first load count as a
+				// reconnect and paint `C2` at the deadline (R3-2).
+				recovering.current = false;
 			}
 			sessions.getState().beginStream(sessionId);
 			// The reader can reopen an HTTP body inside this one stream object.

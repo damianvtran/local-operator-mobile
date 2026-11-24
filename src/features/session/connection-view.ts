@@ -383,8 +383,10 @@ export const connectionView = (input: ConnectionViewInput): ConnectionView => {
 	if (input.droppedSinceFrame === true) {
 		return view("C2", "The connection dropped. Reconnecting…", "warning");
 	}
-	/* A replacement's HTTP headers do not end recovery. The deadline is scoped
-	 * to its first projection; the visible frame's age may be from an older leg. */
+	/* A reconnect whose headers did not arrive within its deadline. Headers
+	 * cancel the deadline but do not end recovery (`overdue` stays until a
+	 * projection); after them, only evidence that the seed was skipped (a
+	 * keepalive, a foreign or malformed projection) restarts the stream. */
 	if (
 		(input.stream === "connecting" || input.stream === "open") &&
 		input.reconnectExpired

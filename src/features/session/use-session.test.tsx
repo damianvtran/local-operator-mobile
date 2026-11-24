@@ -49,7 +49,9 @@ vi.mock("react-native", () => ({
 vi.mock("@/state/warm-sync", () => ({ warmSync: { view: () => () => {} } }));
 vi.mock("@/features/session/warm-store", () => ({ warmCache: {} }));
 
-function mount() {
+/** `keyed: false` keeps ONE hook instance across a session change, the way a
+ *  screen that re-renders with a new id does (refs survive the switch). */
+function mount({ keyed = true }: { keyed?: boolean } = {}) {
 	const dom = installDomShim();
 	const root = createRoot(dom.container as Element);
 	let current!: ReturnType<typeof useSessionRuntime>;
@@ -59,7 +61,9 @@ function mount() {
 	}
 	return {
 		show: (sid: string) =>
-			act(async () => root.render(createElement(Probe, { key: sid, sid }))),
+			act(async () =>
+				root.render(createElement(Probe, keyed ? { key: sid, sid } : { sid })),
+			),
 		read: () => current,
 		close: async () => {
 			await act(async () => root.unmount());
@@ -292,6 +296,69 @@ it("does not reconnect on a retry timer that fires late before the active event"
 		expect(attempts).toHaveLength(1);
 		await changeAppState("active");
 		expect(attempts).toHaveLength(2);
+	} finally {
+		await probe.close();
+	}
+});
+
+it("retries a failed reopen after a return at the backoff delay, with no banner (#369 R3-1)", async () => {
+	vi.useFakeTimers();
+	// Request 2 is the return's reopen: the radio is still waking, so it fails
+	// before any headers, the way a stale socket does right after an unlock.
+	const { attempts, requests } = transport(undefined, (attempt) =>
+		attempt === 2 ? Promise.reject(new TypeError("network lost")) : undefined,
+	);
+	const probe = mount();
+	try {
+		await probe.show("wake-a");
+		await act(async () => attempts[0]?.send(frame("wake-a")));
+		expect(probe.read().projection?.session_id).toBe("wake-a");
+		await changeAppState("background");
+		vi.setSystemTime(Date.now() + 10 * 60_000);
+		await changeAppState("active");
+		expect(requests).toHaveLength(2);
+		await advance(RECONNECT_BACKOFF_MIN_MS - 1);
+		expect(requests).toHaveLength(2);
+		expect(probe.read().connection.id).toBeNull();
+		// The retry fires at the plain backoff delay, not at the end of the
+		// 8 s resume window (where it used to come due with the drop report).
+		await advance(1);
+		expect(requests).toHaveLength(3);
+		await act(async () => attempts[1]?.send(frame("wake-a")));
+		expect(probe.read().connection.id).toBeNull();
+		for (let elapsed = 0; elapsed < 12_000; elapsed += 500) {
+			await advance(500);
+			expect(probe.read().connection.id).toBeNull();
+		}
+		expect(requests).toHaveLength(3);
+	} finally {
+		await probe.close();
+	}
+});
+
+it("does not carry a recovery into the next session's first load (#369 R3-2)", async () => {
+	vi.useFakeTimers();
+	// Request 2 is B's first open; its headers are slow (machine load).
+	const held: (() => void)[] = [];
+	const { attempts } = transport(undefined, (attempt) =>
+		attempt === 2
+			? new Promise<void>((resolve) => held.push(resolve))
+			: undefined,
+	);
+	const probe = mount({ keyed: false });
+	try {
+		await probe.show("carry-a");
+		// A skipped seed puts A into recovery, and the reader switches away
+		// before A's retry fires.
+		await act(async () => attempts[0]?.send(KEEPALIVE));
+		expect(attempts[0]?.signal?.aborted).toBe(true);
+		await probe.show("carry-b");
+		await advance(RECONNECT_DEADLINE_MS + 1_000);
+		expect(probe.read().connection.id).toBeNull();
+		await act(async () => held.shift()?.());
+		await act(async () => attempts[1]?.send(frame("carry-b")));
+		expect(probe.read().projection?.session_id).toBe("carry-b");
+		expect(probe.read().connection.id).toBeNull();
 	} finally {
 		await probe.close();
 	}
