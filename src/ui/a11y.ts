@@ -534,8 +534,10 @@ export const CONTROL = {
 	composerPillField: "composer-pill-field",
 	composerContext: "composer-context",
 	composerOpenQueue: "composer-open-queue",
+	/** More's Model and Folder rows: present only while that control's icon is
+	 *  not on the card's row (a short zone, or short landscape; issue #325). */
 	composerContextModel: "composer-context-model",
-	composerContextEffort: "composer-context-effort",
+	composerContextFolder: "composer-context-folder",
 	/** More's Questions row: the door to the asks sheet that survives a queue
 	 *  of only timed-out asks, which paints no ask bar (build 753). */
 	composerContextQuestions: "composer-context-questions",
@@ -551,8 +553,11 @@ export const CONTROL = {
 	/** Keep existing automation selectors stable when clearing only draft/presentation. */
 	composerClearDraft: "composer-clear-draft",
 	composerDismissError: "composer-dismiss-error",
+	/** The run-settings (model and effort) icon control. The id the model chip
+	 *  had, so a flow that pressed the model lever still finds it (issue #325). */
 	composerModelChip: "composer-model-chip",
-	composerEffortChip: "composer-effort-chip",
+	/** The session view's folder icon control (read-only folder sheet). */
+	composerFolder: "composer-folder",
 	slashFilter: "slash-filter",
 	pendingApprove: "pending-approve",
 	pendingDeny: "pending-deny",
@@ -671,8 +676,6 @@ export const CONTROL = {
 
 	/** The home header's sidebar affordance: opens the conversations panel. */
 	homeSidebar: "home-sidebar",
-	/** The home composer's folder chip: the session's target folder. */
-	homeTargetFolder: "home-target-folder",
 	/** The home's offline action "Connect a computer", in the suggestions' slot. */
 	/** The home's folders-read failure and its remedy (review M2): the sentence
 	 *  `/new` uses for the same failure, with the retry the home lacked. An auth
@@ -702,6 +705,10 @@ export const CONTROL = {
 	 *  failed-read retries, the model search, and the folder picker's secondary
 	 *  "Other path" field and its commit. */
 	homeFolderPicker: "home-folder-picker",
+	/** The folder sheet's header: the FULL path the conversation runs (or will
+	 *  start) in, whole and selectable — the composer's folder control is an icon
+	 *  and names only the folder's own name (issue #325). */
+	homeFolderCurrent: "home-folder-current",
 	homeFolderPickerRetry: "home-folder-picker-retry",
 	homeFolderOther: "home-folder-other",
 	homeFolderUsePath: "home-folder-use-path",
@@ -717,7 +724,8 @@ export const CONTROL = {
 	homeIdentityRetry: "home-identity-retry",
 	/** The composer More sheet's "Agent or team" row (home only). */
 	composerContextIdentity: "composer-context-identity",
-	/** The home composer strip's folder chip (the strip's first chip). */
+	/** The home composer's folder icon control (issue #325) — the id the
+	 *  strip's folder chip had, so a flow that pressed it still finds it. */
 	homeFolderChip: "home-folder-chip",
 	sidebarNewChat: "sidebar-new-chat",
 	sidebarSearch: "sidebar-search",
@@ -1194,6 +1202,15 @@ export const SURFACE = {
 	connectionMachineRemedy: "connection-machine-remedy",
 	connectionRelayNotInstalled: "connection-relay-not-installed",
 	connectionTunnelUnavailable: "connection-tunnel-unavailable",
+	/** The ONE run-settings sheet the composer's model-and-effort control opens
+	 *  (issue #325). `modelSheet` and `effortSheet` now name its two sections, so
+	 *  a flow that asked for "the model sheet" still finds the model list. */
+	runSettingsSheet: "run-settings-sheet",
+	/** The sheet's current-value line ("Opus 5 · High") and the compact rung
+	 *  group: both lead the sheet, so effort is visible when it opens (design
+	 *  round 1, D1). */
+	runSettingsSummary: "run-settings-summary",
+	effortRungs: "effort-rungs",
 	modelSheet: "model-sheet",
 	effortSheet: "effort-sheet",
 	slashSheet: "slash-sheet",

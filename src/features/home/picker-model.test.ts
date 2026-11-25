@@ -12,7 +12,8 @@ import {
 	folderName,
 	folderRows,
 	homeChips,
-	homeFolderChip,
+	homeFolderControl,
+	homeRunSettingsCustom,
 	typedFolder,
 } from "@/features/home/picker-model";
 import { MODEL_SEARCH_THRESHOLD } from "@/features/home/picker-search-threshold";
@@ -263,46 +264,84 @@ describe("the folder picker", () => {
 	});
 });
 
-describe("the folder chip (UX U1, design D2)", () => {
+describe("the folder control (UX U1, design D2; issue #325)", () => {
 	const HOME = "/Users/demo";
+	const FOLDERS = {
+		home: HOME,
+		default: "/Users/demo/code/app",
+		recent: [],
+	};
 
 	it.each([
 		// The computer's default, a picked temp folder, a typed `~` path.
-		// Spoken in the sheet rows' `~`-shortened spelling (UX U11 / N1).
-		["/Users/demo/code/app", "app", "Working in ~/code/app"],
-		["/private/tmp", "tmp", "Working in /private/tmp"],
-		["~/notes", "notes", "Working in ~/notes"],
-		["/Users/demo/notes", "notes", "Working in ~/notes"],
-		["/Users/demo", "~", "Working in ~"],
-	])(
-		"paints %s as its own name, and says the same folder",
-		(path, label, spoken) => {
-			expect(homeFolderChip(path, HOME)).toStrictEqual({
-				label,
-				accessibilityLabel: spoken,
-			});
+		["/Users/demo/code/app", "app", "default"],
+		["/private/tmp", "tmp", "chosen"],
+		["~/notes", "notes", "chosen"],
+		["/Users/demo/notes", "notes", "chosen"],
+		["/Users/demo", "~", "chosen"],
+	] as const)(
+		"names %s by its own name, and says where it comes from",
+		(path, name, source) => {
+			expect(homeFolderControl(path, FOLDERS)).toStrictEqual({ name, source });
 		},
 	);
 
-	it("paints `~` only for the home folder itself", () => {
-		expect(homeFolderChip(HOME, HOME).label).toBe("~");
+	it("names `~` only for the home folder itself", () => {
+		expect(homeFolderControl(HOME, FOLDERS).name).toBe("~");
 		// The regression: shortening a pick against ITSELF painted `~` for all.
-		expect(homeFolderChip("/private/tmp", HOME).label).not.toBe("~");
-		expect(homeFolderChip("/Users/demo/code/app", HOME).label).not.toBe("~");
+		expect(homeFolderControl("/private/tmp", FOLDERS).name).not.toBe("~");
+		expect(homeFolderControl("/Users/demo/code/app", FOLDERS).name).not.toBe(
+			"~",
+		);
 	});
 
-	it("leaves the path whole before the computer's home is known", () => {
-		expect(homeFolderChip("/Users/demo/code/app", null)).toStrictEqual({
-			label: "app",
-			accessibilityLabel: "Working in /Users/demo/code/app",
+	it("knows no source, and leaves the path whole, before the folder read answers", () => {
+		expect(homeFolderControl("/Users/demo/code/app", null)).toStrictEqual({
+			name: "app",
+			source: null,
 		});
 	});
+});
 
-	it("speaks the path exactly as the sheet row for it does (UX U11 / N1)", () => {
-		for (const path of ["/Users/demo/code/app", "/private/tmp", HOME])
-			expect(homeFolderChip(path, HOME).accessibilityLabel).toBe(
-				`Working in ${folderName(path, HOME).short}`,
-			);
+describe("the run-settings control's non-default mark (issue #325)", () => {
+	const ladder = {
+		kind: "ladder",
+		rungs: ["low", "high"],
+		exact: true,
+	} as const;
+	it("is off while both values are the computer's own", () => {
+		expect(
+			homeRunSettingsCustom({
+				chosenModel: null,
+				chosenEffort: null,
+				offer: ladder,
+			}),
+		).toBe(false);
+	});
+	it("is on for a model or an effort the reader chose", () => {
+		expect(
+			homeRunSettingsCustom({
+				chosenModel: opus,
+				chosenEffort: null,
+				offer: ladder,
+			}),
+		).toBe(true);
+		expect(
+			homeRunSettingsCustom({
+				chosenModel: null,
+				chosenEffort: "high",
+				offer: ladder,
+			}),
+		).toBe(true);
+	});
+	it("ignores an effort the start will not carry (a relay too old to accept one)", () => {
+		expect(
+			homeRunSettingsCustom({
+				chosenModel: null,
+				chosenEffort: "high",
+				offer: { kind: "unsupported" },
+			}),
+		).toBe(false);
 	});
 });
 

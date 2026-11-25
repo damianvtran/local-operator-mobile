@@ -123,7 +123,9 @@ export const sessionChipLabels = (input: {
 					? {
 							kind: "value",
 							text: model,
-							accessibilityLabel: `Model, ${model}`,
+							accessibilityLabel: t("mobile.session.chip.model_label", {
+								model,
+							}),
 						}
 					: {
 							kind: "value",
@@ -135,7 +137,9 @@ export const sessionChipLabels = (input: {
 					? {
 							kind: "value",
 							text: effortLabel(effortSource),
-							accessibilityLabel: `Effort, ${effortLabel(effortSource)}`,
+							accessibilityLabel: t("mobile.session.chip.effort_label", {
+								effort: effortLabel(effortSource),
+							}),
 						}
 					: null,
 		};
@@ -156,7 +160,9 @@ export const sessionChipLabels = (input: {
 					: {
 							kind: "unavailable",
 							text: name,
-							accessibilityLabel: `Model, ${name}`,
+							accessibilityLabel: t("mobile.session.chip.model_label", {
+								model: name,
+							}),
 							accessibilityHint: NOT_CONNECTED_HINT,
 						},
 			effort: pending.effort,
@@ -175,7 +181,12 @@ export const sessionChipLabels = (input: {
 	return {
 		model: friendlyValue(base.model, () => {
 			const name = friendlyModelName(modelSource, input.models);
-			return name === null ? null : { text: name, label: `Model, ${name}` };
+			return name === null
+				? null
+				: {
+						text: name,
+						label: t("mobile.session.chip.model_label", { model: name }),
+					};
 		}),
 		effort:
 			/* D1 (header): a reported-but-empty rung on a connected session hides
@@ -185,7 +196,10 @@ export const sessionChipLabels = (input: {
 				? null
 				: friendlyValue(base.effort, () => {
 						const name = effortLabel(p?.effort ?? "");
-						return { text: name, label: `Effort, ${name}` };
+						return {
+							text: name,
+							label: t("mobile.session.chip.effort_label", { effort: name }),
+						};
 					}),
 	};
 };

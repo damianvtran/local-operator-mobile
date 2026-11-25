@@ -73,6 +73,8 @@
 	"mobile.session.find.hint": "इस डिवाइस पर लोड किए गए ट्रांसक्रिप्ट में संदेश खोजता है",
 	"mobile.session.chip.model_change_failed": "मॉडल नहीं बदला जा सका।",
 	"mobile.session.chip.effort_change_failed": "प्रयास नहीं बदला जा सका।",
+	"mobile.session.chip.model_label": "मॉडल, {model}",
+	"mobile.session.chip.effort_label": "प्रयास, {effort}",
 	"mobile.session.composer.retained_instruction": "हो सकता है कि पहले भेजा गया कोई निर्देश पहुँच चुका हो। अपना मौजूदा ड्राफ़्ट भेजने से पहले उस निर्देश को दोबारा भेजने की कोशिश करें।",
 	"mobile.session.composer.settings_not_applied": "सत्र दोबारा खुल गया, लेकिन आपका चुना हुआ मॉडल या प्रयास लागू नहीं हो सका, इसलिए कुछ भी नहीं भेजा गया। फिर से कोशिश करें, या कोई दूसरा मॉडल या प्रयास चुनें।",
 	"mobile.session.tray.context": "{percent}% संदर्भ",

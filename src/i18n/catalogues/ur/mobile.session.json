@@ -73,6 +73,8 @@
 	"mobile.session.find.hint": "اس ڈیوائس پر لوڈ شدہ ٹرانسکرپٹ میں پیغامات تلاش کرتا ہے",
 	"mobile.session.chip.model_change_failed": "ماڈل تبدیل نہیں ہو سکا۔",
 	"mobile.session.chip.effort_change_failed": "استدلال کی شدت تبدیل نہیں ہو سکی۔",
+	"mobile.session.chip.model_label": "ماڈل، {model}",
+	"mobile.session.chip.effort_label": "استدلال کی شدت، {effort}",
 	"mobile.session.composer.retained_instruction": "ممکن ہے پچھلی ہدایت پہنچ چکی ہو۔ موجودہ مسودہ بھیجنے سے پہلے پچھلی ہدایت دوبارہ بھیجنے کی کوشش کریں۔",
 	"mobile.session.composer.settings_not_applied": "سیشن دوبارہ کھل گیا، لیکن آپ کا منتخب کردہ ماڈل یا استدلال کی شدت لاگو نہیں ہو سکی، اس لیے کچھ بھی نہیں بھیجا گیا۔ دوبارہ کوشش کریں، یا کوئی دوسرا ماڈل یا استدلال کی شدت منتخب کریں۔",
 	"mobile.session.tray.context": "{percent}% سیاق",

@@ -255,6 +255,18 @@
 		"role": "meta",
 		"note": "Visible text of the home's model chip when the computer's configured default applies but the app cannot name it (an older Local Operator). Says 'model' because it is the only chip on the row for both unnamed defaults: the effort chip is not drawn beside it. Keep it short: it shares one row with the folder chip and the send controls."
 	},
+	"mobile.home.picker.folder_current": {
+		"role": "meta",
+		"note": "Small label above the full path of the folder a conversation runs (or will start) in, at the top of the folder sheet. The path itself is shown verbatim under it. No colon."
+	},
+	"mobile.home.picker.folder_fixed": {
+		"role": "help",
+		"note": "Shown in the folder sheet once a conversation has started, under its full path: the folder cannot be changed for a running conversation (the computer only accepts a folder when a conversation starts), and the second sentence gives the next step. 'New chat' is the same term as mobile.chrome.new_chat. Two short sentences, each with a final full stop."
+	},
+	"mobile.home.picker.folder_current_label": {
+		"role": "meta",
+		"note": "Spoken label of the folder sheet's header (screen readers; never painted as one line): the label mobile.home.picker.folder_current followed by the full path. {path} is a file-system path, copied verbatim and never translated. Use your language's list separator between the two."
+	},
 	"mobile.home.identity.sheet_title": {
 		"role": "heading",
 		"note": "Title of the sheet that chooses which agent or team a NEW chat starts as. Mirrors the desktop's \"Start this chat with\" menu heading. New in the new-chat identity picker; the non-English text awaits the translation audit."

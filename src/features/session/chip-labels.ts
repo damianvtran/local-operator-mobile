@@ -200,7 +200,7 @@ const modelChipFor = (
 			return {
 				kind: "value",
 				text: model,
-				accessibilityLabel: `Model, ${model}`,
+				accessibilityLabel: t("mobile.session.chip.model_label", { model }),
 			};
 		}
 		case "absent":
@@ -233,6 +233,8 @@ const effortChipFor = (
 		: {
 				kind: "value",
 				text: rung,
-				accessibilityLabel: `Effort, ${rung}`,
+				accessibilityLabel: t("mobile.session.chip.effort_label", {
+					effort: rung,
+				}),
 			};
 };

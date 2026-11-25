@@ -3780,6 +3780,42 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 		}),
 	);
 
+	/* The composer's run-settings sheet and its More rows (issue #325): a live
+	 *  session that reports a model the catalogue lists, an effort ladder and a
+	 *  context reading, idle and mid-turn. NO CELL, for `models-ranked`'s reason
+	 *  above: the sheet is opened from the composer, not by the wire. The
+	 *  scenarios are the world a rendered or manual pass runs in. */
+	const runSettingsFrame = (streaming: boolean) =>
+		projectionFrom(liveIdle, {
+			model_label: "anthropic/claude-opus-5",
+			model_selector: "anthropic/claude-opus-5",
+			effort: "high",
+			effort_ladder: ["low", "medium", "high", "xhigh", "max"],
+			context_tokens: 42_000,
+			context_window: 200_000,
+			context_is_estimate: false,
+			streaming,
+			activity: streaming ? "responding" : "",
+		});
+	add(
+		"run-settings",
+		"A live idle session with a catalogue model, a five-rung effort ladder and a context reading: the composer's folder and run-settings controls, both sheets, and More's usage row.",
+		[],
+		() => ({
+			projections: { [liveIdle.session_id]: runSettingsFrame(false) },
+			models: rankedModels,
+		}),
+	);
+	add(
+		"run-settings-streaming",
+		"`run-settings` mid-turn: Stop joins the controls row beside the folder, run-settings and More controls.",
+		[],
+		() => ({
+			projections: { [liveIdle.session_id]: runSettingsFrame(true) },
+			models: rankedModels,
+		}),
+	);
+
 	/* -------------------------------------------------------------- computers -- */
 
 	add(

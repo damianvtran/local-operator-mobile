@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
 import {
 	composerChipLabels,
@@ -6,6 +6,8 @@ import {
 	reportedModel,
 	UNAVAILABLE_TEXT,
 } from "@/features/session/chip-labels";
+import { runSettingsControl } from "@/features/session/composer-controls";
+import { resetLocaleSource, setLocaleSource } from "@/i18n";
 
 /**
  * The three cases the chips can be in, each asserted on an OBSERVABLE outcome
@@ -144,5 +146,31 @@ describe("the model chip when the reader has chosen nothing", () => {
 			connection: "loading",
 		}).model;
 		expect(chip).toMatchObject({ kind: "value", text: "claude-opus-5" });
+	});
+});
+
+/* QA round 4, Q2 (#335): with the chips gone the run-settings icon's spoken
+ *  name is the only one it has, so its "Model" and "Effort" words follow the
+ *  reader's catalogue like the Home control's do. */
+/** The English words the Urdu name must not carry. */
+const ENGLISH_NAMES = /\bModel\b|\bEffort\b/;
+
+describe("the session chips' spoken names are keyed", () => {
+	afterEach(() => resetLocaleSource());
+
+	it("keeps the English names byte for byte", () => {
+		const { model, effort } = chips("anthropic/claude-opus-5", "high");
+		expect(model.accessibilityLabel).toBe("Model, claude-opus-5");
+		expect(effort.accessibilityLabel).toBe("Effort, high");
+	});
+
+	it("names the model and the effort in the reader's catalogue (ur), values intact", () => {
+		setLocaleSource(() => "ur");
+		const { model, effort } = chips("anthropic/claude-opus-5", "high");
+		expect(model.accessibilityLabel).toBe("ماڈل، claude-opus-5");
+		expect(effort.accessibilityLabel).toBe("استدلال کی شدت، high");
+		const control = runSettingsControl(model, effort);
+		expect(control.accessibilityLabel).not.toMatch(ENGLISH_NAMES);
+		expect(control.accessibilityLabel).toContain("claude-opus-5");
 	});
 });

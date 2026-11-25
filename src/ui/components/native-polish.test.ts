@@ -3,6 +3,12 @@ import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { fieldClasses } from "../variants";
 
+/** A rung row whose JSX carries the `compact` prop on its own line, after the
+ *  session sheet's group opens (round 2 F2). */
+const COMPACT_SESSION_RUNG =
+	/<EffortRungGroup>[\s\S]*?<EffortRungRow[^>]*?^\s*compact$/m;
+const COMPACT_PROP = /^\s*compact$/gm;
+
 const source = (path: string) =>
 	readFileSync(new URL(`../../../${path}`, import.meta.url), "utf8");
 
@@ -67,15 +73,15 @@ describe("native conversation chrome", () => {
 });
 
 describe("final design audit wiring", () => {
-	it("gives the home folder chip the same quiet treatment as the model chip", () => {
+	it("draws the home's folder and the run settings as the same icon control", () => {
 		const source = readFileSync(
 			new URL("../../features/home/home.tsx", import.meta.url),
 			"utf8",
 		);
-		/* The home passes its folder as DATA since the 2026-11-04 composer
-		 *  restructure (the meta line decides glyph-only vs path); the chip itself
-		 *  is drawn by the composer, so its paint is asserted there. */
-		expect(source).toContain("testID: CONTROL.homeTargetFolder");
+		/* The home passes its folder as DATA (the composer's plan decides whether
+		 *  the icon is on the row or a row in More, issue #325), under the id the
+		 *  folder chip had. */
+		expect(source).toContain("testID: CONTROL.homeFolderChip");
 		const composer = readFileSync(
 			new URL(
 				"../../features/session/components/composer.tsx",
@@ -83,22 +89,102 @@ describe("final design audit wiring", () => {
 			),
 			"utf8",
 		);
-		/* Since the pickers' round-1 remediation the folder chip lives in the strip
-		 *  only (UX U5 dropped More's copy), drawn by `ComposerChipButton` — the
-		 *  same quiet chip as the model's. D2: one row of disclosures must not mix
-		 *  a filled bordered chip with flat text. */
-		expect(composer).not.toContain("testID={folderChip.testID}");
-		const at = composer.indexOf("testID={CONTROL.homeFolderChip}");
-		const chip = composer.slice(
-			composer.lastIndexOf("<ComposerChipButton", at),
-			at,
+		/* D2's rule survives the chips: one row of disclosures does not mix two
+		 *  treatments. Both are `ComposerIconControl` — the kit's `IconButton` —
+		 *  the folder under its host's id, the run settings under the model
+		 *  chip's id. */
+		const zone = composer.slice(
+			composer.indexOf("const controlZone = ("),
+			composer.indexOf("const clearDraft ="),
 		);
-		expect(chip).toContain("onPress={folderChip.onPress}");
-		const button = composer.slice(
-			composer.indexOf("const ComposerChipButton"),
-			composer.indexOf("const stripChipSurface"),
+		const folder = zone.indexOf("testID={folder.testID}");
+		const settings = zone.indexOf("testID={CONTROL.composerModelChip}");
+		expect(folder).toBeGreaterThan(-1);
+		expect(settings).toBeGreaterThan(folder);
+		expect(zone.lastIndexOf("<ComposerIconControl", folder)).toBeGreaterThan(
+			-1,
 		);
-		expect(button.slice(button.lastIndexOf("<Chip"))).toContain("quiet");
+		expect(
+			zone.slice(zone.lastIndexOf("<ComposerIconControl", settings), settings),
+		).toContain("onPress={onOpenRunSettings}");
+		const control = composer.slice(
+			composer.indexOf("const ComposerIconControl"),
+			composer.indexOf("/** The failure notice's row floor:"),
+		);
+		expect(control).toContain("<IconButton");
+		expect(control).not.toContain("<Chip");
+	});
+
+	it("pins the run-settings sheet's wiring on both hosts (round 2 F2/Q6)", () => {
+		const read = (path: string) =>
+			readFileSync(new URL(path, import.meta.url), "utf8");
+		const session = read("../../../app/(app)/session/[id].tsx");
+		/* An ended session with no recorded effort says to resume, never "no
+		 *  effort setting" — only if the screen tells the helper it ended. */
+		const wiring = session.slice(
+			session.indexOf("sessionRunSettings({"),
+			session.indexOf("});", session.indexOf("sessionRunSettings({")),
+		);
+		expect(wiring).toContain(
+			'ended: headerHealth(projection, runtime.link) === "ended",',
+		);
+		// A refused change shows inside the open sheet (round 1 R2).
+		expect(session).toContain("error={chipError}");
+		/* Picks go through main's stored-model lane (#350/#353), which records
+		 *  a refusal as `settingsError`; no second command path (#335 rework). */
+		const sessionPicks = session.slice(
+			session.indexOf("<SessionRunSettingsSheet"),
+			session.indexOf("<FolderPicker"),
+		);
+		expect(sessionPicks).toContain("models={pickerModels}");
+		expect(sessionPicks).toContain("storedModel.selectModel(model)");
+		expect(sessionPicks).toContain(
+			"storedModel.selectEffort(effort, selectedModel)",
+		);
+		expect(session).not.toContain("applyRunSetting");
+		// An ended local chat chooses before reopening, so it is never "resume".
+		expect(wiring).toContain("stored: storedPicker");
+		const home = read("../../features/home/home.tsx");
+		expect(home).toContain(
+			"summary={runSettingsSummary(chips.model, chips.effort ?? null)}",
+		);
+		const sheet = read("../../features/session/components/model-sheet.tsx");
+		const sessionSheet = sheet.slice(
+			sheet.indexOf("export const SessionRunSettingsSheet"),
+		);
+		expect(sessionSheet).toMatch(COMPACT_SESSION_RUNG);
+		const pickers = read("../../features/home/home-pickers.tsx");
+		const choices = pickers.slice(
+			pickers.indexOf("const EffortChoices"),
+			pickers.indexOf("export const RunSettingsPicker"),
+		);
+		expect(choices).toContain("<EffortRungGroup>");
+		// Both of the home's rungs (the default row and the ladder) are compact.
+		expect(choices.match(COMPACT_PROP)?.length).toBe(2);
+	});
+
+	it("draws run settings with a settings glyph and pins the dot to the glyph (D4, D5)", () => {
+		const composer = readFileSync(
+			new URL(
+				"../../features/session/components/composer.tsx",
+				import.meta.url,
+			),
+			"utf8",
+		);
+		/* Sparkles reads as "AI feature" beside a message field (design round 1
+		 *  D5); the control changes run SETTINGS, so it is a sliders glyph. */
+		expect(composer).toContain(
+			"<SlidersHorizontal color={color} size={size} />",
+		);
+		expect(composer).not.toContain("Sparkles");
+		/* The non-default dot's inset is computed from the platform floor, not a
+		 *  fixed 7 that only fit the 44 pt box (D4). */
+		expect(composer).toContain(
+			"customMarkInset({\n\tfloor: TOUCH_FLOOR,\n\tbox: ICON_BUTTON_BOX_PT,\n\tglyph: ATTACH_GLYPH_PT,\n\tmark: CUSTOM_MARK_PT,\n})",
+		);
+		expect(composer).toContain("top: MARK_INSET.top,");
+		expect(composer).toContain("end: MARK_INSET.end,");
+		expect(composer).not.toContain("top: 7,");
 	});
 
 	it("keeps the home header's computer on ONE fitted line", () => {

@@ -76,8 +76,8 @@ describe("overlaysBlocked", () => {
 	 *  has — every sheet the screen can open must hold it, and with none open
 	 *  the attempt must fire exactly as `mayAcknowledge` always allowed. */
 	const closed: ScreenOverlays = {
-		models: false,
-		effort: false,
+		runSettings: false,
+		folder: false,
 		panel: false,
 		asks: false,
 		slash: false,
@@ -107,8 +107,8 @@ describe("overlaysBlocked", () => {
 	});
 
 	it.each([
-		["models"],
-		["effort"],
+		["runSettings"],
+		["folder"],
 		["panel"],
 		["asks"],
 		["slash"],

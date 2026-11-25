@@ -21,10 +21,16 @@
 	"mobile.chrome.drawer.open_count": "Открыть беседы, {count, plural, one {# новая беседа} few {# новые беседы} many {# новых бесед} other {# новой беседы}}",
 	"mobile.chrome.drawer.agents": "Агенты",
 	"mobile.chrome.composer.row_model": "Модель",
-	"mobile.chrome.composer.row_effort": "Усилие",
 	"mobile.chrome.composer.row_usage": "Контекст",
 	"mobile.chrome.composer.row_cost": "Стоимость",
 	"mobile.chrome.composer.row_queue": "Очередь",
 	"mobile.chrome.composer.row_questions": "Вопросы",
+	"mobile.chrome.composer.folder": "{source, select, chosen {Папка, {folder}, выбрана для этой беседы} default {Папка, {folder}, по умолчанию на этом компьютере} other {Папка, {folder}}}",
+	"mobile.chrome.composer.folder_hint": "Выберите другую папку",
+	"mobile.chrome.composer.folder_hint_fixed": "Показывает полный путь к папке этой беседы",
+	"mobile.chrome.composer.run_settings": "{model}, {effort}",
+	"mobile.chrome.composer.run_settings_hint": "Выберите модель и усилие",
+	"mobile.chrome.composer.run_settings_title": "Модель и усилие",
+	"mobile.chrome.composer.row_folder": "Папка",
 	"mobile.chrome.composer.row_identity": "Агент или команда"
 }

@@ -73,6 +73,8 @@
 	"mobile.session.find.hint": "在已加载到此设备的会话记录中搜索消息",
 	"mobile.session.chip.model_change_failed": "无法更改模型。",
 	"mobile.session.chip.effort_change_failed": "无法更改推理强度。",
+	"mobile.session.chip.model_label": "模型，{model}",
+	"mobile.session.chip.effort_label": "推理强度，{effort}",
 	"mobile.session.composer.retained_instruction": "之前的指令可能已送达。先重试之前的指令，再发送当前草稿。",
 	"mobile.session.composer.settings_not_applied": "会话已重新打开，但未能应用你选择的模型或推理强度，因此未发送任何内容。请重试，或选择其他模型或推理强度。",
 	"mobile.session.tray.context": "上下文{percent}%",

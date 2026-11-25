@@ -25,9 +25,11 @@ import {
 	type StartTarget,
 } from "@/features/home/start-targets";
 import {
+	EffortRungGroup,
 	EffortRungRow,
 	groupByProvider,
 	ModelOptionRow,
+	RunSettingsSheet,
 } from "@/features/session/components/model-sheet";
 import { HEADER_AVATAR_PT } from "@/features/session/header";
 import { t } from "@/i18n";
@@ -81,6 +83,32 @@ const FixedLine = () => (
 	</Text>
 );
 
+/**
+ * The folder sheet's header: the FULL path, whole and selectable (issue #325).
+ *
+ * The composer's folder control is an icon whose spoken name is the folder's own
+ * name, so this is the one place the reader sees where a conversation runs — the
+ * old chip cut it to `loc`. The path wraps rather than ellipsizes: the end of a
+ * path is what tells two folders apart, and a head-ellipsis is ignored on web
+ * (the rows' D6). One accessible element, so a screen reader hears the label
+ * and the path together.
+ */
+const CurrentFolder = ({ path }: { path: string }) => (
+	<View
+		accessible
+		accessibilityLabel={t("mobile.home.picker.folder_current_label", { path })}
+		className="gap-1 px-3 pb-3"
+		testID={CONTROL.homeFolderCurrent}
+	>
+		<Text className="text-meta text-ink-dim">
+			{t("mobile.home.picker.folder_current")}
+		</Text>
+		<Text selectable className="font-mono text-mono text-ink">
+			{path}
+		</Text>
+	</View>
+);
+
 /** The kit's text line for a list still on its way (spec §5 "loading"). */
 const LoadingLine = () => (
 	<Text className="px-3 py-2 text-body-sm text-ink-dim">
@@ -131,6 +159,75 @@ export const FolderPicker = ({
 }: FolderPickerProps) => {
 	const [typing, setTyping] = useState(false);
 	const [typed, setTyped] = useState("");
+	const close = () => {
+		setTyping(false);
+		setTyped("");
+		onClose();
+	};
+	return (
+		<Sheet
+			visible={visible}
+			onClose={close}
+			title={t("mobile.home.picker.folder_title")}
+			detent="half"
+			testID={CONTROL.homeFolderPicker}
+		>
+			{current !== null ? <CurrentFolder path={current} /> : null}
+			{/* READ-ONLY once the conversation has started: the relay takes a folder
+			 *  only at start (`StartSessionRequest.cwd`) and has no in-session op to
+			 *  change it, so the sheet is the path and why — not a list of rows that
+			 *  are all disabled (issue #325). */}
+			{!editable ? (
+				<Text className="px-3 pb-2 text-body-sm text-ink-muted">
+					{t("mobile.home.picker.folder_fixed")}
+				</Text>
+			) : (
+				<FolderChoices
+					folders={folders}
+					current={current}
+					failure={failure}
+					onRetry={onRetry}
+					retrying={retrying}
+					onPick={(path) => {
+						onPick(path);
+						close();
+					}}
+					typing={typing}
+					onType={() => setTyping(true)}
+					typed={typed}
+					onTyped={setTyped}
+				/>
+			)}
+		</Sheet>
+	);
+};
+
+/** The folder sheet's choices, while the folder can still change: the read's
+ *  failure or loading line, the computer's folders, and the typed path. */
+const FolderChoices = ({
+	folders,
+	current,
+	failure,
+	onRetry,
+	retrying,
+	onPick,
+	typing,
+	onType,
+	typed,
+	onTyped,
+}: {
+	folders: HomeFolders | null;
+	current: string | null;
+	failure: string | null;
+	onRetry: () => void;
+	retrying: boolean;
+	/** Commits the folder and closes the sheet. */
+	onPick: (path: string) => void;
+	typing: boolean;
+	onType: () => void;
+	typed: string;
+	onTyped: (text: string) => void;
+}) => {
 	const glyph = useTokenColor("ink-dim");
 	const rows = useMemo(
 		() => (folders === null ? [] : folderRows(folders)),
@@ -145,11 +242,6 @@ export const FolderPicker = ({
 			: check.reason === "outside"
 				? t("mobile.home.picker.folder_outside")
 				: t("mobile.home.picker.folder_too_long");
-	const close = () => {
-		setTyping(false);
-		setTyped("");
-		onClose();
-	};
 	const kindLabel = (row: FolderRow): string | null =>
 		row.kind === "default"
 			? t("mobile.home.picker.badge_default")
@@ -159,14 +251,7 @@ export const FolderPicker = ({
 					? t("mobile.home.picker.folder_tmp")
 					: null;
 	return (
-		<Sheet
-			visible={visible}
-			onClose={close}
-			title={t("mobile.home.picker.folder_title")}
-			detent="half"
-			testID={CONTROL.homeFolderPicker}
-		>
-			{!editable ? <FixedLine /> : null}
+		<>
 			{failure !== null ? (
 				<View className="px-3 pb-2">
 					<Alert
@@ -196,12 +281,8 @@ export const FolderPicker = ({
 						key={row.path}
 						accessibilityRole={ROLE.button}
 						accessibilityLabel={kind !== null ? `${short}, ${kind}` : short}
-						accessibilityState={state({ selected, disabled: !editable })}
-						disabled={!editable}
-						onPress={() => {
-							onPick(row.path);
-							close();
-						}}
+						accessibilityState={state({ selected })}
+						onPress={() => onPick(row.path)}
 						testID={homeFolderRowId(index)}
 					>
 						{/* 48 pt rows: glyph · name · parent · kind badge · ✓ (spec §5).
@@ -243,20 +324,18 @@ export const FolderPicker = ({
 						<Input
 							label={t("mobile.home.options.folder")}
 							value={typed}
-							onChangeText={setTyped}
+							onChangeText={onTyped}
 							autoCapitalize="none"
 							autoFocus
 							invalid={reason !== null}
-							disabled={!editable}
 							maxLength={4096}
 							/* Return answers the field the way "Use this path" does, and
 							 *  only when that button would: a phone keyboard's Done key
 							 *  otherwise left a valid path sitting in an open sheet (U3). */
 							returnKeyType="done"
 							onSubmitEditing={() => {
-								if (!editable || check === null || !check.ok) return;
+								if (check === null || !check.ok) return;
 								onPick(check.path);
-								close();
 							}}
 							testID={CONTROL.newSessionCwd}
 						/>
@@ -265,11 +344,10 @@ export const FolderPicker = ({
 						) : null}
 						<Button
 							label={t("mobile.home.picker.folder_use_path")}
-							disabled={!editable || check === null || !check.ok}
+							disabled={check === null || !check.ok}
 							onPress={() => {
 								if (check === null || !check.ok) return;
 								onPick(check.path);
-								close();
 							}}
 							testID={CONTROL.homeFolderUsePath}
 						/>
@@ -279,20 +357,17 @@ export const FolderPicker = ({
 						<Button
 							label={t("mobile.home.picker.folder_other")}
 							variant="quiet"
-							disabled={!editable}
-							onPress={() => setTyping(true)}
+							onPress={onType}
 							testID={CONTROL.homeFolderOther}
 						/>
 					</View>
 				)
 			) : null}
-		</Sheet>
+		</>
 	);
 };
 
-export type ModelPickerProps = {
-	visible: boolean;
-	onClose: () => void;
+export type ModelChoicesProps = {
 	models: readonly ModelEntry[];
 	/** From `homeModelRows`: the row set and the one selected row. */
 	rows: readonly HomeModelRow[];
@@ -302,25 +377,24 @@ export type ModelPickerProps = {
 	failure: string | null;
 	onRetry: () => void;
 	retrying: boolean;
-	editable: boolean;
 	/** `null` is "use the computer's default": the start then names no model. */
 	onPick: (model: ModelEntry | null) => void;
 };
 
 /**
- * The model picker: the relay's list, on the phone.
+ * The run-settings sheet's model section: the relay's list, on the phone.
  *
  * Provider groups in first-seen order and the daemon's ranking inside each (never
  * re-sorted); the friendly label; "not connected" rows kept visible and inert,
  * because they answer "why is my model missing"; ✓ on the model that will run; a
  * "Default" badge on the computer's default and "This chat" on a model chosen here
  * — both visible at once when they differ, so the reader can see they overrode a
- * default. A search field appears once the list is long enough to need one
- * (`MODEL_SEARCH_THRESHOLD`), with the relay SPA's token filter.
+ * default. A long list (`MODEL_SEARCH_THRESHOLD`) is filtered by the sheet's
+ * pinned search field (`RunSettingsPicker`), with the relay SPA's token filter.
  */
-export const ModelPicker = ({
-	visible,
-	onClose,
+const ModelChoices = ({
+	editable,
+	query,
 	models,
 	rows,
 	chosen,
@@ -328,14 +402,13 @@ export const ModelPicker = ({
 	failure,
 	onRetry,
 	retrying,
-	editable,
 	onPick,
-}: ModelPickerProps) => {
-	const [query, setQuery] = useState("");
-	const close = () => {
-		setQuery("");
-		onClose();
-	};
+}: ModelChoicesProps & {
+	editable: boolean;
+	/** The search field's text, owned by the sheet so closing it clears it;
+	 *  the field itself is the sheet's pinned region (`RunSettingsSheet`). */
+	query: string;
+}) => {
 	const searchable = models.length > MODEL_SEARCH_THRESHOLD;
 	const matches = useMemo(() => {
 		const kept = new Set(filterModels(models, query).map((m) => m.selector));
@@ -350,19 +423,12 @@ export const ModelPicker = ({
 	const byModel = new Map(modelRows.map((row) => [row.model.selector, row]));
 	const groups = groupByProvider(modelRows.map((row) => row.model));
 	const fallbackRow = matches.find((row) => row.kind === "default");
-	const pick = (model: ModelEntry | null) => {
-		onPick(model);
-		close();
-	};
-	/* What leads the sheet: the source line, a refusal, and the search field.
-	 *  With a search field it is PINNED above the scrolling rows (TestFlight
-	 *  1295: with the keyboard up the body is a few rows tall, and a field that
-	 *  scrolls with its results left the reader typing into nothing). The line and
-	 *  the alert travel with the field so the reading order is unchanged; a short
-	 *  list has no field and keeps everything in the body, as before. */
-	const lead = (
+	/* A pick commits and the sheet stays open (`RunSettingsSheet`): the ✓ moves
+	 *  and the effort section below follows the new model's ladder. */
+	const pick = (model: ModelEntry | null) => onPick(model);
+	return (
 		<>
-			{!editable ? <FixedLine /> : <SourceLine chosen={chosen} />}
+			{editable ? <SourceLine chosen={chosen} /> : null}
 			{failure !== null ? (
 				<View className="px-3 pb-2">
 					<Alert
@@ -378,28 +444,6 @@ export const ModelPicker = ({
 					</Alert>
 				</View>
 			) : null}
-			{searchable ? (
-				<View className="px-3 pb-2">
-					<Input
-						label={t("mobile.home.picker.model_search")}
-						value={query}
-						onChangeText={setQuery}
-						autoCapitalize="none"
-						testID={CONTROL.homeModelSearch}
-					/>
-				</View>
-			) : null}
-		</>
-	);
-	return (
-		<Sheet
-			visible={visible}
-			onClose={close}
-			title={t("mobile.home.picker.model_title")}
-			testID={CONTROL.homeModelPicker}
-			pinned={searchable ? lead : undefined}
-		>
-			{searchable ? null : lead}
 			{/* No default named (an older daemon, or none resolved): the explicit
 			 *  "use this computer's default" row is the way back to sending no model
 			 *  (#174, D1). With a named default its own row carries that meaning. */}
@@ -466,25 +510,22 @@ export const ModelPicker = ({
 					{t("mobile.home.picker.model_no_match")}
 				</Text>
 			) : null}
-		</Sheet>
+		</>
 	);
 };
 
-export type EffortPickerProps = {
-	visible: boolean;
-	onClose: () => void;
+export type EffortChoicesProps = {
 	offer: EffortOffer;
 	/** The reader's level, `null` when they chose none. */
 	chosen: string | null;
 	/** The level the computer applies with nothing chosen, when known. */
 	defaultEffort: string | null;
-	editable: boolean;
 	/** `null` is "use the computer's level": the start then names no effort. */
 	onPick: (effort: string | null) => void;
 };
 
 /**
- * The effort picker: the model's own ladder as radio rows — never a slider, which
+ * The run-settings sheet's effort section: the model's own ladder as radio rows — never a slider, which
  * would invent levels between two rungs that no provider accepts.
  *
  * Every state says why it is what it is: a relay too old to accept an effort
@@ -496,23 +537,16 @@ export type EffortPickerProps = {
  * default row, so the start names no effort and the configured level, not a
  * pinned copy of it, is what runs.
  */
-export const EffortPicker = ({
-	visible,
-	onClose,
+const EffortChoices = ({
 	offer,
 	chosen,
 	defaultEffort,
 	editable,
 	onPick,
-}: EffortPickerProps) => {
+}: EffortChoicesProps & { editable: boolean }) => {
 	const selected = chosen ?? defaultEffort;
 	return (
-		<Sheet
-			visible={visible}
-			onClose={onClose}
-			title={t("mobile.home.picker.effort_title")}
-			testID={CONTROL.homeEffortPicker}
-		>
+		<>
 			{offer.kind === "unsupported" ? (
 				<Text className="px-3 pb-2 text-body-sm text-ink-muted">
 					{t("mobile.home.picker.effort_unsupported")}
@@ -523,13 +557,13 @@ export const EffortPicker = ({
 				</Text>
 			) : (
 				<>
-					{!editable ? <FixedLine /> : <SourceLine chosen={chosen !== null} />}
+					{editable ? <SourceLine chosen={chosen !== null} /> : null}
 					{!offer.exact ? (
 						<Text className="px-3 pb-2 text-body-sm text-ink-muted">
 							{t("mobile.home.picker.effort_unknown")}
 						</Text>
 					) : null}
-					<View accessibilityRole={ROLE.radiogroup} className="py-1">
+					<EffortRungGroup>
 						{/* No rung is the computer's KNOWN default for this model
 						 *  (`default.effort` describes the default model only), so no
 						 *  rung maps a tap back to "send no effort". Without this row a
@@ -540,12 +574,10 @@ export const EffortPicker = ({
 							<EffortRungRow
 								rung=""
 								label={t("mobile.home.picker.effort_use_default")}
+								compact
 								selected={chosen === null}
 								disabled={!editable}
-								onPress={() => {
-									onPick(null);
-									onClose();
-								}}
+								onPress={() => onPick(null)}
 								testID={CONTROL.homeDefaultEffort}
 							/>
 						) : null}
@@ -556,26 +588,91 @@ export const EffortPicker = ({
 									key={rung}
 									rung={rung}
 									label={effortLabel(rung)}
+									compact
 									selected={rung === selected}
 									disabled={!editable}
+									/* Only the default's badge, which never moves. A
+									 *  "This conversation" badge added on a pick made the
+									 *  compact group wrap again under the thumb, so a second
+									 *  tap at the same point hit another rung (design round
+									 *  2 D1, QA Q4). The source line above already says
+									 *  "Chosen for this conversation". */
 									badge={
-										isDefault
-											? t("mobile.home.picker.badge_default")
-											: rung === chosen
-												? t("mobile.home.picker.badge_this_chat")
-												: null
+										isDefault ? t("mobile.home.picker.badge_default") : null
 									}
-									onPress={() => {
-										onPick(isDefault ? null : rung);
-										onClose();
-									}}
+									onPress={() => onPick(isDefault ? null : rung)}
 								/>
 							);
 						})}
-					</View>
+					</EffortRungGroup>
 				</>
 			)}
-		</Sheet>
+		</>
+	);
+};
+
+/**
+ * The home's run-settings sheet: the model and the effort the next start names,
+ * in ONE sheet behind the composer's model-and-effort control (issue #325).
+ *
+ * It replaces the separate model and effort pickers, each behind its own chip,
+ * that iOS cut to `Claude` with no ellipsis. Each section keeps its picker's
+ * rules (`picker-model.ts`) and its source line; a pick commits on its own tap
+ * as before, but the sheet stays open so a model and its effort can be set in
+ * one visit. Once the conversation has started every row is inert, and the
+ * reason is said ONCE, above both sections.
+ */
+export const RunSettingsPicker = ({
+	visible,
+	onClose,
+	editable,
+	summary,
+	model,
+	effort,
+}: {
+	visible: boolean;
+	onClose: () => void;
+	editable: boolean;
+	/** The current model and effort, as the chips name them
+	 *  (`runSettingsSummary`), so both are visible when the sheet opens. */
+	summary: string | null;
+	model: ModelChoicesProps;
+	effort: EffortChoicesProps;
+}) => {
+	const [query, setQuery] = useState("");
+	return (
+		<RunSettingsSheet
+			visible={visible}
+			onClose={() => {
+				setQuery("");
+				onClose();
+			}}
+			headings={{
+				model: t("mobile.home.picker.model_title"),
+				effort: t("mobile.home.picker.effort_title"),
+			}}
+			summary={summary}
+			preface={editable ? null : <FixedLine />}
+			modelTestID={CONTROL.homeModelPicker}
+			effortTestID={CONTROL.homeEffortPicker}
+			model={<ModelChoices {...model} editable={editable} query={query} />}
+			/* Pinned once the reader reaches the models (`RunSettingsSheet`), so
+			 *  the field stays above the keyboard (TestFlight 1295). */
+			modelSearch={
+				model.models.length > MODEL_SEARCH_THRESHOLD ? (
+					<View className="px-3 pb-2">
+						<Input
+							label={t("mobile.home.picker.model_search")}
+							value={query}
+							onChangeText={setQuery}
+							autoCapitalize="none"
+							testID={CONTROL.homeModelSearch}
+						/>
+					</View>
+				) : null
+			}
+			effort={<EffortChoices {...effort} editable={editable} />}
+		/>
 	);
 };
 

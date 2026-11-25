@@ -100,16 +100,22 @@ export type CatalogueKey =
 	| "mobile.chrome.clear_search"
 	| "mobile.chrome.close_conversations"
 	| "mobile.chrome.composer.dismiss_keyboard"
+	| "mobile.chrome.composer.folder"
+	| "mobile.chrome.composer.folder_hint"
+	| "mobile.chrome.composer.folder_hint_fixed"
 	| "mobile.chrome.composer.more"
 	| "mobile.chrome.composer.open_queue"
 	| "mobile.chrome.composer.queued"
 	| "mobile.chrome.composer.row_cost"
-	| "mobile.chrome.composer.row_effort"
+	| "mobile.chrome.composer.row_folder"
 	| "mobile.chrome.composer.row_identity"
 	| "mobile.chrome.composer.row_model"
 	| "mobile.chrome.composer.row_questions"
 	| "mobile.chrome.composer.row_queue"
 	| "mobile.chrome.composer.row_usage"
+	| "mobile.chrome.composer.run_settings"
+	| "mobile.chrome.composer.run_settings_hint"
+	| "mobile.chrome.composer.run_settings_title"
 	| "mobile.chrome.destination.inbox"
 	| "mobile.chrome.destination.inbox_count"
 	| "mobile.chrome.destination.past"
@@ -569,6 +575,9 @@ export type CatalogueKey =
 	| "mobile.home.picker.effort_unknown"
 	| "mobile.home.picker.effort_unsupported"
 	| "mobile.home.picker.effort_use_default"
+	| "mobile.home.picker.folder_current"
+	| "mobile.home.picker.folder_current_label"
+	| "mobile.home.picker.folder_fixed"
 	| "mobile.home.picker.folder_home"
 	| "mobile.home.picker.folder_other"
 	| "mobile.home.picker.folder_outside"
@@ -909,9 +918,11 @@ export type CatalogueKey =
 	| "mobile.session.back_to"
 	| "mobile.session.back_to_session"
 	| "mobile.session.chip.effort_change_failed"
+	| "mobile.session.chip.effort_label"
 	| "mobile.session.chip.effort_resume_hint"
 	| "mobile.session.chip.model_change_failed"
 	| "mobile.session.chip.model_default"
+	| "mobile.session.chip.model_label"
 	| "mobile.session.chip.model_resume_hint"
 	| "mobile.session.chip.model_unknown"
 	| "mobile.session.chip.model_unrecorded_hint"
@@ -1570,15 +1581,19 @@ export type NoParamKey =
 	| "mobile.chrome.clear_search"
 	| "mobile.chrome.close_conversations"
 	| "mobile.chrome.composer.dismiss_keyboard"
+	| "mobile.chrome.composer.folder_hint"
+	| "mobile.chrome.composer.folder_hint_fixed"
 	| "mobile.chrome.composer.more"
 	| "mobile.chrome.composer.open_queue"
 	| "mobile.chrome.composer.row_cost"
-	| "mobile.chrome.composer.row_effort"
+	| "mobile.chrome.composer.row_folder"
 	| "mobile.chrome.composer.row_identity"
 	| "mobile.chrome.composer.row_model"
 	| "mobile.chrome.composer.row_questions"
 	| "mobile.chrome.composer.row_queue"
 	| "mobile.chrome.composer.row_usage"
+	| "mobile.chrome.composer.run_settings_hint"
+	| "mobile.chrome.composer.run_settings_title"
 	| "mobile.chrome.destination.inbox"
 	| "mobile.chrome.destination.past"
 	| "mobile.chrome.destination.schedules"
@@ -1950,6 +1965,8 @@ export type NoParamKey =
 	| "mobile.home.picker.effort_unknown"
 	| "mobile.home.picker.effort_unsupported"
 	| "mobile.home.picker.effort_use_default"
+	| "mobile.home.picker.folder_current"
+	| "mobile.home.picker.folder_fixed"
 	| "mobile.home.picker.folder_home"
 	| "mobile.home.picker.folder_other"
 	| "mobile.home.picker.folder_outside"
@@ -2800,16 +2817,22 @@ export type MessageParams = {
 	"mobile.chrome.clear_search": NoParams;
 	"mobile.chrome.close_conversations": NoParams;
 	"mobile.chrome.composer.dismiss_keyboard": NoParams;
+	"mobile.chrome.composer.folder": { folder: string | number; source: string };
+	"mobile.chrome.composer.folder_hint": NoParams;
+	"mobile.chrome.composer.folder_hint_fixed": NoParams;
 	"mobile.chrome.composer.more": NoParams;
 	"mobile.chrome.composer.open_queue": NoParams;
 	"mobile.chrome.composer.queued": { count: number };
 	"mobile.chrome.composer.row_cost": NoParams;
-	"mobile.chrome.composer.row_effort": NoParams;
+	"mobile.chrome.composer.row_folder": NoParams;
 	"mobile.chrome.composer.row_identity": NoParams;
 	"mobile.chrome.composer.row_model": NoParams;
 	"mobile.chrome.composer.row_questions": NoParams;
 	"mobile.chrome.composer.row_queue": NoParams;
 	"mobile.chrome.composer.row_usage": NoParams;
+	"mobile.chrome.composer.run_settings": { effort: string | number; model: string | number };
+	"mobile.chrome.composer.run_settings_hint": NoParams;
+	"mobile.chrome.composer.run_settings_title": NoParams;
 	"mobile.chrome.destination.inbox": NoParams;
 	"mobile.chrome.destination.inbox_count": { count: number };
 	"mobile.chrome.destination.past": NoParams;
@@ -3269,6 +3292,9 @@ export type MessageParams = {
 	"mobile.home.picker.effort_unknown": NoParams;
 	"mobile.home.picker.effort_unsupported": NoParams;
 	"mobile.home.picker.effort_use_default": NoParams;
+	"mobile.home.picker.folder_current": NoParams;
+	"mobile.home.picker.folder_current_label": { path: string | number };
+	"mobile.home.picker.folder_fixed": NoParams;
 	"mobile.home.picker.folder_home": NoParams;
 	"mobile.home.picker.folder_other": NoParams;
 	"mobile.home.picker.folder_outside": NoParams;
@@ -3609,9 +3635,11 @@ export type MessageParams = {
 	"mobile.session.back_to": { name: string | number };
 	"mobile.session.back_to_session": NoParams;
 	"mobile.session.chip.effort_change_failed": NoParams;
+	"mobile.session.chip.effort_label": { effort: string | number };
 	"mobile.session.chip.effort_resume_hint": NoParams;
 	"mobile.session.chip.model_change_failed": NoParams;
 	"mobile.session.chip.model_default": NoParams;
+	"mobile.session.chip.model_label": { model: string | number };
 	"mobile.session.chip.model_resume_hint": NoParams;
 	"mobile.session.chip.model_unknown": NoParams;
 	"mobile.session.chip.model_unrecorded_hint": NoParams;
@@ -4295,16 +4323,22 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.chrome.clear_search": "Clear search",
 	"mobile.chrome.close_conversations": "Close conversations",
 	"mobile.chrome.composer.dismiss_keyboard": "Dismiss keyboard",
+	"mobile.chrome.composer.folder": "{source, select, chosen {Folder, {folder}, chosen for this conversation} default {Folder, {folder}, this computer's default} other {Folder, {folder}}}",
+	"mobile.chrome.composer.folder_hint": "Choose another folder",
+	"mobile.chrome.composer.folder_hint_fixed": "Shows this conversation's full folder path",
 	"mobile.chrome.composer.more": "More context",
 	"mobile.chrome.composer.open_queue": "Open the queue",
 	"mobile.chrome.composer.queued": "{count, plural, one {# queued message} other {# queued messages}}",
 	"mobile.chrome.composer.row_cost": "Cost",
-	"mobile.chrome.composer.row_effort": "Effort",
+	"mobile.chrome.composer.row_folder": "Folder",
 	"mobile.chrome.composer.row_identity": "Agent or team",
 	"mobile.chrome.composer.row_model": "Model",
 	"mobile.chrome.composer.row_questions": "Questions",
 	"mobile.chrome.composer.row_queue": "Queue",
 	"mobile.chrome.composer.row_usage": "Context",
+	"mobile.chrome.composer.run_settings": "{model}, {effort}",
+	"mobile.chrome.composer.run_settings_hint": "Choose the model and effort",
+	"mobile.chrome.composer.run_settings_title": "Model and effort",
 	"mobile.chrome.destination.inbox": "Inbox",
 	"mobile.chrome.destination.inbox_count": "Inbox, {count, plural, one {# unread} other {# unread}}",
 	"mobile.chrome.destination.past": "Past",
@@ -4764,6 +4798,9 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.home.picker.effort_unknown": "This computer doesn't know this model's levels, so it will use the nearest level the model supports.",
 	"mobile.home.picker.effort_unsupported": "This computer's Local Operator is too old to accept an effort, so it uses its configured level. Update it to choose one here.",
 	"mobile.home.picker.effort_use_default": "This computer's level",
+	"mobile.home.picker.folder_current": "Current folder",
+	"mobile.home.picker.folder_current_label": "Current folder, {path}",
+	"mobile.home.picker.folder_fixed": "A conversation keeps the folder it started in. To use another folder, start a new chat.",
 	"mobile.home.picker.folder_home": "Home",
 	"mobile.home.picker.folder_other": "Other path…",
 	"mobile.home.picker.folder_outside": "This computer starts conversations only inside your home folder or its temporary folder.",
@@ -5104,9 +5141,11 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.session.back_to": "Back to {name}",
 	"mobile.session.back_to_session": "Back to session",
 	"mobile.session.chip.effort_change_failed": "Could not change the effort.",
+	"mobile.session.chip.effort_label": "Effort, {effort}",
 	"mobile.session.chip.effort_resume_hint": "Resume this session to change the effort",
 	"mobile.session.chip.model_change_failed": "Could not change the model.",
 	"mobile.session.chip.model_default": "Default",
+	"mobile.session.chip.model_label": "Model, {model}",
 	"mobile.session.chip.model_resume_hint": "Resume this session to change the model",
 	"mobile.session.chip.model_unknown": "Unknown",
 	"mobile.session.chip.model_unrecorded_hint": "This session has not recorded a model",
@@ -5775,16 +5814,22 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.chrome.clear_search": { role: "button", note: "Empties the search text. Used in three places: the accessible name of the small × inside the sidebar's search field (shown only while the field has text), and the visible button label under 'Nothing matches that.' in the sidebar's no-match empty state and on the Past sessions screen. Short imperative, no final full stop." },
 	"mobile.chrome.close_conversations": { role: "button", note: "Accessible name (screen readers only, never shown) of two controls that both dismiss the conversations sidebar: the ✕ in the sidebar header and the dimmed page strip beside the open sidebar. 'Conversations' is the sidebar's list of chat sessions, not one conversation. Imperative, no final full stop." },
 	"mobile.chrome.composer.dismiss_keyboard": { role: "button", note: "Build389 shared composer context strip / exclusive home presentation. Preserve {count} plural and {host} parameters where present." },
+	"mobile.chrome.composer.folder": { role: "button", note: "Spoken name of the composer's icon-only folder button (screen readers; never painted). {folder} is the folder's own name, a file-system path segment such as local-operator or ~, copied verbatim and never translated. {source} is a fixed selector: chosen = the reader picked this folder for the next conversation, default = it is the connected computer's own default folder, other = unknown (a running conversation). Keep the three arms' shape and the comma-separated, list-like reading of the model button (mobile.home.chip.model_chosen)." },
+	"mobile.chrome.composer.folder_hint": { role: "help", note: "Screen-reader hint on the composer's folder button where the folder can still change: the button opens a sheet listing the computer's folders. Imperative, no final full stop." },
+	"mobile.chrome.composer.folder_hint_fixed": { role: "help", note: "Screen-reader hint on the composer's folder button once the conversation has started and its folder can no longer change: the button opens a read-only sheet with the full path. Describes what the button does; no final full stop." },
 	"mobile.chrome.composer.more": { role: "button", note: "Build389 shared composer context strip / exclusive home presentation. Preserve {count} plural and {host} parameters where present." },
 	"mobile.chrome.composer.open_queue": { role: "button", note: "Opens the queued-messages surface from the composer context sheet. Only rendered where the screen can open that surface; never a disabled control." },
 	"mobile.chrome.composer.queued": { role: "button", note: "Build389 shared composer context strip / exclusive home presentation. Preserve {count} plural and {host} parameters where present." },
 	"mobile.chrome.composer.row_cost": { role: "meta", note: "Row label in the composer's More sheet for the conversation's spend; the amount is shown at the other end of the same row. A noun, no colon." },
-	"mobile.chrome.composer.row_effort": { role: "meta", note: "Row label in the composer's More sheet; the reasoning-effort level is shown at the other end of the same row. A noun, no colon." },
+	"mobile.chrome.composer.row_folder": { role: "meta", note: "Row label in the composer's More sheet, shown only when the folder button does not fit on a narrow phone; the folder's name is shown at the other end of the same row and tapping the row opens the folder sheet. A noun, no colon." },
 	"mobile.chrome.composer.row_identity": { role: "meta", note: "Row label in the composer's More sheet for which agent or team the new chat starts as; its value is that name or \"Default agent\". Short. New in the new-chat identity picker; the non-English text awaits the translation audit." },
 	"mobile.chrome.composer.row_model": { role: "meta", note: "Row label in the composer's More sheet; the model's name is shown at the other end of the same row. A noun, no colon." },
 	"mobile.chrome.composer.row_questions": { role: "meta", note: "Row label in the composer's More sheet for the agent's questions to the user (including ones that timed out); the count is shown at the other end of the same row and tapping the row opens the questions sheet. A plural noun, no colon." },
 	"mobile.chrome.composer.row_queue": { role: "meta", note: "Row label in the composer's More sheet for messages waiting to be sent; the count is shown at the other end of the same row. A noun, no colon." },
 	"mobile.chrome.composer.row_usage": { role: "meta", note: "Row label in the composer's More sheet for how much of the model's context window is used; the reading is shown at the other end of the same row. A noun, no colon." },
+	"mobile.chrome.composer.run_settings": { role: "button", note: "Spoken name of the composer's icon-only model-and-effort button (screen readers; never painted). {model} and {effort} are two already-translated phrases, for example 'Model, Opus 5, chosen for this conversation' and 'Effort, High'. Only the joining punctuation and order are translatable: keep model first, use the list separator natural in your language." },
+	"mobile.chrome.composer.run_settings_hint": { role: "help", note: "Screen-reader hint on the composer's model-and-effort button: it opens one sheet listing the models and the reasoning-effort levels. 'Effort' is the same term as mobile.home.picker.effort_title. Imperative, no final full stop." },
+	"mobile.chrome.composer.run_settings_title": { role: "heading", note: "Title of the sheet that holds both the model list and the reasoning-effort levels for a conversation. Use the same words as mobile.home.picker.model_title and mobile.home.picker.effort_title. Short: it is one line on a 320 pt phone." },
 	"mobile.chrome.destination.inbox": { role: "button", note: "Label under the inbox icon in the sidebar's destinations strip (five equal slots, ~52 pt each, label at 11-12 pt). One short word; the slot truncates anything longer. Opens the notifications inbox." },
 	"mobile.chrome.destination.inbox_count": { role: "button", note: "Accessible name of the Inbox destination when it has unread items. {count} is a positive integer; the visible badge shows only the number. No final full stop." },
 	"mobile.chrome.destination.past": { role: "button", note: "Label under the history icon in the sidebar's destinations strip (~52 pt slot). One short word meaning past/finished sessions; opens the resumable history list." },
@@ -6244,6 +6289,9 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.home.picker.effort_unknown": { role: "help", note: "The computer does not know which effort levels this model supports; every level is offered and the computer uses the nearest one the model supports. New in the three-pickers change; the non-English text awaits the translation audit." },
 	"mobile.home.picker.effort_unsupported": { role: "help", note: "The connected computer runs a Local Operator too old to accept an effort level when starting, so the picker offers nothing. \"Local Operator\" is the product name; do not translate it. New in the three-pickers change; the non-English text awaits the translation audit." },
 	"mobile.home.picker.effort_use_default": { role: "button", note: "First row of the effort picker when the computer's default level for the chosen model is unknown: picking it sends no effort, so the computer applies its configured level. Added in the pickers' round-1 remediation; the non-English text awaits the translation audit." },
+	"mobile.home.picker.folder_current": { role: "meta", note: "Small label above the full path of the folder a conversation runs (or will start) in, at the top of the folder sheet. The path itself is shown verbatim under it. No colon." },
+	"mobile.home.picker.folder_current_label": { role: "meta", note: "Spoken label of the folder sheet's header (screen readers; never painted as one line): the label mobile.home.picker.folder_current followed by the full path. {path} is a file-system path, copied verbatim and never translated. Use your language's list separator between the two." },
+	"mobile.home.picker.folder_fixed": { role: "help", note: "Shown in the folder sheet once a conversation has started, under its full path: the folder cannot be changed for a running conversation (the computer only accepts a folder when a conversation starts), and the second sentence gives the next step. 'New chat' is the same term as mobile.chrome.new_chat. Two short sentences, each with a final full stop." },
 	"mobile.home.picker.folder_home": { role: "meta", note: "Badge on the folder row that is the owner's home folder on the computer. One short word. New in the three-pickers change; the non-English text awaits the translation audit." },
 	"mobile.home.picker.folder_other": { role: "button", note: "Secondary row in the folder picker that reveals a field for typing a path no row names. Ends with an ellipsis because it opens more input. New in the three-pickers change; the non-English text awaits the translation audit." },
 	"mobile.home.picker.folder_outside": { role: "status", note: "Why a typed path cannot be used: the computer only starts conversations under the home folder or its temp folder. One sentence. New in the three-pickers change; the non-English text awaits the translation audit." },
@@ -6584,9 +6632,11 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.session.back_to": { role: "button", note: "Back-navigation label on the video and agent-job screens; {name} is the parent session's own name or the noun phrase from mobile.session.fallback_name ('session') when unknown. Must read grammatically with BOTH (mind case/article: e.g. ru dative). Sentence case, no full stop." },
 	"mobile.session.back_to_session": { role: "button", note: "Back-navigation label on the video and agent-job screens when the parent session has no name of its own (replaces 'Back to {name}' in that case). Full phrase, sentence case, no full stop; free to adapt article/case/word order. Reuse the locale's 'session' term." },
 	"mobile.session.chip.effort_change_failed": { role: "status", note: "Inline error under the composer when changing the session's effort level failed. 'Effort' is the product's word for how hard the model works." },
+	"mobile.session.chip.effort_label": { role: "meta", note: "Spoken label of a conversation's effort (reasoning effort) level (the composer's run-settings button reads it). {effort} is the level's name. Use the same word for 'effort' as mobile.home.chip.effort_chosen." },
 	"mobile.session.chip.effort_resume_hint": { role: "help", note: "Accessibility hint on the effort (reasoning effort) chip of an ENDED session: shown but disabled until the session is resumed. Use the same word for 'effort' as mobile.home effort copy. Imperative, no final full stop." },
 	"mobile.session.chip.model_change_failed": { role: "status", note: "Inline error under the composer when changing the session's model failed. One short sentence." },
 	"mobile.session.chip.model_default": { role: "meta", note: "The model chip when the reader has chosen no model: the computer's configured default is what a start uses. One word, sentence case, no final full stop — it sits in a chip beside the folder name and must stay short enough for a 320 pt row." },
+	"mobile.session.chip.model_label": { role: "meta", note: "Spoken label of a conversation's model (the composer's run-settings button reads it). {model} is the model's name, untranslated. Use the same word for 'model' as mobile.home.chip.model_chosen." },
 	"mobile.session.chip.model_resume_hint": { role: "help", note: "Accessibility hint on the model chip of an ENDED session: the chip shows the model it last ran with but is disabled, because nothing can change a model until the session is resumed. Imperative, no final full stop." },
 	"mobile.session.chip.model_unknown": { role: "meta", note: "The model chip when the model list could not be read at all. One word, sentence case, no final full stop: the accessible name carries the explanation. Never renders as a model name." },
 	"mobile.session.chip.model_unrecorded_hint": { role: "help", note: "Accessibility hint on the model chip of an ended session when no model was ever recorded; the chip itself shows a dash. A statement, no final full stop." },
@@ -7269,16 +7319,22 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.chrome.clear_search": "Borrar búsqueda",
 		"mobile.chrome.close_conversations": "Cerrar conversaciones",
 		"mobile.chrome.composer.dismiss_keyboard": "Ocultar teclado",
+		"mobile.chrome.composer.folder": "{source, select, chosen {Carpeta, {folder}, elegida para esta conversación} default {Carpeta, {folder}, predeterminada de esta máquina} other {Carpeta, {folder}}}",
+		"mobile.chrome.composer.folder_hint": "Elige otra carpeta",
+		"mobile.chrome.composer.folder_hint_fixed": "Muestra la ruta completa de la carpeta de esta conversación",
 		"mobile.chrome.composer.more": "Más contexto",
 		"mobile.chrome.composer.open_queue": "Abrir la cola",
 		"mobile.chrome.composer.queued": "{count, plural, one {# mensaje en cola} other {# mensajes en cola}}",
 		"mobile.chrome.composer.row_cost": "Costo",
-		"mobile.chrome.composer.row_effort": "Esfuerzo",
+		"mobile.chrome.composer.row_folder": "Carpeta",
 		"mobile.chrome.composer.row_identity": "Agente o equipo",
 		"mobile.chrome.composer.row_model": "Modelo",
 		"mobile.chrome.composer.row_questions": "Preguntas",
 		"mobile.chrome.composer.row_queue": "Cola",
 		"mobile.chrome.composer.row_usage": "Contexto",
+		"mobile.chrome.composer.run_settings": "{model}, {effort}",
+		"mobile.chrome.composer.run_settings_hint": "Elige el modelo y el esfuerzo",
+		"mobile.chrome.composer.run_settings_title": "Modelo y esfuerzo",
 		"mobile.chrome.destination.inbox": "Bandeja",
 		"mobile.chrome.destination.inbox_count": "Bandeja, {count, plural, one {# sin leer} other {# sin leer}}",
 		"mobile.chrome.destination.past": "Anteriores",
@@ -7738,6 +7794,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.picker.effort_unknown": "Esta máquina no conoce los niveles de este modelo, así que usará el nivel más cercano que el modelo admita.",
 		"mobile.home.picker.effort_unsupported": "El Local Operator de esta máquina es demasiado antiguo para aceptar un esfuerzo, así que usa su nivel configurado. Actualízalo para elegir uno aquí.",
 		"mobile.home.picker.effort_use_default": "Nivel de esta máquina",
+		"mobile.home.picker.folder_current": "Carpeta actual",
+		"mobile.home.picker.folder_current_label": "Carpeta actual, {path}",
+		"mobile.home.picker.folder_fixed": "Una conversación conserva la carpeta en la que empezó. Para usar otra carpeta, inicia un nuevo chat.",
 		"mobile.home.picker.folder_home": "Personal",
 		"mobile.home.picker.folder_other": "Otra ruta…",
 		"mobile.home.picker.folder_outside": "Esta máquina solo inicia conversaciones dentro de tu carpeta personal o de su carpeta temporal.",
@@ -8078,9 +8137,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.back_to": "Volver a {name}",
 		"mobile.session.back_to_session": "Volver a la sesión",
 		"mobile.session.chip.effort_change_failed": "No se pudo cambiar el esfuerzo.",
+		"mobile.session.chip.effort_label": "Esfuerzo, {effort}",
 		"mobile.session.chip.effort_resume_hint": "Reanuda esta sesión para cambiar el esfuerzo",
 		"mobile.session.chip.model_change_failed": "No se pudo cambiar el modelo.",
 		"mobile.session.chip.model_default": "Predeterminado",
+		"mobile.session.chip.model_label": "Modelo, {model}",
 		"mobile.session.chip.model_resume_hint": "Reanuda esta sesión para cambiar el modelo",
 		"mobile.session.chip.model_unknown": "Desconocido",
 		"mobile.session.chip.model_unrecorded_hint": "Esta sesión no ha registrado ningún modelo",
@@ -8747,16 +8808,22 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.chrome.clear_search": "Effacer la recherche",
 		"mobile.chrome.close_conversations": "Fermer les conversations",
 		"mobile.chrome.composer.dismiss_keyboard": "Masquer le clavier",
+		"mobile.chrome.composer.folder": "{source, select, chosen {Dossier, {folder}, choisi pour cette conversation} default {Dossier, {folder}, par défaut sur cet ordinateur} other {Dossier, {folder}}}",
+		"mobile.chrome.composer.folder_hint": "Choisir un autre dossier",
+		"mobile.chrome.composer.folder_hint_fixed": "Affiche le chemin complet du dossier de cette conversation",
 		"mobile.chrome.composer.more": "Plus de contexte",
 		"mobile.chrome.composer.open_queue": "Ouvrir la file",
 		"mobile.chrome.composer.queued": "{count, plural, one {# message en attente} other {# messages en attente}}",
 		"mobile.chrome.composer.row_cost": "Coût",
-		"mobile.chrome.composer.row_effort": "Effort",
+		"mobile.chrome.composer.row_folder": "Dossier",
 		"mobile.chrome.composer.row_identity": "Agent ou équipe",
 		"mobile.chrome.composer.row_model": "Modèle",
 		"mobile.chrome.composer.row_questions": "Questions",
 		"mobile.chrome.composer.row_queue": "File d’attente",
 		"mobile.chrome.composer.row_usage": "Contexte",
+		"mobile.chrome.composer.run_settings": "{model}, {effort}",
+		"mobile.chrome.composer.run_settings_hint": "Choisir le modèle et l’effort",
+		"mobile.chrome.composer.run_settings_title": "Modèle et effort",
 		"mobile.chrome.destination.inbox": "Boîte",
 		"mobile.chrome.destination.inbox_count": "Boîte, {count, plural, one {# non lue} other {# non lues}}",
 		"mobile.chrome.destination.past": "Passées",
@@ -9216,6 +9283,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.picker.effort_unknown": "Cet ordinateur ne connaît pas les niveaux de ce modèle ; il utilisera donc le niveau le plus proche que le modèle prend en charge.",
 		"mobile.home.picker.effort_unsupported": "Le Local Operator de cet ordinateur est trop ancien pour accepter un niveau d’effort ; il utilise donc son niveau configuré. Mettez-le à jour pour en choisir un ici.",
 		"mobile.home.picker.effort_use_default": "Niveau de cet ordinateur",
+		"mobile.home.picker.folder_current": "Dossier actuel",
+		"mobile.home.picker.folder_current_label": "Dossier actuel, {path}",
+		"mobile.home.picker.folder_fixed": "Une conversation conserve le dossier dans lequel elle a démarré. Pour utiliser un autre dossier, démarrez un nouveau chat.",
 		"mobile.home.picker.folder_home": "Dossier personnel",
 		"mobile.home.picker.folder_other": "Autre chemin…",
 		"mobile.home.picker.folder_outside": "Cet ordinateur ne démarre des conversations que dans votre dossier personnel ou son dossier temporaire.",
@@ -9556,9 +9626,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.back_to": "Retour à {name}",
 		"mobile.session.back_to_session": "Retour à la session",
 		"mobile.session.chip.effort_change_failed": "Impossible de changer le niveau d’effort.",
+		"mobile.session.chip.effort_label": "Effort, {effort}",
 		"mobile.session.chip.effort_resume_hint": "Reprenez cette session pour changer l’effort",
 		"mobile.session.chip.model_change_failed": "Impossible de changer de modèle.",
 		"mobile.session.chip.model_default": "Par défaut",
+		"mobile.session.chip.model_label": "Modèle, {model}",
 		"mobile.session.chip.model_resume_hint": "Reprenez cette session pour changer de modèle",
 		"mobile.session.chip.model_unknown": "Inconnu",
 		"mobile.session.chip.model_unrecorded_hint": "Cette session n’a enregistré aucun modèle",
@@ -10225,16 +10297,22 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.chrome.clear_search": "खोज साफ़ करें",
 		"mobile.chrome.close_conversations": "बातचीत बंद करें",
 		"mobile.chrome.composer.dismiss_keyboard": "कीबोर्ड छिपाएँ",
+		"mobile.chrome.composer.folder": "{source, select, chosen {फ़ोल्डर, {folder}, इस बातचीत के लिए चुना गया} default {फ़ोल्डर, {folder}, इस कंप्यूटर का डिफ़ॉल्ट} other {फ़ोल्डर, {folder}}}",
+		"mobile.chrome.composer.folder_hint": "दूसरा फ़ोल्डर चुनें",
+		"mobile.chrome.composer.folder_hint_fixed": "इस बातचीत के फ़ोल्डर का पूरा पाथ दिखाता है",
 		"mobile.chrome.composer.more": "अधिक संदर्भ",
 		"mobile.chrome.composer.open_queue": "कतार खोलें",
 		"mobile.chrome.composer.queued": "{count, plural, one {# संदेश कतार में} other {# संदेश कतार में}}",
 		"mobile.chrome.composer.row_cost": "लागत",
-		"mobile.chrome.composer.row_effort": "प्रयास",
+		"mobile.chrome.composer.row_folder": "फ़ोल्डर",
 		"mobile.chrome.composer.row_identity": "एजेंट या टीम",
 		"mobile.chrome.composer.row_model": "मॉडल",
 		"mobile.chrome.composer.row_questions": "प्रश्न",
 		"mobile.chrome.composer.row_queue": "कतार",
 		"mobile.chrome.composer.row_usage": "संदर्भ",
+		"mobile.chrome.composer.run_settings": "{model}, {effort}",
+		"mobile.chrome.composer.run_settings_hint": "मॉडल और प्रयास चुनें",
+		"mobile.chrome.composer.run_settings_title": "मॉडल और प्रयास",
 		"mobile.chrome.destination.inbox": "इनबॉक्स",
 		"mobile.chrome.destination.inbox_count": "इनबॉक्स, {count, plural, one {# अपठित} other {# अपठित}}",
 		"mobile.chrome.destination.past": "पिछले",
@@ -10694,6 +10772,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.picker.effort_unknown": "यह कंप्यूटर इस मॉडल के स्तर नहीं जानता, इसलिए वह मॉडल द्वारा समर्थित सबसे नज़दीकी स्तर इस्तेमाल करेगा।",
 		"mobile.home.picker.effort_unsupported": "इस कंप्यूटर का Local Operator प्रयास स्वीकार करने के लिए बहुत पुराना है, इसलिए वह अपना कॉन्फ़िगर किया गया स्तर इस्तेमाल करता है। यहाँ से चुनने के लिए इसे अपडेट करें।",
 		"mobile.home.picker.effort_use_default": "इस कंप्यूटर का स्तर",
+		"mobile.home.picker.folder_current": "मौजूदा फ़ोल्डर",
+		"mobile.home.picker.folder_current_label": "मौजूदा फ़ोल्डर, {path}",
+		"mobile.home.picker.folder_fixed": "बातचीत उसी फ़ोल्डर में रहती है जिसमें वह शुरू हुई थी। दूसरा फ़ोल्डर इस्तेमाल करने के लिए नई चैट शुरू करें।",
 		"mobile.home.picker.folder_home": "होम",
 		"mobile.home.picker.folder_other": "अन्य पाथ…",
 		"mobile.home.picker.folder_outside": "यह कंप्यूटर बातचीत केवल आपके होम फ़ोल्डर या उसके अस्थायी फ़ोल्डर के अंदर शुरू करता है।",
@@ -11034,9 +11115,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.back_to": "{name} पर वापस जाएँ",
 		"mobile.session.back_to_session": "सत्र पर वापस जाएँ",
 		"mobile.session.chip.effort_change_failed": "प्रयास नहीं बदला जा सका।",
+		"mobile.session.chip.effort_label": "प्रयास, {effort}",
 		"mobile.session.chip.effort_resume_hint": "प्रयास बदलने के लिए यह सत्र फिर से शुरू करें",
 		"mobile.session.chip.model_change_failed": "मॉडल नहीं बदला जा सका।",
 		"mobile.session.chip.model_default": "डिफ़ॉल्ट",
+		"mobile.session.chip.model_label": "मॉडल, {model}",
 		"mobile.session.chip.model_resume_hint": "मॉडल बदलने के लिए यह सत्र फिर से शुरू करें",
 		"mobile.session.chip.model_unknown": "अज्ञात",
 		"mobile.session.chip.model_unrecorded_hint": "इस सत्र ने कोई मॉडल दर्ज नहीं किया है",
@@ -11703,16 +11786,22 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.chrome.clear_search": "Очистить поиск",
 		"mobile.chrome.close_conversations": "Закрыть список бесед",
 		"mobile.chrome.composer.dismiss_keyboard": "Скрыть клавиатуру",
+		"mobile.chrome.composer.folder": "{source, select, chosen {Папка, {folder}, выбрана для этой беседы} default {Папка, {folder}, по умолчанию на этом компьютере} other {Папка, {folder}}}",
+		"mobile.chrome.composer.folder_hint": "Выберите другую папку",
+		"mobile.chrome.composer.folder_hint_fixed": "Показывает полный путь к папке этой беседы",
 		"mobile.chrome.composer.more": "Дополнительный контекст",
 		"mobile.chrome.composer.open_queue": "Открыть очередь",
 		"mobile.chrome.composer.queued": "{count, plural, one {# сообщение в очереди} few {# сообщения в очереди} many {# сообщений в очереди} other {# сообщения в очереди}}",
 		"mobile.chrome.composer.row_cost": "Стоимость",
-		"mobile.chrome.composer.row_effort": "Усилие",
+		"mobile.chrome.composer.row_folder": "Папка",
 		"mobile.chrome.composer.row_identity": "Агент или команда",
 		"mobile.chrome.composer.row_model": "Модель",
 		"mobile.chrome.composer.row_questions": "Вопросы",
 		"mobile.chrome.composer.row_queue": "Очередь",
 		"mobile.chrome.composer.row_usage": "Контекст",
+		"mobile.chrome.composer.run_settings": "{model}, {effort}",
+		"mobile.chrome.composer.run_settings_hint": "Выберите модель и усилие",
+		"mobile.chrome.composer.run_settings_title": "Модель и усилие",
 		"mobile.chrome.destination.inbox": "Входящие",
 		"mobile.chrome.destination.inbox_count": "Входящие, {count, plural, one {# непрочитанное} few {# непрочитанных} many {# непрочитанных} other {# непрочитанного}}",
 		"mobile.chrome.destination.past": "Прошлые",
@@ -12172,6 +12261,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.picker.effort_unknown": "Этот компьютер не знает уровней этой модели, поэтому он использует ближайший уровень, который поддерживает модель.",
 		"mobile.home.picker.effort_unsupported": "Local Operator на этом компьютере слишком старый, чтобы принять уровень усилия, поэтому он использует настроенный уровень. Обновите его, чтобы выбирать здесь.",
 		"mobile.home.picker.effort_use_default": "Уровень этого компьютера",
+		"mobile.home.picker.folder_current": "Текущая папка",
+		"mobile.home.picker.folder_current_label": "Текущая папка, {path}",
+		"mobile.home.picker.folder_fixed": "Беседа остаётся в той папке, в которой началась. Чтобы использовать другую папку, начните новый чат.",
 		"mobile.home.picker.folder_home": "Домашняя",
 		"mobile.home.picker.folder_other": "Другой путь…",
 		"mobile.home.picker.folder_outside": "Этот компьютер начинает беседы только внутри вашей домашней папки или его временной папки.",
@@ -12512,9 +12604,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.back_to": "Назад: {name}",
 		"mobile.session.back_to_session": "Назад к сессии",
 		"mobile.session.chip.effort_change_failed": "Не удалось изменить усилие.",
+		"mobile.session.chip.effort_label": "Усилие, {effort}",
 		"mobile.session.chip.effort_resume_hint": "Возобновите этот сеанс, чтобы изменить усилие",
 		"mobile.session.chip.model_change_failed": "Не удалось сменить модель.",
 		"mobile.session.chip.model_default": "По умолчанию",
+		"mobile.session.chip.model_label": "Модель, {model}",
 		"mobile.session.chip.model_resume_hint": "Возобновите этот сеанс, чтобы сменить модель",
 		"mobile.session.chip.model_unknown": "Неизвестно",
 		"mobile.session.chip.model_unrecorded_hint": "Этот сеанс не сохранил модель",
@@ -13181,16 +13275,22 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.chrome.clear_search": "تلاش صاف کریں",
 		"mobile.chrome.close_conversations": "گفتگوئیں بند کریں",
 		"mobile.chrome.composer.dismiss_keyboard": "کی بورڈ بند کریں",
+		"mobile.chrome.composer.folder": "{source, select, chosen {فولڈر، {folder}، اس گفتگو کے لیے منتخب} default {فولڈر، {folder}، اس کمپیوٹر کا ڈیفالٹ} other {فولڈر، {folder}}}",
+		"mobile.chrome.composer.folder_hint": "دوسرا فولڈر منتخب کریں",
+		"mobile.chrome.composer.folder_hint_fixed": "اس گفتگو کے فولڈر کا پورا پاتھ دکھاتا ہے",
 		"mobile.chrome.composer.more": "مزید سیاق",
 		"mobile.chrome.composer.open_queue": "قطار کھولیں",
 		"mobile.chrome.composer.queued": "{count, plural, one {# پیغام قطار میں} other {# پیغامات قطار میں}}",
 		"mobile.chrome.composer.row_cost": "لاگت",
-		"mobile.chrome.composer.row_effort": "شدت",
+		"mobile.chrome.composer.row_folder": "فولڈر",
 		"mobile.chrome.composer.row_identity": "ایجنٹ یا ٹیم",
 		"mobile.chrome.composer.row_model": "ماڈل",
 		"mobile.chrome.composer.row_questions": "سوالات",
 		"mobile.chrome.composer.row_queue": "قطار",
 		"mobile.chrome.composer.row_usage": "سیاق",
+		"mobile.chrome.composer.run_settings": "{model}، {effort}",
+		"mobile.chrome.composer.run_settings_hint": "ماڈل اور استدلال کی شدت منتخب کریں",
+		"mobile.chrome.composer.run_settings_title": "ماڈل اور استدلال کی شدت",
 		"mobile.chrome.destination.inbox": "ان باکس",
 		"mobile.chrome.destination.inbox_count": "ان باکس، {count, plural, one {# غیر پڑھا} other {# غیر پڑھے}}",
 		"mobile.chrome.destination.past": "گزشتہ",
@@ -13650,6 +13750,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.picker.effort_unknown": "یہ کمپیوٹر اس ماڈل کی سطحیں نہیں جانتا، اس لیے یہ ماڈل کی معاونت والی قریب ترین سطح استعمال کرے گا۔",
 		"mobile.home.picker.effort_unsupported": "اس کمپیوٹر کا Local Operator استدلال کی شدت قبول کرنے کے لیے بہت پرانا ہے، اس لیے یہ اپنی ترتیب شدہ سطح استعمال کرتا ہے۔ یہاں سے منتخب کرنے کے لیے اسے اپ ڈیٹ کریں۔",
 		"mobile.home.picker.effort_use_default": "اس کمپیوٹر کی سطح",
+		"mobile.home.picker.folder_current": "موجودہ فولڈر",
+		"mobile.home.picker.folder_current_label": "موجودہ فولڈر، {path}",
+		"mobile.home.picker.folder_fixed": "گفتگو اسی فولڈر میں رہتی ہے جس میں وہ شروع ہوئی تھی۔ دوسرا فولڈر استعمال کرنے کے لیے نئی چیٹ شروع کریں۔",
 		"mobile.home.picker.folder_home": "ہوم",
 		"mobile.home.picker.folder_other": "دوسرا پاتھ…",
 		"mobile.home.picker.folder_outside": "یہ کمپیوٹر گفتگو صرف آپ کے ہوم فولڈر یا اس کے عارضی فولڈر کے اندر شروع کرتا ہے۔",
@@ -13990,9 +14093,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.back_to": "{name} پر واپس جائیں",
 		"mobile.session.back_to_session": "سیشن پر واپس جائیں",
 		"mobile.session.chip.effort_change_failed": "استدلال کی شدت تبدیل نہیں ہو سکی۔",
+		"mobile.session.chip.effort_label": "استدلال کی شدت، {effort}",
 		"mobile.session.chip.effort_resume_hint": "کوشش بدلنے کے لیے یہ سیشن دوبارہ شروع کریں",
 		"mobile.session.chip.model_change_failed": "ماڈل تبدیل نہیں ہو سکا۔",
 		"mobile.session.chip.model_default": "ڈیفالٹ",
+		"mobile.session.chip.model_label": "ماڈل، {model}",
 		"mobile.session.chip.model_resume_hint": "ماڈل بدلنے کے لیے یہ سیشن دوبارہ شروع کریں",
 		"mobile.session.chip.model_unknown": "نامعلوم",
 		"mobile.session.chip.model_unrecorded_hint": "اس سیشن نے کوئی ماڈل درج نہیں کیا",
@@ -14659,16 +14764,22 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.chrome.clear_search": "Xóa tìm kiếm",
 		"mobile.chrome.close_conversations": "Đóng danh sách cuộc trò chuyện",
 		"mobile.chrome.composer.dismiss_keyboard": "Ẩn bàn phím",
+		"mobile.chrome.composer.folder": "{source, select, chosen {Thư mục, {folder}, đã chọn cho cuộc trò chuyện này} default {Thư mục, {folder}, mặc định của máy tính này} other {Thư mục, {folder}}}",
+		"mobile.chrome.composer.folder_hint": "Chọn thư mục khác",
+		"mobile.chrome.composer.folder_hint_fixed": "Hiển thị đường dẫn đầy đủ đến thư mục của cuộc trò chuyện này",
 		"mobile.chrome.composer.more": "Thêm ngữ cảnh",
 		"mobile.chrome.composer.open_queue": "Mở hàng đợi",
 		"mobile.chrome.composer.queued": "{count, plural, other {# tin nhắn trong hàng đợi}}",
 		"mobile.chrome.composer.row_cost": "Chi phí",
-		"mobile.chrome.composer.row_effort": "Mức suy luận",
+		"mobile.chrome.composer.row_folder": "Thư mục",
 		"mobile.chrome.composer.row_identity": "Tác nhân hoặc nhóm",
 		"mobile.chrome.composer.row_model": "Mô hình",
 		"mobile.chrome.composer.row_questions": "Câu hỏi",
 		"mobile.chrome.composer.row_queue": "Hàng đợi",
 		"mobile.chrome.composer.row_usage": "Ngữ cảnh",
+		"mobile.chrome.composer.run_settings": "{model}, {effort}",
+		"mobile.chrome.composer.run_settings_hint": "Chọn mô hình và mức suy luận",
+		"mobile.chrome.composer.run_settings_title": "Mô hình và mức suy luận",
 		"mobile.chrome.destination.inbox": "Hộp thư",
 		"mobile.chrome.destination.inbox_count": "Hộp thư, {count, plural, other {# chưa đọc}}",
 		"mobile.chrome.destination.past": "Trước",
@@ -15128,6 +15239,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.picker.effort_unknown": "Máy tính này chưa biết các mức của mô hình này, nên sẽ dùng mức gần nhất mà mô hình hỗ trợ.",
 		"mobile.home.picker.effort_unsupported": "Local Operator trên máy tính này quá cũ để nhận mức suy luận, nên nó dùng mức đã cấu hình. Hãy cập nhật để chọn tại đây.",
 		"mobile.home.picker.effort_use_default": "Mức của máy tính này",
+		"mobile.home.picker.folder_current": "Thư mục hiện tại",
+		"mobile.home.picker.folder_current_label": "Thư mục hiện tại, {path}",
+		"mobile.home.picker.folder_fixed": "Cuộc trò chuyện giữ nguyên thư mục lúc bắt đầu. Để dùng thư mục khác, hãy bắt đầu cuộc trò chuyện mới.",
 		"mobile.home.picker.folder_home": "Home",
 		"mobile.home.picker.folder_other": "Đường dẫn khác…",
 		"mobile.home.picker.folder_outside": "Máy tính này chỉ bắt đầu cuộc trò chuyện bên trong thư mục home của bạn hoặc thư mục tạm của nó.",
@@ -15468,9 +15582,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.back_to": "Quay lại {name}",
 		"mobile.session.back_to_session": "Quay lại phiên",
 		"mobile.session.chip.effort_change_failed": "Không thể đổi mức suy luận.",
+		"mobile.session.chip.effort_label": "Mức suy luận, {effort}",
 		"mobile.session.chip.effort_resume_hint": "Tiếp tục phiên này để đổi mức suy luận",
 		"mobile.session.chip.model_change_failed": "Không thể đổi mô hình.",
 		"mobile.session.chip.model_default": "Mặc định",
+		"mobile.session.chip.model_label": "Mô hình, {model}",
 		"mobile.session.chip.model_resume_hint": "Tiếp tục phiên này để đổi mô hình",
 		"mobile.session.chip.model_unknown": "Không rõ",
 		"mobile.session.chip.model_unrecorded_hint": "Phiên này chưa ghi lại mô hình nào",
@@ -16137,16 +16253,22 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.chrome.clear_search": "清除搜索",
 		"mobile.chrome.close_conversations": "关闭对话列表",
 		"mobile.chrome.composer.dismiss_keyboard": "收起键盘",
+		"mobile.chrome.composer.folder": "{source, select, chosen {文件夹，{folder}，已为此对话选择} default {文件夹，{folder}，此电脑的默认设置} other {文件夹，{folder}}}",
+		"mobile.chrome.composer.folder_hint": "选择其他文件夹",
+		"mobile.chrome.composer.folder_hint_fixed": "显示此对话文件夹的完整路径",
 		"mobile.chrome.composer.more": "更多上下文",
 		"mobile.chrome.composer.open_queue": "打开队列",
 		"mobile.chrome.composer.queued": "{count, plural, other {# 条排队消息}}",
 		"mobile.chrome.composer.row_cost": "费用",
-		"mobile.chrome.composer.row_effort": "推理强度",
+		"mobile.chrome.composer.row_folder": "文件夹",
 		"mobile.chrome.composer.row_identity": "智能体或团队",
 		"mobile.chrome.composer.row_model": "模型",
 		"mobile.chrome.composer.row_questions": "问题",
 		"mobile.chrome.composer.row_queue": "队列",
 		"mobile.chrome.composer.row_usage": "上下文",
+		"mobile.chrome.composer.run_settings": "{model}，{effort}",
+		"mobile.chrome.composer.run_settings_hint": "选择模型和推理强度",
+		"mobile.chrome.composer.run_settings_title": "模型和推理强度",
 		"mobile.chrome.destination.inbox": "收件箱",
 		"mobile.chrome.destination.inbox_count": "收件箱，{count, plural, other {# 条未读}}",
 		"mobile.chrome.destination.past": "历史",
@@ -16606,6 +16728,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.picker.effort_unknown": "此电脑不知道此模型支持的级别，因此会使用模型支持的最接近级别。",
 		"mobile.home.picker.effort_unsupported": "此电脑上的 Local Operator 版本过旧，无法接受推理强度，因此会使用其已配置的级别。更新后即可在此选择。",
 		"mobile.home.picker.effort_use_default": "此电脑的级别",
+		"mobile.home.picker.folder_current": "当前文件夹",
+		"mobile.home.picker.folder_current_label": "当前文件夹，{path}",
+		"mobile.home.picker.folder_fixed": "对话会一直使用开始时所在的文件夹。如需使用其他文件夹，请开始新聊天。",
 		"mobile.home.picker.folder_home": "主目录",
 		"mobile.home.picker.folder_other": "其他路径…",
 		"mobile.home.picker.folder_outside": "此电脑只会在你的主目录或其临时文件夹内开始对话。",
@@ -16946,9 +17071,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.back_to": "返回{name}",
 		"mobile.session.back_to_session": "返回会话",
 		"mobile.session.chip.effort_change_failed": "无法更改推理强度。",
+		"mobile.session.chip.effort_label": "推理强度，{effort}",
 		"mobile.session.chip.effort_resume_hint": "恢复此会话以更改推理强度",
 		"mobile.session.chip.model_change_failed": "无法更改模型。",
 		"mobile.session.chip.model_default": "默认",
+		"mobile.session.chip.model_label": "模型，{model}",
 		"mobile.session.chip.model_resume_hint": "恢复此会话以更改模型",
 		"mobile.session.chip.model_unknown": "未知",
 		"mobile.session.chip.model_unrecorded_hint": "此会话未记录模型",

@@ -73,6 +73,8 @@
 	"mobile.session.find.hint": "Finds messages in the transcript loaded on this device",
 	"mobile.session.chip.model_change_failed": "Could not change the model.",
 	"mobile.session.chip.effort_change_failed": "Could not change the effort.",
+	"mobile.session.chip.model_label": "Model, {model}",
+	"mobile.session.chip.effort_label": "Effort, {effort}",
 	"mobile.session.composer.retained_instruction": "An earlier instruction may have been delivered. Retry that earlier instruction before sending your current draft.",
 	"mobile.session.composer.settings_not_applied": "The session reopened, but your model or effort choice couldn’t be applied, so nothing was sent. Try again, or choose a different model or effort.",
 	"mobile.session.tray.context": "{percent}% context",

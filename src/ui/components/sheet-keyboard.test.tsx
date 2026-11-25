@@ -6,7 +6,7 @@
  * The cause: `Sheet` lives in a native `Modal`, which is not resized for the
  * keyboard, and the sheet had no keyboard handling at all — its cap assumed the
  * column shrinks with the keyboard, which only the web does. These tests mount
- * the REAL `Sheet` (and the real `ModelPicker`) through react-dom and drive the
+ * the REAL `Sheet` (and the real `RunSettingsPicker`) through react-dom and drive the
  * keyboard through #216's keyboard store, the one boundary that is native.
  *
  * `react-native` is reduced to recording hosts: every kit node registers its
@@ -199,6 +199,10 @@ vi.mock("@/ui/direction", async () => {
 	return {
 		DirectionView: (p: Record<string, unknown>) =>
 			React.createElement(View, { ...p, testID: "column" }),
+		/* The run-settings sheet's section headings (`SectionHeader`) read it. */
+		useDirection: () => "ltr",
+		/* Its summary line states the page's base; `{}` on an LTR page. */
+		useComposedDir: () => ({}),
 	};
 });
 vi.mock("@/ui/components/modal-stack-entry", async () => {
@@ -232,7 +236,7 @@ vi.mock("@/ui/components", async () => ({
 
 const { Sheet } = await import("./sheet");
 const { SURFACE, CONTROL } = await import("@/ui/a11y");
-const { ModelPicker } = await import("@/features/home/home-pickers");
+const { RunSettingsPicker } = await import("@/features/home/home-pickers");
 const { modelOptionId, slashCommandId } = await import("@/ui/a11y");
 const { MODEL_SEARCH_THRESHOLD } = await import(
 	"@/features/home/picker-search-threshold"
@@ -266,6 +270,32 @@ const showKeyboard = (overlap = KEYBOARD) =>
 		store.emit({ visible: true, overlap, duration: 250 } as KeyboardFrame),
 	);
 const hideKeyboard = () => act(() => store.emit(store.hidden));
+/** The mocked ScrollView keeps no instance; React 19 hands the Sheet's ref
+ *  through as a prop, so a test gives it the one method used. The ref object is
+ *  the Sheet's own, so the stub survives the body remounting on a new visit. */
+const stubScrollTo = () => {
+	const scrollTo = vi.fn();
+	const body = node(SURFACE.sheetBody)?.props.ref as { current: unknown };
+	body.current = { scrollTo };
+	return scrollTo;
+};
+/** The body's own layout: its viewport height, as native reports it. */
+const layoutBody = (viewport: number) =>
+	act(() => {
+		(node(SURFACE.sheetBody)?.props.onLayout as (e: unknown) => void)?.({
+			nativeEvent: { layout: { height: viewport, width: WINDOW.width } },
+		});
+	});
+/** The body's content height. */
+const sizeBody = (content: number) =>
+	act(() => {
+		(
+			node(SURFACE.sheetBody)?.props.onContentSizeChange as (
+				w: number,
+				h: number,
+			) => void
+		)?.(WINDOW.width, content);
+	});
 
 let dom: DomShim;
 let root: ReturnType<typeof createRoot>;
@@ -387,6 +417,29 @@ describe("Sheet over the software keyboard (TestFlight 1295)", () => {
 		expect(node(SURFACE.sheetPinnedFade)).toBeUndefined();
 	});
 
+	it("does not carry the last visit's scroll into a region pinned on the next one (R6-1, the identity picker)", async () => {
+		/* The identity picker pins its search only once its list is searchable,
+		 *  which can turn on between visits. The body remounts at offset 0 and a
+		 *  fresh ScrollView reports its size, never a scroll. */
+		await mountSheet();
+		const scrollTo = stubScrollTo();
+		await layoutBody(400);
+		await sizeBody(1200);
+		await act(() =>
+			(node(SURFACE.sheetBody)?.props.onScroll as (e: unknown) => void)?.({
+				nativeEvent: { contentOffset: { y: 200 } },
+			}),
+		);
+		await mountSheet(undefined, false);
+		await mountSheet(<p>search</p>);
+		await layoutBody(400);
+		await sizeBody(1200);
+		await layout(SURFACE.sheetPinned, PINNED);
+		await layoutBody(400 - PINNED);
+		expect(scrollTo).not.toHaveBeenCalled();
+		expect(node(SURFACE.sheetPinnedFade)).toBeUndefined();
+	});
+
 	it("stays on the keyboard through the exit of a sheet closed with the keyboard up (R1-m1)", async () => {
 		await mountSheet();
 		await showKeyboard();
@@ -469,44 +522,343 @@ const ROWS = MODELS.map((model) => ({
 	isDefault: false,
 })) as unknown as HomeModelRow[];
 
-describe("ModelPicker search (TestFlight 1295)", () => {
-	const mountPicker = async (onPick: (m: ModelEntry | null) => void) =>
+/* #335 (maintainer's ruling, 2026-11-24): the run-settings sheet leads with
+ *  the effort rungs, and the model search is pinned — #343's keyboard fix —
+ *  but only once the reader has scrolled to the model list it filters. */
+describe("RunSettingsPicker model search (TestFlight 1295, #335)", () => {
+	const MODEL_TOP = 180;
+	const mountPicker = async (
+		onPick: (m: ModelEntry | null) => void,
+		{ visible = true, models = MODELS } = {},
+	) =>
 		act(async () =>
 			root.render(
-				<ModelPicker
-					visible
+				<RunSettingsPicker
+					visible={visible}
 					onClose={() => {}}
-					models={MODELS}
-					rows={ROWS}
-					chosen={false}
-					loading={false}
-					failure={null}
-					onRetry={() => {}}
-					retrying={false}
 					editable
-					onPick={onPick}
+					summary="Model 0"
+					model={{
+						models,
+						rows: ROWS.slice(0, models.length),
+						chosen: false,
+						loading: false,
+						failure: null,
+						onRetry: () => {},
+						retrying: false,
+						onPick,
+					}}
+					effort={{
+						offer: { kind: "ladder", rungs: ["low", "high"], exact: true },
+						chosen: null,
+						defaultEffort: null,
+						onPick: () => {},
+					}}
 				/>,
 			),
 		);
+	/** The model section's place in the body, as native layout reports it. */
+	const layoutModels = (y = MODEL_TOP) =>
+		act(() => {
+			(node(CONTROL.homeModelPicker)?.props.onLayout as (e: unknown) => void)?.(
+				{
+					nativeEvent: {
+						layout: { x: 0, y, width: WINDOW.width, height: 900 },
+					},
+				},
+			);
+		});
+	/** The body's viewport, content and offset — the three scroll facts. */
+	const scrollBody = (y: number, viewport = 400, content = 1200) =>
+		act(() => {
+			const body = node(SURFACE.sheetBody)?.props;
+			(body?.onLayout as (e: unknown) => void)?.({
+				nativeEvent: { layout: { height: viewport, width: WINDOW.width } },
+			});
+			(body?.onContentSizeChange as (w: number, h: number) => void)?.(
+				WINDOW.width,
+				content,
+			);
+			(body?.onScroll as (e: unknown) => void)?.({
+				nativeEvent: { contentOffset: { x: 0, y } },
+			});
+		});
+	const reachModels = async () => {
+		await layoutModels();
+		await scrollBody(MODEL_TOP);
+	};
 
-	it("pins the search field above the scrolling results", async () => {
+	it("leads with the effort rungs: no search field at the top of the sheet", async () => {
 		await mountPicker(() => {});
+		await layoutModels();
+		await scrollBody(0);
+		expect(node(CONTROL.homeModelSearch)).toBeUndefined();
+		expect(node(SURFACE.sheetPinned)).toBeUndefined();
+		// Effort, then the models: the rungs are above the list in the body.
+		expect(node(CONTROL.homeEffortPicker)?.path).toContain(SURFACE.sheetBody);
+	});
+
+	it("pins the search field above the scrolling results once the reader reaches the models", async () => {
+		await mountPicker(() => {});
+		await layoutModels();
+		await scrollBody(MODEL_TOP - 1);
+		expect(node(CONTROL.homeModelSearch)).toBeUndefined();
+		await scrollBody(MODEL_TOP);
 		const search = node(CONTROL.homeModelSearch);
 		expect(search).toBeDefined();
 		expect(search?.path).toContain(SURFACE.sheetPinned);
 		expect(search?.path).not.toContain(SURFACE.sheetBody);
 	});
 
-	it("picks a row in one tap with the keyboard up", async () => {
+	it("keeps the search for the visit, and starts the next visit at effort again", async () => {
+		await mountPicker(() => {});
+		await reachModels();
+		/* Scrolling back up does not pull the field out from under a query. */
+		await scrollBody(0);
+		expect(node(CONTROL.homeModelSearch)?.path).toContain(SURFACE.sheetPinned);
+		await mountPicker(() => {}, { visible: false });
+		await mountPicker(() => {});
+		await layoutModels();
+		await scrollBody(0);
+		expect(node(CONTROL.homeModelSearch)).toBeUndefined();
+	});
+
+	it("shows the search at once when the body does not scroll: the models are already on screen (D3)", async () => {
+		await mountPicker(() => {});
+		await layoutModels();
+		await scrollBody(0, 1200, 1100);
+		expect(node(CONTROL.homeModelSearch)?.path).toContain(SURFACE.sheetPinned);
+	});
+
+	it("starts the next visit at effort even when the last one closed at the models (R6-1)", async () => {
+		await mountPicker(() => {});
+		const scrollTo = stubScrollTo();
+		await reachModels();
+		await layout(SURFACE.sheetPinned, PINNED);
+		await layoutBody(400 - PINNED);
+		scrollTo.mockClear();
+		/* Closed WITHOUT scrolling back up. */
+		await mountPicker(() => {}, { visible: false });
+		await mountPicker(() => {});
+		/* A fresh ScrollView at offset 0 reports its size, never a scroll. */
+		await layoutModels();
+		await layoutBody(400);
+		await sizeBody(1200);
+		expect(node(CONTROL.homeModelSearch)).toBeUndefined();
+		expect(node(SURFACE.sheetPinned)).toBeUndefined();
+		expect(scrollTo).not.toHaveBeenCalled();
+	});
+
+	it("shows the search when a body that fits is measured before the models section (D3, the browser's order)", async () => {
+		await mountPicker(() => {});
+		await layoutBody(1200);
+		await sizeBody(1100);
+		/* Nothing is decided before the section has a place. */
+		expect(node(CONTROL.homeModelSearch)).toBeUndefined();
+		await layoutModels();
+		expect(node(CONTROL.homeModelSearch)?.path).toContain(SURFACE.sheetPinned);
+	});
+
+	it("does not decide from an earlier visit's facts when the section is measured (D3, R6-1)", async () => {
+		await mountPicker(() => {});
+		await reachModels();
+		await mountPicker(() => {}, { visible: false });
+		await mountPicker(() => {});
+		await layoutModels();
+		expect(node(CONTROL.homeModelSearch)).toBeUndefined();
+	});
+
+	it("measures the models section afresh on each visit (R6-1)", async () => {
+		await mountPicker(() => {});
+		await layoutModels();
+		await scrollBody(0);
+		await mountPicker(() => {}, { visible: false });
+		await mountPicker(() => {});
+		await layoutBody(1200);
+		await sizeBody(1100);
+		/* The last visit's place for the section decides nothing here. */
+		expect(node(CONTROL.homeModelSearch)).toBeUndefined();
+		await layoutModels();
+		expect(node(CONTROL.homeModelSearch)?.path).toContain(SURFACE.sheetPinned);
+	});
+
+	/** The body's own scroll event, alone: what native reports after a
+	 *  programmatic scroll, with the offset it actually reached. */
+	const scrollEvent = (y: number) =>
+		act(() => {
+			(node(SURFACE.sheetBody)?.props.onScroll as (e: unknown) => void)?.({
+				nativeEvent: { contentOffset: { x: 0, y } },
+			});
+		});
+	/** Reach the models, then measure the body at the height it is held at
+	 *  under the search before the search's own height is known. */
+	const pinOver = async (y: number, content = 1200) => {
+		await scrollBody(MODEL_TOP);
+		const before = bodyMaxHeight() ?? 0;
+		expect(before).toBeGreaterThan(0);
+		await scrollBody(y, before, content);
+		return before;
+	};
+
+	it("keeps the rows still when the search appears over a scrolled body, in the commit that shrinks it (design D1, D5)", async () => {
+		await mountPicker(() => {});
+		await layoutModels();
+		const scrollTo = stubScrollTo();
+		const before = await pinOver(MODEL_TOP);
+		expect(scrollTo).not.toHaveBeenCalled();
+		await layout(SURFACE.sheetPinned, PINNED);
+		/* Asked in the commit that shrinks the body, not from the body's own
+		 *  onLayout: on the web that arrives a frame later, and the rows painted
+		 *  dropped by the shrink for one frame (design round 6, D5). */
+		expect(bodyMaxHeight()).toBe(before - PINNED);
+		expect(scrollTo).toHaveBeenCalledTimes(1);
+		expect(scrollTo).toHaveBeenCalledWith({
+			y: MODEL_TOP + PINNED,
+			animated: false,
+		});
+		/* The measured shrink agrees with the hold: nothing more to ask. */
+		await layoutBody(before - PINNED);
+		expect(scrollTo).toHaveBeenCalledTimes(1);
+		/* A later re-measure of the same region (rotation, text size) is not a
+		 *  second appearance. */
+		await layout(SURFACE.sheetPinned, PINNED + 10);
+		await layoutBody(before - PINNED - 10);
+		expect(scrollTo).toHaveBeenCalledTimes(1);
+	});
+
+	it("is not settled by a body layout that only moved (review R7-1, Fabric's order)", async () => {
+		await mountPicker(() => {});
+		await layoutModels();
+		const scrollTo = stubScrollTo();
+		const before = await pinOver(MODEL_TOP);
+		await layout(SURFACE.sheetPinned, PINNED);
+		/* Fabric reports the body pushed down at its old height first. */
+		await layoutBody(before);
+		await layoutBody(before - PINNED);
+		expect(scrollTo).toHaveBeenCalledTimes(1);
+		expect(scrollTo).toHaveBeenCalledWith({
+			y: MODEL_TOP + PINNED,
+			animated: false,
+		});
+	});
+
+	it("asks again at the measured shrink when native clamped the first scroll to the old end (review R7-1)", async () => {
+		await mountPicker(() => {});
+		await layoutModels();
+		const scrollTo = stubScrollTo();
+		/* At the old end of a tall body; the region asks for 61 pt more. */
+		const before = await pinOver(0);
+		const end = 1200 - before;
+		await scrollBody(end, before, 1200);
+		await layout(SURFACE.sheetPinned, 61);
+		expect(scrollTo).toHaveBeenLastCalledWith({ y: end + 61, animated: false });
+		/* Android runs a view command before the batch's new frames, so the
+		 *  scroll stopped at the old end; then the move, then the shrink. */
+		await scrollEvent(end);
+		await layoutBody(before);
+		expect(scrollTo).toHaveBeenCalledTimes(1);
+		await layoutBody(before - 61);
+		expect(scrollTo).toHaveBeenCalledTimes(2);
+		expect(scrollTo).toHaveBeenLastCalledWith({ y: end + 61, animated: false });
+	});
+
+	it("moves the rows by what the body lost when the sheet grows instead (D4 a: 320 pt, 200 %, ru)", async () => {
+		await mountPicker(() => {});
+		/* A column short enough that the hold under a 122 pt region is the
+		 *  body's 120 pt floor: the sheet grows 29 pt, so the body's top moves
+		 *  93 pt, not 122. */
+		await layout("column", 462);
+		await layoutModels();
+		const scrollTo = stubScrollTo();
+		const before = await pinOver(MODEL_TOP);
+		expect(before).toBe(213);
+		await layout(SURFACE.sheetPinned, 122);
+		expect(bodyMaxHeight()).toBe(120);
+		expect(scrollTo).toHaveBeenCalledTimes(1);
+		expect(scrollTo).toHaveBeenCalledWith({
+			y: MODEL_TOP + 93,
+			animated: false,
+		});
+		await layoutBody(120);
+		expect(scrollTo).toHaveBeenCalledTimes(1);
+	});
+
+	it("keeps the rows still at the end of a tall body with less than a region of room left (D4 b)", async () => {
+		await mountPicker(() => {});
+		await layoutModels();
+		const scrollTo = stubScrollTo();
+		/* At the old maximum; the region asks for 61 pt more, which exists only
+		 *  at the body's new height. */
+		const before = await pinOver(0);
+		await scrollBody(1200 - before, before, 1200);
+		await layout(SURFACE.sheetPinned, 61);
+		expect(scrollTo).toHaveBeenCalledWith({
+			y: 1200 - before + 61,
+			animated: false,
+		});
+		await layoutBody(before - 61);
+		expect(scrollTo).toHaveBeenCalledTimes(1);
+	});
+
+	it("does not carry a body layout from the close animation into the next visit (review R7-2)", async () => {
+		await mountPicker(() => {});
+		await reachModels();
+		/* Closed with the search focused: the keyboard leaving during the exit
+		 *  lays the body out again, at this visit's offset. */
+		host.exiting = true;
+		await mountPicker(() => {}, { visible: false });
+		await scrollBody(MODEL_TOP);
+		host.exiting = false;
+		await mountPicker(() => {}, { visible: false });
+		await mountPicker(() => {});
+		/* The section is measured before the fresh body reports anything. */
+		await layoutModels();
+		expect(node(CONTROL.homeModelSearch)).toBeUndefined();
+		expect(node(SURFACE.sheetPinned)).toBeUndefined();
+	});
+
+	it("drops the compensation when the body keeps its height, so a later resize is not taken for it", async () => {
+		/* Measure the height the body is held at under the region, then start a
+		 *  visit whose body is already that tall: the sheet grows by the whole
+		 *  region and the rows do not move. */
+		await mountPicker(() => {});
+		await layout("column", WINDOW.height);
+		await reachModels();
+		await layout(SURFACE.sheetPinned, PINNED);
+		const held = bodyMaxHeight() ?? 0;
+		expect(held).toBeGreaterThan(0);
+		await mountPicker(() => {}, { visible: false });
+		await mountPicker(() => {});
+		const scrollTo = stubScrollTo();
+		await layoutModels();
+		await scrollBody(MODEL_TOP, held, 1200);
+		await layout(SURFACE.sheetPinned, PINNED);
+		expect(bodyMaxHeight()).toBe(held);
+		/* The keyboard, later, shrinks the body for its own reason. */
+		await layoutBody(held - 200);
+		expect(scrollTo).not.toHaveBeenCalled();
+	});
+
+	it("never pins a search over a list short enough to see whole", async () => {
+		await mountPicker(() => {}, {
+			models: MODELS.slice(0, MODEL_SEARCH_THRESHOLD),
+		});
+		await reachModels();
+		expect(node(CONTROL.homeModelSearch)).toBeUndefined();
+		expect(node(SURFACE.sheetPinned)).toBeUndefined();
+	});
+
+	it("picks a model row in one tap with the keyboard up", async () => {
 		const onPick = vi.fn();
 		await mountPicker(onPick);
+		await reachModels();
 		await showKeyboard();
 		expect(node(SURFACE.sheetBody)?.props.keyboardShouldPersistTaps).toBe(
 			"handled",
 		);
 		const row = [...host.nodes.entries()].find(
 			([key, r]) =>
-				key !== CONTROL.sheetScrim &&
+				MODELS.some((m) => modelOptionId(m.model_id) === key) &&
 				r.path.includes(SURFACE.sheetBody) &&
 				typeof r.props.onPress === "function",
 		);
@@ -521,6 +873,7 @@ describe("ModelPicker search (TestFlight 1295)", () => {
 
 	it("keeps the search field where it was while typing narrows the results (design D2)", async () => {
 		await mountPicker(() => {});
+		await reachModels();
 		await layout("column", WINDOW.height);
 		await layout(SURFACE.sheetPinned, PINNED);
 		await showKeyboard();
