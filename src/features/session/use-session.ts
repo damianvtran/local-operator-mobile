@@ -685,13 +685,16 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 						return;
 					}
 					sessions.getState().endStream(sessionId);
+					setError(streamError);
 					/* A stop ends the recovery the missed-seed grace was guarding, so
 					 * the grace goes with it (#393 m1). Left armed, it fired after
 					 * this failure and set `overdue` behind the error, and the
 					 * reader's next `reload()` painted "Reconnecting…" at once over a
-					 * fresh first open instead of opening quietly. */
+					 * fresh first open instead of opening quietly. After `setError`,
+					 * not before: the refusal must reach the reader directly, with
+					 * nothing between the stream's end and its report
+					 * (`resume-hold.test.ts` REFUSAL_DIRECT). */
 					clearSeedGrace();
-					setError(streamError);
 					setFacts((current) => ({
 						...current,
 						state: "closed",
