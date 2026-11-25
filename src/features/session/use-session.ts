@@ -685,6 +685,12 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 						return;
 					}
 					sessions.getState().endStream(sessionId);
+					/* A stop ends the recovery the missed-seed grace was guarding, so
+					 * the grace goes with it (#393 m1). Left armed, it fired after
+					 * this failure and set `overdue` behind the error, and the
+					 * reader's next `reload()` painted "Reconnecting…" at once over a
+					 * fresh first open instead of opening quietly. */
+					clearSeedGrace();
 					setError(streamError);
 					setFacts((current) => ({
 						...current,
