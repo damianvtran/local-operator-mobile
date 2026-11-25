@@ -90,6 +90,7 @@ describe("olderFillReady", () => {
 		olderState: "unknown",
 		frameRows: 80,
 		frameHeadPinned: undefined,
+		frameHasOlder: undefined,
 	};
 
 	it("is ready for a capped frame once the newest read has landed", () => {
