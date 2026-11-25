@@ -254,6 +254,9 @@ const RETRY_TIMER =
 	/cancelRetry = reconnectTimer\(resumeClock\.current, delay, \(\) => \{/;
 const DEADLINE_HELD =
 	/heldTimer\(\s*resumeClock\.current\s*,\s*RECONNECT_DEADLINE_MS\s*,/;
+/** The missed-seed grace (#369 design D1): a report too, so it is held. */
+const SEED_GRACE_HELD =
+	/cancelSeedGrace = heldTimer\(\s*resumeClock\.current\s*,\s*OUTAGE_GRACE_MS\s*,/;
 const REFUSAL_DIRECT =
 	/if \(isTransient\(streamError\)\) \{[\s\S]*?return;\n\t{5}\}\n\t{5}sessions\.getState\(\)\.endStream\(sessionId\);\n\t{5}setError\(streamError\);/;
 
@@ -263,14 +266,16 @@ describe("use-session wiring", () => {
 		"utf8",
 	);
 	it("holds the drop report and reconnect deadline; the retry only skips the background", () => {
-		// Two held REPORTS: the graced drop report and a reconnect's overdue
-		// deadline. The backoff retry is an attempt, not a report: it goes through
-		// `reconnectTimer` (no retry while backgrounded, #369 R2-2; no waiting out
-		// the resume window, #369 R3-1), which the runtime model above exercises.
-		expect(source.match(HELD_TIMER_CALL)?.length).toBe(2);
+		// Three held REPORTS: the graced drop report, a reconnect's overdue
+		// deadline, and the missed-seed grace (#369 design D1). The backoff retry
+		// is an attempt, not a report: it goes through `reconnectTimer` (no retry
+		// while backgrounded, #369 R2-2; no waiting out the resume window, #369
+		// R3-1), which the runtime model above exercises.
+		expect(source.match(HELD_TIMER_CALL)?.length).toBe(3);
 		expect(source).toMatch(RETRY_TIMER);
 		expect(source).toContain("OUTAGE_GRACE_MS,");
 		expect(source).toMatch(DEADLINE_HELD);
+		expect(source).toMatch(SEED_GRACE_HELD);
 		// The refusal path stays direct: a typed failure is never held.
 		expect(source).toMatch(REFUSAL_DIRECT);
 	});

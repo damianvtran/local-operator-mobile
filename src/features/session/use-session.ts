@@ -445,6 +445,25 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 		const grace = createRefusalGrace();
 		let retireStream: (() => void) | null = null;
 		let cancelRetry: (() => void) | null = null;
+		/* MISSED-SEED GRACE (#369 design D1). A skipped, foreign or malformed
+		 * seed restarts the stream at the 1 s backoff and the replacement
+		 * usually seeds 30–100 ms later (QA O3, rows 3c/3d). Marking the reopen
+		 * overdue at once flashed C2 for about a second over a retry that had
+		 * not failed, against the operator's "silently … unless subsequent
+		 * retries fail". So a missed seed arms the SAME `OUTAGE_GRACE_MS` the
+		 * drop path holds its report behind (the relay web app's 2.5 s outage
+		 * hysteresis), and only a recovery still unseeded when it fires is
+		 * reported. It is NOT routed through `droppedSinceFrame`: nothing
+		 * dropped, and that flag's copy says it did. A retry that fails before
+		 * the grace ends still reports through its own path (`onError` → the
+		 * graced drop; the reconnect deadline in `onState`). Armed once per
+		 * recovery, like the drop grace: repeated skipped seeds do not push the
+		 * report back. Cleared by an accepted frame and by the effect's end. */
+		let cancelSeedGrace: (() => void) | null = null;
+		const clearSeedGrace = () => {
+			cancelSeedGrace?.();
+			cancelSeedGrace = null;
+		};
 		const scheduleRetry = (
 			missedProjection: boolean,
 			retryAfterMs?: number,
@@ -454,9 +473,19 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 				...current,
 				state: "connecting",
 				lastEnd: missedProjection ? undefined : "error",
-				overdue: current.overdue || missedProjection,
 				droppedSinceFrame: current.droppedSinceFrame || !missedProjection,
 			}));
+			if (missedProjection && cancelSeedGrace === null) {
+				cancelSeedGrace = heldTimer(
+					resumeClock.current,
+					OUTAGE_GRACE_MS,
+					() => {
+						cancelSeedGrace = null;
+						if (active && sameProjectionOwner(owner, currentIdentity.current))
+							setFacts((current) => ({ ...current, overdue: true }));
+					},
+				);
+			}
 			const delay = reconnectDelay(retries.current, retryAfterMs);
 			retries.current += 1;
 			// A retry can become due while iOS is suspended too, so it never opens a
@@ -545,6 +574,7 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 					}
 					cancelDeadline?.();
 					cancelDeadline = null;
+					clearSeedGrace();
 					awaitingSeed = false;
 					projectionOwner.current = owner;
 					lastFrameAt.current = Date.now();
@@ -679,6 +709,7 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 		return () => {
 			active = false;
 			cancelRetry?.();
+			clearSeedGrace();
 			retireStream?.();
 			sessions.getState().endStream(sessionId);
 		};
@@ -1233,6 +1264,9 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 			olderState: historyWindow.olderState,
 			frameRows: projection?.transcript.length ?? 0,
 			frameHeadPinned: projection?.transcript_head_pinned,
+			// Fill evidence only: the reader's cursor seeding keeps reading the
+			// pin alone, so a compaction marker at row 0 is never detached.
+			frameHasOlder: projection?.transcript_has_older,
 		}),
 		// The notice is for a hole the automatic fill could not close; while the
 		// fill runs the list shows nothing (no flash, no layout jump).

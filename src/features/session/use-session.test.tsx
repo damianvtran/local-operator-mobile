@@ -5,6 +5,7 @@ import {
 	RECONNECT_BACKOFF_MIN_MS,
 	RECONNECT_DEADLINE_MS,
 } from "@/features/session/connection-view";
+import { OUTAGE_GRACE_MS } from "@/features/session/resume-hold";
 import { useSessionRuntime } from "@/features/session/use-session";
 import { RelayEndpoints } from "@/relay/endpoints";
 import { RelayHttpClient } from "@/relay/http";
@@ -172,8 +173,10 @@ it("retries only when a keepalive proves the seed was skipped, then clears recov
 		expect(probe.read().connection.id).toBeNull();
 		await act(async () => attempts[0]?.send(KEEPALIVE));
 		expect(attempts[0]?.signal?.aborted).toBe(true);
-		expect(probe.read().connection.id).toBe("C2");
+		// The restart has not failed: no banner yet (#369 design D1).
+		expect(probe.read().connection.id).toBeNull();
 		await advance(RECONNECT_BACKOFF_MIN_MS);
+		expect(probe.read().connection.id).toBeNull();
 		expect(attempts.map(({ sid }) => sid)).toEqual(["silent-a", "silent-a"]);
 		await act(async () => attempts[1]?.send(frame("silent-a")));
 		expect(probe.read().projection?.session_id).toBe("silent-a");
@@ -181,6 +184,37 @@ it("retries only when a keepalive proves the seed was skipped, then clears recov
 		expect(probe.read().connection.id).toBeNull();
 		await advance(RECONNECT_DEADLINE_MS + 1);
 		expect(attempts).toHaveLength(2);
+	} finally {
+		await probe.close();
+	}
+});
+
+it("holds a missed-seed restart behind the outage grace, then reports it (#369 D1)", async () => {
+	vi.useFakeTimers();
+	const { attempts } = transport();
+	const probe = mount();
+	try {
+		await probe.show("grace-a");
+		// t=0: the seed is skipped. The restart has not failed, so no banner.
+		await act(async () => attempts[0]?.send(KEEPALIVE));
+		expect(probe.read().connection.id).toBeNull();
+		await advance(RECONNECT_BACKOFF_MIN_MS);
+		expect(attempts).toHaveLength(2);
+		expect(probe.read().connection.id).toBeNull();
+		// t=1 s: the restart skips its seed too. That does not re-arm the grace.
+		await act(async () => attempts[1]?.send(KEEPALIVE));
+		await advance(OUTAGE_GRACE_MS - RECONNECT_BACKOFF_MIN_MS - 1);
+		expect(probe.read().connection.id).toBeNull();
+		// t=2.5 s: still no seed, so the recovery is reported — as a reconnect,
+		// not as a drop that never happened.
+		await advance(1);
+		expect(probe.read().connection.id).toBe("C2");
+		expect(probe.read().connection.text).toBe("Reconnecting…");
+		// The next seed retires the report at once.
+		await advance(RECONNECT_BACKOFF_MIN_MS * 2);
+		expect(attempts).toHaveLength(3);
+		await act(async () => attempts[2]?.send(frame("grace-a")));
+		expect(probe.read().connection.id).toBeNull();
 	} finally {
 		await probe.close();
 	}

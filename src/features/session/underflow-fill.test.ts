@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import type { TranscriptEntry } from "@/contracts";
-import { HEAL_BUDGET } from "@/features/session/history-window";
+import type {
+	HistoryResponse,
+	SessionProjection,
+	TranscriptEntry,
+} from "@/contracts";
+import { HEAL_BUDGET, HistoryWindow } from "@/features/session/history-window";
 import type { TranscriptItem } from "@/features/session/turn-condensing";
 import {
 	type OlderFillEvidence,
@@ -12,6 +16,7 @@ import {
 	type UnderflowFacts,
 	UnderflowFill,
 } from "@/features/session/underflow-fill";
+import { fixtureBody } from "@/testing/fixture-relay";
 
 /**
  * Issue #322: a conversation whose live tail (the relay's 80-row frame) is all
@@ -103,7 +108,28 @@ describe("olderFillReady", () => {
 		).toBe(true);
 	});
 
+	// Core #4521: a compacted render opens at its marker with a short kept
+	// window and no pin. Without this the 14-row seed read as the whole
+	// conversation and every turn before the compaction stayed unreachable.
+	it("is ready for a short frame that says older rows exist", () => {
+		expect(
+			olderFillReady({ ...capped, frameRows: 14, frameHasOlder: true }),
+		).toBe(true);
+	});
+
 	it.each<[string, Partial<OlderFillEvidence>]>([
+		[
+			"for a short frame from Core older than the field",
+			{ frameRows: 14, frameHasOlder: undefined },
+		],
+		[
+			"for a short frame whose older rows are already exhausted",
+			{ frameRows: 14, frameHasOlder: true, hasMore: false },
+		],
+		[
+			"for a short frame that says older rows exist before the read lands",
+			{ frameRows: 14, frameHasOlder: true, read: "unknown" },
+		],
 		["before the newest read lands", { read: "unknown" }],
 		["after a failed read", { read: "failed" }],
 		["while any history read is in flight", { loading: true }],
@@ -115,6 +141,119 @@ describe("olderFillReady", () => {
 		["with no frame at all", { frameRows: 0 }],
 	])("is not ready %s", (_name, over) => {
 		expect(olderFillReady({ ...capped, ...over })).toBe(false);
+	});
+});
+
+/**
+ * Core #4521 (operator report 2026-11-24: scrolling up a compacted
+ * conversation showed no condensed agent turns and no final answers between
+ * historical user messages). A compacted render opens at its marker with a
+ * short kept window and no pin, and now says `transcript_has_older`. The
+ * production reader and the fill decision together must page back from the
+ * render's own oldest row — the marker, never skipped or detached as an
+ * opener — and an older Core that omits the field must keep today's reading.
+ */
+describe("a short compacted seed, through the production reader", () => {
+	const turn = (n: number): TranscriptEntry[] => [
+		entry(`req-${n}`, { kind: "user", text: `req ${n}` }),
+		entry(`final-${n}`, { text: `final ${n}` }),
+	];
+	const marker = entry("cmp-2", {
+		kind: "notice",
+		text: "summary c2",
+		custom_type: "compaction",
+	});
+	const before = [100, 101, 102, 103, 104, 105].flatMap(turn);
+	const kept = [marker, ...[120, 121, 122].flatMap(turn)];
+	const journal = [...before, ...kept];
+	const projectionOf = (
+		transcript: TranscriptEntry[],
+		over: Partial<SessionProjection>,
+	): SessionProjection => ({
+		...(fixtureBody(
+			"sse/sse-projection-checkpoints-empty.json",
+		) as SessionProjection),
+		transcript,
+		...over,
+	});
+	const open = (seed: TranscriptEntry[]) => {
+		const asked: Array<string | undefined> = [];
+		const reader = new HistoryWindow(
+			async (cursor): Promise<HistoryResponse> => {
+				asked.push(cursor);
+				// Newest page: the kept window, as the frame seeded it. Older
+				// pages: four rows ending just before the cursor.
+				const end =
+					cursor === undefined
+						? journal.length
+						: journal.findIndex((row) => row.id === cursor);
+				const start =
+					cursor === undefined
+						? journal.length - seed.length
+						: Math.max(0, end - 4);
+				return { entries: journal.slice(start, end), has_more: start > 0 };
+			},
+			() => undefined,
+		);
+		return { reader, asked };
+	};
+	const evidence = (
+		reader: HistoryWindow,
+		frame: SessionProjection,
+	): OlderFillEvidence => ({
+		read: reader.read,
+		loading: reader.loading,
+		hasMore: reader.hasMore,
+		olderState: reader.olderState,
+		frameRows: frame.transcript.length,
+		frameHeadPinned: frame.transcript_head_pinned,
+		frameHasOlder: frame.transcript_has_older,
+	});
+
+	it("pages back from the marker until the earlier turns are held", async () => {
+		const frame = projectionOf(kept, { transcript_has_older: true });
+		const { reader, asked } = open(kept);
+		reader.accept(frame);
+		await reader.load(true);
+		expect(olderFillReady(evidence(reader, frame))).toBe(true);
+		let pages = 0;
+		while (
+			olderFillReady(evidence(reader, frame)) &&
+			pages < UNDERFLOW_FILL_PAGES
+		) {
+			await reader.load();
+			pages += 1;
+		}
+		expect(reader.error).toBeNull();
+		// Paged from the render's own oldest row: the marker is the cursor.
+		expect(asked[1]).toBe("cmp-2");
+		const ids = reader.visibleRows.map((row) => row.id);
+		expect(ids).toEqual(journal.map((row) => row.id));
+		expect(ids).toContain("final-105");
+		expect(pages).toBe(3);
+		expect(reader.olderState).toBe("end");
+	});
+
+	it("never detaches the head row as a pinned opener", async () => {
+		// The marker trimmed by a cap: a user prompt heads the kept window.
+		const seed = kept.slice(1);
+		const frame = projectionOf(seed, { transcript_has_older: true });
+		const { reader, asked } = open(seed);
+		reader.accept(frame);
+		await reader.load(true);
+		expect(reader.visibleRows[0]?.id).toBe("req-120");
+		await reader.load();
+		expect(asked[1]).toBe("req-120");
+	});
+
+	it("keeps an older Core's short seed as the whole conversation", async () => {
+		const frame = projectionOf(kept, {});
+		const { reader, asked } = open(kept);
+		reader.accept(frame);
+		await reader.load(true);
+		expect(frame.transcript_has_older).toBeUndefined();
+		expect(olderFillReady(evidence(reader, frame))).toBe(false);
+		expect(asked).toEqual([undefined]);
 	});
 });
 

@@ -34,6 +34,26 @@ export const USER_MESSAGE_CLAMP_LINES = 8;
  *  last line and a half is what says "this continues" without a rule. */
 export const USER_MESSAGE_FADE_LINES = 1.5;
 
+/**
+ * How many lines the fade covers on a clamp that shows `lines` lines: the
+ * standard line and a half, but never more than `lines - 1`, so the FIRST line
+ * is always drawn at full contrast (PR #391 design D1).
+ *
+ * WHY. The subagent prompt shrinks its clamp to the lines the open bound can
+ * show (`subagentPromptLayout`), down to ONE at 320x692 and 200 % text. A
+ * 1.5-line fade over a 1-line clip covered the only line, which rendered at
+ * 3.23 -> 1.29:1 against the canvas: the brief was unreadable exactly where it
+ * had already been cut hardest. With one line there is nothing below to fade
+ * toward, and `Show more` alone says the brief continues; two lines keep one
+ * clear line under a one-line fade; three or more (the transcript's eight)
+ * are unchanged.
+ */
+export function userMessageFadeLines(
+	lines: number = USER_MESSAGE_CLAMP_LINES,
+): number {
+	return Math.min(USER_MESSAGE_FADE_LINES, Math.max(0, lines - 1));
+}
+
 /** One line of the bubble's `text-body-read` step, in points, at `scale`. The
  *  step is the token's, so a type change moves the clip with it. */
 export function userMessageLineHeight(scale: number): number {
@@ -90,12 +110,19 @@ export const USER_MESSAGE_MORE_GROWTH = 32;
  * expanded, because there is no fade to overlap and pulling `Show less` up
  * would sit it on the message's last line of text. Never positive — on a
  * floor already at or under the visible growth there is nothing to pull up.
+ *
+ * `fadeLines` is the collapsed clamp's fade (`userMessageFadeLines`). With no
+ * fade (a one-line clamp, PR #391 D1) there is nothing decorative to overlap,
+ * so the pull-up would sit the control on the only line of text: zero, as
+ * when expanded. Omitted, the standard fade, so the transcript's eight-line
+ * clamp keeps its 32 pt footprint.
  */
 export function userMessageControlMarginTop(
 	expanded: boolean,
 	touchFloor: number,
+	fadeLines: number = USER_MESSAGE_FADE_LINES,
 ): number {
-	if (expanded) return 0;
+	if (expanded || fadeLines <= 0) return 0;
 	return -Math.max(0, touchFloor - USER_MESSAGE_MORE_GROWTH);
 }
 

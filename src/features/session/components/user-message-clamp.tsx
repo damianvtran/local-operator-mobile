@@ -18,10 +18,10 @@ import { userBubbleFill } from "@/features/session/user-bubble";
 import {
 	needsUserMessageClamp,
 	nextUserMessageExpanded,
-	USER_MESSAGE_FADE_LINES,
 	UserMessageCollapseContext,
 	userMessageClipHeight,
 	userMessageControlMarginTop,
+	userMessageFadeLines,
 	userMessageLineHeight,
 } from "@/features/session/user-message-clamp";
 import { t } from "@/i18n";
@@ -107,6 +107,9 @@ export const UserMessageClamp = ({
 	const [contentHeight, setContentHeight] = useState<number | null>(null);
 	const { effectiveScale } = useTextScale();
 	const clipHeight = userMessageClipHeight(effectiveScale, lines);
+	// Never over the first line: a one-line clamp (the subagent prompt at 200 %
+	// text) gets no fade and no pull-up, so its only line stays legible (D1).
+	const fadeLines = userMessageFadeLines(lines);
 	const clamped =
 		contentHeight !== null &&
 		needsUserMessageClamp(contentHeight, effectiveScale, lines);
@@ -158,12 +161,10 @@ export const UserMessageClamp = ({
 			<View onLayout={onContentLayout}>
 				{typeof children === "function" ? children(expand) : children}
 			</View>
-			{clamped && !expanded ? (
+			{clamped && !expanded && fadeLines > 0 ? (
 				<BubbleFade
 					colour={fadeColor}
-					height={
-						USER_MESSAGE_FADE_LINES * userMessageLineHeight(effectiveScale)
-					}
+					height={fadeLines * userMessageLineHeight(effectiveScale)}
 				/>
 			) : null}
 		</View>
@@ -206,7 +207,12 @@ export const UserMessageClamp = ({
 						// Collapsed, pulled up over the fade so only 32 pt is new
 						// height; the floor stays whole (D1, `USER_MESSAGE_MORE_GROWTH`).
 						// Drawn after the clip, so it sits above the fade for touches.
-						marginTop: userMessageControlMarginTop(expanded, TOUCH_FLOOR),
+						// With no fade to overlap (a one-line clamp) it sits below the text.
+						marginTop: userMessageControlMarginTop(
+							expanded,
+							TOUCH_FLOOR,
+							fadeLines,
+						),
 					}}
 					className="w-full items-center justify-center"
 				>

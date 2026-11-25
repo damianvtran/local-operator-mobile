@@ -1,5 +1,8 @@
-import { userMessageLineHeight } from "@/features/session/user-message-clamp";
-import { TYPE_STEPS } from "@/ui/tokens.gen";
+import {
+	userMessageClipHeight,
+	userMessageLineHeight,
+} from "@/features/session/user-message-clamp";
+import { lineBoxPt } from "@/ui/text-scale";
 
 /**
  * How much of the subagent screen the child's prompt may take (PR #390 design
@@ -44,17 +47,20 @@ const LABEL_GAP = 4;
 
 /**
  * The prompt block's height OTHER than the body, while open: padding, the
- * "prompt" label at `scale`, and the `Show less` control's touch floor (open,
- * the control adds its whole floor: `userMessageControlMarginTop` is 0).
+ * "prompt" label at `scale`, and the `Show less` row (open, the control adds
+ * its whole row: `userMessageControlMarginTop` is 0).
+ *
+ * The row is `minHeight: TOUCH_FLOOR` around a `text-meta` label, so it is the
+ * LARGER of the two: at the 3x scale ceiling (`TEXT_SCALE_BOUNDS.max`) meta's
+ * line box is 12 x 1.4 x 3 = 50.4 pt, past iOS's 44, and counting only the
+ * floor cost the transcript ~6 pt of its 40 % share (PR #390 review m1).
  */
 export function subagentPromptChrome(
 	scale: number,
 	touchFloor: number,
 ): number {
-	const meta = TYPE_STEPS.meta;
-	return (
-		BLOCK_PADDING + meta.size * meta.lineHeight * scale + LABEL_GAP + touchFloor
-	);
+	const label = lineBoxPt("meta", scale);
+	return BLOCK_PADDING + label + LABEL_GAP + Math.max(touchFloor, label);
 }
 
 /**
@@ -82,4 +88,76 @@ export function subagentPromptScrollMax(input: {
 	return Math.floor(
 		Math.max(userMessageLineHeight(scale), Math.min(byWindow, byTranscript)),
 	);
+}
+
+/** What the prompt's clamp renders with: lines shown collapsed, and the open
+ *  body's scroller height. */
+export interface SubagentPromptLayout {
+	collapsedLines: number;
+	expandedMaxHeight: number;
+}
+
+/**
+ * The collapsed clamp and the open bound, chosen together so `Show more` never
+ * shows LESS of the brief than the collapsed state (PR #390 design D5).
+ *
+ * THE INVERSION. At 320x692 and 200 % text the 40 % transcript bound leaves
+ * the open scroller ~75 pt, about 1.7 body lines, while the collapsed clamp
+ * shows 3 lines (130 pt): the control promising more showed less, and the
+ * block shrank when opened.
+ *
+ * THE CHOICE, in order — each keeps both promises (open >= collapsed, and the
+ * transcript's 40 % while open) wherever the window allows them:
+ *  1. The bound already fits the collapsed lines: nothing changes.
+ *  2. Flooring the open scroller at the collapsed clip still leaves the
+ *     transcript its 40 % (only the 45 % window bound was binding, or the
+ *     region is not measured yet): floor it there — D5's suggested
+ *     `max(scrollMax, collapsedClip)`.
+ *  3. Otherwise the floor would take the transcript under 40 % (at the D5
+ *     corner it would drop to ~33 %), which is D1's own regression bar. So the
+ *     COLLAPSED clamp shrinks instead, to the whole lines the open bound can
+ *     show (never under one), and the open scroller is floored at that. D5
+ *     advised against a flat 2-line clamp at large text because 2 lines
+ *     (87 pt) still exceed the 75 pt bound and the inversion remains; sizing
+ *     the clamp FROM the bound is what closes it. The cost is confined to the
+ *     corner where the transcript would otherwise lose its share — at
+ *     430x932 and 100 % text the clamp stays at 3 lines and the bound at 378 pt.
+ */
+export function subagentPromptLayout(input: {
+	windowHeight: number;
+	regionHeight: number | null;
+	scale: number;
+	touchFloor: number;
+}): SubagentPromptLayout {
+	const { windowHeight, regionHeight, scale, touchFloor } = input;
+	const scrollMax = subagentPromptScrollMax(input);
+	const clip = userMessageClipHeight(scale, SUBAGENT_PROMPT_LINES);
+	if (scrollMax >= clip)
+		return {
+			collapsedLines: SUBAGENT_PROMPT_LINES,
+			expandedMaxHeight: scrollMax,
+		};
+	const transcriptBound =
+		regionHeight === null
+			? Number.POSITIVE_INFINITY
+			: regionHeight -
+				windowHeight * SUBAGENT_TRANSCRIPT_MIN_SHARE -
+				subagentPromptChrome(scale, touchFloor);
+	if (transcriptBound >= clip)
+		return {
+			collapsedLines: SUBAGENT_PROMPT_LINES,
+			expandedMaxHeight: Math.ceil(clip),
+		};
+	const line = userMessageLineHeight(scale);
+	const collapsedLines = Math.max(
+		1,
+		Math.min(SUBAGENT_PROMPT_LINES, Math.floor(scrollMax / line)),
+	);
+	return {
+		collapsedLines,
+		expandedMaxHeight: Math.max(
+			scrollMax,
+			Math.ceil(userMessageClipHeight(scale, collapsedLines)),
+		),
+	};
 }

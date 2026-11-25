@@ -1847,3 +1847,23 @@ it("preserves the existing transcript_head_pinned signal without inventing it on
 		),
 	).toThrow();
 });
+
+// Core #4521's additive "older rows exist" fact: carried as sent, never
+// invented on a frame from older Core (absence is "no statement").
+it("carries transcript_has_older and leaves it absent on older frames", () => {
+	expect(
+		parsePayload(
+			"sessionProjection",
+			projectionWith({ transcript_has_older: true }),
+		).transcript_has_older,
+	).toBe(true);
+	expect(
+		parsePayload("sessionProjection", projectionWith({})).transcript_has_older,
+	).toBeUndefined();
+	expect(() =>
+		parsePayload(
+			"sessionProjection",
+			projectionWith({ transcript_has_older: "yes" }),
+		),
+	).toThrow();
+});
