@@ -28,6 +28,8 @@ type HostProps = {
 		overflow?: string;
 		minHeight?: number;
 		flexGrow?: number;
+		position?: string;
+		height?: number;
 	};
 	onLayout?: (event: { nativeEvent: { layout: { height: number } } }) => void;
 	onPress?: () => void;
@@ -88,6 +90,8 @@ const {
 	userMessageClipHeight,
 	userMessageLineHeight,
 	userMessageControlMarginTop,
+	userMessageFadeLines,
+	USER_MESSAGE_FADE_LINES,
 	collapseScrollOffset,
 	USER_MESSAGE_MORE_GROWTH,
 	USER_MESSAGE_COLLAPSE_INSET,
@@ -592,5 +596,64 @@ describe("the wrapper's bounds for a pinned prompt", () => {
 		await layOut(60);
 		await press();
 		expect(last("ScrollView")).toHaveLength(0);
+	});
+});
+
+/** PR #391 design round 1, D1 (QA Q1): at 320x692 and 200 % text the
+ *  subagent prompt's clamp shrinks to ONE line, and the 1.5-line fade covered
+ *  that only line (3.23 -> 1.29:1). The fade never reaches the first line, and
+ *  with no fade the control does not pull up over the text. */
+describe("the fade never covers the first line (PR #391 D1)", () => {
+	/** The fade's absolutely-positioned frame in the latest pass, if drawn. */
+	const fadeFrame = () =>
+		rig.hosts.find(
+			(h) => h.host === "View" && h.props.style?.position === "absolute",
+		)?.props.style;
+
+	it("fades nothing at one line, one line at two, and the standard 1.5 from three", () => {
+		expect(USER_MESSAGE_FADE_LINES).toBe(1.5);
+		expect(userMessageFadeLines(1)).toBe(0);
+		expect(userMessageFadeLines(2)).toBe(1);
+		expect(userMessageFadeLines(3)).toBe(1.5);
+		expect(userMessageFadeLines(8)).toBe(1.5);
+		// Omitted: the transcript's eight-line clamp, unchanged.
+		expect(userMessageFadeLines()).toBe(USER_MESSAGE_FADE_LINES);
+		// No fade: no pull-up. The standard fade keeps the 32 pt footprint.
+		expect(userMessageControlMarginTop(false, 48, 0)).toBe(0);
+		expect(userMessageControlMarginTop(false, 48, 1)).toBe(-16);
+		expect(userMessageControlMarginTop(false, 48)).toBe(-16);
+	});
+
+	it("a one-line clamp draws its line unfaded, with Show more below it", async () => {
+		rig.scale = 2;
+		await render(undefined, { lines: 1 });
+		await layOut(5);
+		expect(control()?.accessibilityLabel).toBe("Show more");
+		expect(last("Svg")).toHaveLength(0);
+		expect(fadeFrame()).toBeUndefined();
+		expect(control()?.style).toEqual({ minHeight: TOUCH_FLOOR, marginTop: 0 });
+	});
+
+	it("a two-line clamp fades one line and keeps the 32 pt pull-up", async () => {
+		rig.scale = 2;
+		await render(undefined, { lines: 2 });
+		await layOut(5);
+		expect(fadeFrame()?.height).toBe(userMessageLineHeight(2));
+		expect(control()?.style).toEqual({
+			minHeight: TOUCH_FLOOR,
+			marginTop: -(TOUCH_FLOOR - USER_MESSAGE_MORE_GROWTH),
+		});
+	});
+
+	it("the transcript's default eight-line clamp is unchanged", async () => {
+		await render();
+		await layOut(20);
+		expect(fadeFrame()?.height).toBe(
+			USER_MESSAGE_FADE_LINES * userMessageLineHeight(1),
+		);
+		expect(control()?.style).toEqual({
+			minHeight: TOUCH_FLOOR,
+			marginTop: -(TOUCH_FLOOR - USER_MESSAGE_MORE_GROWTH),
+		});
 	});
 });
