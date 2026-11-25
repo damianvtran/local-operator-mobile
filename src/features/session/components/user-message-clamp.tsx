@@ -230,7 +230,9 @@ export const UserMessageClamp = ({
 };
 
 /**
- * The fade over the clipped block's last line and a half, drawn to the
+ * The fade over the clipped block's last `userMessageFadeLines(lines)` lines
+ * (a line and a half on the transcript's clamp, one on a two-line clamp, none
+ * on a one-line clamp), drawn to the
  * bubble's OWN fill (`userBubbleFill`, read from the active palette as the
  * bubble itself is) so it dissolves into the bubble in every theme, light or
  * dark. An SVG gradient because `react-native-svg` is already the kit's

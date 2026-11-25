@@ -169,6 +169,7 @@ describe("the mock worlds the S5 cells open, through the production reader", () 
 					olderState: reader.olderState,
 					frameRows: projection.transcript.length,
 					frameHeadPinned: projection.transcript_head_pinned,
+					frameHasOlder: projection.transcript_has_older,
 				});
 			// The list's automatic walk, minus the geometry: page while ready and no
 			// conversation row is held, within the budget.

@@ -454,6 +454,40 @@ it("ignores an unknown event before the seed (the streams are additive)", async 
 	}
 });
 
+// #393 m1: a non-retryable failure inside the missed-seed grace must take the
+// grace with it. Left armed, it set `overdue` behind the error, and a reload
+// soon after painted "Reconnecting…" before its open had a chance. The reload
+// lands between the seed grace's deadline (t=2.5 s, armed at the skipped seed)
+// and the drop grace's (t=3.5 s, armed by the refusal's `lastEnd: "error"`),
+// so only the seed grace can paint C2 there.
+it("drops a pending missed-seed grace on a non-retryable failure, so reload opens quietly", async () => {
+	vi.useFakeTimers();
+	const { attempts, requests } = transport((attempt) =>
+		attempt === 2 ? 401 : 200,
+	);
+	const probe = mount();
+	try {
+		await probe.show("stopped-a");
+		// t=0: the seed is skipped, which arms the 2.5 s grace.
+		await act(async () => attempts[0]?.send(KEEPALIVE));
+		// t=1 s: the retry is refused, a stop the reader must resolve.
+		await advance(RECONNECT_BACKOFF_MIN_MS);
+		expect(requests).toHaveLength(2);
+		expect(probe.read().error?.kind).toBe("relay-unauthorized");
+		// t=2.6 s: past the seed grace's deadline; the reader retries.
+		await advance(OUTAGE_GRACE_MS - RECONNECT_BACKOFF_MIN_MS + 100);
+		await act(async () => probe.read().reload());
+		expect(requests).toHaveLength(3);
+		expect(probe.read().error).toBeNull();
+		expect(probe.read().connection.id).toBeNull();
+		await act(async () => attempts[1]?.send(frame("stopped-a")));
+		expect(probe.read().projection?.session_id).toBe("stopped-a");
+		expect(probe.read().connection.id).toBeNull();
+	} finally {
+		await probe.close();
+	}
+});
+
 it("backs off repeated skipped seeds and stops on a typed authentication failure", async () => {
 	vi.useFakeTimers();
 	const { attempts, requests } = transport((attempt) =>

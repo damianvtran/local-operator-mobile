@@ -45,8 +45,11 @@ export interface OlderFillEvidence {
 	frameHeadPinned: boolean | undefined;
 	/** `transcript_has_older` (Core #4521), absent on an older relay and when
 	 *  false. Read ONLY here, never as a pin: a compacted render opens at its
-	 *  marker, and treating that as a pinned opener would detach it. */
-	frameHasOlder?: boolean | undefined;
+	 *  marker, and treating that as a pinned opener would detach it. Required
+	 *  (value may be `undefined`), like `frameHeadPinned`, so a caller that
+	 *  forgets to pass the frame's field is a type error rather than a
+	 *  compacted conversation that silently never pages in (#393 n1). */
+	frameHasOlder: boolean | undefined;
 }
 
 /**
