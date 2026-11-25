@@ -30,10 +30,6 @@ type HostProps = {
 		flexGrow?: number;
 		position?: string;
 		height?: number;
-		width?: number;
-		end?: number;
-		top?: number;
-		bottom?: number;
 	};
 	onLayout?: (event: { nativeEvent: { layout: { height: number } } }) => void;
 	onPress?: () => void;
@@ -43,10 +39,6 @@ type HostProps = {
 	testID?: string;
 	stopColor?: string;
 	stopOpacity?: number;
-	x1?: string;
-	y1?: string;
-	x2?: string;
-	y2?: string;
 };
 const rig = vi.hoisted(() => ({
 	/** Every host element drawn in the latest render pass, in order. */
@@ -100,8 +92,6 @@ const {
 	userMessageControlMarginTop,
 	userMessageFadeLines,
 	USER_MESSAGE_FADE_LINES,
-	userMessageEdgeFadeWidth,
-	USER_MESSAGE_EDGE_FADE_LINES,
 	collapseScrollOffset,
 	USER_MESSAGE_MORE_GROWTH,
 	USER_MESSAGE_COLLAPSE_INSET,
@@ -639,53 +629,9 @@ describe("the fade never covers the first line (PR #391 D1)", () => {
 		await render(undefined, { lines: 1 });
 		await layOut(5);
 		expect(control()?.accessibilityLabel).toBe("Show more");
-		// No BOTTOM fade over the only line; only the end-edge cue (#393 D2).
-		expect(fadeFrame()?.height).toBeUndefined();
+		expect(last("Svg")).toHaveLength(0);
+		expect(fadeFrame()).toBeUndefined();
 		expect(control()?.style).toEqual({ minHeight: TOUCH_FLOOR, marginTop: 0 });
-	});
-
-	/* #393 (PR #391 design round 2, D2): a one-line clamp whose line breaks on
-	 *  a word looked finished. It gets a short fade over the line's END, an
-	 *  overlay that adds no height, and nothing else changes. */
-	it("a one-line clamp fades its line's end edge, and only it", async () => {
-		expect(USER_MESSAGE_EDGE_FADE_LINES).toBe(1.5);
-		expect(userMessageEdgeFadeWidth(2, 1)).toBe(1.5 * userMessageLineHeight(2));
-		expect(userMessageEdgeFadeWidth(1, 2)).toBe(0);
-		expect(userMessageEdgeFadeWidth(1, 3)).toBe(0);
-		expect(userMessageEdgeFadeWidth(1)).toBe(0);
-
-		rig.scale = 2;
-		await render(undefined, { lines: 1 });
-		await layOut(5);
-		expect(last("Svg")).toHaveLength(1);
-		expect(fadeFrame()).toEqual({
-			position: "absolute",
-			top: 0,
-			bottom: 0,
-			end: 0,
-			width: 1.5 * userMessageLineHeight(2),
-		});
-		// Runs along the line, clear at the text side, opaque at the end.
-		const gradient = last("LinearGradient")[0]?.props;
-		expect([gradient?.x1, gradient?.y1, gradient?.x2, gradient?.y2]).toEqual([
-			"0%",
-			"0%",
-			"100%",
-			"0%",
-		]);
-		expect(last("Stop").map((s) => s.props.stopOpacity)).toEqual([0, 1]);
-		// An overlay: the clip stays exactly one line, no height added.
-		expect(
-			rig.hosts.find((h) => h.props.style?.maxHeight)?.props.style?.maxHeight,
-		).toBe(userMessageClipHeight(2, 1));
-
-		// Open: no cue. A one-line message that fits: no cue either.
-		await press();
-		expect(last("Svg")).toHaveLength(0);
-		await render(undefined, { lines: 1 });
-		await layOut(1);
-		expect(control()).toBeUndefined();
-		expect(last("Svg")).toHaveLength(0);
 	});
 
 	it("a two-line clamp fades one line and keeps the 32 pt pull-up", async () => {
@@ -702,9 +648,6 @@ describe("the fade never covers the first line (PR #391 D1)", () => {
 	it("the transcript's default eight-line clamp is unchanged", async () => {
 		await render();
 		await layOut(20);
-		// One fade, the bottom one: no end-edge cue on the eight-line clamp.
-		expect(last("Svg")).toHaveLength(1);
-		expect(fadeFrame()?.width).toBeUndefined();
 		expect(fadeFrame()?.height).toBe(
 			USER_MESSAGE_FADE_LINES * userMessageLineHeight(1),
 		);

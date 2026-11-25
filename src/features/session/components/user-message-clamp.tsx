@@ -21,14 +21,12 @@ import {
 	UserMessageCollapseContext,
 	userMessageClipHeight,
 	userMessageControlMarginTop,
-	userMessageEdgeFadeWidth,
 	userMessageFadeLines,
 	userMessageLineHeight,
 } from "@/features/session/user-message-clamp";
 import { t } from "@/i18n";
 import { ROLE } from "@/ui/a11y";
 import { useTheme } from "@/ui/appearance";
-import { useIsRTL } from "@/ui/direction";
 import { TOUCH_FLOOR } from "@/ui/layout";
 import { useTextScale } from "@/ui/text-scale-provider";
 
@@ -112,9 +110,6 @@ export const UserMessageClamp = ({
 	// Never over the first line: a one-line clamp (the subagent prompt at 200 %
 	// text) gets no fade and no pull-up, so its only line stays legible (D1).
 	const fadeLines = userMessageFadeLines(lines);
-	// That one-line clamp gets a short fade on its line's end instead, so a
-	// brief that breaks on a word still reads as continuing (#393, D2).
-	const edgeFadeWidth = userMessageEdgeFadeWidth(effectiveScale, lines);
 	const clamped =
 		contentHeight !== null &&
 		needsUserMessageClamp(contentHeight, effectiveScale, lines);
@@ -171,9 +166,6 @@ export const UserMessageClamp = ({
 					colour={fadeColor}
 					height={fadeLines * userMessageLineHeight(effectiveScale)}
 				/>
-			) : null}
-			{clamped && !expanded && edgeFadeWidth > 0 ? (
-				<BubbleFade colour={fadeColor} width={edgeFadeWidth} />
 			) : null}
 		</View>
 	);
@@ -239,9 +231,8 @@ export const UserMessageClamp = ({
 
 /**
  * The fade over the clipped block's last `userMessageFadeLines(lines)` lines
- * (a line and a half on the transcript's clamp, one on a two-line clamp), or,
- * given a `width`, over the END of a one-line clamp's only line
- * (`userMessageEdgeFadeWidth`). Drawn to the
+ * (a line and a half on the transcript's clamp, one on a two-line clamp, none
+ * on a one-line clamp), drawn to the
  * bubble's OWN fill (`userBubbleFill`, read from the active palette as the
  * bubble itself is) so it dissolves into the bubble in every theme, light or
  * dark. An SVG gradient because `react-native-svg` is already the kit's
@@ -252,36 +243,24 @@ export const UserMessageClamp = ({
  */
 const BubbleFade = ({
 	height,
-	width,
 	colour: override,
 }: {
-	height?: number;
-	width?: number;
+	height: number;
 	colour?: string;
 }) => {
 	const { active } = useTheme();
-	const rtl = useIsRTL();
 	const colour = override ?? userBubbleFill(active).backgroundColor;
 	// One id per mounted fade: SVG gradient ids are document-global on web.
 	const id = `user-message-fade-${useId().replace(/:/g, "")}`;
-	/* The end-edge form. The frame sits on the logical `end`, which the root's
-	 * layout direction already flips (`src/ui/direction.tsx`). An SVG's x axis
-	 * never flips, so the gradient alone reads the direction context to run
-	 * from clear at the text side to opaque at the end edge. */
-	const horizontal = width !== undefined;
-	const frame = horizontal
-		? { position: "absolute" as const, top: 0, bottom: 0, end: 0, width }
-		: { position: "absolute" as const, start: 0, end: 0, bottom: 0, height };
-	const axis = horizontal
-		? rtl
-			? { x1: "100%", y1: "0%", x2: "0%", y2: "0%" }
-			: { x1: "0%", y1: "0%", x2: "100%", y2: "0%" }
-		: { x1: "0%", y1: "0%", x2: "0%", y2: "100%" };
 	return (
-		<View pointerEvents="none" aria-hidden style={frame}>
+		<View
+			pointerEvents="none"
+			aria-hidden
+			style={{ position: "absolute", start: 0, end: 0, bottom: 0, height }}
+		>
 			<Svg width="100%" height="100%">
 				<Defs>
-					<LinearGradient id={id} {...axis}>
+					<LinearGradient id={id} x1="0%" y1="0%" x2="0%" y2="100%">
 						<Stop offset="0" stopColor={colour} stopOpacity={0} />
 						<Stop offset="1" stopColor={colour} stopOpacity={1} />
 					</LinearGradient>
