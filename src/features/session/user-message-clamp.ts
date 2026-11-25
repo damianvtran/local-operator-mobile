@@ -54,6 +54,39 @@ export function userMessageFadeLines(
 	return Math.min(USER_MESSAGE_FADE_LINES, Math.max(0, lines - 1));
 }
 
+/** How far, in lines of the body-read step, the END-edge fade on a one-line
+ *  clamp reaches into its line (#393, PR #391 design round 2 D2). */
+export const USER_MESSAGE_EDGE_FADE_LINES = 1.5;
+
+/**
+ * The width of the end-edge fade on a collapsed clamp showing `lines` lines,
+ * in points at `scale`, or 0 where the clamp gets none.
+ *
+ * WHY. A one-line clamp has no bottom fade (`userMessageFadeLines` is 0 so
+ * its only line stays legible, PR #391 D1). Its line is a whole wrapped line,
+ * so a brief that breaks on a word boundary looked finished, with `Show more`
+ * the only cue that it continues. A short fade over the line's END says
+ * "continues" the way the bottom fade does on taller clamps, while the start
+ * of the line, which carries the meaning, stays at full contrast.
+ *
+ * A FADE, NOT AN ELLIPSIS. An ellipsis needs `numberOfLines` on the message's
+ * `<Text>`, which the wrapper deliberately never touches: it truncates what a
+ * selection can reach, and the text would then report only its visible line,
+ * so the clamp could never tell it was hiding anything. The fade is an
+ * absolutely-positioned overlay, so it adds no height and cannot shift layout
+ * on native or on web.
+ *
+ * Only where there is no bottom fade: two or more lines already have one, and
+ * the transcript's eight-line clamp must stay exactly as it was.
+ */
+export function userMessageEdgeFadeWidth(
+	scale: number,
+	lines: number = USER_MESSAGE_CLAMP_LINES,
+): number {
+	if (userMessageFadeLines(lines) > 0) return 0;
+	return USER_MESSAGE_EDGE_FADE_LINES * userMessageLineHeight(scale);
+}
+
 /** One line of the bubble's `text-body-read` step, in points, at `scale`. The
  *  step is the token's, so a type change moves the clip with it. */
 export function userMessageLineHeight(scale: number): number {
