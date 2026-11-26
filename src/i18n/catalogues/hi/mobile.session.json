@@ -112,5 +112,14 @@
 	"mobile.session.diagram.open_hint": "आरेख को पूर्ण स्क्रीन पर खोलता है",
 	"mobile.session.diagram.copy": "आरेख का स्रोत कॉपी करें",
 	"mobile.session.diagram.close": "आरेख बंद करें",
-	"mobile.session.diagram.viewer": "आरेख व्यूअर"
+	"mobile.session.diagram.viewer": "आरेख व्यूअर",
+	"mobile.session.inline_chart.other": "अन्य ({count})",
+	"mobile.session.inline_chart.share": "कुल का {share}",
+	"mobile.session.inline_chart.total": "कुल",
+	"mobile.session.inline_chart.more": "+{count} और",
+	"mobile.session.inline_chart.also_label": "साथ ही:",
+	"mobile.session.inline_chart.no_data": "कोई डेटा नहीं",
+	"mobile.session.inline_chart.value_count": "मान: {count}",
+	"mobile.session.inline_chart.position": "{count} में से {index}",
+	"mobile.session.inline_chart.right_axis": "{label} · दायाँ अक्ष"
 }

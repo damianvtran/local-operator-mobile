@@ -112,5 +112,14 @@
 	"mobile.session.diagram.open_hint": "全屏打开图表",
 	"mobile.session.diagram.copy": "复制图表源码",
 	"mobile.session.diagram.close": "关闭图表",
-	"mobile.session.diagram.viewer": "图表查看器"
+	"mobile.session.diagram.viewer": "图表查看器",
+	"mobile.session.inline_chart.other": "其他 ({count})",
+	"mobile.session.inline_chart.share": "占总数 {share}",
+	"mobile.session.inline_chart.total": "总计",
+	"mobile.session.inline_chart.more": "另有 {count} 项",
+	"mobile.session.inline_chart.also_label": "另外：",
+	"mobile.session.inline_chart.no_data": "无数据",
+	"mobile.session.inline_chart.value_count": "数值：{count}",
+	"mobile.session.inline_chart.position": "第 {index} 项，共 {count} 项",
+	"mobile.session.inline_chart.right_axis": "{label} · 右轴"
 }

@@ -236,8 +236,12 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	 * the U-08 scene, checks and thresholds are unchanged. */
 	"tools/mock-relay/relay.ts":
 		"53ba7d083d6e3c5fae20cc20b4ecc591c3793e6f4660625fdae87ac4f10b8f9e",
+	/* Inline-chart redesign: the chart dataset gains the operator's Datadog
+	 * series, a 32-day line, a long-label bar and a 12-slice pie; round-1
+	 * remediation ends the 32-day line on a real date (Nov 1, not Oct 32). Data
+	 * only — the U-08 scene, checks and thresholds are unchanged. */
 	"tools/mock-relay/inline-charts.ts":
-		"d5ff734f546a710b51b1521a56958d5479dc4416c659e1218fd16690fc26678e",
+		"69b74c0e42d072537da066c64b79a1d15daba6395bfc956165ca87e5e6a3c13e",
 	/* Re-pinned 2026-10-29 after merging main's session-health work into the French
 	 * wave: `src` and `app` carry that surface plus the French catalogues and the
 	 * per-render copy modules, and the readiness/matrix/scenario helpers moved with

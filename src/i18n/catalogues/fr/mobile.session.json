@@ -112,5 +112,14 @@
 	"mobile.session.diagram.open_hint": "Ouvre le diagramme en plein écran",
 	"mobile.session.diagram.copy": "Copier la source du diagramme",
 	"mobile.session.diagram.close": "Fermer le diagramme",
-	"mobile.session.diagram.viewer": "Visionneuse de diagramme"
+	"mobile.session.diagram.viewer": "Visionneuse de diagramme",
+	"mobile.session.inline_chart.other": "Autres ({count})",
+	"mobile.session.inline_chart.share": "{share} du total",
+	"mobile.session.inline_chart.total": "Total",
+	"mobile.session.inline_chart.more": "+{count} de plus",
+	"mobile.session.inline_chart.also_label": "Aussi :",
+	"mobile.session.inline_chart.no_data": "Aucune donnée",
+	"mobile.session.inline_chart.value_count": "Valeurs : {count}",
+	"mobile.session.inline_chart.position": "{index} sur {count}",
+	"mobile.session.inline_chart.right_axis": "{label} · axe de droite"
 }

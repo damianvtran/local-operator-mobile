@@ -55,6 +55,7 @@ const TEXT_COLOUR = new RegExp(
 const ON_SCROLL_BEGIN =
 	/onScrollBeginDrag = useCallback\(\(\) => \{[\s\S]*?\}, \[/;
 const THREAD_SCROLL_BEGIN = /onScrollBeginDrag=\{\(\) => \{[\s\S]*?\}\}/;
+const ON_LIST_TOUCH_START = /const onListTouchStart = \(\) => \{[\s\S]*?\};/;
 
 const read = (relative: string): string =>
 	readFileSync(fileURLToPath(new URL(relative, import.meta.url)), "utf8");
@@ -208,12 +209,18 @@ describe("the lists end the mode on a tap outside, never on a scroll", () => {
 		expect(begin).not.toContain("exitTextSelection");
 		expect(list).not.toContain("exitTextSelection");
 		for (const prop of [
-			"onTouchStart={textSelectionContainerTouch}",
+			"onTouchStart={onListTouchStart}",
 			"onTouchEnd={textSelectionContainerTouchEnd}",
 			"onTouchCancel={textSelectionContainerTouchCancel}",
 		]) {
 			expect(list).toContain(prop);
 		}
+		// PR #397 R11: the list's touch start is a wrapper shared with the
+		// inline charts' tap-outside rule (X7); it must still start the
+		// selection's tap-outside check, so pin the wrapper's body too.
+		const wrapper = list.match(ON_LIST_TOUCH_START)?.[0] ?? "";
+		expect(wrapper).toContain("textSelectionContainerTouch()");
+		expect(wrapper).toContain("inlineChartsContainerTouch()");
 	});
 
 	it("the Team Bridge thread", () => {

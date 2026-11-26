@@ -967,6 +967,15 @@ export type CatalogueKey =
 	| "mobile.session.history.loading"
 	| "mobile.session.history.refresh_failed"
 	| "mobile.session.history.stalled"
+	| "mobile.session.inline_chart.also_label"
+	| "mobile.session.inline_chart.more"
+	| "mobile.session.inline_chart.no_data"
+	| "mobile.session.inline_chart.other"
+	| "mobile.session.inline_chart.position"
+	| "mobile.session.inline_chart.right_axis"
+	| "mobile.session.inline_chart.share"
+	| "mobile.session.inline_chart.total"
+	| "mobile.session.inline_chart.value_count"
 	| "mobile.session.inline_chart_data"
 	| "mobile.session.jump_to_latest"
 	| "mobile.session.jump_to_latest_name"
@@ -2290,6 +2299,9 @@ export type NoParamKey =
 	| "mobile.session.history.loading"
 	| "mobile.session.history.refresh_failed"
 	| "mobile.session.history.stalled"
+	| "mobile.session.inline_chart.also_label"
+	| "mobile.session.inline_chart.no_data"
+	| "mobile.session.inline_chart.total"
 	| "mobile.session.inline_chart_data"
 	| "mobile.session.jump_to_latest"
 	| "mobile.session.jump_to_latest_name"
@@ -3684,6 +3696,15 @@ export type MessageParams = {
 	"mobile.session.history.loading": NoParams;
 	"mobile.session.history.refresh_failed": NoParams;
 	"mobile.session.history.stalled": NoParams;
+	"mobile.session.inline_chart.also_label": NoParams;
+	"mobile.session.inline_chart.more": { count: string | number };
+	"mobile.session.inline_chart.no_data": NoParams;
+	"mobile.session.inline_chart.other": { count: string | number };
+	"mobile.session.inline_chart.position": { count: string | number; index: string | number };
+	"mobile.session.inline_chart.right_axis": { label: string | number };
+	"mobile.session.inline_chart.share": { share: string | number };
+	"mobile.session.inline_chart.total": NoParams;
+	"mobile.session.inline_chart.value_count": { count: string | number };
 	"mobile.session.inline_chart_data": NoParams;
 	"mobile.session.jump_to_latest": NoParams;
 	"mobile.session.jump_to_latest_name": NoParams;
@@ -5190,6 +5211,15 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.session.history.loading": "Loading earlier messages…",
 	"mobile.session.history.refresh_failed": "The latest messages could not be loaded.",
 	"mobile.session.history.stalled": "Earlier messages stopped loading. Try again, or reopen this conversation.",
+	"mobile.session.inline_chart.also_label": "Also:",
+	"mobile.session.inline_chart.more": "+{count} more",
+	"mobile.session.inline_chart.no_data": "No data",
+	"mobile.session.inline_chart.other": "Other ({count})",
+	"mobile.session.inline_chart.position": "{index} of {count}",
+	"mobile.session.inline_chart.right_axis": "{label} · right axis",
+	"mobile.session.inline_chart.share": "{share} of total",
+	"mobile.session.inline_chart.total": "Total",
+	"mobile.session.inline_chart.value_count": "Values: {count}",
 	"mobile.session.inline_chart_data": "Chart data",
 	"mobile.session.jump_to_latest": "↓ Jump to latest",
 	"mobile.session.jump_to_latest_name": "Jump to latest",
@@ -6681,6 +6711,15 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.session.history.loading": { role: "status", note: "Busy state while reading one earlier transcript page." },
 	"mobile.session.history.refresh_failed": { role: "status", note: "Reading the newest transcript page failed (returning to the app, Check again, or reloading history). Shown at the newest edge with a Try again button; do not repeat that label. Must not say EARLIER messages failed." },
 	"mobile.session.history.stalled": { role: "status", note: "The server returned a cursor that did not advance; automatic reads stop. Name the button's own action (Try again) or reopening; plain wording, no engineering terms." },
+	"mobile.session.inline_chart.also_label": { role: "meta", note: "Lead-in label of the one line under a wide donut chart that lists the slices too small to label on the chart; each \"label percentage\" item follows it as its own tappable text. Keep the colon (or this language's equivalent); no final full stop." },
+	"mobile.session.inline_chart.more": { role: "meta", note: "Last line of the tooltip of the grouped \"Other\" pie slice when it groups more items than it lists. {count} is the number not listed (always at least 1). No final full stop." },
+	"mobile.session.inline_chart.no_data": { role: "meta", note: "Value shown in a heatmap tooltip and read by screen readers for a cell that has no value (drawn hatched). Short phrase, no final full stop." },
+	"mobile.session.inline_chart.other": { role: "meta", note: "Label of the pie-chart slice that groups the smallest items once a chart has more than seven. {count} is how many items it groups (always at least 2). Keep it short: it sits in a legend row beside a percentage." },
+	"mobile.session.inline_chart.position": { role: "meta", note: "Read by screen readers after a chart value: which mark of how many is selected, e.g. \"3 of 9\". {index} and {count} are positive integers. No final full stop." },
+	"mobile.session.inline_chart.right_axis": { role: "meta", note: "Legend entry of a chart series drawn against the right-hand axis, e.g. \"Latency · right axis\". {label} is the series name as authored. Keep the middle dot separator. No final full stop." },
+	"mobile.session.inline_chart.share": { role: "meta", note: "Line in a chart tooltip giving the slice or segment as a part of the whole, e.g. \"38.2% of total\". {share} is an already formatted percentage. No final full stop." },
+	"mobile.session.inline_chart.total": { role: "meta", note: "Row label in a stacked-chart tooltip and the caption under the total in the centre of a donut chart. One word, no final full stop." },
+	"mobile.session.inline_chart.value_count": { role: "meta", note: "Read by screen readers as the value of a chart before any mark is selected: how many values the chart holds, e.g. \"Values: 9\". {count} is a positive integer; the label-colon-number form avoids a plural. No final full stop." },
 	"mobile.session.inline_chart_data": { role: "button", note: "Disclosure below a chart in an assistant reply. Opens and closes the chart's exact values as a table. The button label stays the same and the expanded state is read separately. Short noun phrase, no final full stop." },
 	"mobile.session.jump_to_latest": { role: "button", note: "The visible and accessible name of the floating chip over the transcript that takes a reader who scrolled up back to the newest message. It appears only after new output arrived while they were away. Keep the leading down arrow; imperative, sentence case, no final full stop. The arrow points at the newest content below, not at the reading direction." },
 	"mobile.session.jump_to_latest_name": { role: "button", note: "The ACCESSIBLE name of the floating \"jump to latest\" chip: the same sentence as mobile.session.jump_to_latest WITHOUT the leading down arrow, because a screen reader would read the glyph as \"down arrow\". Imperative, sentence case, no final full stop. Shown visually only by screen readers, never on the chip itself." },
@@ -8186,6 +8225,15 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.history.loading": "Cargando mensajes anteriores…",
 		"mobile.session.history.refresh_failed": "No se pudieron cargar los mensajes más recientes.",
 		"mobile.session.history.stalled": "Los mensajes anteriores dejaron de cargarse. Reintenta o abre de nuevo esta conversación.",
+		"mobile.session.inline_chart.also_label": "También:",
+		"mobile.session.inline_chart.more": "+{count} más",
+		"mobile.session.inline_chart.no_data": "Sin datos",
+		"mobile.session.inline_chart.other": "Otros ({count})",
+		"mobile.session.inline_chart.position": "{index} de {count}",
+		"mobile.session.inline_chart.right_axis": "{label} · eje derecho",
+		"mobile.session.inline_chart.share": "{share} del total",
+		"mobile.session.inline_chart.total": "Total",
+		"mobile.session.inline_chart.value_count": "Valores: {count}",
 		"mobile.session.inline_chart_data": "Datos del gráfico",
 		"mobile.session.jump_to_latest": "↓ Ir a lo más reciente",
 		"mobile.session.jump_to_latest_name": "Ir a lo más reciente",
@@ -9675,6 +9723,15 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.history.loading": "Chargement des messages précédents…",
 		"mobile.session.history.refresh_failed": "Les derniers messages n’ont pas pu être chargés.",
 		"mobile.session.history.stalled": "Le chargement des messages précédents s’est arrêté. Réessayez ou rouvrez cette conversation.",
+		"mobile.session.inline_chart.also_label": "Aussi :",
+		"mobile.session.inline_chart.more": "+{count} de plus",
+		"mobile.session.inline_chart.no_data": "Aucune donnée",
+		"mobile.session.inline_chart.other": "Autres ({count})",
+		"mobile.session.inline_chart.position": "{index} sur {count}",
+		"mobile.session.inline_chart.right_axis": "{label} · axe de droite",
+		"mobile.session.inline_chart.share": "{share} du total",
+		"mobile.session.inline_chart.total": "Total",
+		"mobile.session.inline_chart.value_count": "Valeurs : {count}",
 		"mobile.session.inline_chart_data": "Données du graphique",
 		"mobile.session.jump_to_latest": "↓ Aller au plus récent",
 		"mobile.session.jump_to_latest_name": "Aller au plus récent",
@@ -11164,6 +11221,15 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.history.loading": "पहले के संदेश लोड हो रहे हैं…",
 		"mobile.session.history.refresh_failed": "सबसे नए संदेश लोड नहीं हो सके।",
 		"mobile.session.history.stalled": "पहले के संदेश लोड होना रुक गया। फिर से कोशिश करें, या यह बातचीत दोबारा खोलें।",
+		"mobile.session.inline_chart.also_label": "साथ ही:",
+		"mobile.session.inline_chart.more": "+{count} और",
+		"mobile.session.inline_chart.no_data": "कोई डेटा नहीं",
+		"mobile.session.inline_chart.other": "अन्य ({count})",
+		"mobile.session.inline_chart.position": "{count} में से {index}",
+		"mobile.session.inline_chart.right_axis": "{label} · दायाँ अक्ष",
+		"mobile.session.inline_chart.share": "कुल का {share}",
+		"mobile.session.inline_chart.total": "कुल",
+		"mobile.session.inline_chart.value_count": "मान: {count}",
 		"mobile.session.inline_chart_data": "चार्ट का डेटा",
 		"mobile.session.jump_to_latest": "↓ नवीनतम पर जाएँ",
 		"mobile.session.jump_to_latest_name": "नवीनतम पर जाएँ",
@@ -12653,6 +12719,15 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.history.loading": "Загрузка предыдущих сообщений…",
 		"mobile.session.history.refresh_failed": "Не удалось загрузить последние сообщения.",
 		"mobile.session.history.stalled": "Загрузка предыдущих сообщений остановилась. Повторите или откройте беседу заново.",
+		"mobile.session.inline_chart.also_label": "Также:",
+		"mobile.session.inline_chart.more": "ещё {count}",
+		"mobile.session.inline_chart.no_data": "Нет данных",
+		"mobile.session.inline_chart.other": "Другое ({count})",
+		"mobile.session.inline_chart.position": "{index} из {count}",
+		"mobile.session.inline_chart.right_axis": "{label} · правая ось",
+		"mobile.session.inline_chart.share": "{share} от общего",
+		"mobile.session.inline_chart.total": "Итого",
+		"mobile.session.inline_chart.value_count": "Значений: {count}",
 		"mobile.session.inline_chart_data": "Данные диаграммы",
 		"mobile.session.jump_to_latest": "↓ К последнему сообщению",
 		"mobile.session.jump_to_latest_name": "К последнему сообщению",
@@ -14142,6 +14217,15 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.history.loading": "پہلے کے پیغامات لوڈ ہو رہے ہیں…",
 		"mobile.session.history.refresh_failed": "تازہ ترین پیغامات لوڈ نہیں ہو سکے۔",
 		"mobile.session.history.stalled": "تاریخچے کے پہلے کے پیغامات لوڈ ہونا رک گئے۔ دوبارہ کوشش کریں، یا یہ گفتگو دوبارہ کھولیں۔",
+		"mobile.session.inline_chart.also_label": "نیز:",
+		"mobile.session.inline_chart.more": "+{count} مزید",
+		"mobile.session.inline_chart.no_data": "کوئی ڈیٹا نہیں",
+		"mobile.session.inline_chart.other": "دیگر ({count})",
+		"mobile.session.inline_chart.position": "{count} میں سے {index}",
+		"mobile.session.inline_chart.right_axis": "{label} · دایاں محور",
+		"mobile.session.inline_chart.share": "کل کا {share}",
+		"mobile.session.inline_chart.total": "کل",
+		"mobile.session.inline_chart.value_count": "اقدار: {count}",
 		"mobile.session.inline_chart_data": "چارٹ کا ڈیٹا",
 		"mobile.session.jump_to_latest": "↓ تازہ ترین پر جائیں",
 		"mobile.session.jump_to_latest_name": "تازہ ترین پر جائیں",
@@ -15631,6 +15715,15 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.history.loading": "Đang tải tin nhắn trước đó…",
 		"mobile.session.history.refresh_failed": "Không tải được các tin nhắn mới nhất.",
 		"mobile.session.history.stalled": "Tin nhắn trước đó đã ngừng tải. Hãy thử lại hoặc mở lại cuộc trò chuyện này.",
+		"mobile.session.inline_chart.also_label": "Ngoài ra:",
+		"mobile.session.inline_chart.more": "+{count} mục khác",
+		"mobile.session.inline_chart.no_data": "Không có dữ liệu",
+		"mobile.session.inline_chart.other": "Khác ({count})",
+		"mobile.session.inline_chart.position": "{index} / {count}",
+		"mobile.session.inline_chart.right_axis": "{label} · trục phải",
+		"mobile.session.inline_chart.share": "{share} tổng số",
+		"mobile.session.inline_chart.total": "Tổng",
+		"mobile.session.inline_chart.value_count": "Giá trị: {count}",
 		"mobile.session.inline_chart_data": "Dữ liệu biểu đồ",
 		"mobile.session.jump_to_latest": "↓ Đến mới nhất",
 		"mobile.session.jump_to_latest_name": "Đến mới nhất",
@@ -17120,6 +17213,15 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.history.loading": "正在加载更早的消息…",
 		"mobile.session.history.refresh_failed": "无法加载最新的消息。",
 		"mobile.session.history.stalled": "无法继续加载更早的消息。请重试或重新打开此对话。",
+		"mobile.session.inline_chart.also_label": "另外：",
+		"mobile.session.inline_chart.more": "另有 {count} 项",
+		"mobile.session.inline_chart.no_data": "无数据",
+		"mobile.session.inline_chart.other": "其他 ({count})",
+		"mobile.session.inline_chart.position": "第 {index} 项，共 {count} 项",
+		"mobile.session.inline_chart.right_axis": "{label} · 右轴",
+		"mobile.session.inline_chart.share": "占总数 {share}",
+		"mobile.session.inline_chart.total": "总计",
+		"mobile.session.inline_chart.value_count": "数值：{count}",
 		"mobile.session.inline_chart_data": "图表数据",
 		"mobile.session.jump_to_latest": "↓ 跳到最新",
 		"mobile.session.jump_to_latest_name": "跳到最新",
