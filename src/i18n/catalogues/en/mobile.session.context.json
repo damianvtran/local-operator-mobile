@@ -454,5 +454,33 @@
 	"mobile.session.diagram.viewer": {
 		"role": "heading",
 		"note": "Accessible name of the full-screen diagram viewer dialog. A short noun phrase, sentence case, no final full stop."
+	},
+	"mobile.session.inline_chart.other": {
+		"role": "meta",
+		"note": "Label of the pie-chart slice that groups the smallest items once a chart has more than seven. {count} is how many items it groups (always at least 2). Keep it short: it sits in a legend row beside a percentage."
+	},
+	"mobile.session.inline_chart.share": {
+		"role": "meta",
+		"note": "Line in a chart tooltip giving the slice or segment as a part of the whole, e.g. \"38.2% of total\". {share} is an already formatted percentage. No final full stop."
+	},
+	"mobile.session.inline_chart.total": {
+		"role": "meta",
+		"note": "Row label in a stacked-chart tooltip and the caption under the total in the centre of a donut chart. One word, no final full stop."
+	},
+	"mobile.session.inline_chart.more": {
+		"role": "meta",
+		"note": "Last line of the tooltip of the grouped \"Other\" pie slice when it groups more items than it lists. {count} is the number not listed (always at least 1). No final full stop."
+	},
+	"mobile.session.inline_chart.also": {
+		"role": "meta",
+		"note": "One line under a wide donut chart listing the slices too small to label on the chart. {items} is a comma-separated list of \"label percentage\" pairs, already formatted. No final full stop."
+	},
+	"mobile.session.inline_chart.position": {
+		"role": "meta",
+		"note": "Read by screen readers after a chart value: which mark of how many is selected, e.g. \"3 of 9\". {index} and {count} are positive integers. No final full stop."
+	},
+	"mobile.session.inline_chart.right_axis": {
+		"role": "meta",
+		"note": "Legend entry of a chart series drawn against the right-hand axis, e.g. \"Latency · right axis\". {label} is the series name as authored. Keep the middle dot separator. No final full stop."
 	}
 }

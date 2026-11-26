@@ -35,6 +35,16 @@ vi.mock("react-native", () => ({
 		return children;
 	},
 	ScrollView: ({ children }: { children: ReactNode }) => children,
+	Animated: {
+		View: ({ children }: { children: ReactNode }) => children,
+		Value: class {
+			setValue() {}
+		},
+		timing: () => ({ start() {} }),
+	},
+	AccessibilityInfo: { isReduceMotionEnabled: () => Promise.resolve(true) },
+	PanResponder: { create: () => ({ panHandlers: {} }) },
+	Platform: { OS: "ios" },
 	Text: ({ children }: { children: ReactNode }) => {
 		if (typeof children === "string") host.texts.push(children);
 		return children;
@@ -61,7 +71,11 @@ vi.mock("react-native-svg", () => {
 	};
 });
 vi.mock("@/ui/appearance", () => ({
-	useTheme: () => ({ active: { colors: PALETTE.light } }),
+	useTheme: () => ({
+		active: { colors: PALETTE.light },
+		chart: [PALETTE.light.accent],
+		theme: "light",
+	}),
 	useTokenColor: () => PALETTE.light["ink-muted"],
 }));
 vi.mock("@/ui/text-scale-provider", () => ({
@@ -72,7 +86,9 @@ it("repaints an open chart below a memoized row on a language-only frame", async
 	const data = inlineUiData({
 		type: "bar",
 		title: "Readings",
-		data: [["A", 5]],
+		// 0–0.5 on a 180 plot ticks every 0.2, so the labels carry a decimal
+		// separator the locale switch must repaint.
+		data: [["A", 0.5]],
 	});
 	const Row = memo(() => <InlineUiPreview data={data} />);
 	const dom = installDomShim();
@@ -90,7 +106,7 @@ it("repaints an open chart below a memoized row on a language-only frame", async
 			accessibilityLabel: "Chart data · Readings",
 			"aria-expanded": false,
 		});
-		expect(host.texts).toContain("2.5");
+		expect(host.texts).toContain("0.2");
 		await act(async () => host.disclosure?.onPress());
 		expect(host.disclosure?.["aria-expanded"]).toBe(true);
 
@@ -102,8 +118,8 @@ it("repaints an open chart below a memoized row on a language-only frame", async
 			"aria-expanded": true,
 		});
 		expect(host.texts).toContain("Données du graphique");
-		expect(host.texts).toContain("2,5");
-		expect(host.texts).not.toContain("2.5");
+		expect(host.texts).toContain("0,2");
+		expect(host.texts).not.toContain("0.2");
 	} finally {
 		await act(async () => root.unmount());
 		dom.dispose();

@@ -112,5 +112,12 @@
 	"mobile.session.diagram.open_hint": "ڈایاگرام کو پوری اسکرین پر کھولتا ہے",
 	"mobile.session.diagram.copy": "ڈایاگرام کا ماخذ کاپی کریں",
 	"mobile.session.diagram.close": "ڈایاگرام بند کریں",
-	"mobile.session.diagram.viewer": "ڈایاگرام ویوور"
+	"mobile.session.diagram.viewer": "ڈایاگرام ویوور",
+	"mobile.session.inline_chart.other": "دیگر ({count})",
+	"mobile.session.inline_chart.share": "کل کا {share}",
+	"mobile.session.inline_chart.total": "کل",
+	"mobile.session.inline_chart.more": "+{count} مزید",
+	"mobile.session.inline_chart.also": "نیز: {items}",
+	"mobile.session.inline_chart.position": "{count} میں سے {index}",
+	"mobile.session.inline_chart.right_axis": "{label} · دایاں محور"
 }

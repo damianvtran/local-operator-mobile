@@ -13,6 +13,7 @@ import {
 	type ThemeSelection,
 } from "@/state/theme-preference";
 import { useUiStore } from "@/state/ui-store";
+import { chartColorsFor } from "@/ui/chart-palette";
 import {
 	COLOR_ROLES,
 	type ColorRole,
@@ -161,6 +162,11 @@ export type Theme = {
 	isDark: boolean;
 	/** The palette that paints right now. */
 	active: ThemeEntry;
+	/**
+	 * Seven categorical chart colours derived from `active` (slot 0 = accent).
+	 * Not a token role: see `chart-palette.ts` for why they are computed.
+	 */
+	chart: readonly string[];
 };
 
 /** The active theme. `selection` is the choice; `theme` and `active` the result. */
@@ -182,6 +188,7 @@ export const useTheme = (): Theme => {
 		theme,
 		isDark: theme === "dark",
 		active,
+		chart: chartColorsFor(active),
 	};
 };
 

@@ -112,5 +112,12 @@
 	"mobile.session.diagram.open_hint": "Opens the diagram full screen",
 	"mobile.session.diagram.copy": "Copy diagram source",
 	"mobile.session.diagram.close": "Close diagram",
-	"mobile.session.diagram.viewer": "Diagram viewer"
+	"mobile.session.diagram.viewer": "Diagram viewer",
+	"mobile.session.inline_chart.other": "Other ({count})",
+	"mobile.session.inline_chart.share": "{share} of total",
+	"mobile.session.inline_chart.total": "Total",
+	"mobile.session.inline_chart.more": "+{count} more",
+	"mobile.session.inline_chart.also": "Also: {items}",
+	"mobile.session.inline_chart.position": "{index} of {count}",
+	"mobile.session.inline_chart.right_axis": "{label} · right axis"
 }

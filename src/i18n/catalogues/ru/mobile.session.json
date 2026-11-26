@@ -112,5 +112,12 @@
 	"mobile.session.diagram.open_hint": "Открывает диаграмму на весь экран",
 	"mobile.session.diagram.copy": "Скопировать исходный код диаграммы",
 	"mobile.session.diagram.close": "Закрыть диаграмму",
-	"mobile.session.diagram.viewer": "Просмотр диаграммы"
+	"mobile.session.diagram.viewer": "Просмотр диаграммы",
+	"mobile.session.inline_chart.other": "Другое ({count})",
+	"mobile.session.inline_chart.share": "{share} от общего",
+	"mobile.session.inline_chart.total": "Итого",
+	"mobile.session.inline_chart.more": "ещё {count}",
+	"mobile.session.inline_chart.also": "Также: {items}",
+	"mobile.session.inline_chart.position": "{index} из {count}",
+	"mobile.session.inline_chart.right_axis": "{label} · правая ось"
 }
