@@ -25,12 +25,22 @@ module Spaceship
   module ConnectAPI
     class App
       def self.find(bundle)
-        raise 'wrong recovery bundle' unless bundle == 'com.localoperator.mobile'
+        raise 'wrong iOS bundle' unless bundle == 'com.localoperator.mobile'
+        raise 'baseline lookup needs the uploader key' if $baseline && !$spaceship_authenticated
         $called << :lookup_app
-        $recovery[:app]
+        ($baseline || $recovery)[:app]
       end
     end
     def self.get_builds(filter:, includes:)
+      if $baseline
+        raise 'wrong baseline query' unless filter == {
+          app: 'synthetic-app', 'preReleaseVersion.version' => '0.2.0', 'preReleaseVersion.platform' => 'IOS',
+          version: '1600', processingState: 'VALID'
+        } && includes == 'app,preReleaseVersion'
+        $called << :lookup_build
+        raise 'synthetic authorization error (must not be echoed)' if $baseline[:build] == :denied
+        return $baseline[:build]
+      end
       raise 'wrong recovery build query' unless filter == { app: 'synthetic-app', 'preReleaseVersion.version' => '0.1.0', version: '1517' } && includes.nil?
       $called << :lookup_build
       raise 'synthetic authorization error' if $recovery[:build] == :denied
@@ -71,6 +81,7 @@ $LOADED_FEATURES << 'xcodeproj.rb'
 def app_store_connect_api_key(**options)
   raise 'API key path must resolve from root' unless options[:key_filepath] == File.join($fixture, 'signing', 'asc-api-key.p8')
   $called << :key
+  $spaceship_authenticated = options[:set_spaceship_token]
   { synthetic: true }
 end
 def get_provisioning_profile(**options)
@@ -86,6 +97,7 @@ def update_code_signing_settings(**options)
 end
 def upload_to_testflight(**options)
   raise 'relative IPA directory must resolve from root' unless options[:ipa] == File.join($fixture, 'artifacts', 'synthetic.ipa')
+  raise 'upload must use the same API key' unless options[:api_key] == { synthetic: true }
   raise 'upload is not internal-only and non-waiting' unless options.values_at(:distribute_external, :notify_external_testers, :skip_waiting_for_build_processing) == [false, false, true]
   $called << :testflight
 end
@@ -202,5 +214,67 @@ Dir.mktmpdir('fastlane-cwd-test-', base) do |root|
         puts "PASS recovery blocked before Pilot: #{label}"
       end
     end
+
+    # A new Git tag is already reachable in this scenario (the CLI supplies
+    # 0.2.0/1600), but the next main IPA must not claim its train before ASC
+    # confirms that build. Only the ASC and Pilot boundaries are synthetic.
+    ENV['LOCAL_OPERATOR_MOBILE_VERSION'] = '0.2.0'
+    ENV['LO_IOS_TAGGED_BUILD_NUMBER'] = '1600'
+    build = {
+      'type' => 'builds', 'id' => 'synthetic-build',
+      'attributes' => { 'version' => '1600', 'processingState' => 'VALID' },
+      'relationships' => {
+        'app' => { 'data' => { 'type' => 'apps', 'id' => 'synthetic-app' } },
+        'preReleaseVersion' => { 'data' => { 'type' => 'preReleaseVersions', 'id' => 'synthetic-train' } }
+      }
+    }
+    train = {
+      'type' => 'preReleaseVersions', 'id' => 'synthetic-train',
+      'attributes' => { 'version' => '0.2.0', 'platform' => 'IOS' }
+    }
+    valid = { 'data' => [build], 'included' => [train] }
+    with_build = ->(new_build) { response.new(200, valid.merge('data' => [new_build])) }
+    with_train = ->(new_train) { response.new(200, valid.merge('included' => [new_train])) }
+    {
+      'not visible' => empty,
+      'pending' => with_build.call(build.merge('attributes' => build['attributes'].merge('processingState' => 'PROCESSING'))),
+      'failed' => with_build.call(build.merge('attributes' => build['attributes'].merge('processingState' => 'FAILED'))),
+      'wrong build' => with_build.call(build.merge('attributes' => build['attributes'].merge('version' => '1601'))),
+      'wrong app' => with_build.call(build.merge('relationships' => build['relationships'].merge('app' => { 'data' => { 'type' => 'apps', 'id' => 'other-app' } }))),
+      'wrong train' => with_train.call(train.merge('attributes' => train['attributes'].merge('version' => '0.1.0'))),
+      'wrong platform' => with_train.call(train.merge('attributes' => train['attributes'].merge('platform' => 'MAC_OS'))),
+      'unrelated included train' => with_train.call(train.merge('id' => 'other-train')),
+      'malformed build' => with_build.call(build.merge('relationships' => 'not an object')),
+      'extra null build' => response.new(200, valid.merge('data' => [build, nil])),
+      'authorization failure' => :denied,
+      'non-success status' => response.new(403, valid)
+    }.each do |label, result|
+      $baseline = { app: app, build: result }
+      $called.clear
+      begin
+        testflight.call(require_tagged_baseline: true)
+        raise "signed main uploaded without an accepted tagged baseline: #{label} (#{$called.inspect})"
+      rescue RuntimeError => error
+        raise unless error.message.include?('refusing signed-main upload') && error.cause.nil? &&
+                     $called == [:key, :lookup_app, :lookup_build]
+      end
+      puts "PASS signed main blocked before Pilot: #{label}"
+    end
+
+    $baseline = { app: app, build: response.new(200, valid) }
+    $called.clear
+    testflight.call(require_tagged_baseline: true)
+    raise 'tagged baseline was not checked before Pilot' unless $called == [:key, :lookup_app, :lookup_build, :testflight]
+    puts 'PASS signed main: valid exact iOS build, then internal Pilot call'
+
+    ENV.delete('LO_IOS_TAGGED_BUILD_NUMBER')
+    $called.clear
+    begin
+      testflight.call(require_tagged_baseline: true)
+      raise 'signed main uploaded without the derived tagged build number'
+    rescue RuntimeError => error
+      raise unless error.message.include?('refusing signed-main upload') && !$called.include?(:testflight)
+    end
+    puts 'PASS signed main blocked before Pilot: missing derived tagged build number'
   end
 end

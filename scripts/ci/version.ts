@@ -503,7 +503,13 @@ if (isEntryPoint) {
 			`LOCAL_OPERATOR_MOBILE_VERSION=${derived.version}\n` +
 				`LOCAL_OPERATOR_MOBILE_VERSION_CODE=${derived.versionCode}\n`,
 		);
-		appendFileSync(outputFile, `${lines.join("\n")}\n`);
+		// The upload needs the number read at the same Git tag as the train, not
+		// the counter at HEAD or the larger number we just picked for this IPA.
+		// Keep this step output private to the opt-in; other callers are unchanged.
+		const outputs = testflight
+			? [...lines, `tagged_build_number=${release.base}`]
+			: lines;
+		appendFileSync(outputFile, `${outputs.join("\n")}\n`);
 	}
 
 	for (const line of lines) console.log(line);

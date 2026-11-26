@@ -167,6 +167,68 @@ platform :ios do
     UI.user_error!("App Store Connect already has a #{collection} for 0.1.0 (1517); refusing recovery upload") unless body["data"].empty?
   end
 
+  def tagged_baseline_valid?(response, app_id, train, number)
+    body = response&.body
+    return false unless response&.status == 200 && body.is_a?(Hash) &&
+                        body["data"].is_a?(Array) && body["data"].size == 1 && body["included"].is_a?(Array)
+
+    build = body["data"].first
+    return false unless build.is_a?(Hash) && build["type"] == "builds" &&
+                        build["id"].is_a?(String) && !build["id"].empty? &&
+                        build.dig("attributes", "version") == number &&
+                        build.dig("attributes", "processingState") == "VALID" &&
+                        build.dig("relationships", "app", "data") == { "type" => "apps", "id" => app_id }
+
+    # A compound response can contain other versions. Require the iOS train
+    # linked by this build, not merely a matching version somewhere in included.
+    link = build.dig("relationships", "preReleaseVersion", "data")
+    return false unless link.is_a?(Hash) && link["type"] == "preReleaseVersions" &&
+                        link["id"].is_a?(String) && !link["id"].empty?
+
+    versions = body["included"].select do |record|
+      record.is_a?(Hash) && record["type"] == link["type"] && record["id"] == link["id"]
+    end
+    versions.size == 1 && versions.first.dig("attributes", "version") == train &&
+      versions.first.dig("attributes", "platform") == "IOS"
+  rescue TypeError # A nested JSON:API field was not an object.
+    false
+  end
+
+  def require_tagged_baseline!
+    train = ENV["LOCAL_OPERATOR_MOBILE_VERSION"]
+    number = ENV["LO_IOS_TAGGED_BUILD_NUMBER"]
+    unless train&.match?(/\A[0-9]+\.[0-9]+\.[0-9]+\z/) && number&.match?(/\A[1-9][0-9]*\z/)
+      UI.user_error!("Missing or invalid derived TestFlight train/build; refusing signed-main upload")
+    end
+
+    # A higher build can strand the tagged release if it reaches this train
+    # first. Use the existing uploader's ASC session and require affirmative
+    # proof of the exact lower, Apple-processed build before invoking Pilot.
+    asc = Spaceship::ConnectAPI
+    app_id = nil
+    response = begin
+      app_id = asc::App.find("com.localoperator.mobile")&.id
+      if app_id.is_a?(String) && !app_id.empty?
+        asc.get_builds(
+          filter: { app: app_id, "preReleaseVersion.version" => train, "preReleaseVersion.platform" => "IOS",
+                    version: number, processingState: "VALID" },
+          includes: "app,preReleaseVersion"
+        )
+      end
+    rescue StandardError
+      :lookup_failed
+    end
+    if response == :lookup_failed
+      # Spaceship errors can embed response bodies. Raise outside rescue so the
+      # safe lane error does not retain the original exception as its cause.
+      UI.user_error!("App Store Connect lookup failed for tagged iOS build #{train} (#{number}); refusing signed-main upload")
+    end
+    unless tagged_baseline_valid?(response, app_id, train, number)
+      UI.user_error!("No confirmed VALID tagged iOS build #{train} (#{number}) in App Store Connect; refusing signed-main upload")
+    end
+    UI.message("App Store Connect confirmed VALID tagged iOS build #{train} (#{number}); continuing signed-main upload")
+  end
+
   desc "Upload an already-built IPA to TestFlight (internal testers)"
   lane :testflight do |options|
     dir = repo_path(require_env!("LO_IOS_IPA_DIR", "It is the directory the export wrote the IPA into."))
@@ -185,9 +247,13 @@ platform :ios do
         "APPLE_ASC_PRIVATE_KEY_PATH",
         "It is the path to the decoded .p8, written from APPLE_ASC_PRIVATE_KEY_BASE64."
       )),
+      # Use the same credentials for Spaceship reads and the Pilot upload.
+      set_spaceship_token: true,
       # This is an App Store Connect key, not an in-house enterprise one.
       in_house: false
     )
+
+    require_tagged_baseline! if options&.fetch(:require_tagged_baseline, false) == true
 
     if options&.fetch(:recovery_v010, false) == true
       # Check both exact version/build collections with the same credential as

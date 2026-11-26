@@ -104,12 +104,15 @@ const git = (cwd: string, args: string[]): string =>
 	execFileSync("git", args, { cwd, encoding: "utf8", env: childEnv() }).trim();
 
 type Run = { rc: number; out: string; value: (key: string) => string };
+// These overrides are layered over childEnv(), not a complete ProcessEnv (whose
+// ambient NODE_ENV is required). Keep the full environment type at the boundary.
+type EnvOverrides = Partial<NodeJS.ProcessEnv>;
 
 /** Run the script the way a workflow does: from inside the fixture. */
 const runScript = (
 	cwd: string,
 	args: string[] = [],
-	env: NodeJS.ProcessEnv = {},
+	env: EnvOverrides = {},
 ): Run => {
 	let rc = 0;
 	let out = "";
@@ -151,11 +154,13 @@ describe("signed TestFlight train (version.ts CLI)", () => {
 		git(root, ["commit", "--allow-empty", "-qm", "unreachable release"]);
 		git(root, ["tag", "v9.0.0"]);
 		git(root, ["switch", "-q", "main"]);
-		git(root, ["commit", "--allow-empty", "-qm", "main next"]);
+		// Main may have a different committed counter; the ASC proof must use the tag's.
+		writeFileSync(join(root, "release", "build-number.txt"), "9999\n");
+		git(root, ["commit", "-qam", "main next"]);
 		git(root, ["commit", "--allow-empty", "-qm", "main tip"]);
 		const envFile = join(root, "github-env");
 		const outputFile = join(root, "github-output");
-		const run = (args: string[], override: NodeJS.ProcessEnv = {}) => {
+		const run = (args: string[], override: EnvOverrides = {}) => {
 			writeFileSync(envFile, "");
 			writeFileSync(outputFile, "");
 			const result = runScript(root, [...args, "--write"], {
@@ -185,6 +190,7 @@ describe("signed TestFlight train (version.ts CLI)", () => {
 		expect(regular.rc).toBe(0);
 		expect(regular.value("version")).toBe("0.0.0");
 		expect(regular.value("version_code")).toBe("1519");
+		expect(regular.outputs).not.toContain("tagged_build_number");
 		expect(signed.rc).toBe(0);
 		expect(signed.value("base_release_tag")).toBe("v0.1.0");
 		expect(signed.value("version")).toBe("0.1.0");
@@ -195,7 +201,7 @@ describe("signed TestFlight train (version.ts CLI)", () => {
 			"LOCAL_OPERATOR_MOBILE_VERSION=0.1.0\nLOCAL_OPERATOR_MOBILE_VERSION_CODE=1519\n",
 		);
 		expect(signed.outputs).toBe(
-			"version=0.1.0\ndisplay_version=0.1.0-dev.1519\nversion_code=1519\nfrom_tag=false\n",
+			"version=0.1.0\ndisplay_version=0.1.0-dev.1519\nversion_code=1519\nfrom_tag=false\ntagged_build_number=1517\n",
 		);
 	});
 

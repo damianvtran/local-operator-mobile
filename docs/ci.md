@@ -701,6 +701,13 @@ releases still use the tag and the release counter. Apple requires a numeric sho
 version, so the `-dev.<build>` suffix is log-only (`display_version`), never
 exported into the job.
 
+If TestFlight upload is enabled, the signed `main` lane first checks App Store
+Connect for the exact tagged iOS version and build in `VALID` processing state.
+A Git tag alone does not prove that its build uploaded; accepting a higher
+number first could strand the tagged build. Wait for the tagged build to finish
+processing before retrying a refused upload. Export-only jobs do not make this
+check, and the tagged upload path is unchanged.
+
 `app.config.ts` reads the derived values from the environment
 (`LOCAL_OPERATOR_MOBILE_VERSION`, `LOCAL_OPERATOR_MOBILE_VERSION_CODE`) and writes
 them into `version`, `ios.buildNumber` and `android.versionCode`. An unset
