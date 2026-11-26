@@ -1,5 +1,11 @@
 import { execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+	mkdirSync,
+	mkdtempSync,
+	readFileSync,
+	rmSync,
+	writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -77,8 +83,12 @@ const tempRoot = (): string => {
 const childEnv = (): NodeJS.ProcessEnv => {
 	const env: NodeJS.ProcessEnv = { ...process.env };
 	for (const name of [
+		"GITHUB_ACTIONS",
+		"GITHUB_EVENT_NAME",
+		"GITHUB_REF",
 		"GITHUB_REF_TYPE",
 		"GITHUB_REF_NAME",
+		"GITHUB_SHA",
 		"GITHUB_ENV",
 		"GITHUB_OUTPUT",
 	]) {
@@ -94,16 +104,23 @@ const git = (cwd: string, args: string[]): string =>
 	execFileSync("git", args, { cwd, encoding: "utf8", env: childEnv() }).trim();
 
 type Run = { rc: number; out: string; value: (key: string) => string };
+// These overrides are layered over childEnv(), not a complete ProcessEnv (whose
+// ambient NODE_ENV is required). Keep the full environment type at the boundary.
+type EnvOverrides = Partial<NodeJS.ProcessEnv>;
 
 /** Run the script the way a workflow does: from inside the fixture. */
-const runScript = (cwd: string, args: string[] = []): Run => {
+const runScript = (
+	cwd: string,
+	args: string[] = [],
+	env: EnvOverrides = {},
+): Run => {
 	let rc = 0;
 	let out = "";
 	try {
 		out = execFileSync("node", [SCRIPT, ...args], {
 			cwd,
 			encoding: "utf8",
-			env: childEnv(),
+			env: { ...childEnv(), ...env },
 			stdio: ["ignore", "pipe", "pipe"],
 		});
 	} catch (error) {
@@ -121,6 +138,122 @@ const runScript = (cwd: string, args: string[] = []): Run => {
 		value: (key) => out.match(new RegExp(`^${key}=(.*)$`, "m"))?.[1] ?? "",
 	};
 };
+
+describe("signed TestFlight train (version.ts CLI)", () => {
+	const signedMain = (tagged = true, counter = "1517\n") => {
+		const root = tempRoot();
+		git(root, ["init", "-q", "-b", "main"]);
+		git(root, ["config", "user.email", "fixture@example.invalid"]);
+		git(root, ["config", "user.name", "fixture"]);
+		mkdirSync(join(root, "release"));
+		writeFileSync(join(root, "release", "build-number.txt"), counter);
+		git(root, ["add", "release"]);
+		git(root, ["commit", "-qm", "root release"]);
+		if (tagged) git(root, ["tag", "-am", "first release", "v0.1.0"]);
+		git(root, ["switch", "-qc", "other"]);
+		git(root, ["commit", "--allow-empty", "-qm", "unreachable release"]);
+		git(root, ["tag", "v9.0.0"]);
+		git(root, ["switch", "-q", "main"]);
+		// Main may have a different committed counter; the ASC proof must use the tag's.
+		writeFileSync(join(root, "release", "build-number.txt"), "9999\n");
+		git(root, ["commit", "-qam", "main next"]);
+		git(root, ["commit", "--allow-empty", "-qm", "main tip"]);
+		const envFile = join(root, "github-env");
+		const outputFile = join(root, "github-output");
+		const run = (args: string[], override: EnvOverrides = {}) => {
+			writeFileSync(envFile, "");
+			writeFileSync(outputFile, "");
+			const result = runScript(root, [...args, "--write"], {
+				GITHUB_ACTIONS: "true",
+				GITHUB_EVENT_NAME: "workflow_dispatch",
+				GITHUB_REF: "refs/heads/main",
+				GITHUB_REF_TYPE: "branch",
+				GITHUB_REF_NAME: "main",
+				GITHUB_SHA: git(root, ["rev-parse", "HEAD"]),
+				GITHUB_ENV: envFile,
+				GITHUB_OUTPUT: outputFile,
+				...override,
+			});
+			return {
+				...result,
+				exported: readFileSync(envFile, "utf8"),
+				outputs: readFileSync(outputFile, "utf8"),
+			};
+		};
+		return { root, run };
+	};
+
+	it("exports the reachable root tag's train without changing the commit counter", () => {
+		const { run } = signedMain();
+		const regular = run([]);
+		const signed = run(["--testflight"], { GITHUB_EVENT_NAME: "push" });
+		expect(regular.rc).toBe(0);
+		expect(regular.value("version")).toBe("0.0.0");
+		expect(regular.value("version_code")).toBe("1519");
+		expect(regular.outputs).not.toContain("tagged_build_number");
+		expect(signed.rc).toBe(0);
+		expect(signed.value("base_release_tag")).toBe("v0.1.0");
+		expect(signed.value("version")).toBe("0.1.0");
+		expect(signed.value("display_version")).toBe("0.1.0-dev.1519");
+		expect(signed.value("version_code")).toBe("1519");
+		expect(signed.value("from_tag")).toBe("false");
+		expect(signed.exported).toBe(
+			"LOCAL_OPERATOR_MOBILE_VERSION=0.1.0\nLOCAL_OPERATOR_MOBILE_VERSION_CODE=1519\n",
+		);
+		expect(signed.outputs).toBe(
+			"version=0.1.0\ndisplay_version=0.1.0-dev.1519\nversion_code=1519\nfrom_tag=false\ntagged_build_number=1517\n",
+		);
+	});
+
+	it("refuses bootstrap without a reachable release and does not export a placeholder", () => {
+		const { run } = signedMain(false);
+		const regular = run([]);
+		expect(regular.rc).toBe(0);
+		expect(regular.value("version")).toBe("0.0.0");
+		expect(regular.value("version_code")).toBe("3");
+		const signed = run(["--testflight"]);
+		expect(signed.rc).toBe(1);
+		expect(signed.out).toContain("reachable release tag");
+		expect(signed.exported + signed.outputs).toBe("");
+	});
+
+	it("refuses a signed build that would reuse the tagged release's number", () => {
+		const { root, run } = signedMain();
+		git(root, ["checkout", "-q", "--detach", "v0.1.0"]);
+		const signed = run(["--testflight"]);
+		expect(signed.rc).toBe(1);
+		expect(signed.out).toContain("new main commit");
+		expect(signed.exported + signed.outputs).toBe("");
+	});
+
+	it("refuses to count from an invalid tagged release counter", () => {
+		const { run } = signedMain(true, "invalid\n");
+		const signed = run(["--testflight"]);
+		expect(signed.rc).toBe(1);
+		expect(signed.out).toContain("valid build counter");
+		expect(signed.exported + signed.outputs).toBe("");
+	});
+
+	it("fails closed outside a matching main checkout and rejects ref overrides", () => {
+		const { root, run } = signedMain();
+		for (const override of [
+			{ GITHUB_ACTIONS: "" },
+			{ GITHUB_EVENT_NAME: "pull_request" },
+			{ GITHUB_REF: "refs/heads/other", GITHUB_REF_NAME: "other" },
+			{ GITHUB_REF: "refs/tags/v0.1.0", GITHUB_REF_TYPE: "tag" },
+			{ GITHUB_SHA: git(root, ["rev-parse", "HEAD^"]) },
+		]) {
+			const result = run(["--testflight"], override);
+			expect(result.rc).toBe(1);
+			expect(result.out).toContain("--testflight");
+			expect(result.exported + result.outputs).toBe("");
+		}
+		const overridden = run(["--testflight", "--ref", "HEAD^"]);
+		expect(overridden.rc).toBe(1);
+		expect(overridden.out).toContain("overrides");
+		expect(overridden.exported + overridden.outputs).toBe("");
+	});
+});
 
 type Scenario = {
 	/** Commits on `main` before the release pull request. */

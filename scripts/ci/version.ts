@@ -5,6 +5,7 @@
  *     node scripts/ci/version.ts                       # read the GitHub env, print them
  *     node scripts/ci/version.ts --write               # also export them to the job
  *     node scripts/ci/version.ts --ref-type tag --ref-name v1.2.3 --write
+ *     node scripts/ci/version.ts --testflight --write   # protected signed main job only
  *
  * Run directly by Node: the pinned runtime (>= 24.2, see the entry-point guard at
  * the bottom) strips the type annotations, so there is no build
@@ -77,6 +78,8 @@ export type Ref = {
 	 * moment the first tag existed. The one place that reads git is the CLI.
 	 */
 	mainInternal: number | null;
+	/** Only the signed main job opts in; null means no reachable release. */
+	testflightBaseTag?: string | null;
 	/** The counter at the last release tag, or 0 before the first release. */
 	base: number;
 	/** Commits since that tag: the increment an internal build claims. */
@@ -113,6 +116,7 @@ const parseTag = (refName: string): [number, number, number] | null => {
 export const derive = ({
 	refType,
 	refName,
+	testflightBaseTag,
 	base,
 	commitsSinceLastRelease,
 	releaseBuildNumber,
@@ -145,9 +149,32 @@ export const derive = ({
 	const internalNumber = base + commitsSinceLastRelease;
 
 	if (!isTag) {
+		let version = PLACEHOLDER_VERSION;
+		if (testflightBaseTag !== undefined) {
+			// A newer build of the installed TestFlight version belongs in the same
+			// marketing train. Do not create an ambiguous placeholder train if the
+			// repo has not released yet, or recycle the tagged build's own number.
+			const train = testflightBaseTag ? parseTag(testflightBaseTag) : null;
+			if (!train?.every(Number.isSafeInteger)) {
+				throw new Error(
+					"--testflight needs a reachable release tag (vMAJOR.MINOR.PATCH).",
+				);
+			}
+			if (base <= 0 || !Number.isSafeInteger(internalNumber)) {
+				throw new Error(
+					`--testflight needs a valid build counter at ${testflightBaseTag}.`,
+				);
+			}
+			if (commitsSinceLastRelease === 0) {
+				throw new Error(
+					"--testflight needs a new main commit after the release tag to avoid reusing its build number.",
+				);
+			}
+			version = train.join(".");
+		}
 		return {
-			version: PLACEHOLDER_VERSION,
-			displayVersion: `${PLACEHOLDER_VERSION}-dev.${internalNumber}`,
+			version,
+			displayVersion: `${version}-dev.${internalNumber}`,
 			versionCode: String(internalNumber),
 			fromTag: false,
 		};
@@ -206,6 +233,33 @@ export const derive = ({
 const arg = (name: string, fallback: string): string => {
 	const i = process.argv.indexOf(`--${name}`);
 	return i === -1 ? fallback : (process.argv[i + 1] ?? fallback);
+};
+
+// The workflow's protected environment and job condition authorize signing.
+// This guard prevents an accidental opt-in on a PR, tag, local run or a checkout
+// other than the workflow's main commit; changing a CLI ref must not bypass it.
+const requireTestflightContext = (): void => {
+	const env = process.env;
+	if (
+		env.GITHUB_ACTIONS !== "true" ||
+		(env.GITHUB_EVENT_NAME !== "push" &&
+			env.GITHUB_EVENT_NAME !== "workflow_dispatch") ||
+		env.GITHUB_REF !== "refs/heads/main" ||
+		env.GITHUB_REF_TYPE !== "branch" ||
+		env.GITHUB_REF_NAME !== "main" ||
+		env.GITHUB_SHA !== git(["rev-parse", "HEAD"])
+	) {
+		throw new Error(
+			"--testflight is only for a GitHub Actions main push or dispatch with HEAD matching GITHUB_SHA.",
+		);
+	}
+	if (
+		["--ref", "--ref-type", "--ref-name", "--counter"].some((arg) =>
+			process.argv.includes(arg),
+		)
+	) {
+		throw new Error("--testflight does not accept ref or counter overrides.");
+	}
 };
 
 const message = (error: unknown): string =>
@@ -358,12 +412,14 @@ if (isEntryPoint) {
 	const refName = arg("ref-name", process.env.GITHUB_REF_NAME ?? "");
 	const counterPath = arg("counter", DEFAULT_COUNTER);
 	const ref = arg("ref", "HEAD");
+	const testflight = process.argv.includes("--testflight");
 
 	let derived: Derived;
 	let mainInternal: number | null = null;
 	let release: { tag: string | null; base: number; commitsSince: number };
 	let releaseBuildNumber: number | null = null;
 	try {
+		if (testflight) requireTestflightContext();
 		if (git(["rev-parse", "--is-shallow-repository"]) === "true") {
 			throw new Error(
 				"this is a shallow clone, so a commit count would be the count of what " +
@@ -390,6 +446,7 @@ if (isEntryPoint) {
 		derived = derive({
 			refType,
 			refName,
+			...(testflight ? { testflightBaseTag: release.tag } : {}),
 			base: release.base,
 			commitsSinceLastRelease: release.commitsSince,
 			releaseBuildNumber,
@@ -446,7 +503,13 @@ if (isEntryPoint) {
 			`LOCAL_OPERATOR_MOBILE_VERSION=${derived.version}\n` +
 				`LOCAL_OPERATOR_MOBILE_VERSION_CODE=${derived.versionCode}\n`,
 		);
-		appendFileSync(outputFile, `${lines.join("\n")}\n`);
+		// The upload needs the number read at the same Git tag as the train, not
+		// the counter at HEAD or the larger number we just picked for this IPA.
+		// Keep this step output private to the opt-in; other callers are unchanged.
+		const outputs = testflight
+			? [...lines, `tagged_build_number=${release.base}`]
+			: lines;
+		appendFileSync(outputFile, `${outputs.join("\n")}\n`);
 	}
 
 	for (const line of lines) console.log(line);
