@@ -1,4 +1,4 @@
-import { useRouter } from "expo-router";
+import { useIsFocused, useRouter } from "expo-router";
 import { memo, useEffect, useMemo } from "react";
 import { ScrollView, Text, View, type ViewStyle } from "react-native";
 import type { TranscriptEntry } from "@/contracts";
@@ -146,7 +146,8 @@ export function StartupTranscript({
 	/** See `StartupPendingTail`. */
 	startingAs?: string | null;
 }) {
-	const runtime = useSessionRuntime(sessionId);
+	const focused = useIsFocused();
+	const runtime = useSessionRuntime(sessionId, focused);
 	const router = useRouter();
 	const entries: readonly TranscriptEntry[] = runtime.entries;
 	/* Filtered in the SAME render that receives the entries, so the frame that

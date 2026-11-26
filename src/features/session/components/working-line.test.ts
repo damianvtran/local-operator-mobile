@@ -29,7 +29,16 @@ const probe = vi.hoisted(() => ({
 	tweens: [] as Array<(ok: boolean) => void>,
 	/** The geometry props each Pressable was given, by testID: the touch floor
 	 *  must be the BOX (react-native-web drops `hitSlop` on `Pressable`). */
-	targets: new Map<string, { style?: unknown; hitSlop?: unknown }>(),
+	targets: new Map<
+		string,
+		{
+			style?: unknown;
+			hitSlop?: unknown;
+			disabled?: boolean;
+			accessibilityState?: { disabled?: boolean };
+			onPress: () => void;
+		}
+	>(),
 	texts: [] as Array<{
 		children?: React.ReactNode;
 		className?: string;
@@ -72,6 +81,7 @@ vi.mock("react-native", async () => {
 			disabled,
 			testID,
 			accessibilityLabel,
+			accessibilityState,
 			style,
 			hitSlop,
 		}: {
@@ -80,12 +90,19 @@ vi.mock("react-native", async () => {
 			disabled?: boolean;
 			testID: string;
 			accessibilityLabel: string;
+			accessibilityState?: { disabled?: boolean };
 			style?: unknown;
 			hitSlop?: unknown;
 		}) => {
 			// A disabled Pressable never calls `onPress`, as on device.
 			probe.presses.set(testID, disabled ? () => {} : onPress);
-			probe.targets.set(testID, { style, hitSlop });
+			probe.targets.set(testID, {
+				style,
+				hitSlop,
+				disabled,
+				accessibilityState,
+				onPress,
+			});
 			return React.createElement(
 				"button",
 				null,
@@ -338,6 +355,50 @@ describe("PinnedWorkingLine", () => {
 		);
 		expect(visible.match(/\[counts\]/g)).toHaveLength(1);
 	});
+
+	it.each([false, true])(
+		"keeps the pinned busy branch while Stop is inert (stacked=%s)",
+		(trailingStacked) => {
+			const onStop = vi.fn(async () => true);
+			const props = {
+				line: frame(true, "Reading", null),
+				onStop,
+				gapBelow: false,
+				stopping: false,
+				trailing: createElement("span", null, "[counts]"),
+				trailingStacked,
+			};
+			const target = () => probe.targets.get(CONTROL.sessionWorkingStop);
+			const typography = () =>
+				probe.texts.findLast((text) => text.children === "Reading")?.className;
+
+			render({ ...props, stopInert: true });
+			const heldStyle = target()?.style;
+			const heldText = screen();
+			const heldTypography = typography();
+			expect(heldText.split("[counts]")).toHaveLength(2);
+			expect(heldTypography).toContain("font-mono");
+			expect(target()).toMatchObject({
+				disabled: true,
+				accessibilityState: { disabled: true },
+				style: { minWidth: 44, minHeight: 44 },
+			});
+			// Call the raw callback, bypassing the native disabled Pressable.
+			target()?.onPress();
+			expect(onStop).not.toHaveBeenCalled();
+
+			render({ ...props, stopInert: false });
+			expect(screen()).toBe(heldText);
+			expect(typography()).toBe(heldTypography);
+			expect(target()).toMatchObject({
+				disabled: false,
+				accessibilityState: { disabled: false },
+				style: heldStyle,
+			});
+			target()?.onPress();
+			expect(onStop).toHaveBeenCalledOnce();
+		},
+	);
 
 	it("draws the counts ONCE when they take their own line (large text)", () => {
 		render({

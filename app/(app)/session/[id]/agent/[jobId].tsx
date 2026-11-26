@@ -1,4 +1,4 @@
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useIsFocused, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import {
 	type LayoutChangeEvent,
@@ -68,7 +68,8 @@ export default function Subagent() {
 	const sessionId = typeof id === "string" ? id : "";
 	const childId = typeof jobId === "string" ? jobId : "";
 	const router = useRouter();
-	const runtime = useSessionRuntime(sessionId);
+	const focused = useIsFocused();
+	const runtime = useSessionRuntime(sessionId, focused);
 	const compact = useCompactChrome();
 	const canvas = useTokenColor("canvas");
 	const { height: windowHeight } = useWindowDimensions();

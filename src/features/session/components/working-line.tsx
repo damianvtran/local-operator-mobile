@@ -393,7 +393,7 @@ const WorkingStop = ({
 			{({ pressed }) => (
 				<View
 					className={`items-center justify-center rounded-sm px-2 ${pressed ? "bg-danger-wash" : ""}`}
-					style={{ opacity: stopping ? 0.6 : 1 }}
+					style={{ opacity: stopping || inert ? 0.6 : 1 }}
 				>
 					{/* The line's own face: the rest of the row is mono (design D5). */}
 					<Text className="font-mono text-mono-sm text-danger">
@@ -415,6 +415,8 @@ export type PinnedWorkingLineProps = {
 	/** Absent when this conversation cannot be stopped from here (a remote
 	 *  relay that does not forward `abort`): the line shows no Stop at all. */
 	onStop?: () => Promise<boolean>;
+	/** Keep the measured Stop branch without giving the retained turn authority. */
+	stopInert?: boolean;
 	/** The session's shared stop latch (`composer.stopping`). */
 	stopping: boolean;
 	/** Whether a sibling follows in the dock's `gap-2` column (the chips or the
@@ -513,6 +515,7 @@ export const heldLine = <T,>(
 const PinnedWorkingLineImpl = ({
 	line,
 	onStop,
+	stopInert = false,
 	stopping,
 	gapBelow,
 	trailing,
@@ -602,7 +605,7 @@ const PinnedWorkingLineImpl = ({
 					startedS={shown.startedS}
 					onStop={onStop}
 					stopping={stopping}
-					stopInert={line === null}
+					stopInert={stopInert || line === null}
 					trailing={trailing}
 					trailingStacked={trailingStacked}
 				/>

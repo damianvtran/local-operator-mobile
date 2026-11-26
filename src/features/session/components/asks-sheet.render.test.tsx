@@ -184,6 +184,7 @@ const render = async (
 	props: {
 		initialOpenAsk?: string | null;
 		sessions?: { session_id: string; conversation_name: string }[];
+		canSettle?: () => boolean;
 	} = {},
 ) => {
 	host.texts = [];
@@ -200,6 +201,7 @@ const render = async (
 				visible
 				onClose={() => undefined}
 				client={client as never}
+				canSettle={props.canSettle}
 				currentSessionId="s1"
 				sessions={props.sessions as never}
 				initialOpenAsk={props.initialOpenAsk ?? null}
@@ -345,6 +347,17 @@ describe("the footer", () => {
 			ask_id: "A",
 			reason: "moot",
 		});
+	});
+
+	it("does not settle an ask through a footer captured before the session blurred", async () => {
+		let active = true;
+		await render([OPEN], { initialOpenAsk: "A", canSettle: () => active });
+		await press(CONTROL.askDismiss);
+		const confirmDismiss = host.presses.get(askDismissReasonId("moot"));
+		expect(confirmDismiss).toEqual(expect.any(Function));
+		active = false;
+		await act(async () => confirmDismiss?.());
+		expect(command).not.toHaveBeenCalled();
 	});
 
 	it("dismisses a lapsed ask at once, with no reason", async () => {

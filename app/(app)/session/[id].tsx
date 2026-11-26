@@ -1,4 +1,4 @@
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useIsFocused, useLocalSearchParams, useRouter } from "expo-router";
 import { Search } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -260,7 +260,8 @@ function Session() {
 	 *  reconcile against the same SSE frame. */
 	const [tagsOpen, setTagsOpen] = useState(false);
 
-	const runtime = useSessionRuntime(sessionId);
+	const focused = useIsFocused();
+	const runtime = useSessionRuntime(sessionId, focused);
 	const provisional = useStartup(null, sessionId);
 	const provisionalEditor =
 		provisional.coordinator === null
@@ -335,6 +336,8 @@ function Session() {
 		/* A warm-cache frame is a picture, not a conversation: no send until the
 		 *  first live frame replaces it (PR #246 R1). */
 		cached: runtime.hydrated,
+		awaitingVisit: runtime.awaitingVisit,
+		canActOnVisit: runtime.canActOnVisit,
 		/* The ended verdict comes FROM THE DOT (`headerHealth`), not
 		 *  `projection.ended` alone: a history-only conversation (pid 0) is ended
 		 *  too, and a send to either REOPENS it. */
@@ -360,17 +363,24 @@ function Session() {
 		setText: composer.setDraft,
 		slashDraft: draftSlashQuery(composer.draft) !== null,
 	});
-	/* Stop is withheld when the relay does not forward `abort`: every Stop on this
-	 *  screen (composer ■, pinned line, image-gen Cancel) reads this one gate. */
-	const stopAllowed = controlPolicy.allows("abort");
+	/* Retain the busy layout, not its authority: replacing the Stop branch
+	 * drops the pinned counts and moves the composer's menu under Stop. Only
+	 * the accepted visit can send a session-scoped abort; warm-cache frames
+	 * do not count as streaming and cannot reserve a Stop slot. */
+	const abortSupported = controlPolicy.allows("abort");
+	const stopAllowed = runtime.turnActionsReady && abortSupported;
+	const stopInert =
+		runtime.awaitingVisit && runtime.streaming && abortSupported;
+	const stopMounted = stopAllowed || stopInert;
 	const composerControls = useMemo(
 		() =>
-			stopAllowed
+			stopMounted
 				? composer.controls
 				: { ...composer.controls, stopVisible: false },
-		[composer.controls, stopAllowed],
+		[composer.controls, stopMounted],
 	);
-	const asksAnswerable = controlPolicy.allows("ask_respond");
+	const asksAnswerable =
+		runtime.turnActionsReady && controlPolicy.allows("ask_respond");
 	/* What the reader just sent and the transcript does not carry yet, resolved by
 	 *  command id against the rows (`pending-echo.ts`). */
 	const pendingEchoes = usePendingEchoes(sessionId, runtime.entries);
@@ -732,12 +742,11 @@ function Session() {
 	 *  present, a `pending` card of `kind == "ask"` is one of those rows mirrored
 	 *  for old clients and must be IGNORED here — rendering both would draw the
 	 *  same ask twice and collect a second answer. Approvals are unaffected. */
-	/* A warm-cache frame's pending approval may already be answered on the
-	 *  desktop, and answering it is a send against a cached frame (PR #246 R1
-	 *  lead). No card until the first live frame says the ask still stands. */
-	const pending = runtime.hydrated
-		? null
-		: blockingPending(projection?.pending ?? null, projection?.asks);
+	/* A saved or retained approval may already be answered on the desktop.
+	 * Wait for this visit's accepted projection before offering a decision. */
+	const pending = runtime.turnActionsReady
+		? blockingPending(projection?.pending ?? null, projection?.asks)
+		: null;
 
 	/* The header dot's sheet + the session menu, held here (not in the control) so
 	 *  the acceptance line survives the sheet closing, and so the `S5/health-sheet`
@@ -1202,6 +1211,9 @@ function Session() {
 							pending={pendingRows}
 							sendMark={composer.sendMark}
 							streamingRowId={runtime.streamingRowId}
+							// If there is no streaming row yet, the list must not infer idle
+							// from the image Cancel callback being withheld on a busy visit.
+							turnLive={runtime.streaming}
 							streamArrivalEpoch={runtime.streamArrivalEpoch}
 							streamArrivalTail={runtime.streamArrivalTail}
 							loadImage={runtime.loadImage}
@@ -1224,14 +1236,13 @@ function Session() {
 									? runtime.loadBridgeBody
 									: undefined
 							}
-							/* The image-gen card's Cancel is the composer's OWN stop path (the
-					   one turn-interrupt — no second mechanism). The gate is the
-					   composer's own (`stopVisible` = a turn is running), so the two
-					   controls cannot diverge about when a cancel is real: while the
-					   gate is closed the card hides the control rather than offering
-					   a dead one. */
+							/* Image Cancel is another route to the same abort, not part of
+					   the retained Stop layout. Never infer its authority from the
+					   reserved composer slot. */
 							onCancelTurn={
-								composerControls.stopVisible ? composer.stop : undefined
+								stopAllowed && composerControls.stopVisible
+									? composer.stop
+									: undefined
 							}
 							anchorId={attentionRecord(runtime.projection)?.anchor_id ?? null}
 							onAnchorVisible={setCompletionVisible}
@@ -1966,7 +1977,8 @@ function Session() {
 						{activityLineHost ? (
 							<PinnedWorkingLine
 								line={pinned}
-								onStop={stopAllowed ? composer.stop : undefined}
+								onStop={stopMounted ? composer.stop : undefined}
+								stopInert={stopInert}
 								stopping={composer.stopping}
 								gapBelow={outstandingAsks(projection?.asks).length > 0}
 								trailing={lineCountsElement}
@@ -2052,6 +2064,7 @@ function Session() {
 							storedModel.clearSettingsError();
 						}}
 						onStop={composer.stop}
+						stopInert={stopInert}
 						stopping={composer.stopping}
 						retainedMessage={
 							composer.retained !== null
@@ -2060,7 +2073,7 @@ function Session() {
 						}
 						notice={composer.notice}
 						onRetry={composer.retry}
-						showResume={aborted}
+						showResume={runtime.turnActionsReady && aborted}
 						onResume={composer.send}
 						ended={ended}
 						error={pending === null ? (composer.error ?? chipError) : null}
@@ -2228,8 +2241,9 @@ function Session() {
 			<AsksSheet
 				visible={asksOpen}
 				onClose={asksSheet.close}
+				canSettle={runtime.canActOnVisit}
 				initialOpenAsk={asksSheet.initialOpenAsk}
-				frameRows={asksSheet.frameRows}
+				frameRows={asksAnswerable ? asksSheet.frameRows : null}
 				onReadFailed={asksSheet.readFailed}
 				/* The queue's own read, back to the screen: the ask-id chips in the
 				   prose resolve an id against what this sheet can show — the one

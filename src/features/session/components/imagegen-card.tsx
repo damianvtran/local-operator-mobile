@@ -330,10 +330,10 @@ export const ImageGenCard = ({
 	/* Destructured so the done arm's JSX narrows once, at the gate. */
 	const videoArtifact = view.videoArtifact;
 	/* The control is shown only where it applies — a live phase, no request in
-	 * flight, a live turn to interrupt (the screen withholds `onCancelTurn`
-	 * while the composer's own Stop is not visible, so the two controls share
-	 * one gate) — and its LABEL names the scope, not the card. The press is the
-	 * turn's own stop (the composer's `{op:"abort"}`), so a card-scoped word —
+	 * flight, a live turn to interrupt (the screen supplies `onCancelTurn` only
+	 * when the composer's own Stop can act) — and its LABEL names the scope, not
+	 * the card. The press is the turn's own stop (the composer's `{op:"abort"}`),
+	 * so a card-scoped word —
 	 * "Cancel" — promised a scope the mechanism does not have. "Stop turn" is
 	 * that action in the product's own vocabulary (the composer's control is
 	 * "Stop the running turn"; brand-kit's button verbs include `Stop`), and

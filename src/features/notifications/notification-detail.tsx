@@ -1,4 +1,4 @@
-import { useRouter } from "expo-router";
+import { useIsFocused, useRouter } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ScrollView, Text, View } from "react-native";
 
@@ -111,8 +111,10 @@ export default function NotificationDetail({ itemId }: { itemId: string }) {
 		rewalkRef.current();
 	});
 	const { observe, reportCountFailed } = dismissAll;
+	const focused = useIsFocused();
 	const runtime = useSessionRuntime(
 		state.kind === "ready" ? state.detail.session.id : "",
+		focused,
 	);
 	const [asksOpen, setAsksOpen] = useState(false);
 

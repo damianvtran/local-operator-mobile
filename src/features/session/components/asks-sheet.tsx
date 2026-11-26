@@ -190,6 +190,9 @@ export type AsksSheetProps = {
 	/** The relay client, or `null` while nothing is connected: the sheet then
 	 *  states the read failed rather than pretending an empty queue. */
 	client: RelayEndpoints | null;
+	/** A session launch can seed the sheet with its projection. A captured
+	 *  footer press must not use those rows after the visit has been retired. */
+	canSettle?: () => boolean;
 	/** The conversation this sheet was opened from, if any — its rows are not
 	 *  labelled with a conversation name (the reader is already there). */
 	currentSessionId?: string;
@@ -903,6 +906,7 @@ export const AsksSheet = ({
 	visible,
 	onClose,
 	client,
+	canSettle,
 	currentSessionId,
 	onOpenConversation,
 	sessions,
@@ -1323,7 +1327,8 @@ export const AsksSheet = ({
 			body?: { answers: Record<string, string[]> },
 			reason?: DismissReason,
 		) => {
-			if (client === null || pendingAction !== null) return;
+			if (client === null || pendingAction !== null || canSettle?.() === false)
+				return;
 			const sessionId = String(row.session_id || currentSessionId || "");
 			if (sessionId === "") {
 				setRowError({
@@ -1388,7 +1393,7 @@ export const AsksSheet = ({
 				setPendingAction(null);
 			}
 		},
-		[client, currentSessionId, load, pendingAction, shownRows],
+		[client, canSettle, currentSessionId, load, pendingAction, shownRows],
 	);
 
 	/* The footer's settle — the only submit path, and the guard keeps a second

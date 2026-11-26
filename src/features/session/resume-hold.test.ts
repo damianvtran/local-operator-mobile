@@ -300,11 +300,14 @@ describe("use-session wiring", () => {
 		"resumeClock.current.background();",
 		"resumeClock.current.resume();",
 	])("rejects a removed resume guard: %s", (guard) => {
-		// Remove the real guard, not the ownership anchor: selection must still
-		// succeed so the original safety assertion is what rejects the mutant.
-		const mutant = source.replace(guard, "");
-		expect(mutant).not.toBe(source);
-		expect(sessionResumeHandler(mutant)).toContain("reconnectRef.current();");
+		// Focus initializes the same clock outside AppState. Mutate only the
+		// selected listener, preserving the ownership anchor so it still selects.
+		const handler = sessionResumeHandler(source);
+		const mutatedHandler = handler.replace(guard, "");
+		expect(mutatedHandler).not.toBe(handler);
+		const mutant = source.replace(handler, () => mutatedHandler);
+		expect(sessionResumeHandler(mutant)).toBe(mutatedHandler);
+		expect(mutatedHandler).toContain("reconnectRef.current();");
 		expect(() => assertResumeWiring(mutant)).toThrow();
 	});
 

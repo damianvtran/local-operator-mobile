@@ -116,7 +116,10 @@ const runtime = {
 vi.mock("@/features/session/use-session", () => ({
 	useSessionRuntime: () => runtime,
 }));
-vi.mock("expo-router", () => ({ useRouter: () => ({ push: () => {} }) }));
+vi.mock("expo-router", () => ({
+	useIsFocused: () => true,
+	useRouter: () => ({ push: () => {} }),
+}));
 /* The list stands in as its own three slots, in the order it renders them:
  * the empty state (only with no rows), then the pending footer. */
 vi.mock("@/features/session/components/transcript-list", async () => {

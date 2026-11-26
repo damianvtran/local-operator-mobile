@@ -205,7 +205,7 @@ async function measureAll() {
 			reconnectingShown: false,
 		};
 		function Probe() {
-			probe.current = useSessionRuntime(sid);
+			probe.current = useSessionRuntime(sid, true);
 			return null;
 		}
 		return { probe, Probe };
