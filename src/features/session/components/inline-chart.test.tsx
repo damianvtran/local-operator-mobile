@@ -1,12 +1,25 @@
 import { act, type ReactNode, useEffect } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { inlineChartModel } from "@/features/session/inline-chart-model";
+import {
+	type Cartesian,
+	type HeatmapChart,
+	inlineChartModel,
+	labelWidth,
+	plotHeightFor,
+} from "@/features/session/inline-chart-model";
 import { inlineChartsContainerTouch } from "@/features/session/inline-chart-touch";
 import { resetLocaleSource, setLocaleSource } from "@/i18n";
 import { installDomShim } from "@/testing/dom-shim";
 import { PALETTE } from "@/ui/tokens.gen";
-import { donutHeight, horizontalRow, reservedHeight } from "./inline-chart";
+import {
+	cartesianFrame,
+	donutHeight,
+	heatmapColumnBoxes,
+	heatmapFrame,
+	horizontalRow,
+	reservedHeight,
+} from "./inline-chart";
 import { InlineUiPreview, inlineUiData } from "./inline-ui-preview";
 
 // The chart root is the one `adjustable` element; its props are the whole
@@ -133,6 +146,7 @@ vi.mock("@/ui/text-scale-provider", () => ({
 }));
 
 const VALUE_WITH_UNIT = /\d.*USD/;
+const SPACE_BEFORE_ELLIPSIS = /\s…$/;
 
 const spend = inlineUiData({
 	type: "line",
@@ -433,6 +447,105 @@ describe("heatmap (§4, §5, Q2)", () => {
 		expect(host.root?.accessibilityValue?.text).toBe(
 			"AM, Tue, 1,200 jobs, 2 of 6",
 		);
+	});
+});
+
+describe("label boxes hold what they draw (D5, C2, D6)", () => {
+	const cartesian = (
+		chart: Parameters<typeof inlineChartModel>[0],
+		w: number,
+	) => {
+		const model = inlineChartModel(chart, plotHeightFor(w));
+		if (model.kind !== "cartesian") throw new Error("Expected Cartesian plot");
+		return model as Cartesian;
+	};
+
+	it.each([320, 390, 760])("fits the whole `100%` tick at %i (D5)", (w) => {
+		const model = cartesian(
+			{
+				type: "series",
+				title: "Client share",
+				labels: ["A", "B"],
+				mode: "percent",
+				series: [
+					{ label: "iOS", values: [3, 1] },
+					{ label: "Android", values: [1, 3] },
+				],
+			},
+			w,
+		);
+		const frame = cartesianFrame(model, w, plotHeightFor(w), 1, "en", true);
+		expect(frame.leftLabels).toContain("100%");
+		// The y-tick box is drawn `x0 - 4` wide (CartesianPlot).
+		for (const label of frame.leftLabels)
+			expect(frame.x0 - 4).toBeGreaterThanOrEqual(labelWidth(label));
+	});
+
+	it.each([320, 390, 760])("fits the dual right axis at %i (D5)", (w) => {
+		const model = cartesian(
+			{
+				type: "series",
+				title: "Items and latency",
+				labels: ["A", "B"],
+				mode: "dual",
+				series: [
+					{ label: "Items", axis: "left", values: [1, 9] },
+					{ label: "Latency", axis: "right", values: [100, 1000] },
+				],
+			},
+			w,
+		);
+		const frame = cartesianFrame(model, w, plotHeightFor(w), 1, "en", false);
+		expect(frame.rightLabels).toContain("1,000");
+		// The right-tick box is drawn `width - x1 - 4` wide.
+		for (const label of frame.rightLabels)
+			expect(w - frame.x1 - 4).toBeGreaterThanOrEqual(labelWidth(label));
+	});
+
+	const hourly: HeatmapChart = {
+		type: "heatmap",
+		title: "Hourly load",
+		columns: Array.from(
+			{ length: 24 },
+			(_, h) => `${String(h).padStart(2, "0")}:00`,
+		),
+		rowLabels: ["Mon", "Tue"],
+		rows: [Array(24).fill(1), Array(24).fill(2)],
+	};
+	it.each([328, 360, 760])(
+		"never collapses an hourly column label at %i (C2)",
+		(w) => {
+			const frame = heatmapFrame(hourly, w, 1);
+			const boxes = heatmapColumnBoxes(hourly, frame, 1);
+			expect(boxes[0]?.index).toBe(0);
+			expect(boxes.at(-1)?.index).toBe(23);
+			for (const box of boxes) {
+				const label = hourly.columns[box.index] ?? "";
+				if (box.text !== label) {
+					expect(box.text.endsWith("…")).toBe(true);
+					expect([...box.text].length - 1).toBeGreaterThanOrEqual(3);
+				}
+				expect(box.left).toBeGreaterThanOrEqual(frame.gutter);
+				expect(box.left + box.width).toBeLessThanOrEqual(w);
+			}
+		},
+	);
+
+	it("truncates a horizontal-bar label without a space before the ellipsis (D6)", async () => {
+		host.width = 320;
+		const data = inlineUiData({
+			type: "bar",
+			title: "Tickets",
+			data: [
+				["Customer support escalations", 40],
+				["Platform infrastructure", 30],
+			],
+		});
+		await act(async () => root.render(<InlineUiPreview data={data} />));
+		expect(host.texts).toContain("Customer support…");
+		expect(
+			host.texts.filter((text) => SPACE_BEFORE_ELLIPSIS.test(text)),
+		).toEqual([]);
 	});
 });
 

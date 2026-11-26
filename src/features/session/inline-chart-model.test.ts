@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { sansTextWidthDp } from "@/ui/components/list-row-meta";
 import {
 	axisText,
 	barBand,
@@ -52,6 +53,7 @@ const series = (
 });
 
 const COMPACT_SUFFIX = /K|M/;
+const EN_TICK = /^(-?[\d.,]+)([KMBT]?)$/;
 
 // The operator's Datadog spend series from the bug report (USD per day).
 const DATADOG: [string, number][] = [
@@ -274,6 +276,90 @@ describe("nice ticks (§2)", () => {
 		expect(new Set(labels).size).toBe(labels.length);
 	});
 
+	// C1: a compact label is accepted only if it reads back as its true value.
+	// `en` compact suffixes are K/M/B/T; standard labels parse after ungrouping.
+	const SCALE: Record<string, number> = { K: 1e3, M: 1e6, B: 1e9, T: 1e12 };
+	const readBack = (label: string) => {
+		const match = EN_TICK.exec(label);
+		if (!match) throw new Error(`unparsable tick ${label}`);
+		return Number(match[1]?.replaceAll(",", "")) * (SCALE[match[2] ?? ""] ?? 1);
+	};
+	const axisOf = (lo: number, hi: number, target: number) => {
+		const ticks = niceTicks(lo, hi, target);
+		return {
+			...ticks,
+			compact: Math.max(Math.abs(ticks.lo), Math.abs(ticks.hi)) >= 10_000,
+			position: () => 0,
+		};
+	};
+	it.each([
+		[0, 10_300],
+		[0, 1_250_000],
+		[1_000_000, 1_250_000],
+		[10_050, 10_300],
+		[1_000_000, 1_004_000],
+		[0, 1.25e-6],
+		[1e12 + 1, 1e12 + 4],
+	])("labels every tick of %d–%d exactly (C1)", (lo, hi) => {
+		for (const target of [4, 5, 6]) {
+			const axis = axisOf(lo, hi, target);
+			const labels = tickLabels(axis, "en");
+			expect(new Set(labels).size).toBe(labels.length);
+			// Relative tolerance: the read-back multiplies by 1e3/1e6, which is
+			// not exact in binary; a rounded label is off by far more.
+			labels.forEach((label, i) => {
+				const value = axis.values[i] ?? Number.NaN;
+				expect(Math.abs(readBack(label) - value)).toBeLessThanOrEqual(
+					Math.abs(value) * 1e-12,
+				);
+			});
+		}
+	});
+
+	it("names the cases C1 lists by their exact labels", () => {
+		expect(tickLabels(axisOf(0, 10_300, 5), "en")).toEqual([
+			"0.0",
+			"2.5K",
+			"5.0K",
+			"7.5K",
+			"10.0K",
+			"12.5K",
+		]);
+		expect(tickLabels(axisOf(1_000_000, 1_250_000, 5), "en").at(-1)).toBe(
+			"1.25M",
+		);
+		expect(tickLabels(axisOf(0, 1.25e-6, 5), "en").at(-1)).toBe("0.00000125");
+	});
+
+	it("checks exactness against the true value, not a 6-digit rendering (C1)", () => {
+		// 10,000,000.1 renders `10M` at six compact digits, so a 6-digit
+		// reference would have accepted `10M` as exact.
+		const labels = tickLabels(
+			{
+				lo: 10_000_000.1,
+				hi: 30_000_000.1,
+				step: 10_000_000,
+				decimals: 1,
+				values: [10_000_000.1, 20_000_000.1, 30_000_000.1],
+				compact: true,
+				position: () => 0,
+			},
+			"en",
+		);
+		expect(labels).toEqual(["10,000,000.1", "20,000,000.1", "30,000,000.1"]);
+	});
+
+	it("keeps 1e12+1…1e12+4 distinct at full precision (C3)", () => {
+		const axis = axisOf(1e12 + 1, 1e12 + 4, 5);
+		expect(axis.values).toEqual([1e12 + 1, 1e12 + 2, 1e12 + 3, 1e12 + 4]);
+		expect(tickLabels(axis, "en")).toEqual([
+			"1,000,000,000,001",
+			"1,000,000,000,002",
+			"1,000,000,000,003",
+			"1,000,000,000,004",
+		]);
+	});
+
 	it("gives the right axis the left's tick count", () => {
 		const right = fixedCountTicks(-5, 10, 5);
 		expect(right.values).toHaveLength(5);
@@ -396,6 +482,36 @@ describe("x labels (§2)", () => {
 		["Platform infrastructure", 122.09],
 	])("measures %s at least as wide as it draws (%f px)", (text, drawn) => {
 		expect(labelWidth(text)).toBeGreaterThanOrEqual(drawn);
+	});
+
+	// R12: outside ASCII and CJK the estimate is never below the repo's sans
+	// fallback rule (`sansTextWidthDp`, 0.7 em per uncovered glyph), and an
+	// accented capital never below its base letter's measured Figtree advance.
+	it.each([
+		["Cyrillic", "Понедельник"],
+		["Cyrillic capitals", "ЖШЩЮ"],
+		["Greek", "Ψηφιακό"],
+		["Devanagari", "सोमवार"],
+		["Arabic", "الاثنين"],
+		["Thai", "วันจันทร์"],
+		["accented capitals", "ÉÖÅÜ"],
+	])("charges %s at least the sans fallback rule", (_, text) => {
+		expect(labelWidth(text)).toBeGreaterThanOrEqual(
+			Math.ceil(sansTextWidthDp(text, 1)) + 4,
+		);
+	});
+
+	it("charges an accented capital at least its base letter's advance", () => {
+		for (const [accented, base] of [
+			["ÖÖÖÖ", "OOOO"],
+			["ÉÉÉÉ", "EEEE"],
+		] as const) {
+			expect(labelWidth(accented)).toBeGreaterThanOrEqual(
+				Math.ceil(sansTextWidthDp(base, 1)) + 4,
+			);
+		}
+		// W is already charged the WIDE weight; its accented form never less.
+		expect(labelWidth("ŴŴŴŴ")).toBeGreaterThanOrEqual(labelWidth("WWWW"));
 	});
 
 	it("keeps the first label and truncates the last when only the ends fit", () => {

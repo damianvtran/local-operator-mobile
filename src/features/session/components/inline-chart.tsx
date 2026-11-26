@@ -59,7 +59,6 @@ import {
 	axisText,
 	barBand,
 	type Cartesian,
-	CHAR_WIDTH,
 	type ChartStep,
 	categoryX,
 	describeMark,
@@ -91,6 +90,7 @@ import {
 	stepCell,
 	tickLabels,
 	tooltipPlacement,
+	truncateLabel,
 	withUnit,
 } from "@/features/session/inline-chart-model";
 import {
@@ -134,8 +134,6 @@ export const horizontalRow = (fontScale: number) =>
 	Math.max(HORIZONTAL_ROW, Math.ceil(metaLine(fontScale)) + 8);
 const seriesColor = (paint: Paint, i: number) =>
 	paint.chart[i % paint.chart.length] ?? paint.colors.accent;
-const textWidth = (text: string, fontScale: number) =>
-	[...text].length * CHAR_WIDTH * fontScale;
 const snap = (n: number) => Math.round(n) + 0.5;
 const sameMark = (a: ActiveMark | null, b: ActiveMark | null) =>
 	a?.category === b?.category && a?.series === b?.series;
@@ -324,7 +322,8 @@ function useCartesianFrame(
 	);
 }
 
-function cartesianFrame(
+/** Exported for the gutter tests: the frame the plot draws from. */
+export function cartesianFrame(
 	model: Cartesian,
 	width: number,
 	plotHeight: number,
@@ -334,8 +333,11 @@ function cartesianFrame(
 ) {
 	const leftLabels = tickLabels(model.left, locale, percent);
 	const rightLabels = model.right ? tickLabels(model.right, locale) : [];
+	// D5: both tick gutters use the per-glyph `labelWidth` the x labels use.
+	// The flat 6.6 px/char estimate gave `100%` 26.4 px against ~32 px drawn
+	// (Figtree digits are 7.48 px), so percent charts showed `100…`.
 	const widest = (labels: string[]) =>
-		Math.max(0, ...labels.map((l) => textWidth(l, fontScale)));
+		Math.max(0, ...labels.map((l) => labelWidth(l, fontScale)));
 	const x0 = Math.max(PLOT_MARGIN.minLeft, Math.ceil(widest(leftLabels) + 8));
 	const right = model.right
 		? Math.ceil(widest(rightLabels) + 8)
@@ -912,9 +914,9 @@ function CartesianPlot({
 						numberOfLines={1}
 						style={{
 							left: 0,
-							// The gutter is the 6.6/char estimate + 8 (§1); the box takes
-							// all but 4 of it so an estimate that runs short for a wide
-							// glyph never clips a tick to "2…".
+							// The gutter is the widest `labelWidth` + 8 (§1, D5); the box
+							// takes all but 4 of it, which still holds the label's
+							// measured box, so no tick clips to "100…".
 							width: Math.max(0, x0 - 4),
 							top: yAt(model.left.position(v)) - labelBox / 2,
 						}}
@@ -1116,7 +1118,11 @@ function HorizontalBarPlot({
 						top: rowTop(i) + 8 - line / 2,
 					}}
 				>
-					{text}
+					{/* D6: truncate here rather than leave it to the platform's
+					    ellipsis, which keeps the word space (`Customer support …`);
+					    `truncateLabel` trims it. The tooltip and table keep the
+					    full label. */}
+					{truncateLabel(text, gutter - 8, fontScale)}
 				</Text>
 			))}
 			<AxisLabels boxes={tickBoxes} top={plotBottom + 6} />
@@ -1637,8 +1643,12 @@ function DonutPlot({
 }
 
 /** §4 heatmap geometry at a width: one function for the plot and the
- * pre-layout reservation. */
-function heatmapFrame(chart: HeatmapChart, width: number, fontScale: number) {
+ * pre-layout reservation (exported for the layout tests). */
+export function heatmapFrame(
+	chart: HeatmapChart,
+	width: number,
+	fontScale: number,
+) {
 	const line = metaLine(fontScale);
 	const rows = chart.rowLabels.length;
 	const columns = chart.columns.length;
@@ -1678,6 +1688,28 @@ function heatmapFrame(chart: HeatmapChart, width: number, fontScale: number) {
 		cellY: (r: number) => gridTop + r * (rowHeight + gap),
 		height: gridBottom + 6 + Math.ceil(line),
 	};
+}
+
+/**
+ * Column labels under the grid (C2). Centred on each cell, and
+ * `layoutXLabels` clamps every box inside [gutter, width], so the first and
+ * last labels slide inward to fit whole instead of collapsing to a bare "…"
+ * at the chart edges. Exported so the tests measure the boxes that are drawn.
+ */
+export function heatmapColumnBoxes(
+	chart: HeatmapChart,
+	frame: ReturnType<typeof heatmapFrame>,
+	fontScale: number,
+) {
+	return layoutXLabels({
+		texts: chart.columns.map(axisText),
+		anchors: chart.columns.map((_, c) => frame.cellX(c) + frame.cellWidth / 2),
+		edges: false,
+		lo: frame.gutter,
+		hi:
+			frame.gutter + frame.columns * (frame.cellWidth + frame.gap) - frame.gap,
+		fontScale,
+	});
 }
 
 /**
@@ -1756,14 +1788,7 @@ function HeatmapPlot({
 			: null;
 	};
 	const gesture = usePlotGesture({ hit, active, setActive, scrub: false });
-	const columnBoxes = layoutXLabels({
-		texts: chart.columns.map(axisText),
-		anchors: chart.columns.map((_, c) => cellX(c) + cellWidth / 2),
-		edges: false,
-		lo: frame.gutter,
-		hi: width,
-		fontScale,
-	});
+	const columnBoxes = heatmapColumnBoxes(chart, frame, fontScale);
 	// The legend gradient is sampled in OKLab, since SVG interpolates stops in
 	// sRGB; five stops keep the bar within a hair of the cells' own mix.
 	const stops = [0, 0.25, 0.5, 0.75, 1].map((f) => ({
@@ -1855,7 +1880,8 @@ function HeatmapPlot({
 						top: cellY(r) + (rowHeight - frame.line) / 2,
 					}}
 				>
-					{label}
+					{/* D6: trimmed ellipsis, as for the horizontal-bar rows. */}
+					{truncateLabel(label, frame.gutter - 8, fontScale)}
 				</Text>
 			))}
 			<AxisLabels boxes={columnBoxes} top={frame.gridBottom + 6} />

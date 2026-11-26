@@ -56,9 +56,27 @@ export const labelWidth = (text: string, fontScale = 1) =>
 // costs a little thinning, an under-wide one truncates.
 const WIDE = new Set([..."MWmw@%"]);
 const NARROW = new Set([..."ilIjt.,:;|!'’ "]);
-function glyphEm(ch: string) {
+// R12: a glyph outside ASCII and CJK (Cyrillic, Greek, Devanagari, Arabic,
+// Thai, accented Latin) is charged the repo's own sans fallback rule —
+// `SANS_UNKNOWN_ADVANCE_EM` (0.7 em) in ui/components/list-row-meta.ts,
+// "an under-counted line is the one the platform clamps" — in units of
+// 6.6 px at the 12 px meta size. Restated rather than imported so this model
+// stays free of the i18n/UI imports that file carries; the model test pins it
+// to `sansTextWidthDp` so the two cannot drift. A capital is wider than that
+// floor (Figtree O is 0.779 em; wide capitals such as Ж and Ю come from a
+// fallback face this table cannot measure), so a non-ASCII capital
+// takes the WIDE weight (0.88 em), and an accented letter never measures
+// below its base letter.
+const UNCOVERED = (0.7 * 12) / CHAR_WIDTH;
+function glyphEm(ch: string): number {
 	const code = ch.codePointAt(0) ?? 0;
 	if (code >= 0x2e80) return 1.9; // CJK and other full-width scripts
+	if (code >= 0x80) {
+		const base = ch.normalize("NFD").charAt(0);
+		const baseEm = base !== ch && base < "\u0080" ? glyphEm(base) : 0;
+		const capital = ch !== ch.toLowerCase();
+		return Math.max(UNCOVERED, baseEm, capital ? 1.6 : 0);
+	}
 	if (WIDE.has(ch)) return 1.6;
 	if (NARROW.has(ch)) return 0.6;
 	if (ch >= "0" && ch <= "9") return 1.15;
@@ -283,6 +301,11 @@ export function formatPieShare(share: number, locale: string) {
  * `13K` that is really 12,500. Fixed per axis so the column of labels lines
  * up, matching desktop and relay. When three digits are not enough, the full
  * grouped numbers are shown instead.
+ *
+ * C1: "none is rounded" means each label round-trips to its TRUE value, so
+ * the reference rendering carries 20 fraction digits (the Intl maximum every
+ * engine accepts) — a 6-digit reference would itself round 1,000,000,000,001
+ * to `1T` and let a rounded label pass as exact.
  */
 export function tickLabels(axis: Axis, locale: string, percent = false) {
 	if (percent)
@@ -302,7 +325,7 @@ export function tickLabels(axis: Axis, locale: string, percent = false) {
 			});
 		// Unrounded check: the trimmed rendering at `digits` must equal the
 		// trimmed 6-digit one; the shown label then pads to `digits`.
-		const exact = axis.values.map((v) => compactAt(0, 6).format(v));
+		const exact = axis.values.map((v) => compactAt(0, 20).format(v));
 		for (let digits = 0; digits <= 3; digits++) {
 			const trimmed = axis.values.map((v) => compactAt(0, digits).format(v));
 			if (
