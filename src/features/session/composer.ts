@@ -223,8 +223,8 @@ export interface PrimaryControl {
 
 export interface ComposerControls {
 	primary: PrimaryControl;
-	/** Stop is a separate control beside the primary, and it exists exactly while
-	 *  a turn is running. */
+	/** Layout only. A busy retained visit keeps its Stop slot beside the primary;
+	 *  the screen owns the authority to enable it. */
 	stopVisible: boolean;
 	/** A send is in flight: the primary reads `…` and is disabled. */
 	sending: boolean;
@@ -324,8 +324,7 @@ export const composerControls = (
 					? "Steer the running turn"
 					: "Send message",
 		},
-		stopVisible:
-			input.streaming && input.connected !== false && !cached && !awaitingVisit,
+		stopVisible: input.streaming && input.connected !== false && !cached,
 		sending: input.sending,
 		/* On an ENDED session the retained card already carries the one sentence
 		 *  (the ended one) and its Retry; a third line saying "resolve the

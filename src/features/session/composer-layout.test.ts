@@ -23,11 +23,31 @@ const read = (path: string) =>
 const COMPOSER = read("src/features/session/components/composer.tsx");
 const SCREEN = read("app/(app)/session/[id].tsx");
 const PANE = read("src/features/sessions/conversations-pane.tsx");
+const SPACE = /\s+/g;
 describe("build389 persistent field and context", () => {
 	it("retains disc spacing and target floors", () => {
 		expect(COMPOSER_CONTROLS_ROW).toContain("gap-x-1");
 		expect(COMPOSER_ACTION_CLUSTER).toContain("gap-1");
 		expect(COMPOSER_DISC).toContain("h-11 w-11");
+	});
+	it("disables the retained Stop in place in both toolbar layouts", () => {
+		const composer = COMPOSER.replace(SPACE, " ");
+		const stop = composer.slice(
+			composer.indexOf("const stopButton ="),
+			composer.indexOf("const sendButton ="),
+		);
+		expect(stop).toContain("controls.stopVisible ? (");
+		expect(stop).toContain("disabled={stopInert}");
+		expect(stop).toContain("disabled: stopInert");
+		expect(stop).toContain("onPress={() => { if (!stopInert) onStop(); }}");
+		expect(stop).toContain("minWidth: TOUCH_FLOOR, minHeight: TOUCH_FLOOR");
+		// The card and the pill use the same Stop node in the same cluster.
+		expect(composer).toContain(
+			"className={COMPOSER_ACTION_CLUSTER}> {stopButton} {sendButton}",
+		);
+		expect(composer).toContain(
+			"className={COMPOSER_ACTION_CLUSTER}> {stopButton} {pillSend ? sendButton : null}",
+		);
 	});
 	it("mounts one Textarea independently of idle, focus and keyboard", () => {
 		expect(COMPOSER.match(/<Textarea\b/g)).toHaveLength(1);

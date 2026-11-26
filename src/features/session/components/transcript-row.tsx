@@ -116,9 +116,8 @@ export type TranscriptRowProps = {
 	 *  resolve it): the receipt row then renders exactly as it always has. */
 	loadBridgeBody?: BridgeBodyLoader;
 	/** The turn interrupt, threaded to the image-gen card's Cancel. The screen
-	 *  withholds it while the composer's own Stop is not visible, so the two
-	 *  controls share one gate (`composer.controls.stopVisible`). Resolves
-	 *  whether the request reached the relay (review round 1, F2). */
+	 *  requires an actionable composer Stop, not just a reserved slot during
+	 *  a retained visit. Resolves whether the request reached the relay. */
 	onCancelTurn?: () => Promise<boolean>;
 	/** Whether this row's fold is open, when the list owns that state (it keeps
 	 *  a set keyed by row id, so the answer survives windowing and a find

@@ -591,7 +591,8 @@ it("retains the editor but cannot abort a different desktop turn before Back see
 		expect(probe.read(a)?.entries.map((row) => row.id)).toEqual(retainedRows);
 		expect(probe.read(a)?.connected).toBe(true);
 		expect(probe.composer().draft).toBe("unsent draft");
-		expect(probe.composer().controls.stopVisible).toBe(false);
+		expect(probe.composer().controls.stopVisible).toBe(true);
+		expect(probe.composer().controls.primary.kind).toBe("steer");
 		expect(probe.composer().controls.primary.disabled).toBe(true);
 		expect(probe.composer().controls.disabledReason).toBeNull();
 		await act(async () => {
@@ -612,6 +613,7 @@ it("retains the editor but cannot abort a different desktop turn before Back see
 		expect(probe.read(a)?.projection?.activity).toBe("new turn");
 		expect(probe.composer().draft).toBe("unsent draft");
 		expect(probe.composer().controls.stopVisible).toBe(true);
+		expect(probe.composer().controls.primary.kind).toBe("steer");
 		expect(probe.composer().controls.primary.disabled).toBe(false);
 		await act(async () => {
 			expect(await previousStop()).toBe(false);
@@ -663,7 +665,7 @@ it("joins a held Stop on authoritative Back until an idle frame ends the turn", 
 		expect(probe.composer().stopping).toBe(false);
 		await probe.show(a);
 		expect(probe.read(a)?.awaitingVisit).toBe(true);
-		expect(probe.composer().controls.stopVisible).toBe(false);
+		expect(probe.composer().controls.stopVisible).toBe(true);
 		expect(probe.composer().stopping).toBe(false);
 		await act(async () => expect(await probe.composer().stop()).toBe(false));
 		expect(commands).toEqual([abort]);
@@ -688,6 +690,8 @@ it("joins a held Stop on authoritative Back until an idle frame ends the turn", 
 		);
 		expect(probe.read(a)?.awaitingVisit).toBe(false);
 		expect(probe.read(a)?.streaming).toBe(false);
+		expect(probe.composer().controls.stopVisible).toBe(false);
+		expect(probe.composer().controls.primary.kind).toBe("send");
 		expect(probe.composer().stopping).toBe(false);
 		await act(async () =>
 			attempts[2]?.send(frame(a, { streaming: true, activity: "next turn" })),

@@ -1184,7 +1184,9 @@ export const useComposer = (input: {
 				connected: endpoints !== null,
 				cached,
 				awaitingVisit,
-				streaming: streaming && !awaitingVisit,
+				// Keep the composer in its running layout while a retained busy frame
+				// waits for authority. The press-time visit check still fences dispatch.
+				streaming,
 				hasDraft: draft.trim().length > 0,
 				hasImages: images.length > 0,
 				sending,

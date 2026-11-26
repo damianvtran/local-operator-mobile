@@ -348,6 +348,8 @@ export type ComposerProps = {
 	/** Presentation only; the host must not discard any delivery record. */
 	onDismissError?: () => void;
 	onStop: () => void;
+	/** Preserve the toolbar's hitboxes while waiting for turn authority. */
+	stopInert?: boolean;
 	/** A stop is pending for this turn (`turn-stop.ts`), shared with the pinned
 	 *  working line's `stop`: the ■ dims and reads busy with it, so the two
 	 *  controls never disagree about whether the turn was asked to stop. */
@@ -721,6 +723,7 @@ export const Composer = ({
 	onClearDraft,
 	onDismissError,
 	onStop,
+	stopInert = false,
 	stopping = false,
 	retainedMessage,
 	notice,
@@ -2302,9 +2305,12 @@ export const Composer = ({
 		<Pressable
 			accessibilityRole={ROLE.button}
 			accessibilityLabel="Stop the running turn"
-			accessibilityState={state({ busy: stopping })}
+			accessibilityState={state({ busy: stopping, disabled: stopInert })}
+			disabled={stopInert}
 			style={{ minWidth: TOUCH_FLOOR, minHeight: TOUCH_FLOOR }}
-			onPress={onStop}
+			onPress={() => {
+				if (!stopInert) onStop();
+			}}
 			testID={CONTROL.composerStop}
 		>
 			{/* A 44 pt `danger-wash` DISC one `gap-1` step from send (D-S5, the
@@ -2314,7 +2320,7 @@ export const Composer = ({
 			 *  The wash is quiet enough not to compete with the accent send disc. */}
 			<View
 				className={cx(COMPOSER_DISC, "bg-danger-wash")}
-				style={{ opacity: stopping ? 0.6 : 1 }}
+				style={{ opacity: stopping || stopInert ? 0.6 : 1 }}
 			>
 				<Square size={14} color={dangerInk} fill={dangerInk} aria-hidden />
 			</View>

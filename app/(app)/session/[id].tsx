@@ -363,15 +363,21 @@ function Session() {
 		setText: composer.setDraft,
 		slashDraft: draftSlashQuery(composer.draft) !== null,
 	});
-	/* All Stop surfaces share the same authority: the relay forwards `abort`
-	 * and this visit has confirmed which turn its session-scoped abort can hit. */
-	const stopAllowed = runtime.turnActionsReady && controlPolicy.allows("abort");
+	/* Retain the busy layout, not its authority: replacing the Stop branch
+	 * drops the pinned counts and moves the composer's menu under Stop. Only
+	 * the accepted visit can send a session-scoped abort; warm-cache frames
+	 * do not count as streaming and cannot reserve a Stop slot. */
+	const abortSupported = controlPolicy.allows("abort");
+	const stopAllowed = runtime.turnActionsReady && abortSupported;
+	const stopInert =
+		runtime.awaitingVisit && runtime.streaming && abortSupported;
+	const stopMounted = stopAllowed || stopInert;
 	const composerControls = useMemo(
 		() =>
-			stopAllowed
+			stopMounted
 				? composer.controls
 				: { ...composer.controls, stopVisible: false },
-		[composer.controls, stopAllowed],
+		[composer.controls, stopMounted],
 	);
 	const asksAnswerable =
 		runtime.turnActionsReady && controlPolicy.allows("ask_respond");
@@ -1205,6 +1211,9 @@ function Session() {
 							pending={pendingRows}
 							sendMark={composer.sendMark}
 							streamingRowId={runtime.streamingRowId}
+							// If there is no streaming row yet, the list must not infer idle
+							// from the image Cancel callback being withheld on a busy visit.
+							turnLive={runtime.streaming}
 							streamArrivalEpoch={runtime.streamArrivalEpoch}
 							streamArrivalTail={runtime.streamArrivalTail}
 							loadImage={runtime.loadImage}
@@ -1227,14 +1236,13 @@ function Session() {
 									? runtime.loadBridgeBody
 									: undefined
 							}
-							/* The image-gen card's Cancel is the composer's OWN stop path (the
-					   one turn-interrupt — no second mechanism). The gate is the
-					   composer's own (`stopVisible` = a turn is running), so the two
-					   controls cannot diverge about when a cancel is real: while the
-					   gate is closed the card hides the control rather than offering
-					   a dead one. */
+							/* Image Cancel is another route to the same abort, not part of
+					   the retained Stop layout. Never infer its authority from the
+					   reserved composer slot. */
 							onCancelTurn={
-								composerControls.stopVisible ? composer.stop : undefined
+								stopAllowed && composerControls.stopVisible
+									? composer.stop
+									: undefined
 							}
 							anchorId={attentionRecord(runtime.projection)?.anchor_id ?? null}
 							onAnchorVisible={setCompletionVisible}
@@ -1969,7 +1977,8 @@ function Session() {
 						{activityLineHost ? (
 							<PinnedWorkingLine
 								line={pinned}
-								onStop={stopAllowed ? composer.stop : undefined}
+								onStop={stopMounted ? composer.stop : undefined}
+								stopInert={stopInert}
 								stopping={composer.stopping}
 								gapBelow={outstandingAsks(projection?.asks).length > 0}
 								trailing={lineCountsElement}
@@ -2055,6 +2064,7 @@ function Session() {
 							storedModel.clearSettingsError();
 						}}
 						onStop={composer.stop}
+						stopInert={stopInert}
 						stopping={composer.stopping}
 						retainedMessage={
 							composer.retained !== null
