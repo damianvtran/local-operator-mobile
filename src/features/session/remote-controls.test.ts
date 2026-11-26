@@ -163,7 +163,7 @@ const SESSION = readFileSync(
 describe("the session screen reads the one control policy", () => {
 	it("gates every Stop on abort", () => {
 		expect(SESSION).toContain(
-			'const stopAllowed = controlPolicy.allows("abort");',
+			'const stopAllowed = runtime.turnActionsReady && controlPolicy.allows("abort");',
 		);
 		expect(SESSION).toContain("controls={composerControls}");
 		expect(SESSION).not.toContain("controls={composer.controls}");

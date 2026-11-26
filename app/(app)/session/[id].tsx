@@ -336,6 +336,8 @@ function Session() {
 		/* A warm-cache frame is a picture, not a conversation: no send until the
 		 *  first live frame replaces it (PR #246 R1). */
 		cached: runtime.hydrated,
+		awaitingVisit: runtime.awaitingVisit,
+		canActOnVisit: runtime.canActOnVisit,
 		/* The ended verdict comes FROM THE DOT (`headerHealth`), not
 		 *  `projection.ended` alone: a history-only conversation (pid 0) is ended
 		 *  too, and a send to either REOPENS it. */
@@ -361,9 +363,9 @@ function Session() {
 		setText: composer.setDraft,
 		slashDraft: draftSlashQuery(composer.draft) !== null,
 	});
-	/* Stop is withheld when the relay does not forward `abort`: every Stop on this
-	 *  screen (composer ■, pinned line, image-gen Cancel) reads this one gate. */
-	const stopAllowed = controlPolicy.allows("abort");
+	/* All Stop surfaces share the same authority: the relay forwards `abort`
+	 * and this visit has confirmed which turn its session-scoped abort can hit. */
+	const stopAllowed = runtime.turnActionsReady && controlPolicy.allows("abort");
 	const composerControls = useMemo(
 		() =>
 			stopAllowed
@@ -371,7 +373,8 @@ function Session() {
 				: { ...composer.controls, stopVisible: false },
 		[composer.controls, stopAllowed],
 	);
-	const asksAnswerable = controlPolicy.allows("ask_respond");
+	const asksAnswerable =
+		runtime.turnActionsReady && controlPolicy.allows("ask_respond");
 	/* What the reader just sent and the transcript does not carry yet, resolved by
 	 *  command id against the rows (`pending-echo.ts`). */
 	const pendingEchoes = usePendingEchoes(sessionId, runtime.entries);
@@ -733,12 +736,11 @@ function Session() {
 	 *  present, a `pending` card of `kind == "ask"` is one of those rows mirrored
 	 *  for old clients and must be IGNORED here — rendering both would draw the
 	 *  same ask twice and collect a second answer. Approvals are unaffected. */
-	/* A warm-cache frame's pending approval may already be answered on the
-	 *  desktop, and answering it is a send against a cached frame (PR #246 R1
-	 *  lead). No card until the first live frame says the ask still stands. */
-	const pending = runtime.hydrated
-		? null
-		: blockingPending(projection?.pending ?? null, projection?.asks);
+	/* A saved or retained approval may already be answered on the desktop.
+	 * Wait for this visit's accepted projection before offering a decision. */
+	const pending = runtime.turnActionsReady
+		? blockingPending(projection?.pending ?? null, projection?.asks)
+		: null;
 
 	/* The header dot's sheet + the session menu, held here (not in the control) so
 	 *  the acceptance line survives the sheet closing, and so the `S5/health-sheet`
@@ -2061,7 +2063,7 @@ function Session() {
 						}
 						notice={composer.notice}
 						onRetry={composer.retry}
-						showResume={aborted}
+						showResume={runtime.turnActionsReady && aborted}
 						onResume={composer.send}
 						ended={ended}
 						error={pending === null ? (composer.error ?? chipError) : null}
@@ -2229,8 +2231,9 @@ function Session() {
 			<AsksSheet
 				visible={asksOpen}
 				onClose={asksSheet.close}
+				canSettle={runtime.canActOnVisit}
 				initialOpenAsk={asksSheet.initialOpenAsk}
-				frameRows={asksSheet.frameRows}
+				frameRows={asksAnswerable ? asksSheet.frameRows : null}
 				onReadFailed={asksSheet.readFailed}
 				/* The queue's own read, back to the screen: the ask-id chips in the
 				   prose resolve an id against what this sheet can show — the one

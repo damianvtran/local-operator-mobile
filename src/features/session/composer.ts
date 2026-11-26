@@ -246,6 +246,8 @@ export interface ComposerControlInput {
 	 *  old, and its `streaming` is forced false, so a send would be `prompt`
 	 *  even while the desktop turn is still running (PR #246 R1/Q1-1). */
 	cached?: boolean;
+	/** Back retained a frame, but this visit hasn't confirmed which turn is current. */
+	awaitingVisit?: boolean;
 	streaming: boolean;
 	hasDraft: boolean;
 	hasImages: boolean;
@@ -298,9 +300,11 @@ export const composerControls = (
 	 *  action that brings the session back. The reader is told what a send does
 	 *  by the placeholder, not by a dead control. */
 	const cached = input.cached === true;
+	const awaitingVisit = input.awaitingVisit === true;
 	const disabled =
 		input.connected === false ||
 		cached ||
+		awaitingVisit ||
 		input.sending ||
 		blocked ||
 		!hasContent;
@@ -320,7 +324,8 @@ export const composerControls = (
 					? "Steer the running turn"
 					: "Send message",
 		},
-		stopVisible: input.streaming && input.connected !== false && !cached,
+		stopVisible:
+			input.streaming && input.connected !== false && !cached && !awaitingVisit,
 		sending: input.sending,
 		/* On an ENDED session the retained card already carries the one sentence
 		 *  (the ended one) and its Retry; a third line saying "resolve the

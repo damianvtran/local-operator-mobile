@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+	useCallback,
+	useEffect,
+	useLayoutEffect,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
 import { AppState } from "react-native";
 import { useStore } from "zustand";
 import type {
@@ -117,6 +124,13 @@ export interface SessionRuntime {
 	historyErrorScope: "newest" | "older" | null;
 	streaming: boolean;
 	streamingRowId: string | null;
+	/** Retained paint is usable for reading, but not authority for turn actions. */
+	turnActionsReady: boolean;
+	/** True only when retained paint is waiting on this visit's projection. */
+	awaitingVisit: boolean;
+	/** Fences captured presses across blur. Only a new submission without any
+	 * projection may opt out of the seed requirement (ordinary cold open). */
+	canActOnVisit: (requireProjection?: boolean) => boolean;
 	/** Motion can only be attributed to arrivals on this accepted wire stream. */
 	streamArrivalEpoch: number | null;
 	/** The wire tail, not a row introduced by history paging or gap healing. */
@@ -274,6 +288,22 @@ export const useSessionRuntime = (
 		}),
 		[snapshot.revision, snapshot.tunnelId, sessionId],
 	);
+
+	// A visit is narrower than a projection owner. The same mounted screen can
+	// come Back to its own rows, but the desktop may have started a new turn.
+	// Invalidate captured presses at the focus commit, before passive SSE setup.
+	const visit = useMemo(
+		() => ({ focused, identity, endpoints, reason: source.reason }),
+		[focused, identity, endpoints, source.reason],
+	);
+	const currentVisit = useRef<typeof visit | null>(null);
+	const [acceptedVisit, setAcceptedVisit] = useState<typeof visit | null>(null);
+	useLayoutEffect(() => {
+		currentVisit.current = visit.focused ? visit : null;
+		return () => {
+			currentVisit.current = null;
+		};
+	}, [visit]);
 
 	const [facts, setFacts] = useSessionValue<StreamFacts>(
 		identity,
@@ -438,6 +468,7 @@ export const useSessionRuntime = (
 
 	/* ------------------------------------------------------------- the stream */
 	useEffect(() => {
+		const { identity: owner, focused, endpoints, reason } = visit;
 		// A hidden or unnamed screen has no stream to open (Q10).
 		if (!focused || !hasSessionId(sessionId)) return;
 		// Refocus is a new visit, not evidence that the old leg dropped. Retain
@@ -453,11 +484,7 @@ export const useSessionRuntime = (
 		else if (resumeClock.current.backgrounded()) resumeClock.current.resume();
 		let active = true;
 		let sawFrameThisVisit = false;
-		const owner: ProjectionOwner = {
-			revision: snapshot.revision,
-			tunnelId: snapshot.tunnelId,
-			sessionId,
-		};
+		let acceptedProjection = false;
 		/* A gateway refusal on a stream that was serving moments ago is a
 		 * reconnect for two minutes, not a terminal block (`refusal-grace.ts`;
 		 * field report 2026-11-17: "login may have expired, or billing may be
@@ -527,11 +554,12 @@ export const useSessionRuntime = (
 			if (
 				!focusedRef.current ||
 				!active ||
+				currentVisit.current !== visit ||
 				!sameProjectionOwner(owner, currentIdentity.current)
 			)
 				return;
 			if (endpoints === null) {
-				setLoading(source.reason === "pending");
+				setLoading(reason === "pending");
 				return;
 			}
 			// A reload replaces the stream: leaving the old one open would put two
@@ -565,6 +593,7 @@ export const useSessionRuntime = (
 				focusedRef.current &&
 				!retired &&
 				active &&
+				currentVisit.current === visit &&
 				sameProjectionOwner(owner, currentIdentity.current);
 			/* The relay daemon writes NOTHING between this response's headers and
 			 * its seed frame (`daemon.py` `api_session_events`: the durable capture
@@ -626,7 +655,13 @@ export const useSessionRuntime = (
 					const decision = sessions
 						.getState()
 						.applyFrame(sessionId, frame.data, pendingAttemptSeed);
-					if (decision !== "dropped-older") pendingAttemptSeed = false;
+					if (decision !== "dropped-older") {
+						pendingAttemptSeed = false;
+						if (!acceptedProjection) {
+							acceptedProjection = true;
+							setAcceptedVisit(visit);
+						}
+					}
 					if (readOnResume) {
 						const reader = historyRef.current;
 						heldHistoryRead.current?.();
@@ -757,12 +792,8 @@ export const useSessionRuntime = (
 			}
 		};
 	}, [
-		focused,
-		endpoints,
 		sessionId,
-		source.reason,
-		snapshot.revision,
-		snapshot.tunnelId,
+		visit,
 		setLoading,
 		setError,
 		setFacts,
@@ -1015,6 +1046,15 @@ export const useSessionRuntime = (
 	const projection = entry.projection;
 	/** The frame on screen is the warm cache's, not a live one. */
 	const hydrated = entry.hydrated === true;
+	const turnActionsReady =
+		focused && ownsProjection && !hydrated && acceptedVisit === visit;
+	const hasProjection = projection !== null;
+	const canActOnVisit = useCallback(
+		(requireProjection = true) =>
+			currentVisit.current === visit &&
+			(turnActionsReady || (!requireProjection && !hasProjection)),
+		[hasProjection, turnActionsReady, visit],
+	);
 	if (ownsProjection) {
 		if (hydrated) historyWindow.seedFromCache(projection);
 		else historyWindow.accept(projection);
@@ -1272,6 +1312,9 @@ export const useSessionRuntime = (
 		 *  above stays on the raw flag — it marks where streamed TEXT lands. */
 		streaming: running,
 		streamingRowId,
+		turnActionsReady,
+		awaitingVisit: hasProjection && !turnActionsReady,
+		canActOnVisit,
 		streamArrivalEpoch:
 			ownsProjection && entry.connected && !entry.awaitingSnapshot
 				? (entry.streamEpoch ?? null)

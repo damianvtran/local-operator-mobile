@@ -457,13 +457,26 @@ describe("the cached-frame gate is wired end to end (PR #246 R1)", () => {
 	});
 
 	it("a cached frame offers no pending approval card to answer", () => {
-		expect(flat(screen)).toContain("const pending = runtime.hydrated ? null");
+		expect(flat(screen)).toContain(
+			"const pending = runtime.turnActionsReady ? blockingPending(projection?.pending ?? null, projection?.asks) : null;",
+		);
+		const runtime = readFileSync(
+			new URL("./use-session.ts", import.meta.url),
+			"utf8",
+		);
+		expect(flat(runtime)).toContain(
+			"focused && ownsProjection && !hydrated && acceptedVisit === visit;",
+		);
 	});
 
 	it("every send path in the hook refuses while cached", () => {
 		const code = flat(hook);
-		expect(code).toContain("connected: endpoints !== null, cached, streaming,");
-		expect(code).toContain("if (cached) return; void runSend");
+		expect(code).toContain(
+			"connected: endpoints !== null, cached, awaitingVisit,",
+		);
+		expect(code).toContain(
+			"if (cached || awaitingVisit || canActOnVisit?.(streaming) === false) return; void runSend",
+		);
 		expect(code).toContain("held === null || endpoints === null || cached");
 		expect(code).toContain("!tap.submit || endpoints === null || cached");
 	});

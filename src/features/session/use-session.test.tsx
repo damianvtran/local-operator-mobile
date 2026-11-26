@@ -1,12 +1,21 @@
-import { act, createElement } from "react";
+import { act, createElement, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, it, vi } from "vitest";
+import type { PromptImage } from "@/contracts";
 import {
 	RECONNECT_BACKOFF_MIN_MS,
 	RECONNECT_DEADLINE_MS,
 } from "@/features/session/connection-view";
 import { OUTAGE_GRACE_MS } from "@/features/session/resume-hold";
-import { useSessionRuntime } from "@/features/session/use-session";
+import { resetTurnStopForTests } from "@/features/session/turn-stop";
+import {
+	type ComposerState,
+	useComposer,
+} from "@/features/session/use-composer";
+import {
+	type SessionRuntime,
+	useSessionRuntime,
+} from "@/features/session/use-session";
 import { RelayEndpoints } from "@/relay/endpoints";
 import { RelayHttpClient } from "@/relay/http";
 import { installDomShim } from "@/testing/dom-shim";
@@ -49,6 +58,9 @@ vi.mock("react-native", () => ({
 }));
 vi.mock("@/state/warm-sync", () => ({ warmSync: { view: () => () => {} } }));
 vi.mock("@/features/session/warm-store", () => ({ warmCache: {} }));
+vi.mock("expo-crypto", async () => ({
+	randomUUID: (await import("node:crypto")).randomUUID,
+}));
 
 /** `keyed: false` keeps ONE hook instance across a session change, the way a
  *  screen that re-renders with a new id does (refs survive the switch). */
@@ -75,14 +87,40 @@ function mount({ keyed = true }: { keyed?: boolean } = {}) {
 
 /** Expo's stack retains the old reader when navigating to another dynamic id.
  * Keep every route mounted; only the foreground flag changes on push/pop. */
-function mountStack() {
+function mountStack(composerRoute?: string) {
 	const dom = installDomShim();
 	const root = createRoot(dom.container as Element);
-	const readers = new Map<string, ReturnType<typeof useSessionRuntime>>();
+	const readers = new Map<string, SessionRuntime>();
+	let composer!: ComposerState;
+	function ComposerProbe({
+		sid,
+		runtime,
+	}: {
+		sid: string;
+		runtime: SessionRuntime;
+	}) {
+		const [draft, setDraft] = useState("");
+		const [images, setImages] = useState<PromptImage[]>([]);
+		composer = useComposer({
+			sessionId: sid,
+			source: runtime.source,
+			streaming: runtime.streaming,
+			cached: runtime.hydrated,
+			awaitingVisit: runtime.awaitingVisit,
+			canActOnVisit: runtime.canActOnVisit,
+			ended: false,
+			capabilities: null,
+			editor: { draft, images, setDraft, setImages },
+		});
+		return null;
+	}
 	function Probe({ route, focused }: { route: string; focused: boolean }) {
 		const sid = route.split("/")[0] ?? "";
-		readers.set(route, useSessionRuntime(sid, focused));
-		return null;
+		const runtime = useSessionRuntime(sid, focused);
+		readers.set(route, runtime);
+		return route === composerRoute
+			? createElement(ComposerProbe, { sid, runtime })
+			: null;
 	}
 	return {
 		show: (...routes: string[]) =>
@@ -98,6 +136,7 @@ function mountStack() {
 				),
 			),
 		read: (sid: string) => readers.get(sid),
+		composer: () => composer,
 		close: async () => {
 			await act(async () => root.unmount());
 			dom.dispose();
@@ -116,6 +155,11 @@ function transport(
 	gate?: (attempt: number) => Promise<void> | undefined,
 ) {
 	const requests: string[] = [];
+	const commands: {
+		path: string;
+		method: string | undefined;
+		body: unknown;
+	}[] = [];
 	const signals: (AbortSignal | null | undefined)[] = [];
 	const attempts: {
 		sid: string;
@@ -128,6 +172,14 @@ function transport(
 		const path = new URL(input instanceof Request ? input.url : input).pathname;
 		const sid = SESSION_EVENTS_PATH.exec(path)?.[1];
 		if (!sid) {
+			if (path.endsWith("/command")) {
+				commands.push({
+					path,
+					method: init?.method,
+					body: JSON.parse(String(init?.body)),
+				});
+				return Response.json({ ok: true, detail: "command accepted" });
+			}
 			if (path.endsWith("/history"))
 				return Response.json({ entries: [], has_more: false });
 			return Response.json({}, { status: 404 });
@@ -168,13 +220,18 @@ function transport(
 		}),
 	);
 	admission.relay = () => client;
-	return { attempts, requests, signals };
+	return { attempts, commands, requests, signals };
 }
 
-const frame = (sid: string) =>
+const frame = (
+	sid: string,
+	overrides?: { streaming?: boolean; activity?: string },
+	fixture = "sse/sse-projection-checkpoints-empty.json",
+) =>
 	`event: projection\ndata: ${JSON.stringify({
-		...(fixtureBody("sse/sse-projection-checkpoints-empty.json") as object),
+		...(fixtureBody(fixture) as object),
 		session_id: sid,
+		...overrides,
 	})}\n\n`;
 const advance = (ms: number) =>
 	act(async () => {
@@ -454,7 +511,10 @@ it("retires A's stream when switching to B and ignores A's late frame", async ()
 
 it("retires retained slots for A → B → A and restores the live reader on Back", async () => {
 	vi.useFakeTimers();
-	const { attempts, requests } = transport();
+	const backHeaders = Promise.withResolvers<void>();
+	const { attempts, requests } = transport(undefined, (attempt) =>
+		attempt === 4 ? backHeaders.promise : undefined,
+	);
 	const probe = mountStack();
 	const a = "stack-a";
 	const b = "stack-b";
@@ -469,6 +529,8 @@ it("retires retained slots for A → B → A and restores the live reader on Bac
 		expect(attempts[0]?.signal?.aborted).toBe(true);
 		await act(async () => attempts[1]?.send(frame(b)));
 		expect(probe.read(b)?.projection?.session_id).toBe(b);
+		const bEpoch = probe.read(b)?.streamArrivalEpoch;
+		expect(bEpoch).toEqual(expect.any(Number));
 
 		await probe.show(a, b, aAgain);
 		expect(attempts[1]?.signal?.aborted).toBe(true);
@@ -478,13 +540,92 @@ it("retires retained slots for A → B → A and restores the live reader on Bac
 
 		await probe.show(a, b);
 		expect(attempts[2]?.signal?.aborted).toBe(true);
-		// Back preserved B's reader and transcript: the fresh seed can wait.
+		// B was already live in its previous visit. Waiting on headers past
+		// the reconnect deadline still isn't an outage on this new first leg.
+		await advance(RECONNECT_DEADLINE_MS + 100);
+		expect(probe.read(b)?.connection.id).toBeNull();
 		expect(probe.read(b)?.projection?.session_id).toBe(b);
 		expect(requests).toEqual([a, b, a, b]);
-		await act(async () => attempts[3]?.send(frame(b)));
-		expect(probe.read(b)?.connected).toBe(true);
+		expect(attempts).toHaveLength(3);
+		await act(async () => backHeaders.resolve());
+		await act(async () => attempts[3]?.send(frame(b, { activity: "new B" })));
+		expect(probe.read(b)?.projection?.activity).toBe("new B");
+		expect(probe.read(b)?.streamArrivalEpoch).toBeGreaterThan(bEpoch ?? 0);
 	} finally {
+		backHeaders.resolve();
 		await probe.close();
+	}
+});
+
+it("retains the editor but cannot abort a different desktop turn before Back seeds", async () => {
+	const a = "busy-back-a";
+	const b = "busy-back-b";
+	const transcript = "sse/sse-projection-live-idle.json";
+	const backHeaders = Promise.withResolvers<void>();
+	const { attempts, commands } = transport(undefined, (attempt) =>
+		attempt === 3 ? backHeaders.promise : undefined,
+	);
+	const probe = mountStack(a);
+	try {
+		await probe.show(a);
+		await act(async () =>
+			attempts[0]?.send(
+				frame(a, { streaming: true, activity: "old turn" }, transcript),
+			),
+		);
+		const retainedRows = probe.read(a)?.entries.map((row) => row.id);
+		expect(retainedRows?.length).toBeGreaterThan(0);
+		await act(async () => probe.composer().setDraft("unsent draft"));
+		expect(probe.composer().controls.stopVisible).toBe(true);
+		const previousStop = probe.composer().stop;
+		const previousAnswer = probe.composer().answerApproval;
+		const previousSubmit = probe.composer().send;
+
+		await probe.show(a, b);
+		await act(async () => attempts[1]?.send(frame(b)));
+		await probe.show(a);
+		// The retained projection is still busy, and `beginStream` is not a seed.
+		expect(probe.read(a)?.projection?.activity).toBe("old turn");
+		expect(probe.read(a)?.entries.map((row) => row.id)).toEqual(retainedRows);
+		expect(probe.read(a)?.connected).toBe(true);
+		expect(probe.composer().draft).toBe("unsent draft");
+		expect(probe.composer().controls.stopVisible).toBe(false);
+		expect(probe.composer().controls.primary.disabled).toBe(true);
+		expect(probe.composer().controls.disabledReason).toBeNull();
+		await act(async () => {
+			expect(await probe.composer().stop()).toBe(false);
+			expect(await previousStop()).toBe(false);
+			previousAnswer("old-request", true, false);
+			previousSubmit();
+			probe.composer().send();
+		});
+		expect(commands).toEqual([]);
+
+		await act(async () => backHeaders.resolve());
+		await act(async () =>
+			attempts[2]?.send(
+				frame(a, { streaming: true, activity: "new turn" }, transcript),
+			),
+		);
+		expect(probe.read(a)?.projection?.activity).toBe("new turn");
+		expect(probe.composer().draft).toBe("unsent draft");
+		expect(probe.composer().controls.stopVisible).toBe(true);
+		expect(probe.composer().controls.primary.disabled).toBe(false);
+		await act(async () => {
+			expect(await previousStop()).toBe(false);
+			expect(await probe.composer().stop()).toBe(true);
+		});
+		expect(commands).toEqual([
+			{
+				path: `/api/sessions/${a}/command`,
+				method: "POST",
+				body: { op: "abort" },
+			},
+		]);
+	} finally {
+		backHeaders.resolve();
+		await probe.close();
+		resetTurnStopForTests();
 	}
 });
 
@@ -546,11 +687,19 @@ it("hands a same-session stream to a focused child and back without ending the a
 		await probe.show(parent, child);
 		expect(attempts[0]?.signal?.aborted).toBe(true);
 		await act(async () => attempts[1]?.send(frame(parent)));
-		expect(probe.read(child)?.connected).toBe(true);
+		const childEpoch = probe.read(child)?.streamArrivalEpoch;
+		expect(childEpoch).toEqual(expect.any(Number));
 		await probe.show(parent);
 		expect(attempts[1]?.signal?.aborted).toBe(true);
-		await act(async () => attempts[2]?.send(frame(parent)));
-		expect(probe.read(parent)?.connected).toBe(true);
+		expect(probe.read(parent)?.turnActionsReady).toBe(false);
+		await act(async () =>
+			attempts[2]?.send(frame(parent, { activity: "new parent seed" })),
+		);
+		expect(probe.read(parent)?.turnActionsReady).toBe(true);
+		expect(probe.read(parent)?.projection?.activity).toBe("new parent seed");
+		expect(probe.read(parent)?.streamArrivalEpoch).toBeGreaterThan(
+			childEpoch ?? 0,
+		);
 		expect(requests).toEqual([parent, parent, parent]);
 	} finally {
 		await probe.close();
