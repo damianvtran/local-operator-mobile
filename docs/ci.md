@@ -627,7 +627,7 @@ when the floor check names a higher minimum.
 
 | Value | Rule |
 |---|---|
-| version (JS / `app.json` / Android `versionName` / iOS `CFBundleShortVersionString`) | `vX.Y.Z` without the `v` when the ref is a tag; `0.0.0` otherwise |
+| version (JS / `app.json` / Android `versionName` / iOS `CFBundleShortVersionString`) | `X.Y.Z` from the release tag on a tag build; `X.Y.Z` from the highest reachable release tag in the protected signed iOS `main` job; `0.0.0` otherwise |
 | Android `versionCode`, iOS `CFBundleVersion`, internal builds | **the last release's counter plus the commits since it** — `base + git rev-list --count <last release tag>..HEAD`, and before the first release simply the commit count of the ref. Monotonic as the branch grows, identical for every workflow building the same commit, and stored nowhere |
 | Android `versionCode`, iOS `CFBundleVersion`, releases | **`release/build-number.txt`**, read as-is, and the release FAILS unless it is at least the floor: **one more than** the highest internal number `main` could claim — the greater of this commit's internal number (`base + commits since the last release`) and the one at the tip of `origin/main` (`floorFor` in `scripts/ci/version.ts`) |
 
@@ -690,14 +690,16 @@ Play rejects a duplicate upload — and the remedy is a new commit, or the count
 bump the release message asks for. That is deliberate: a number that moves while
 the code does not is a number nobody can trace back to a build.
 
-The non-tag version is `0.0.0` rather than the ADR's written `0.0.0-dev.<run>`
-because the same string reaches `CFBundleShortVersionString`, and Apple rejects a
-non-numeric short version at upload — which would break the internal TestFlight
-upload on every push to `main`. Monotonicity, the property both stores actually
-enforce, is carried by the build number. The dev string is printed as
-`display_version` in the run log and deliberately **not** exported into the job:
-nothing consumes it, and a variable nothing reads is how a version silently stops
-reaching an artefact.
+The protected signed iOS `main` job opts into `--testflight`. This uses the
+same reachable release tag for the numeric marketing version and the build-number
+base, so a fresh build is on the installed release's TestFlight train instead of
+the lower `0.0.0` train. Before the first reachable release, signed `main` builds
+fail rather than create a placeholder train. The release tag must have a valid
+counter, and the build must be on a later commit so it cannot reuse the release's
+number. Local, unsigned and Android branch builds still use `0.0.0`; tagged
+releases still use the tag and the release counter. Apple requires a numeric short
+version, so the `-dev.<build>` suffix is log-only (`display_version`), never
+exported into the job.
 
 `app.config.ts` reads the derived values from the environment
 (`LOCAL_OPERATOR_MOBILE_VERSION`, `LOCAL_OPERATOR_MOBILE_VERSION_CODE`) and writes
@@ -714,8 +716,8 @@ variable that no generated file consumes is invisible to every other gate here,
 so `android.yml` reads `versionName`/`versionCode` out of the built APK's manifest
 and `ios.yml` reads `CFBundleShortVersionString`/`CFBundleVersion` out of the
 built app's `Info.plist`, and each **fails** when the value is not the one the ref
-derived. That is the check that would have caught the version reaching nothing at
-all.
+derived. Both signed iOS lanes also check these two fields in the exported IPA's
+`Info.plist` before the artifact can be uploaded.
 
 **The same discipline covers the local-network configuration, which nothing in the
 JS bundle can prove.** `scripts/ci/native-config.ts` asserts, from built products

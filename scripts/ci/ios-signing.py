@@ -168,6 +168,15 @@ def verify(directory):
             raise SigningError("IPA bundle check failed")
         if info.get("ITSAppUsesNonExemptEncryption") is not False:
             raise SigningError("IPA export compliance flag check failed")
+    # Check the exported payload, not the generated project: a stale prebuild or
+    # an archive/export override could put the IPA on the wrong TestFlight train.
+    version = os.environ.get("LOCAL_OPERATOR_MOBILE_VERSION")
+    build = os.environ.get("LOCAL_OPERATOR_MOBILE_VERSION_CODE")
+    if not version or not build:
+        raise SigningError("Missing derived IPA version or build number")
+    for key, expected in (("CFBundleShortVersionString", version), ("CFBundleVersion", build)):
+        if info.get(key) != expected:
+            raise SigningError(f"IPA {key} mismatch with the derived version")
     embedded = plistlib.loads(run(["security", "cms", "-D", "-i", str(apps[0] / "embedded.mobileprovision")]))
     validate_profile(embedded, team, bundle, os.environ["LO_IOS_PROFILE_NAME"])
     if embedded["UUID"] != (directory / "profile-uuid.txt").read_text():
@@ -181,6 +190,7 @@ def verify(directory):
     entitlements = plistlib.loads(run(["codesign", "-d", "--entitlements", "-", "--xml", app]))
     validate_entitlements(entitlements, team, bundle)
     print("IPA codesign verified: Distribution identity, bundle/team, production aps-environment, get-task-allow=false")
+    print("IPA version verified: CFBundleShortVersionString and CFBundleVersion match the derived version")
 
 
 def cleanup(directory):

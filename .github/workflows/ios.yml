@@ -772,11 +772,10 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Derive the version from the ref
-        # On `main` this is the placeholder version with a commit-count build
-        # number: both stores compare the build number, and the placeholder is
-        # what a non-release build is allowed to be. See docs/ci.md.
-        run: node scripts/ci/version.ts --write
+      - name: Derive the TestFlight version from the latest reachable release
+        # Keep the commit-count build number, but use the installed release's
+        # numeric train so TestFlight can offer this build as an update.
+        run: node scripts/ci/version.ts --testflight --write
 
       - name: Generate the native project
         env:

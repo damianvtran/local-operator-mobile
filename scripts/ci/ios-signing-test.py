@@ -11,6 +11,7 @@ import subprocess
 import tempfile
 import sys
 import unittest
+import zipfile
 from unittest.mock import patch
 
 spec = importlib.util.spec_from_file_location("ios_signing", pathlib.Path(__file__).with_name("ios-signing.py"))
@@ -144,15 +145,24 @@ class SigningTests(unittest.TestCase):
             directory = root / "lo-ios-signing.synthetic"
             directory.mkdir()
             (root / "ipa").mkdir()
-            (root / "ipa" / "synthetic.ipa").touch()
-            app = directory / "verified" / "Payload" / "Synthetic.app"
-            app.mkdir(parents=True)
-            (app / "Info.plist").write_bytes(plistlib.dumps({"CFBundleIdentifier": BUNDLE, "ITSAppUsesNonExemptEncryption": False}))
+            ipa = root / "ipa" / "synthetic.ipa"
+            info = {"CFBundleIdentifier": BUNDLE, "ITSAppUsesNonExemptEncryption": False, "CFBundleShortVersionString": "0.1.0", "CFBundleVersion": "1519"}
+
+            def export(plist):
+                with zipfile.ZipFile(ipa, "w") as archive:
+                    archive.writestr("Payload/Synthetic.app/Info.plist", plistlib.dumps(plist))
+
+            export(info)
             (directory / "bundle-id.txt").write_text(BUNDLE)
             (directory / "profile-uuid.txt").write_text(UUID)
             entitlements = valid_profile()["Entitlements"]
 
             def fake_run(args):
+                if args[:3] == ["ditto", "-x", "-k"]:
+                    # Emulate ditto on Linux too; read the plist from the IPA,
+                    # not a preseeded extracted tree that could hide a wrong path.
+                    with zipfile.ZipFile(args[3]) as archive:
+                        archive.extractall(args[4])
                 if args[:3] == ["security", "cms", "-D"]:
                     return plistlib.dumps(valid_profile())
                 if "--extract-certificates" in args:
@@ -164,9 +174,18 @@ class SigningTests(unittest.TestCase):
                 return b""
 
             display = subprocess.CompletedProcess([], 0, b"", f"Authority=Apple Distribution: Synthetic\nTeamIdentifier={TEAM}\n".encode())
-            env = {"RUNNER_TEMP": str(root), "APPLE_TEAM_ID": TEAM, "LO_IOS_PROFILE_NAME": NAME}
+            env = {"RUNNER_TEMP": str(root), "APPLE_TEAM_ID": TEAM, "LO_IOS_PROFILE_NAME": NAME, "LOCAL_OPERATOR_MOBILE_VERSION": "0.1.0", "LOCAL_OPERATOR_MOBILE_VERSION_CODE": "1519"}
             with patch.dict(os.environ, env), patch.object(signing, "run", side_effect=fake_run), patch.object(signing.subprocess, "run", return_value=display):
                 signing.verify(directory)
+                for key, wrong in [("CFBundleShortVersionString", "0.0.0"), ("CFBundleVersion", "1517")]:
+                    with self.subTest(key=key):
+                        export({**info, key: wrong})
+                        with self.assertRaisesRegex(signing.SigningError, f"IPA {key} mismatch"):
+                            signing.verify(directory)
+                export(info)
+                with patch.dict(os.environ, {"LOCAL_OPERATOR_MOBILE_VERSION_CODE": ""}):
+                    with self.assertRaisesRegex(signing.SigningError, "Missing derived IPA version"):
+                        signing.verify(directory)
                 entitlements["get-task-allow"] = True
                 with self.assertRaisesRegex(signing.SigningError, "entitlement"):
                     signing.verify(directory)
