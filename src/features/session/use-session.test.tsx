@@ -153,6 +153,7 @@ const KEEPALIVE = ": keepalive\n\n";
 function transport(
 	status?: (attempt: number) => number,
 	gate?: (attempt: number) => Promise<void> | undefined,
+	commandGate?: (attempt: number) => Promise<void> | undefined,
 ) {
 	const requests: string[] = [];
 	const commands: {
@@ -178,6 +179,7 @@ function transport(
 					method: init?.method,
 					body: JSON.parse(String(init?.body)),
 				});
+				await commandGate?.(commands.length);
 				return Response.json({ ok: true, detail: "command accepted" });
 			}
 			if (path.endsWith("/history"))
@@ -624,6 +626,78 @@ it("retains the editor but cannot abort a different desktop turn before Back see
 		]);
 	} finally {
 		backHeaders.resolve();
+		await probe.close();
+		resetTurnStopForTests();
+	}
+});
+
+it("joins a held Stop on authoritative Back until an idle frame ends the turn", async () => {
+	vi.useFakeTimers();
+	const a = "stop-back-a";
+	const b = "stop-back-b";
+	const heldAbort = Promise.withResolvers<void>();
+	const { attempts, commands } = transport(undefined, undefined, (attempt) =>
+		attempt === 1 ? heldAbort.promise : undefined,
+	);
+	const probe = mountStack(a);
+	const busy = frame(a, { streaming: true, activity: "same turn" });
+	const abort = {
+		path: `/api/sessions/${a}/command`,
+		method: "POST",
+		body: { op: "abort" },
+	};
+	try {
+		await probe.show(a);
+		await act(async () => attempts[0]?.send(busy));
+		const firstVisitEpoch = probe.read(a)?.streamArrivalEpoch ?? 0;
+		let first!: Promise<boolean>;
+		await act(async () => {
+			first = probe.composer().stop();
+		});
+		expect(commands).toEqual([abort]);
+		expect(probe.composer().stopping).toBe(true);
+
+		await probe.show(a, b);
+		await act(async () => attempts[1]?.send(frame(b)));
+		expect(probe.read(a)?.awaitingVisit).toBe(true);
+		expect(probe.composer().stopping).toBe(false);
+		await probe.show(a);
+		expect(probe.read(a)?.awaitingVisit).toBe(true);
+		expect(probe.composer().controls.stopVisible).toBe(false);
+		expect(probe.composer().stopping).toBe(false);
+		await act(async () => expect(await probe.composer().stop()).toBe(false));
+		expect(commands).toEqual([abort]);
+
+		await act(async () => attempts[2]?.send(busy));
+		expect(probe.read(a)?.streamArrivalEpoch).toBeGreaterThan(firstVisitEpoch);
+		expect(probe.read(a)?.awaitingVisit).toBe(false);
+		let joined!: Promise<boolean>;
+		await act(async () => {
+			joined = probe.composer().stop();
+		});
+		expect(commands).toEqual([abort]);
+		expect(joined).toBe(first);
+		expect(probe.composer().stopping).toBe(true);
+		await act(async () => {
+			heldAbort.resolve();
+			expect(await joined).toBe(true);
+		});
+
+		await act(async () =>
+			attempts[2]?.send(frame(a, { streaming: false, activity: "" })),
+		);
+		expect(probe.read(a)?.awaitingVisit).toBe(false);
+		expect(probe.read(a)?.streaming).toBe(false);
+		expect(probe.composer().stopping).toBe(false);
+		await act(async () =>
+			attempts[2]?.send(frame(a, { streaming: true, activity: "next turn" })),
+		);
+		expect(probe.composer().controls.stopVisible).toBe(true);
+		expect(probe.composer().stopping).toBe(false);
+		await act(async () => expect(await probe.composer().stop()).toBe(true));
+		expect(commands).toEqual([abort, abort]);
+	} finally {
+		heldAbort.resolve();
 		await probe.close();
 		resetTurnStopForTests();
 	}

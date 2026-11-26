@@ -970,7 +970,12 @@ export const useComposer = (input: {
 			}
 		});
 	}, [endpoints, sessionId, canActOnVisit]);
-	const stopping = useTurnStopping(sessionId, streaming && !awaitingVisit);
+	// A retained or cached frame cannot tell us that the stopped turn ended.
+	const stopping = useTurnStopping(
+		sessionId,
+		awaitingVisit || cached ? null : streaming,
+		canActOnVisit,
+	);
 
 	/* ------------------------------------------------------------- the answers */
 

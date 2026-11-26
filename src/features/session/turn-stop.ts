@@ -13,8 +13,9 @@ import { useEffect, useSyncExternalStore } from "react";
  * and a turn that ended and restarted inside the line's 180 ms close tween
  * inherited the old turn's "stopping" (review R1-1, cases A and B). One flag per
  * session fixes all three: both controls read it, a second tap is a no-op, and
- * it is released when the turn ends (`alive` false) OR after a hard bound,
- * because a flag that outlives a lost event would leave Stop dead for good.
+ * it is released when an authoritative frame shows the turn ended OR after a
+ * hard bound, because a flag that outlives a lost event would leave Stop dead
+ * for good.
  */
 
 /** The longest a stop stays "pending" without the turn ending — the relay's
@@ -76,18 +77,23 @@ const subscribe = (listener: () => void): (() => void) => {
 	};
 };
 
-/** Whether a stop is pending for `sessionId`; releases it once the turn is no
- *  longer `alive`, so the next turn always starts with a working Stop. */
-export const useTurnStopping = (sessionId: string, alive: boolean): boolean => {
+/** Read the pending Stop without treating a missing/retained frame as idle.
+ * Recheck visit authority at the effect, since a focus commit can revoke it
+ * before a reader's observation is applied to the shared latch. */
+export const useTurnStopping = (
+	sessionId: string,
+	alive: boolean | null,
+	canObserveTurnEnd?: () => boolean,
+): boolean => {
 	const stopping = useSyncExternalStore(
 		subscribe,
 		() => pending.has(sessionId),
 		() => false,
 	);
 	useEffect(() => {
-		if (!alive) release(sessionId);
-	}, [alive, sessionId]);
-	return stopping;
+		if (alive === false && canObserveTurnEnd?.() !== false) release(sessionId);
+	}, [alive, canObserveTurnEnd, sessionId]);
+	return alive === true && stopping;
 };
 
 /** Test seam: forget every pending stop. */
