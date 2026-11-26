@@ -3,18 +3,27 @@ import {
 	axisText,
 	barBand,
 	type Cartesian,
+	categoryX,
 	fixedCountTicks,
 	formatExact,
+	formatPieShare,
+	HEAT_FLOOR,
+	heatmapModel,
 	histogramAxisLabels,
 	horizontalBars,
 	type InlineChart,
 	inlineChartModel,
+	LABEL_GAP,
+	type LabelBox,
+	labelWidth,
+	layoutXLabels,
 	niceTicks,
 	pieDiameterFor,
 	pieSlices,
 	plotHeightFor,
+	sideTooltipPlacement,
 	stepActive,
-	thinLabels,
+	stepCell,
 	tickLabels,
 	tickTarget,
 	tooltipPlacement,
@@ -41,6 +50,8 @@ const series = (
 		values,
 	})),
 });
+
+const COMPACT_SUFFIX = /K|M/;
 
 // The operator's Datadog spend series from the bug report (USD per day).
 const DATADOG: [string, number][] = [
@@ -81,23 +92,36 @@ describe("sizing (§1, §3)", () => {
 });
 
 describe("nice ticks (§2)", () => {
-	it("targets 5 ticks at 240 and 3 at 180", () => {
+	it("targets 5 ticks at 240 and never fewer than 4 (X1)", () => {
 		expect(tickTarget(240)).toBe(5);
-		expect(tickTarget(180)).toBe(3);
+		expect(tickTarget(180)).toBe(4);
 		expect(tickTarget(1000)).toBe(6);
 	});
 
-	it("fits the operator's 84–154 USD series to 80–160 without zero", () => {
-		const { left } = plot({
-			type: "line",
-			title: "Spend",
-			unit: "USD",
-			data: DATADOG,
-		});
-		expect(left.values).toEqual([80, 100, 120, 140, 160]);
-		expect(left.unit).toBe("USD");
-		expect(tickLabels(left, "en")).toEqual(["80", "100", "120", "140", "160"]);
-	});
+	// X1 regression: with a floor of 3 the 180 px phone plot fitted this
+	// series to 50–200 and the data filled under half the plot.
+	it.each([
+		[180, 360],
+		[240, 760],
+	])(
+		"fits the operator's 84–154 USD series to 80–160 without zero at a %i px plot (W %i)",
+		(height, width) => {
+			expect(plotHeightFor(width)).toBe(height);
+			const { left } = plot(
+				{ type: "line", title: "Spend", unit: "USD", data: DATADOG },
+				height,
+			);
+			expect(left.values).toEqual([80, 100, 120, 140, 160]);
+			expect(left.unit).toBe("USD");
+			expect(tickLabels(left, "en")).toEqual([
+				"80",
+				"100",
+				"120",
+				"140",
+				"160",
+			]);
+		},
+	);
 
 	it("uses the smallest {1, 2, 2.5, 5}×10^k step and the step's decimals", () => {
 		expect(niceTicks(0, 1, 5).values).toEqual([0, 0.2, 0.4, 0.6, 0.8, 1]);
@@ -182,6 +206,61 @@ describe("nice ticks (§2)", () => {
 		expect(formatExact(1.765, "fr")).toBe("1,765");
 	});
 
+	// X3: the fewest decimals (0–3) that keep every compact label distinct
+	// and unrounded, else full grouped numbers.
+	it.each([
+		[10_050, 10_300, ["10.0K", "10.1K", "10.2K", "10.3K"]],
+		[1_000_000, 1_004_000, ["1.000M", "1.001M", "1.002M", "1.003M", "1.004M"]],
+	])("gives compact ticks over %i–%i distinct decimals", (lo, hi, expected) => {
+		const { left } = plot(
+			{
+				type: "line",
+				title: "Close",
+				data: [
+					["a", lo],
+					["b", hi],
+				],
+			},
+			180,
+		);
+		const labels = tickLabels(left, "en");
+		expect(new Set(labels).size).toBe(labels.length);
+		expect(labels.every((label) => COMPACT_SUFFIX.test(label))).toBe(true);
+		expect(labels).toEqual(expected);
+	});
+
+	it("needs two decimals for 50-unit steps over 10,050", () => {
+		const labels = tickLabels(
+			{ ...niceTicks(10_050, 10_300, 6), compact: true, position: () => 0 },
+			"en",
+		);
+		expect(labels).toEqual([
+			"10.05K",
+			"10.10K",
+			"10.15K",
+			"10.20K",
+			"10.25K",
+			"10.30K",
+		]);
+	});
+
+	it("never rounds a compact tick to a value it is not", () => {
+		const labels = tickLabels(
+			{
+				lo: 10_000,
+				hi: 15_000,
+				step: 2500,
+				decimals: 0,
+				values: [10_000, 12_500, 15_000],
+				compact: true,
+				position: () => 0,
+			},
+			"en",
+		);
+		expect(labels).toContain("12.5K");
+		expect(labels).not.toContain("13K");
+	});
+
 	it("falls back to standard labels when compact ones would collide", () => {
 		const { left } = plot({
 			type: "line",
@@ -231,38 +310,119 @@ describe("x labels (§2)", () => {
 		expect(axisText("Plain")).toBe("Plain");
 	});
 
-	it("thins 32 categories at 360 so no two labels overlap and both ends show", () => {
-		const widths = Array.from({ length: 32 }, () => 6 * 6.6);
-		const plotWidth = 360 - 36 - 12;
-		const slot = plotWidth / 31;
-		const shown = thinLabels(widths, slot, true);
-		expect(shown[0]?.index).toBe(0);
-		expect(shown[shown.length - 1]?.index).toBe(31);
-		const extents = shown.map(({ index, maxWidth }, i) => {
-			const w = Math.min(widths[index] ?? 0, maxWidth);
-			const x = index * slot;
-			if (i === 0) return [x, x + w];
-			if (i === shown.length - 1) return [x - w, x];
-			return [x - w / 2, x + w / 2];
+	// X2: the boxes are measured with `labelWidth` — the function the
+	// renderer sizes each label with — at their real anchors.
+	const layout = (labels: string[], width: number, lineLike = true) => {
+		const x0 = 36;
+		const x1 = width - 12;
+		const { at } = categoryX(labels.length, x0, x1, lineLike);
+		return layoutXLabels({
+			texts: labels,
+			anchors: labels.map((_, i) => at(i)),
+			edges: lineLike,
+			lo: 0,
+			hi: width,
 		});
-		for (let i = 1; i < extents.length; i++)
-			expect(extents[i]?.[0]).toBeGreaterThan(extents[i - 1]?.[1] ?? 0);
+	};
+	const expectDisjoint = (boxes: LabelBox[], width: number) => {
+		for (const box of boxes) {
+			expect(box.left).toBeGreaterThanOrEqual(0);
+			expect(box.left + box.width).toBeLessThanOrEqual(width);
+			// The box is exactly the measured width of what is drawn.
+			expect(box.width).toBe(labelWidth(box.text));
+		}
+		for (let i = 1; i < boxes.length; i++) {
+			const prev = boxes[i - 1];
+			const cur = boxes[i];
+			if (!prev || !cur) continue;
+			expect(cur.left).toBeGreaterThanOrEqual(
+				prev.left + prev.width + LABEL_GAP,
+			);
+		}
+	};
+
+	it("thins 32 categories at 360 so no two labels overlap and both ends show", () => {
+		const labels = Array.from({ length: 32 }, (_, i) =>
+			i < 31 ? `Oct ${i + 1}` : "Nov 1",
+		);
+		const boxes = layout(labels, 360);
+		expect(boxes[0]).toMatchObject({ index: 0, text: "Oct 1", align: "left" });
+		expect(boxes.at(-1)).toMatchObject({
+			index: 31,
+			text: "Nov 1",
+			align: "right",
+		});
+		expect(boxes.length).toBeGreaterThan(2);
+		expectDisjoint(boxes, 360);
+	});
+
+	it.each([
+		["Week 3 of the quarterly reporting period", 360],
+		["Week 3 of the quarterly reporting period", 760],
+		["2025-11-16 14:00 UTC", 360],
+		["2025-11-16 14:00 UTC", 760],
+	])(
+		"never overlaps long labels (%s at %i), any count up to 32",
+		(label, width) => {
+			for (const lineLike of [true, false])
+				for (let n = 1; n <= 32; n++) {
+					const labels = Array.from({ length: n }, (_, i) =>
+						i % 2 ? `${label} ${i}` : label,
+					);
+					const boxes = layout(labels, width, lineLike);
+					expect(boxes[0]?.index).toBe(0);
+					expect(boxes.at(-1)?.index).toBe(n - 1);
+					expect(boxes.every((box) => box.text.length > 0)).toBe(true);
+					expectDisjoint(boxes, width);
+				}
+		},
+	);
+
+	// Natural widths of these labels in the app font (Figtree 12 px,
+	// tabular-nums), measured as inline-block spans in the harness browser.
+	// A box narrower than its text is ellipsized by the renderer ("W…").
+	it.each([
+		["Wed", 24.61],
+		["Mon", 23.8],
+		["50–100", 44.01],
+		["100–150", 51.48],
+		["Nov 24", 40.24],
+		["12K", 22.28],
+		["10.05K", 42.56],
+		["0123456789", 74.8],
+		["MMMMMMMMMM", 101.46],
+		["2025-11-16 14:00 UTC", 132.38],
+		["Week 3 of the quarterly reporting period", 216.45],
+		["Platform infrastructure", 122.09],
+	])("measures %s at least as wide as it draws (%f px)", (text, drawn) => {
+		expect(labelWidth(text)).toBeGreaterThanOrEqual(drawn);
+	});
+
+	it("keeps the first label and truncates the last when only the ends fit", () => {
+		const labels = Array.from(
+			{ length: 4 },
+			() => "Week 3 of the quarterly reporting period",
+		);
+		const boxes = layout(labels, 360);
+		expect(boxes.map(({ index }) => index)).toEqual([0, 3]);
+		expect(boxes[0]?.text).toBe("Week 3 of the quarterly reporting period");
+		expect(boxes[1]?.text.endsWith("…")).toBe(true);
+		expectDisjoint(boxes, 360);
 	});
 
 	it("drops the previous label when the forced last one collides", () => {
-		// 10 labels, stride 3 → 0, 3, 6, 9: the last is on stride already.
-		expect(
-			thinLabels(Array(10).fill(40), 20, false).map(({ index }) => index),
-		).toEqual([0, 3, 6, 9]);
-		// 9 labels, stride 3 → 0, 3, 6 then 8 collides with 6, so 6 goes.
-		expect(
-			thinLabels(Array(9).fill(40), 20, false).map(({ index }) => index),
-		).toEqual([0, 3, 8]);
+		const boxes = layout(
+			Array.from({ length: 9 }, () => "Label"),
+			150,
+			false,
+		);
+		expect(boxes.at(-1)?.index).toBe(8);
+		expectDisjoint(boxes, 150);
 	});
 
 	it("keeps every label when they fit", () => {
 		expect(
-			thinLabels([20, 20, 20], 60, false).map(({ index }) => index),
+			layout(["A", "B", "C"], 360, false).map(({ index }) => index),
 		).toEqual([0, 1, 2]);
 	});
 });
@@ -320,6 +480,34 @@ describe("bars (§1)", () => {
 		]);
 	});
 
+	// X6: an all-negative stack still has a whole; only mixed signs drop it.
+	it("keeps shares for same-sign negative stacks", () => {
+		const { bars } = plot(
+			series("stacked", [
+				[-3, 2],
+				[-1, -2],
+			]),
+		);
+		// Category A holds −3 and −1 (one sign); category B holds 2 and −2.
+		expect(bars?.map(({ share }) => share)).toEqual([
+			0.75,
+			0.25,
+			undefined,
+			undefined,
+		]);
+	});
+
+	// X6: percent mode keeps the share even on a mixed-sign category.
+	it("keeps shares in percent mode even with mixed signs", () => {
+		const { bars } = plot(
+			series("percent", [
+				[6, 2],
+				[-2, 2],
+			]),
+		);
+		expect(bars?.every(({ share }) => share !== undefined)).toBe(true);
+	});
+
 	it("keeps shares for percent stacks", () => {
 		const { bars } = plot(
 			series("percent", [
@@ -333,6 +521,16 @@ describe("bars (§1)", () => {
 });
 
 describe("pie (§3)", () => {
+	// X9: whole percent on every pie surface; "<1%" for a sliver.
+	it("formats pie shares as whole percents with a <1% floor", () => {
+		expect(formatPieShare(0.348, "en")).toBe("35%");
+		expect(formatPieShare(0.052, "en")).toBe("5%");
+		expect(formatPieShare(0.008, "en")).toBe("1%");
+		expect(formatPieShare(0.004, "en")).toBe("<1%");
+		expect(formatPieShare(0, "en")).toBe("0%");
+		expect(formatPieShare(1, "en")).toBe("100%");
+	});
+
 	it("sorts slices descending from 12 o'clock and closes the circle", () => {
 		const { slices } = pieSlices([
 			["A", 1],
@@ -439,6 +637,110 @@ describe("interaction (§5)", () => {
 			tooltipPlacement({ x: 299, top: 80, width: 60, height: 40, box: 300 })
 				.left,
 		).toBe(236);
+	});
+
+	// X4: a flipped tooltip near the plot floor stays above the x labels.
+	it("never leaves the plot vertically, even when flipped", () => {
+		const plotBottom = 192;
+		for (const [top, bottom] of [
+			[20, 190],
+			[4, 60],
+			[30, 192],
+		] as const) {
+			const place = tooltipPlacement({
+				x: 100,
+				top,
+				bottom,
+				width: 80,
+				height: 60,
+				box: 360,
+				maxBottom: plotBottom,
+			});
+			expect(place.top).toBeGreaterThanOrEqual(0);
+			expect(place.top + 60).toBeLessThanOrEqual(plotBottom);
+		}
+	});
+
+	// X5: beside the ring, never inside the outer radius.
+	it.each([1, -1] as const)(
+		"puts the wide donut tooltip beside the ring (side %i)",
+		(side) => {
+			const cx = 380;
+			const outer = 100;
+			const place = sideTooltipPlacement({
+				cx,
+				outer,
+				side,
+				y: 40,
+				width: 500,
+				height: 70,
+				box: 760,
+				boxHeight: 224,
+			});
+			const width = Math.min(500, place.maxWidth);
+			const [l, r] = [place.left, place.left + width];
+			if (side > 0) expect(l).toBeGreaterThanOrEqual(cx + outer + 8);
+			else expect(r).toBeLessThanOrEqual(cx - outer - 8);
+			expect(l).toBeGreaterThanOrEqual(4);
+			expect(r).toBeLessThanOrEqual(756);
+			expect(place.top).toBeGreaterThanOrEqual(0);
+			expect(place.top + 70).toBeLessThanOrEqual(224);
+		},
+	);
+
+	it("walks heatmap cells in reading order", () => {
+		expect(stepCell(null, 1, 3, 2)).toEqual({ category: 0, series: 0 });
+		expect(stepCell({ category: 2, series: 0 }, 1, 3, 2)).toEqual({
+			category: 0,
+			series: 1,
+		});
+		expect(stepCell({ category: 0, series: 1 }, -1, 3, 2)).toEqual({
+			category: 2,
+			series: 0,
+		});
+		expect(stepCell({ category: 2, series: 1 }, 1, 3, 2)).toEqual({
+			category: 2,
+			series: 1,
+		});
+	});
+});
+
+describe("heatmap (§4, X10)", () => {
+	it("mixes from the raised floor at the minimum to full accent at the maximum", () => {
+		const model = heatmapModel({
+			type: "heatmap",
+			title: "Load",
+			columns: ["Mon", "Tue"],
+			rowLabels: ["AM", "PM"],
+			rows: [
+				[0, 5],
+				[null, 10],
+			],
+		});
+		expect(HEAT_FLOOR).toBe(0.28);
+		expect([model.min, model.max]).toEqual([0, 10]);
+		expect(model.mix(0)).toBe(HEAT_FLOOR);
+		expect(model.mix(10)).toBe(1);
+		expect(model.mix(5)).toBeCloseTo(0.64);
+	});
+
+	it("paints flat data at the top and reports no data for all-null", () => {
+		const flat = heatmapModel({
+			type: "heatmap",
+			title: "Flat",
+			columns: ["A"],
+			rowLabels: ["R"],
+			rows: [[3]],
+		});
+		expect(flat.mix(3)).toBe(1);
+		const empty = heatmapModel({
+			type: "heatmap",
+			title: "Empty",
+			columns: ["A"],
+			rowLabels: ["R"],
+			rows: [[null]],
+		});
+		expect(empty.hasData).toBe(false);
 	});
 });
 

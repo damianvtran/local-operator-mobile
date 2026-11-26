@@ -117,7 +117,9 @@
 	"mobile.session.inline_chart.share": "{share} del total",
 	"mobile.session.inline_chart.total": "Total",
 	"mobile.session.inline_chart.more": "+{count} más",
-	"mobile.session.inline_chart.also": "También: {items}",
+	"mobile.session.inline_chart.also_label": "También:",
+	"mobile.session.inline_chart.no_data": "Sin datos",
+	"mobile.session.inline_chart.value_count": "Valores: {count}",
 	"mobile.session.inline_chart.position": "{index} de {count}",
 	"mobile.session.inline_chart.right_axis": "{label} · eje derecho"
 }

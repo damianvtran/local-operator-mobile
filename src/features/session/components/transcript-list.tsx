@@ -51,6 +51,7 @@ import {
 	anchoredScrollTop,
 	historyTopReached,
 } from "@/features/session/history-scroll";
+import { inlineChartsContainerTouch } from "@/features/session/inline-chart-touch";
 import {
 	bottomArrival,
 	contentArrival,
@@ -85,6 +86,16 @@ import {
 	textSelectionContainerTouchCancel,
 	textSelectionContainerTouchEnd,
 } from "@/features/session/text-selection";
+
+/* One list-level touch start serves both tap-outside rules: it may end a text
+ *  selection (on lift) and it dismisses a chart's pinned mark when the touch
+ *  began outside every chart (inline-chart.tsx, X7). Module scope keeps the
+ *  FlatList prop stable. */
+const onListTouchStart = () => {
+	textSelectionContainerTouch();
+	inlineChartsContainerTouch();
+};
+
 import {
 	edgeFadeLevels,
 	type ScrollPresence,
@@ -2341,7 +2352,8 @@ export const TranscriptList = ({
 					onScrollBeginDrag={onScrollBeginDrag}
 					// A TAP outside the selecting message ends the select mode; a
 					// drag that scrolls does not (start/end/cancel, `text-selection.ts`).
-					onTouchStart={textSelectionContainerTouch}
+					// A touch outside a chart also dismisses its pinned mark.
+					onTouchStart={onListTouchStart}
 					onTouchEnd={textSelectionContainerTouchEnd}
 					onTouchCancel={textSelectionContainerTouchCancel}
 					onScrollEndDrag={onScrollEndDrag}

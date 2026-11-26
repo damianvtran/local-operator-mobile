@@ -471,9 +471,17 @@
 		"role": "meta",
 		"note": "Last line of the tooltip of the grouped \"Other\" pie slice when it groups more items than it lists. {count} is the number not listed (always at least 1). No final full stop."
 	},
-	"mobile.session.inline_chart.also": {
+	"mobile.session.inline_chart.also_label": {
 		"role": "meta",
-		"note": "One line under a wide donut chart listing the slices too small to label on the chart. {items} is a comma-separated list of \"label percentage\" pairs, already formatted. No final full stop."
+		"note": "Lead-in label of the one line under a wide donut chart that lists the slices too small to label on the chart; each \"label percentage\" item follows it as its own tappable text. Keep the colon (or this language's equivalent); no final full stop."
+	},
+	"mobile.session.inline_chart.no_data": {
+		"role": "meta",
+		"note": "Value shown in a heatmap tooltip and read by screen readers for a cell that has no value (drawn hatched). Short phrase, no final full stop."
+	},
+	"mobile.session.inline_chart.value_count": {
+		"role": "meta",
+		"note": "Read by screen readers as the value of a chart before any mark is selected: how many values the chart holds, e.g. \"Values: 9\". {count} is a positive integer; the label-colon-number form avoids a plural. No final full stop."
 	},
 	"mobile.session.inline_chart.position": {
 		"role": "meta",

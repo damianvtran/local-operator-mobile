@@ -4,6 +4,7 @@ import {
 	chartPalette,
 	contrastRatio,
 	cvdDistance,
+	mixOklab,
 } from "@/ui/chart-palette";
 import { THEMES } from "@/ui/tokens.gen";
 
@@ -72,5 +73,20 @@ describe("chartPalette on every shipped theme", () => {
 		expect(colors[0]).toBe("#E0457B");
 		for (const color of colors.slice(1))
 			expect(contrastRatio(color, "#2a261d")).toBeGreaterThanOrEqual(3);
+	});
+});
+
+describe("mixOklab (heatmap §4, X10)", () => {
+	it("returns the endpoints at 1 and 0 and mixes between them", () => {
+		expect(mixOklab("#137742", "#f7f5ee", 1)).toBe("#137742");
+		expect(mixOklab("#137742", "#f7f5ee", 0)).toBe("#F7F5EE");
+		// The X10 floor on the light theme, measured for the PR remediation.
+		expect(mixOklab("#137742", "#f7f5ee", 0.28)).toBe("#BCD1BB");
+	});
+
+	it("keeps a 0 cell at the raised floor visibly off every light ground", () => {
+		const zero = mixOklab("#137742", "#f7f5ee", 0.28);
+		for (const ground of ["#f2ede3", "#f7f5ee", "#fcfbf7"])
+			expect(contrastRatio(zero, ground)).toBeGreaterThan(1.38); // measured 1.387:1 vs the light canvas
 	});
 });

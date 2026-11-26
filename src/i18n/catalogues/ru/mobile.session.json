@@ -117,7 +117,9 @@
 	"mobile.session.inline_chart.share": "{share} от общего",
 	"mobile.session.inline_chart.total": "Итого",
 	"mobile.session.inline_chart.more": "ещё {count}",
-	"mobile.session.inline_chart.also": "Также: {items}",
+	"mobile.session.inline_chart.also_label": "Также:",
+	"mobile.session.inline_chart.no_data": "Нет данных",
+	"mobile.session.inline_chart.value_count": "Значений: {count}",
 	"mobile.session.inline_chart.position": "{index} из {count}",
 	"mobile.session.inline_chart.right_axis": "{label} · правая ось"
 }

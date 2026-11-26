@@ -17,20 +17,43 @@
  *   scale and font apply; widths use the spec's 6.6 px/char estimate × scale.
  * - The tooltip is an absolutely positioned `View` sibling of the `Svg` (§8),
  *   `pointerEvents="none"`, so it never changes layout or steals a touch.
+ * - Every chart root is pinned `direction: "ltr"` (X8). Plot geometry is
+ *   physical — the value axis grows rightwards, x labels anchor at measured
+ *   pixels — so under an RTL locale (ur) the root must not mirror flex rows or
+ *   flip `textAlign`; the physical `left`/`text-right` uses below rely on it
+ *   and are allowlisted in `src/i18n/__tests__/physical-edges.test.ts`.
  */
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+	useCallback,
+	useEffect,
+	useId,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
 import {
 	type AccessibilityActionEvent,
 	AccessibilityInfo,
 	Animated,
 	type LayoutChangeEvent,
 	PanResponder,
+	type PanResponderCallbacks,
 	Platform,
 	Pressable,
 	Text,
 	View,
 } from "react-native";
-import Svg, { Circle, Line, Path, Polyline } from "react-native-svg";
+import Svg, {
+	Circle,
+	Defs,
+	Line,
+	LinearGradient,
+	Path,
+	Pattern,
+	Polyline,
+	Rect,
+	Stop,
+} from "react-native-svg";
 import {
 	type ActiveMark,
 	axisText,
@@ -38,32 +61,48 @@ import {
 	type Cartesian,
 	CHAR_WIDTH,
 	type ChartStep,
+	categoryX,
 	describeMark,
 	formatExact,
+	formatPieShare,
 	formatShare,
+	HEAT_FLOOR,
+	type HeatmapChart,
 	HORIZONTAL_ROW,
+	heatmapModel,
+	heatRowHeight,
 	histogramAxisLabels,
 	horizontalBarModel,
 	horizontalBars,
 	type InlineChart,
 	inlineChartModel,
 	keyStep,
+	type LabelBox,
+	labelWidth,
+	layoutXLabels,
 	NARROW_WIDTH,
 	type Pie,
 	PLOT_MARGIN,
+	type PlotChart,
 	pieDiameterFor,
 	plotHeightFor,
+	sideTooltipPlacement,
 	stepActive,
-	thinLabels,
+	stepCell,
 	tickLabels,
 	tooltipPlacement,
 	withUnit,
 } from "@/features/session/inline-chart-model";
+import {
+	noteChartTouch,
+	touchOwner,
+} from "@/features/session/inline-chart-touch";
 import type { CategoryChart } from "@/features/session/inline-ui-parts";
 import { t } from "@/i18n";
 import { useTheme } from "@/ui/appearance";
-import { contrastRatio } from "@/ui/chart-palette";
+import { contrastRatio, mixOklab } from "@/ui/chart-palette";
 import { useShadow } from "@/ui/elevation";
+import { lineBoxPt } from "@/ui/text-scale";
 import { useTextScale } from "@/ui/text-scale-provider";
 import type { ColorRole } from "@/ui/tokens.gen";
 
@@ -84,9 +123,15 @@ const SCRUB_SLOP = 8;
 const SCATTER_HIT = 32;
 // §7 — one entrance fade on mount.
 const FADE_MS = 180;
-// Text-meta line box (12 px × 1.4) used to place one-line labels.
-const META_LINE = 17;
+// §5 — the touch-target floor for legend rows and "Also:" items (Q6).
+const TOUCH_MIN = 44;
 
+/** The text-meta line box at the reader's scale (the one derivation, R8). */
+const metaLine = (fontScale: number) => lineBoxPt("meta", fontScale);
+/** §1 horizontal-bar row: 28 (16 bar + 12 gap), grown with the text scale so
+ * row labels never overlap at large type (R4). */
+export const horizontalRow = (fontScale: number) =>
+	Math.max(HORIZONTAL_ROW, Math.ceil(metaLine(fontScale)) + 8);
 const seriesColor = (paint: Paint, i: number) =>
 	paint.chart[i % paint.chart.length] ?? paint.colors.accent;
 const textWidth = (text: string, fontScale: number) =>
@@ -97,12 +142,28 @@ const sameMark = (a: ActiveMark | null, b: ActiveMark | null) =>
 
 type TooltipRow = { color?: string; label?: string; value: string };
 type TooltipContent = { title?: string; rows: TooltipRow[]; notes?: string[] };
-type Anchor = { x: number; top: number; bottom?: number };
+type Size = { width: number; height: number };
+/** Where a tooltip of a measured size goes, plus its width cap. */
+type Placement = {
+	place: (size: Size) => { left: number; top: number };
+	maxWidth: number;
+};
 type MarkInfo = {
 	tooltip: TooltipContent;
-	anchor: Anchor;
+	placement: Placement;
 	description: string;
 };
+
+/** §5 / X4: above the mark, flipped below, never outside [0, maxBottom]. */
+const aboveMark = (
+	anchor: { x: number; top: number; bottom?: number },
+	box: number,
+	maxBottom: number,
+): Placement => ({
+	place: ({ width, height }) =>
+		tooltipPlacement({ ...anchor, width, height, box, maxBottom }),
+	maxWidth: Math.min(256, box - 8),
+});
 
 /**
  * The root owns the accessibility value and live region; each plot reports
@@ -125,27 +186,16 @@ function useReportMark(
 /** §5 tooltip: elevated, radius 6, platform shadow, no border. */
 function ChartTooltip({
 	content,
-	anchor,
-	box,
+	placement,
 	paint,
 }: {
 	content: TooltipContent;
-	anchor: Anchor;
-	box: number;
+	placement: Placement;
 	paint: Paint;
 }) {
 	const shadow = useShadow("overlay");
-	const [size, setSize] = useState<{ width: number; height: number } | null>(
-		null,
-	);
-	const place = tooltipPlacement({
-		x: anchor.x,
-		top: anchor.top,
-		bottom: anchor.bottom,
-		width: size?.width ?? 0,
-		height: size?.height ?? 0,
-		box,
-	});
+	const [size, setSize] = useState<Size | null>(null);
+	const place = placement.place(size ?? { width: 0, height: 0 });
 	return (
 		<View
 			pointerEvents="none"
@@ -163,7 +213,7 @@ function ChartTooltip({
 					position: "absolute",
 					left: place.left,
 					top: place.top,
-					maxWidth: Math.min(256, box - 8),
+					maxWidth: placement.maxWidth,
 					backgroundColor: paint.colors.elevated,
 					borderRadius: 6,
 					paddingHorizontal: 8,
@@ -258,7 +308,8 @@ function barPath(
 	return `M${x + w} ${y}H${x + rr}Q${x} ${y} ${x} ${y + rr}V${y + h - rr}Q${x} ${y + h} ${x + rr} ${y + h}H${x + w}Z`;
 }
 
-/** Measured once per chart: the cartesian frame in pixels. */
+/** The cartesian frame in pixels. Memoised by its inputs (R3): a scrub or
+ * hover re-render must not rebuild tick labels and their number formats. */
 function useCartesianFrame(
 	model: Cartesian,
 	width: number,
@@ -267,6 +318,20 @@ function useCartesianFrame(
 	percent: boolean,
 ) {
 	const { fontScale, locale } = paint;
+	return useMemo(
+		() => cartesianFrame(model, width, plotHeight, fontScale, locale, percent),
+		[model, width, plotHeight, fontScale, locale, percent],
+	);
+}
+
+function cartesianFrame(
+	model: Cartesian,
+	width: number,
+	plotHeight: number,
+	fontScale: number,
+	locale: string,
+	percent: boolean,
+) {
 	const leftLabels = tickLabels(model.left, locale, percent);
 	const rightLabels = model.right ? tickLabels(model.right, locale) : [];
 	const widest = (labels: string[]) =>
@@ -280,16 +345,15 @@ function useCartesianFrame(
 	const y1 = y0 + plotHeight;
 	const bottom = Math.max(
 		PLOT_MARGIN.bottom,
-		Math.ceil(META_LINE * fontScale) + 6,
+		Math.ceil(metaLine(fontScale)) + 6,
 	);
 	const pw = x1 - x0;
 	const n = model.categories.length;
 	const lineLike = model.variant === "line" || model.variant === "dual";
-	const slot = lineLike ? (n > 1 ? pw / (n - 1) : pw) : pw / Math.max(1, n);
-	const xAt = (i: number) =>
-		lineLike ? (n > 1 ? x0 + i * slot : x0 + pw / 2) : x0 + (i + 0.5) * slot;
+	const { slot, at: xAt } = categoryX(n, x0, x1, lineLike);
 	const yAt = (position: number) => y1 - position * plotHeight;
 	return {
+		width,
 		leftLabels,
 		rightLabels,
 		x0,
@@ -305,7 +369,7 @@ function useCartesianFrame(
 	};
 }
 
-type Frame = ReturnType<typeof useCartesianFrame>;
+type Frame = ReturnType<typeof cartesianFrame>;
 
 function cartesianMark(
 	model: Cartesian,
@@ -341,7 +405,11 @@ function cartesianMark(
 		const cy = frame.yAt(point.y);
 		return {
 			tooltip: { rows: [{ value: xText }, { value: yText }] },
-			anchor: { x: cx, top: cy - 6, bottom: cy + 6 },
+			placement: aboveMark(
+				{ x: cx, top: cy - 6, bottom: cy + 6 },
+				frame.width,
+				frame.y1,
+			),
 			description: describeMark([xText, yText], position),
 		};
 	}
@@ -361,7 +429,11 @@ function cartesianMark(
 		const focus = model.lines[active.series] ?? model.lines[0];
 		return {
 			tooltip: { title: label, rows },
-			anchor: { x, top: Math.min(...ys), bottom: Math.max(...ys) },
+			placement: aboveMark(
+				{ x, top: Math.min(...ys), bottom: Math.max(...ys) },
+				frame.width,
+				frame.y1,
+			),
 			description: describeMark(
 				[
 					label,
@@ -401,14 +473,20 @@ function cartesianMark(
 		model.variant === "grouped"
 			? (band.offsets[bar.series] ?? 0) + band.width / 2
 			: 0;
+	// X4: `bar` is the active SEGMENT, so a stacked/percent tooltip anchors at
+	// the hovered segment rather than the top of the whole stack.
 	const top = frame.yAt(Math.max(bar.from, bar.to));
 	return {
 		tooltip: { title: label, rows, notes },
-		anchor: {
-			x: centre + offset,
-			top,
-			bottom: frame.yAt(Math.min(bar.from, bar.to)),
-		},
+		placement: aboveMark(
+			{
+				x: centre + offset,
+				top,
+				bottom: frame.yAt(Math.min(bar.from, bar.to)),
+			},
+			frame.width,
+			frame.y1,
+		),
 		description: describeMark(
 			[
 				label,
@@ -490,130 +568,110 @@ function cartesianHit(
 	return { category, series: 0 };
 }
 
-/** One gesture model for every plot (§5 Touch). */
-function usePlotGesture({
-	hit,
-	active,
-	setActive,
-	scrub,
-}: {
+type GestureInput = {
 	hit: (x: number, y: number) => ActiveMark | null;
 	active: ActiveMark | null;
 	setActive: (mark: ActiveMark | null) => void;
 	scrub: boolean;
-}) {
+};
+
+/** One gesture model for every plot (§5 Touch, X7). */
+function usePlotGesture(input: GestureInput) {
 	// The responder is created once; the latest closures ride in a ref.
-	const latest = useRef({ hit, active, setActive, scrub });
-	latest.current = { hit, active, setActive, scrub };
-	const state = useRef({ x: 0, y: 0, scrubbing: false });
+	const latest = useRef(input);
+	latest.current = input;
 	return useMemo(
-		() =>
-			PanResponder.create({
-				// Taps need the touch from its start. Until a horizontal drag passes
-				// the slop, any ancestor (the transcript's ScrollView) that asks for
-				// the gesture gets it, so vertical scrolling is never captured.
-				onStartShouldSetPanResponder: () => true,
-				onMoveShouldSetPanResponder: (_, g) =>
-					Math.abs(g.dx) > SCRUB_SLOP && Math.abs(g.dx) > Math.abs(g.dy),
-				onPanResponderGrant: ({ nativeEvent }) => {
-					state.current = {
-						x: nativeEvent.locationX,
-						y: nativeEvent.locationY,
-						scrubbing: false,
-					};
-				},
-				onPanResponderMove: (_, g) => {
-					const s = state.current;
-					if (
-						!s.scrubbing &&
-						latest.current.scrub &&
-						Math.abs(g.dx) > SCRUB_SLOP &&
-						Math.abs(g.dx) > Math.abs(g.dy)
-					)
-						s.scrubbing = true;
-					if (s.scrubbing) {
-						// Start point + delta: `locationX` of a move event is relative
-						// to whatever view is under the finger, not this overlay.
-						const mark = latest.current.hit(s.x + g.dx, s.y + g.dy);
-						if (mark) latest.current.setActive(mark);
-					}
-				},
-				onPanResponderTerminationRequest: () => !state.current.scrubbing,
-				onPanResponderRelease: (_, g) => {
-					const s = state.current;
-					if (!s.scrubbing && Math.hypot(g.dx, g.dy) <= SCRUB_SLOP) {
-						const mark = latest.current.hit(s.x, s.y);
-						// Tap the same mark again (or empty space) to dismiss.
-						latest.current.setActive(
-							mark && !sameMark(mark, latest.current.active) ? mark : null,
-						);
-					}
-					s.scrubbing = false;
-				},
-				onPanResponderTerminate: () => {
-					state.current.scrubbing = false;
-				},
-			}),
+		() => PanResponder.create(plotGestureConfig(() => latest.current)),
 		[],
 	);
 }
 
-function XLabels({
-	labels,
-	frame,
-	edges,
-	fontScale,
-	width,
-}: {
-	labels: string[];
-	frame: Frame;
-	edges: boolean;
-	fontScale: number;
-	width: number;
-}) {
-	const texts = labels.map(axisText);
-	const widths = texts.map((text) => textWidth(text, fontScale));
-	const shown = thinLabels(widths, frame.slot, edges);
-	const last = labels.length - 1;
+/**
+ * The responder callbacks, separate from the hook so their contract is
+ * testable without a native responder system.
+ *
+ * - A tap is decided on LIFT, within an 8 px slop: tap a mark to pin it, the
+ *   same mark (or empty plot) to dismiss.
+ * - A horizontal drag past the slop scrubs line charts, and only re-renders
+ *   when the mark under the finger changes (R3).
+ * - Termination — a cancelled touch, or the transcript's scroll view taking
+ *   the gesture — clears any pinned mark and its dimming (X7).
+ */
+export function plotGestureConfig(
+	get: () => GestureInput,
+): PanResponderCallbacks {
+	const state = { x: 0, y: 0, scrubbing: false };
+	return {
+		// Taps need the touch from its start. Until a horizontal drag passes the
+		// slop, an ancestor that asks for the gesture gets it
+		// (`onPanResponderTerminationRequest`).
+		onStartShouldSetPanResponder: () => true,
+		// R2: PanResponder's default answer is `true`, which on Android calls
+		// `requestDisallowInterceptTouchEvent(true)` up the parent chain
+		// (JSResponderHandler) — the transcript's NATIVE ScrollView could then
+		// never intercept a vertical drag that starts on a chart. Not blocking
+		// keeps scrolling native; scrubbing still works because a vertical
+		// scroller intercepts only vertical travel.
+		onShouldBlockNativeResponder: () => false,
+		onMoveShouldSetPanResponder: (_, g) =>
+			Math.abs(g.dx) > SCRUB_SLOP && Math.abs(g.dx) > Math.abs(g.dy),
+		onPanResponderGrant: ({ nativeEvent }) => {
+			state.x = nativeEvent.locationX;
+			state.y = nativeEvent.locationY;
+			state.scrubbing = false;
+		},
+		onPanResponderMove: (_, g) => {
+			const latest = get();
+			if (
+				!state.scrubbing &&
+				latest.scrub &&
+				Math.abs(g.dx) > SCRUB_SLOP &&
+				Math.abs(g.dx) > Math.abs(g.dy)
+			)
+				state.scrubbing = true;
+			if (!state.scrubbing) return;
+			// Start point + delta: `locationX` of a move event is relative to
+			// whatever view is under the finger, not this overlay.
+			const mark = latest.hit(state.x + g.dx, state.y + g.dy);
+			if (mark && !sameMark(mark, latest.active)) latest.setActive(mark);
+		},
+		onPanResponderTerminationRequest: () => !state.scrubbing,
+		onPanResponderRelease: (_, g) => {
+			const latest = get();
+			if (!state.scrubbing && Math.hypot(g.dx, g.dy) <= SCRUB_SLOP) {
+				const mark = latest.hit(state.x, state.y);
+				// Tap the same mark again (or empty space) to dismiss.
+				latest.setActive(mark && !sameMark(mark, latest.active) ? mark : null);
+			}
+			state.scrubbing = false;
+		},
+		onPanResponderTerminate: () => {
+			state.scrubbing = false;
+			get().setActive(null);
+		},
+	};
+}
+
+/** Axis labels at the boxes `layoutXLabels` measured (X2): the box drawn is
+ * the box tested, so shown labels never overlap. */
+function AxisLabels({ boxes, top }: { boxes: LabelBox[]; top: number }) {
 	return (
 		<>
-			{shown.map(({ index, maxWidth }) => {
-				const text = texts[index] ?? "";
-				// The box is the label's whole allowance (k·slot − 8, §2) rather
-				// than its estimated width: alignment keeps the anchor, and only a
-				// label that really exceeds its room truncates.
-				const w = Math.max(8, maxWidth);
-				const x = frame.xAt(index);
-				const anchored =
-					edges && labels.length > 1
-						? index === 0
-							? x
-							: index === last
-								? x - w
-								: x - w / 2
-						: x - w / 2;
-				const left = Math.max(0, Math.min(width - w, anchored));
-				return (
-					<Text
-						key={index}
-						className="absolute text-meta tabular-nums text-ink-muted"
-						numberOfLines={1}
-						style={{
-							left,
-							width: w,
-							top: frame.y1 + 6,
-							textAlign:
-								edges && labels.length > 1 && index === 0
-									? "left"
-									: edges && labels.length > 1 && index === last
-										? "right"
-										: "center",
-						}}
-					>
-						{text}
-					</Text>
-				);
-			})}
+			{boxes.map((box, i) => (
+				<Text
+					key={i}
+					className="absolute text-meta tabular-nums text-ink-muted"
+					numberOfLines={1}
+					style={{
+						left: box.left,
+						width: box.width,
+						top,
+						textAlign: box.align,
+					}}
+				>
+					{box.text}
+				</Text>
+			))}
 		</>
 	);
 }
@@ -682,12 +740,35 @@ function CartesianPlot({
 	const lineOpacity = (series: number) =>
 		active && multi && series !== active.series ? DIM : 1;
 	const zeroInside = model.left.lo < 0 && model.left.hi > 0;
-	const labelBox = META_LINE * fontScale;
-	const xAxisLabels = model.xAxis && tickLabels(model.xAxis, locale);
+	const labelBox = metaLine(fontScale);
 	const histogram = model.variant === "histogram";
-	const intervals = histogram
-		? histogramAxisLabels(model.categories)
-		: undefined;
+	const intervals = useMemo(
+		() => (histogram ? histogramAxisLabels(model.categories) : undefined),
+		[histogram, model],
+	);
+	// X2: scatter's numeric x ticks and category labels share one layout,
+	// edge-anchored for line-like charts and scatter, centred for bars.
+	const xBoxes = useMemo(() => {
+		const xAxis = model.xAxis;
+		if (xAxis)
+			return layoutXLabels({
+				texts: tickLabels(xAxis, locale),
+				anchors: xAxis.values.map((v) => x0 + xAxis.position(v) * pw),
+				edges: true,
+				lo: 0,
+				hi: width,
+				fontScale,
+			});
+		const labels = intervals ? intervals.labels : model.categories;
+		return layoutXLabels({
+			texts: labels.map(axisText),
+			anchors: labels.map((_, i) => xAt(i)),
+			edges: frame.lineLike,
+			lo: 0,
+			hi: width,
+			fontScale,
+		});
+	}, [model, intervals, locale, x0, pw, xAt, frame.lineLike, width, fontScale]);
 	const caption = chart.type === "scatter" ? chart.xLabel : intervals?.unit;
 	return (
 		<>
@@ -855,40 +936,10 @@ function CartesianPlot({
 						{frame.rightLabels[i] ?? ""}
 					</Text>
 				))}
-				{model.xAxis && xAxisLabels ? (
-					model.xAxis.values.map((v, i) => {
-						const label = xAxisLabels[i] ?? "";
-						const w = Math.ceil(textWidth(label, fontScale) + 4);
-						const x = x0 + (model.xAxis?.position(v) ?? 0) * pw;
-						const last = model.xAxis ? model.xAxis.values.length - 1 : 0;
-						const anchored = i === 0 ? x : i === last ? x - w : x - w / 2;
-						return (
-							<Text
-								key={`x${i}`}
-								className="absolute text-center text-meta tabular-nums text-ink-muted"
-								numberOfLines={1}
-								style={{
-									left: Math.max(0, Math.min(width - w, anchored)),
-									width: w,
-									top: y1 + 6,
-								}}
-							>
-								{label}
-							</Text>
-						);
-					})
-				) : (
-					<XLabels
-						labels={intervals ? [...intervals.labels] : model.categories}
-						frame={frame}
-						edges={frame.lineLike}
-						fontScale={fontScale}
-						width={width}
-					/>
-				)}
+				<AxisLabels boxes={xBoxes} top={y1 + 6} />
 				<View
 					{...gesture.panHandlers}
-					style={{ position: "absolute", left: 0, top: 0, right: 0, bottom: 0 }}
+					className="absolute inset-0"
 					onPointerMove={(event) => {
 						if (event.nativeEvent.pointerType !== "mouse") return;
 						const mark = hit(
@@ -904,8 +955,7 @@ function CartesianPlot({
 				{info ? (
 					<ChartTooltip
 						content={info.tooltip}
-						anchor={info.anchor}
-						box={width}
+						placement={info.placement}
 						paint={paint}
 					/>
 				) : null}
@@ -945,7 +995,9 @@ function HorizontalBarPlot({
 			width * 0.4,
 			Math.max(
 				PLOT_MARGIN.minLeft,
-				...labels.map((l) => textWidth(l, fontScale)),
+				// Row labels share the axis-label measure, so a wide glyph
+				// never ellipsizes a label the gutter was sized to hold.
+				...labels.map((l) => labelWidth(l, fontScale)),
 			) + 8,
 		),
 	);
@@ -957,12 +1009,13 @@ function HorizontalBarPlot({
 	);
 	const ticks = tickLabels(model.left, locale);
 	const top = 4;
-	const plotBottom = top + n * HORIZONTAL_ROW;
-	const height =
-		plotBottom +
-		Math.max(PLOT_MARGIN.bottom, Math.ceil(META_LINE * fontScale) + 6);
+	const line = metaLine(fontScale);
+	const row = horizontalRow(fontScale);
+	const plotBottom = top + n * row;
+	const height = plotBottom + Math.max(PLOT_MARGIN.bottom, Math.ceil(line) + 6);
 	const xAt = (position: number) => gutter + position * plotWidth;
-	const rowTop = (i: number) => top + i * HORIZONTAL_ROW + 6;
+	// The 16 px bar sits centred in its row, whatever the row's height.
+	const rowTop = (i: number) => top + i * row + (row - 16) / 2;
 	const activeBar = active ? model.bars?.[active.category] : undefined;
 	const info: MarkInfo | null =
 		active && activeBar
@@ -978,11 +1031,15 @@ function HorizontalBarPlot({
 							},
 						],
 					},
-					anchor: {
-						x: xAt(Math.max(activeBar.from, activeBar.to)),
-						top: rowTop(active.category),
-						bottom: rowTop(active.category) + 16,
-					},
+					placement: aboveMark(
+						{
+							x: xAt(Math.max(activeBar.from, activeBar.to)),
+							top: rowTop(active.category),
+							bottom: rowTop(active.category) + 16,
+						},
+						width,
+						plotBottom,
+					),
 					description: describeMark(
 						[
 							chart.data[active.category]?.[0],
@@ -997,12 +1054,21 @@ function HorizontalBarPlot({
 			: null;
 	useReportMark(onMark, info, [n, 1]);
 	const hit = (_x: number, y: number) => {
-		const category = Math.floor((y - top) / HORIZONTAL_ROW);
+		const category = Math.floor((y - top) / row);
 		return category >= 0 && category < n ? { category, series: 0 } : null;
 	};
 	const gesture = usePlotGesture({ hit, active, setActive, scrub: false });
+	const tickBoxes = layoutXLabels({
+		texts: ticks,
+		anchors: model.left.values.map((v) => xAt(model.left.position(v))),
+		edges: false,
+		lo: 0,
+		hi: width,
+		fontScale,
+	});
 	return (
-		<View style={{ height }}>
+		// X8: physical geometry (labels in the left gutter, bars growing right).
+		<View style={{ height, direction: "ltr" }}>
 			<Svg aria-hidden width={width} height={height}>
 				{model.left.values.map((v, i) => (
 					<Line
@@ -1047,36 +1113,16 @@ function HorizontalBarPlot({
 					style={{
 						left: 0,
 						width: gutter - 8,
-						top: rowTop(i) + 8 - (META_LINE * fontScale) / 2,
+						top: rowTop(i) + 8 - line / 2,
 					}}
 				>
 					{text}
 				</Text>
 			))}
-			{model.left.values.map((v, i) => {
-				const label = ticks[i] ?? "";
-				const w = Math.ceil(textWidth(label, fontScale) + 4);
-				return (
-					<Text
-						key={`t${i}`}
-						className="absolute text-center text-meta tabular-nums text-ink-muted"
-						numberOfLines={1}
-						style={{
-							left: Math.max(
-								0,
-								Math.min(width - w, xAt(model.left.position(v)) - w / 2),
-							),
-							width: w,
-							top: plotBottom + 6,
-						}}
-					>
-						{label}
-					</Text>
-				);
-			})}
+			<AxisLabels boxes={tickBoxes} top={plotBottom + 6} />
 			<View
 				{...gesture.panHandlers}
-				style={{ position: "absolute", left: 0, top: 0, right: 0, bottom: 0 }}
+				className="absolute inset-0"
 				onPointerMove={(event) => {
 					if (event.nativeEvent.pointerType !== "mouse") return;
 					const mark = hit(
@@ -1092,8 +1138,7 @@ function HorizontalBarPlot({
 			{info ? (
 				<ChartTooltip
 					content={info.tooltip}
-					anchor={info.anchor}
-					box={width}
+					placement={info.placement}
 					paint={paint}
 				/>
 			) : null}
@@ -1174,6 +1219,31 @@ function relaxLabels(labels: OutsideLabel[], height: number) {
 	return labels;
 }
 
+/** §3 narrow legend: two columns of rows at least 44 tall (Q6), no gap, so
+ * neighbouring hit areas never overlap. */
+const legendRowHeight = (fontScale: number) =>
+	Math.max(TOUCH_MIN, Math.ceil(metaLine(fontScale)));
+
+/**
+ * The donut's laid-out height at `width`, legend and caption lines included:
+ * one function for the plot and the pre-layout reservation (R5), so a pie
+ * mounts at the height it ends at.
+ */
+export function donutHeight(pie: Pie, width: number, fontScale: number) {
+	const diameter = pieDiameterFor(width);
+	if (width >= NARROW_WIDTH) {
+		const small = pie.slices.some((slice) => slice.share < 0.03);
+		return diameter + 24 + (small ? 8 + legendRowHeight(fontScale) : 0);
+	}
+	const folded = pie.slices.some((slice) => slice.folded);
+	return (
+		diameter +
+		(folded ? Math.ceil(metaLine(fontScale)) : 0) +
+		8 +
+		Math.ceil(pie.slices.length / 2) * legendRowHeight(fontScale)
+	);
+}
+
 function DonutPlot({
 	chart,
 	paint,
@@ -1203,6 +1273,7 @@ function DonutPlot({
 	const cx = width / 2;
 	const cy = height / 2;
 	const tau = 2 * Math.PI;
+	const line = metaLine(fontScale);
 	const sliceLabel = (i: number) => {
 		const slice = pie.slices[i];
 		if (!slice) return "";
@@ -1217,6 +1288,8 @@ function DonutPlot({
 			: seriesColor(paint, slice.color);
 	};
 	const valueText = (n: number) => withUnit(formatExact(n, locale), chart.unit);
+	// X9: one whole-percent format for every share a pie shows.
+	const pct = (share: number) => formatPieShare(share, locale);
 	const activeSlice = active ? pie.slices[active.category] : undefined;
 	const position = active
 		? t("mobile.session.inline_chart.position", {
@@ -1225,28 +1298,22 @@ function DonutPlot({
 			})
 		: "";
 	const shareText = (share: number) =>
-		t("mobile.session.inline_chart.share", {
-			share: formatShare(share, locale),
-		});
+		t("mobile.session.inline_chart.share", { share: pct(share) });
 	const folded = activeSlice?.folded;
+	const more = (count: number) =>
+		t("mobile.session.inline_chart.more", { count });
 	const notes = folded
 		? [
 				...folded
 					.slice(0, 8)
 					.map(({ label, value }) => `${label} · ${valueText(value)}`),
-				...(folded.length > 8
-					? [
-							t("mobile.session.inline_chart.more", {
-								count: folded.length - 8,
-							}),
-						]
-					: []),
+				...(folded.length > 8 ? [more(folded.length - 8)] : []),
 			]
 		: undefined;
 	const mid = activeSlice
 		? ((activeSlice.start + activeSlice.end) / 2) * tau
 		: 0;
-	const [ax, ay] = polar(cx, cy, outer + 8, mid);
+	const [, ay = cy] = polar(cx, cy, outer + 8, mid);
 	const info: MarkInfo | null =
 		active && activeSlice
 			? {
@@ -1255,7 +1322,33 @@ function DonutPlot({
 						rows: [{ value: valueText(activeSlice.value) }],
 						notes: [shareText(activeSlice.share), ...(notes ?? [])],
 					},
-					anchor: { x: ax ?? cx, top: ay ?? cy, bottom: ay ?? cy },
+					placement: {
+						// X5: beside the ring on the slice's side, never over it.
+						place: (size) =>
+							sideTooltipPlacement({
+								cx,
+								outer,
+								side: mid < Math.PI ? 1 : -1,
+								y: ay,
+								width: size.width,
+								height: size.height,
+								box: width,
+								boxHeight: height,
+							}),
+						maxWidth: Math.min(
+							256,
+							sideTooltipPlacement({
+								cx,
+								outer,
+								side: mid < Math.PI ? 1 : -1,
+								y: ay,
+								width: 0,
+								height: 0,
+								box: width,
+								boxHeight: height,
+							}).maxWidth,
+						),
+					},
 					description: describeMark(
 						[
 							sliceLabel(active.category),
@@ -1298,9 +1391,32 @@ function DonutPlot({
 		: [];
 	const small = wide ? pie.slices.filter((slice) => slice.share < 0.03) : [];
 	const single = pie.slices.length === 1;
+	const hasOther = pie.slices.some((slice) => slice.folded);
+	// Q7: on a phone the centre readout is the tooltip and has no room for the
+	// folded list, so the line under the donut names up to 3 of them. Its
+	// height is reserved whenever the pie has an "Other" slice, so selecting it
+	// never pushes the legend down.
+	const foldedLine =
+		!wide && folded
+			? [
+					folded
+						.slice(0, 3)
+						.map(({ label }) => label)
+						.join(" · "),
+					...(folded.length > 3 ? [more(folded.length - 3)] : []),
+				].join(" · ")
+			: "";
+	// Q3: legend rows and "Also:" items mirror the chart's own adjustable
+	// element, so they are pointer/touch targets only, never extra tab stops.
+	const notFocusable = {
+		accessible: false,
+		focusable: false,
+		tabIndex: -1 as const,
+	};
 
 	return (
-		<View>
+		// X8: the ring, its labels and the legend columns are physical geometry.
+		<View style={{ direction: "ltr" }}>
 			<View style={{ height }}>
 				<Svg aria-hidden width={width} height={height}>
 					{pie.slices.map((slice, i) => {
@@ -1346,6 +1462,13 @@ function DonutPlot({
 					? pie.slices.map((slice, i) => {
 							const color = ringTextColor(fill(i));
 							if (slice.share < 0.08 || !color) return null;
+							const text = pct(slice.share);
+							// R4: the label must fit the band at the reader's text
+							// scale — along the slice's arc and across the ring.
+							const w = labelWidth(text, fontScale);
+							const arc =
+								(slice.end - slice.start) * tau * ((outer + inner) / 2);
+							if (w + 4 > arc || line + 2 > outer - inner) return null;
 							const angle = ((slice.start + slice.end) / 2) * tau;
 							const [x = 0, y = 0] = polar(cx, cy, (outer + inner) / 2, angle);
 							return (
@@ -1354,14 +1477,14 @@ function DonutPlot({
 									className="absolute text-center text-meta font-semibold tabular-nums"
 									numberOfLines={1}
 									style={{
-										left: x - 24,
-										width: 48,
-										top: y - (META_LINE * fontScale) / 2,
+										left: x - w / 2,
+										width: w,
+										top: y - line / 2,
 										color,
 										opacity: active && active.category !== i ? DIM : 1,
 									}}
 								>
-									{formatShare(slice.share, locale)}
+									{text}
 								</Text>
 							);
 						})
@@ -1379,14 +1502,12 @@ function DonutPlot({
 							style={{
 								left: side > 0 ? x : 0,
 								width: w,
-								top: y - (META_LINE * fontScale) / 2,
+								top: y - line / 2,
 								opacity: active && active.category !== index ? DIM : 1,
 							}}
 						>
 							{sliceLabel(index)}
-							<Text className="text-ink-muted">
-								{`  ${formatShare(slice.share, locale)}`}
-							</Text>
+							<Text className="text-ink-muted">{`  ${pct(slice.share)}`}</Text>
 						</Text>
 					);
 				})}
@@ -1421,13 +1542,13 @@ function DonutPlot({
 							className="text-center text-meta tabular-nums text-ink-muted"
 							numberOfLines={1}
 						>
-							{formatShare(activeSlice.share, locale)}
+							{pct(activeSlice.share)}
 						</Text>
 					) : null}
 				</View>
 				<View
 					{...gesture.panHandlers}
-					style={{ position: "absolute", left: 0, top: 0, right: 0, bottom: 0 }}
+					className="absolute inset-0"
 					onPointerMove={(event) => {
 						if (event.nativeEvent.pointerType !== "mouse") return;
 						const mark = hit(
@@ -1445,27 +1566,32 @@ function DonutPlot({
 				{wide && info ? (
 					<ChartTooltip
 						content={info.tooltip}
-						anchor={info.anchor}
-						box={width}
+						placement={info.placement}
 						paint={paint}
 					/>
 				) : null}
 			</View>
+			{!wide && hasOther ? (
+				<Text
+					className="text-center text-meta text-ink-muted"
+					numberOfLines={1}
+					style={{ minHeight: Math.ceil(line) }}
+				>
+					{foldedLine}
+				</Text>
+			) : null}
 			{!wide ? (
 				// §3 narrow legend: two columns, rows 'swatch · label · %', interactive.
-				<View
-					className="mt-2 flex-row flex-wrap"
-					style={{ rowGap: 8, columnGap: 16 }}
-				>
+				<View className="mt-2 flex-row flex-wrap" style={{ columnGap: 16 }}>
 					{pie.slices.map((slice, i) => (
 						<Pressable
 							key={i}
-							accessible={false}
+							{...notFocusable}
 							onPress={() => pick(i)}
-							hitSlop={{ top: 12, bottom: 12 }}
 							className="flex-row items-center gap-2"
 							style={{
 								width: (width - 16) / 2,
+								minHeight: legendRowHeight(fontScale),
 								opacity: active && active.category !== i ? DIM : 1,
 							}}
 						>
@@ -1474,27 +1600,286 @@ function DonutPlot({
 								{sliceLabel(i)}
 							</Text>
 							<Text className="ms-auto text-meta tabular-nums text-ink-muted">
-								{formatShare(slice.share, locale)}
+								{pct(slice.share)}
 							</Text>
 						</Pressable>
 					))}
 				</View>
 			) : small.length ? (
-				<View className="mt-2 flex-row flex-wrap justify-center gap-x-1">
+				<View className="mt-2 flex-row flex-wrap items-center justify-center gap-x-1">
 					<Text className="text-meta text-ink-muted">
-						{t("mobile.session.inline_chart.also", { items: "" }).trim()}
+						{t("mobile.session.inline_chart.also_label")}
 					</Text>
 					{small.map((slice) => {
 						const i = pie.slices.indexOf(slice);
 						return (
-							<Pressable key={i} accessible={false} onPress={() => pick(i)}>
+							<Pressable
+								key={i}
+								{...notFocusable}
+								onPress={() => pick(i)}
+								className="items-center justify-center px-1"
+								style={{
+									minHeight: legendRowHeight(fontScale),
+									minWidth: TOUCH_MIN,
+									opacity: active && active.category !== i ? DIM : 1,
+								}}
+							>
 								<Text className="text-meta text-ink-muted">
-									{`${sliceLabel(i)} ${formatShare(slice.share, locale)}`}
+									{`${sliceLabel(i)} ${pct(slice.share)}`}
 								</Text>
 							</Pressable>
 						);
 					})}
 				</View>
+			) : null}
+		</View>
+	);
+}
+
+/** §4 heatmap geometry at a width: one function for the plot and the
+ * pre-layout reservation. */
+function heatmapFrame(chart: HeatmapChart, width: number, fontScale: number) {
+	const line = metaLine(fontScale);
+	const rows = chart.rowLabels.length;
+	const columns = chart.columns.length;
+	const gap = 2;
+	// Row height follows §1; at a large text scale it grows so a row label
+	// never overlaps the next row.
+	const rowHeight = Math.max(heatRowHeight(width), Math.ceil(line) + 4);
+	const gutter = Math.ceil(
+		Math.min(
+			width * 0.4,
+			Math.max(
+				PLOT_MARGIN.minLeft,
+				...chart.rowLabels.map((label) => labelWidth(label, fontScale)),
+			) + 8,
+		),
+	);
+	const cellWidth = Math.max(
+		1,
+		(width - gutter - gap * (columns - 1)) / Math.max(1, columns),
+	);
+	const legend = Math.max(16, Math.ceil(line));
+	// The grid starts under the legend row (16) and the §1 8 px rhythm gap.
+	const gridTop = legend + 8;
+	const gridBottom = gridTop + rows * rowHeight + Math.max(0, rows - 1) * gap;
+	return {
+		line,
+		rows,
+		columns,
+		gap,
+		rowHeight,
+		gutter,
+		cellWidth,
+		legend,
+		gridTop,
+		gridBottom,
+		cellX: (c: number) => gutter + c * (cellWidth + gap),
+		cellY: (r: number) => gridTop + r * (rowHeight + gap),
+		height: gridBottom + 6 + Math.ceil(line),
+	};
+}
+
+/**
+ * §4/§5 heatmap: sequential accent→surface fill in OKLab (X10 floor), gap 2,
+ * radius 3, no text in the cells; `null` cells are a 45° hairline-strong hatch
+ * and read "No data"; a 120×8 gradient legend with the min and max top-right.
+ * Cells are marks like any other: hover, tap and keyboard (←/→ column, ↑/↓
+ * row) drive the shared active mark, tooltip and announcement.
+ */
+function HeatmapPlot({
+	chart,
+	paint,
+	width,
+	active,
+	setActive,
+	onMark,
+}: {
+	chart: HeatmapChart;
+	paint: Paint;
+	width: number;
+	active: ActiveMark | null;
+	setActive: (mark: ActiveMark | null) => void;
+	onMark: (info: MarkInfo | null, count: [number, number]) => void;
+}) {
+	const { colors, fontScale, locale } = paint;
+	const model = useMemo(() => heatmapModel(chart), [chart]);
+	const frame = heatmapFrame(chart, width, fontScale);
+	const { rows, columns, cellX, cellY, cellWidth, rowHeight } = frame;
+	// SVG ids are document-global on web: one per chart instance.
+	const id = useId().replace(/[^a-zA-Z0-9_-]/g, "");
+	const hatchId = `heat-hatch-${id}`;
+	const gradientId = `heat-legend-${id}`;
+	const fillFor = (value: number) =>
+		mixOklab(colors.accent, colors.surface, model.mix(value));
+	const valueText = (value: number | null) =>
+		value === null
+			? t("mobile.session.inline_chart.no_data")
+			: withUnit(formatExact(value, locale), chart.unit);
+	const cell =
+		active && active.category < columns && active.series < rows ? active : null;
+	const value = cell
+		? (chart.rows[cell.series]?.[cell.category] ?? null)
+		: null;
+	const rowLabel = cell ? (chart.rowLabels[cell.series] ?? "") : "";
+	const column = cell ? (chart.columns[cell.category] ?? "") : "";
+	const info: MarkInfo | null = cell
+		? {
+				tooltip: {
+					title: rowLabel,
+					rows: [{ label: column, value: valueText(value) }],
+				},
+				placement: aboveMark(
+					{
+						x: cellX(cell.category) + cellWidth / 2,
+						top: cellY(cell.series),
+						bottom: cellY(cell.series) + rowHeight,
+					},
+					width,
+					frame.gridBottom,
+				),
+				description: describeMark(
+					[rowLabel, column, valueText(value)],
+					t("mobile.session.inline_chart.position", {
+						index: cell.series * columns + cell.category + 1,
+						count: rows * columns,
+					}),
+				),
+			}
+		: null;
+	useReportMark(onMark, info, [columns, rows]);
+	const hit = (x: number, y: number): ActiveMark | null => {
+		const category = Math.floor((x - frame.gutter) / (cellWidth + frame.gap));
+		const series = Math.floor((y - frame.gridTop) / (rowHeight + frame.gap));
+		return category >= 0 && category < columns && series >= 0 && series < rows
+			? { category, series }
+			: null;
+	};
+	const gesture = usePlotGesture({ hit, active, setActive, scrub: false });
+	const columnBoxes = layoutXLabels({
+		texts: chart.columns.map(axisText),
+		anchors: chart.columns.map((_, c) => cellX(c) + cellWidth / 2),
+		edges: false,
+		lo: frame.gutter,
+		hi: width,
+		fontScale,
+	});
+	// The legend gradient is sampled in OKLab, since SVG interpolates stops in
+	// sRGB; five stops keep the bar within a hair of the cells' own mix.
+	const stops = [0, 0.25, 0.5, 0.75, 1].map((f) => ({
+		offset: f,
+		color: mixOklab(
+			colors.accent,
+			colors.surface,
+			HEAT_FLOOR + (1 - HEAT_FLOOR) * f,
+		),
+	}));
+	const legendText = (n: number) =>
+		withUnit(formatExact(n, locale), chart.unit);
+	return (
+		// X8: physical geometry (row labels in the left gutter).
+		<View style={{ height: frame.height, direction: "ltr" }}>
+			{model.hasData ? (
+				<View
+					aria-hidden
+					className="flex-row items-center justify-end gap-2"
+					style={{ height: frame.legend }}
+				>
+					<Text className="text-meta tabular-nums text-ink-muted">
+						{legendText(model.min)}
+					</Text>
+					<Svg width={120} height={8}>
+						<Defs>
+							<LinearGradient id={gradientId} x1="0" y1="0" x2="1" y2="0">
+								{stops.map((stop, i) => (
+									<Stop key={i} offset={stop.offset} stopColor={stop.color} />
+								))}
+							</LinearGradient>
+						</Defs>
+						<Rect width={120} height={8} rx={4} fill={`url(#${gradientId})`} />
+					</Svg>
+					<Text className="text-meta tabular-nums text-ink-muted">
+						{legendText(model.max)}
+					</Text>
+				</View>
+			) : null}
+			<Svg
+				aria-hidden
+				width={width}
+				height={frame.height}
+				style={{ position: "absolute", top: 0 }}
+			>
+				<Defs>
+					<Pattern
+						id={hatchId}
+						patternUnits="userSpaceOnUse"
+						width={4}
+						height={4}
+						patternTransform="rotate(45)"
+					>
+						<Line
+							x1={0}
+							y1={0}
+							x2={0}
+							y2={4}
+							stroke={colors["hairline-strong"]}
+							strokeWidth={1}
+						/>
+					</Pattern>
+				</Defs>
+				{chart.rows.flatMap((row, r) =>
+					row.map((n, c) => (
+						<Rect
+							key={`${r}-${c}`}
+							x={cellX(c)}
+							y={cellY(r)}
+							width={cellWidth}
+							height={rowHeight}
+							rx={3}
+							fill={n === null ? `url(#${hatchId})` : fillFor(n)}
+							opacity={
+								cell && (cell.series !== r || cell.category !== c) ? DIM : 1
+							}
+						/>
+					)),
+				)}
+			</Svg>
+			{chart.rowLabels.map((label, r) => (
+				<Text
+					key={`r${r}`}
+					className="absolute text-right text-meta text-ink-muted"
+					numberOfLines={1}
+					style={{
+						left: 0,
+						width: frame.gutter - 8,
+						top: cellY(r) + (rowHeight - frame.line) / 2,
+					}}
+				>
+					{label}
+				</Text>
+			))}
+			<AxisLabels boxes={columnBoxes} top={frame.gridBottom + 6} />
+			<View
+				{...gesture.panHandlers}
+				className="absolute inset-0"
+				onPointerMove={(event) => {
+					if (event.nativeEvent.pointerType !== "mouse") return;
+					const mark = hit(
+						event.nativeEvent.offsetX,
+						event.nativeEvent.offsetY,
+					);
+					if (!sameMark(mark, active)) setActive(mark);
+				}}
+				onPointerLeave={(event) => {
+					if (event.nativeEvent.pointerType === "mouse") setActive(null);
+				}}
+			/>
+			{info ? (
+				<ChartTooltip
+					content={info.tooltip}
+					placement={info.placement}
+					paint={paint}
+				/>
 			) : null}
 		</View>
 	);
@@ -1555,15 +1940,34 @@ function CartesianHeader({
 	);
 }
 
-/** §7 — the height the chart will take, reserved before width is measured. */
-const reservedHeight = (chart: InlineChart, width: number) =>
-	chart.type === "pie"
-		? pieDiameterFor(width) + (width >= NARROW_WIDTH ? 24 : 0)
-		: plotHeightFor(width) + PLOT_MARGIN.top + PLOT_MARGIN.bottom;
+/** Before the first layout the width is unknown; reserve at a phone's 360
+ * (every phone is narrow) rather than 0, which gave a pie no height (R5). */
+const NOMINAL_WIDTH = 360;
 
-type WebKeyNode = {
-	addEventListener: (type: "keydown", fn: (e: WebKey) => void) => void;
-	removeEventListener: (type: "keydown", fn: (e: WebKey) => void) => void;
+/** §7 — the height the plot will take, reserved before width is measured. */
+export const reservedHeight = (
+	chart: PlotChart,
+	width: number,
+	fontScale = 1,
+) => {
+	const w = width > 0 ? width : NOMINAL_WIDTH;
+	if (chart.type === "heatmap") return heatmapFrame(chart, w, fontScale).height;
+	if (chart.type === "pie") {
+		const pie = inlineChartModel(chart);
+		return pie.kind === "pie" ? donutHeight(pie, w, fontScale) : 0;
+	}
+	return (
+		plotHeightFor(w) +
+		PLOT_MARGIN.top +
+		Math.max(PLOT_MARGIN.bottom, Math.ceil(metaLine(fontScale)) + 6)
+	);
+};
+
+type WebNode = {
+	addEventListener: (type: string, fn: (e: never) => void) => void;
+	removeEventListener: (type: string, fn: (e: never) => void) => void;
+	contains?: (node: unknown) => boolean;
+	ownerDocument?: WebNode;
 };
 type WebKey = { key: string; preventDefault: () => void };
 
@@ -1571,7 +1975,7 @@ export function InlineChartPlot({
 	chart,
 	locale,
 }: {
-	chart: InlineChart;
+	chart: PlotChart;
 	locale: string;
 }) {
 	const {
@@ -1608,20 +2012,36 @@ export function InlineChartPlot({
 			});
 		return () => {
 			cancelled = true;
+			// R10: a fade already running must not outlive the chart.
+			opacity.stopAnimation();
 		};
 	}, [opacity]);
 
+	const heatmap = chart.type === "heatmap";
 	const step = (s: ChartStep) =>
 		setActive((current) =>
 			stepActive(current, s, mark.count[0], mark.count[1]),
 		);
-	// Web build: one tab stop with arrow/Home/End/Escape (§5 Keyboard).
+	const clear = useCallback(() => setActive(null), []);
+	// X7: the pinned chart is the one an outside touch dismisses.
+	useEffect(() => {
+		if (active) touchOwner.clear = clear;
+		else if (touchOwner.clear === clear) touchOwner.clear = null;
+	}, [active, clear]);
+	useEffect(
+		() => () => {
+			if (touchOwner.clear === clear) touchOwner.clear = null;
+		},
+		[clear],
+	);
+	// Web build: one tab stop with arrow/Home/End/Escape (§5 Keyboard), and a
+	// click or tap anywhere outside the chart dismisses its mark (X7).
 	const rootRef = useRef<View>(null);
 	const stepRef = useRef(step);
 	stepRef.current = step;
 	useEffect(() => {
 		if (Platform.OS !== "web") return;
-		const node = rootRef.current as unknown as WebKeyNode | null;
+		const node = rootRef.current as unknown as WebNode | null;
 		if (!node || typeof node.addEventListener !== "function") return;
 		const onKey = (event: WebKey) => {
 			const s = keyStep(event.key);
@@ -1632,6 +2052,17 @@ export function InlineChartPlot({
 		node.addEventListener("keydown", onKey);
 		return () => node.removeEventListener("keydown", onKey);
 	}, []);
+	useEffect(() => {
+		if (Platform.OS !== "web" || !active) return;
+		const node = rootRef.current as unknown as WebNode | null;
+		const doc = node?.ownerDocument;
+		if (!node?.contains || !doc) return;
+		const onDown = (event: { target: unknown }) => {
+			if (!node.contains?.(event.target)) setActive(null);
+		};
+		doc.addEventListener("pointerdown", onDown);
+		return () => doc.removeEventListener("pointerdown", onDown);
+	}, [active]);
 
 	const onMark = (info: MarkInfo | null, count: [number, number]) =>
 		setMark((current) =>
@@ -1649,7 +2080,27 @@ export function InlineChartPlot({
 			chart.data.map(([label]) => axisText(label)),
 			width,
 		);
+	// U3/Q4: the adjustable element always carries spoken text — the active
+	// mark, else how many values the chart has — so no host falls back to a
+	// numeric default (RN-web's slider read "50" at rest).
+	const valueText =
+		mark.info?.description ??
+		t("mobile.session.inline_chart.value_count", {
+			count:
+				chart.type === "heatmap"
+					? chart.rows.length * chart.columns.length
+					: chart.type === "series"
+						? chart.labels.length
+						: chart.data.length,
+		});
 	const description = mark.info?.description;
+	// The numeric half of the value (RN-web reads only the aria-* spellings):
+	// the active mark's 1-based position, 0 at rest. Without it the browser
+	// computes the slider midpoint, "50", for anything reading the number.
+	const total = Math.max(1, mark.count[0] * mark.count[1]);
+	const now = active
+		? Math.min(total, active.series * mark.count[0] + active.category + 1)
+		: 0;
 	return (
 		<View
 			ref={rootRef}
@@ -1660,23 +2111,55 @@ export function InlineChartPlot({
 			focusable
 			accessibilityRole="adjustable"
 			accessibilityLabel={chart.title}
-			accessibilityValue={description ? { text: description } : undefined}
+			accessibilityValue={{ min: 0, max: total, now, text: valueText }}
+			aria-valuetext={valueText}
+			aria-valuemin={0}
+			aria-valuemax={total}
+			aria-valuenow={now}
 			accessibilityActions={[{ name: "increment" }, { name: "decrement" }]}
 			onAccessibilityAction={({ nativeEvent }: AccessibilityActionEvent) => {
-				if (nativeEvent.actionName === "increment") step("next");
-				if (nativeEvent.actionName === "decrement") step("previous");
+				const direction =
+					nativeEvent.actionName === "increment"
+						? 1
+						: nativeEvent.actionName === "decrement"
+							? -1
+							: 0;
+				if (!direction) return;
+				// A heatmap walks every cell in reading order; others walk categories.
+				if (heatmap)
+					setActive((current) =>
+						stepCell(current, direction, mark.count[0], mark.count[1]),
+					);
+				else step(direction > 0 ? "next" : "previous");
+			}}
+			onFocus={(event) => {
+				// §5 Keyboard: focus activates mark 0, so the first arrow moves.
+				// Web: only keyboard focus (`:focus-visible`) — a click or tap
+				// also focuses the root, and must not pin mark 0 under the finger.
+				const target = event.target as unknown as {
+					matches?: (selector: string) => boolean;
+				};
+				const keyboard =
+					Platform.OS !== "web" || target?.matches?.(":focus-visible") === true;
+				if (keyboard)
+					setActive((current) => current ?? { category: 0, series: 0 });
 			}}
 			onBlur={() => setActive(null)}
+			onTouchStart={() => noteChartTouch(clear)}
+			// X8: plot geometry is physical; an RTL root must not mirror it.
+			style={{ direction: "ltr" }}
 			className="rounded-sm web:focus-visible:outline web:focus-visible:outline-2 web:focus-visible:outline-accent"
 		>
 			{/* Horizontal bars keep the unit row too: their value axis is x, but
 			 * the unit still reads once, above the plot. */}
-			{chart.type !== "pie" ? (
+			{chart.type !== "pie" && chart.type !== "heatmap" ? (
 				<CartesianHeader chart={chart} paint={paint} />
 			) : null}
 			<Animated.View style={{ opacity }}>
 				{width === 0 ? (
-					<View style={{ height: reservedHeight(chart, 0) }} />
+					<View style={{ height: reservedHeight(chart, 0, fontScale) }} />
+				) : chart.type === "heatmap" ? (
+					<HeatmapPlot chart={chart} {...props} />
 				) : chart.type === "pie" ? (
 					<DonutPlot chart={chart} {...props} />
 				) : horizontal && chart.type === "bar" ? (

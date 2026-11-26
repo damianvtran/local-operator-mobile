@@ -17,6 +17,10 @@ export type InlineChart = Exclude<
 	InlineUi,
 	{ type: "table" | "spreadsheet" | "heatmap" }
 >;
+export type HeatmapChart = Extract<InlineUi, { type: "heatmap" }>;
+/** Everything the plot component draws: the cartesian/pie charts and the
+ * heatmap (§4), which has its own grid model below. */
+export type PlotChart = InlineChart | HeatmapChart;
 
 // §1 — "narrow" is a content box under 520; phones are always narrow.
 export const NARROW_WIDTH = 520;
@@ -25,6 +29,42 @@ export const PLOT_MARGIN = { top: 12, right: 12, bottom: 24, minLeft: 28 };
 // §2 — RN has no canvas text metrics before layout; the spec's estimate for a
 // 12 px tabular label, multiplied by the reader's text scale at the call site.
 export const CHAR_WIDTH = 6.6;
+// Slack added to every estimated label box: the 6.6/char estimate runs short
+// for wide glyphs (M, W, CJK), and the box — not the glyphs — is what the
+// non-overlap guarantee is about, so the slack is part of the box.
+const LABEL_SLACK = 4;
+/**
+ * The ONE text-measurement function for axis labels (§2, §8): the renderer
+ * sizes every label box with it and the thinning tests measure with it, so a
+ * test that proves boxes disjoint proves what is drawn.
+ */
+export const labelWidth = (text: string, fontScale = 1) =>
+	text.length === 0
+		? 0
+		: Math.ceil(
+				[...text].reduce((sum, ch) => sum + glyphEm(ch), 0) *
+					CHAR_WIDTH *
+					fontScale,
+			) + LABEL_SLACK;
+
+// The flat 6.6/char estimate under-measures digits and wide glyphs: in the
+// Expo web fixture "Wed" and "50–100" drew wider than their boxes and were
+// ellipsized ("W…", "50–1…"). Measured in the app font (Figtree 12 px,
+// tabular-nums; inline-block probe in the harness browser, 2026-11-26): a
+// digit is 7.48 px (1.13 × 6.6), M 10.15 (1.54), i 2.78 (0.42), lowercase
+// prose ~5.4. Weights are in units of 6.6 and err wide — an over-wide box
+// costs a little thinning, an under-wide one truncates.
+const WIDE = new Set([..."MWmw@%"]);
+const NARROW = new Set([..."ilIjt.,:;|!'’ "]);
+function glyphEm(ch: string) {
+	const code = ch.codePointAt(0) ?? 0;
+	if (code >= 0x2e80) return 1.9; // CJK and other full-width scripts
+	if (WIDE.has(ch)) return 1.6;
+	if (NARROW.has(ch)) return 0.6;
+	if (ch >= "0" && ch <= "9") return 1.15;
+	if (ch >= "A" && ch <= "Z") return 1.25;
+	return 1;
+}
 // §1 — horizontal bars: 16 bar + 12 gap per category.
 export const HORIZONTAL_ROW = 28;
 
@@ -36,9 +76,14 @@ export const plotHeightFor = (width: number) =>
 export const pieDiameterFor = (width: number) =>
 	width >= NARROW_WIDTH ? 200 : Math.max(0, Math.min(180, width - 32));
 
-/** §2 — target tick count: 5 at a 240 plot, 3 at 180. */
+/**
+ * §2 — target tick count: 5 at a 240 plot, never below 4 (cross-surface
+ * decision X1). With the spec's floor of 3, every phone (plot 180) fitted the
+ * operator's 84–154 USD series to 50–200 and the data filled under half the
+ * plot; a floor of 4 gives 80…160 at 180 as well as at 240.
+ */
 export const tickTarget = (plotHeight: number) =>
-	Math.min(6, Math.max(3, Math.floor(plotHeight / 48)));
+	Math.min(6, Math.max(4, Math.floor(plotHeight / 48)));
 
 /** §1 — horizontal orientation for long or many-category single-series bars. */
 export function horizontalBars(labels: readonly string[], width: number) {
@@ -206,7 +251,7 @@ export const withUnit = (text: string, unit?: string) =>
 export const formatExact = (value: number, locale: string) =>
 	new Intl.NumberFormat(locale, { maximumFractionDigits: 20 }).format(value);
 
-/** One-decimal share, e.g. 38.2%. */
+/** One-decimal share, e.g. 38.2% (stacked/percent tooltips). */
 export const formatShare = (share: number, locale: string) =>
 	new Intl.NumberFormat(locale, {
 		style: "percent",
@@ -214,9 +259,30 @@ export const formatShare = (share: number, locale: string) =>
 	}).format(share);
 
 /**
+ * Pie shares (X9): whole percent everywhere a pie shows one — direct labels,
+ * legend, centre readout, tooltip, announcement — so one chart never mixes
+ * `34.8%` with `5%`. A non-zero slice that would round to 0% reads `<1%`.
+ */
+export function formatPieShare(share: number, locale: string) {
+	const whole = new Intl.NumberFormat(locale, {
+		style: "percent",
+		maximumFractionDigits: 0,
+	});
+	return share > 0 && share < 0.005
+		? `<${whole.format(0.01)}`
+		: whole.format(share);
+}
+
+/**
  * §2 tick labels: compact from 10 000, else standard with the step's decimals.
- * If compact rounding would print two equal labels (a tiny step on a huge
- * value), fall back to the standard form so every tick stays distinct.
+ *
+ * Compact labels (X3) use ONE fixed number of fraction digits per axis — the
+ * fewest, 0–3, at which every label is distinct and none is rounded (each
+ * equals its 6-digit rendering) — so 10,050–10,300 reads `10.05K, 10.10K …`
+ * and 1,000,000–1,004,000 reads `1.000M … 1.004M`, never five `10K`s or a
+ * `13K` that is really 12,500. Fixed per axis so the column of labels lines
+ * up, matching desktop and relay. When three digits are not enough, the full
+ * grouped numbers are shown instead.
  */
 export function tickLabels(axis: Axis, locale: string, percent = false) {
 	if (percent)
@@ -228,12 +294,25 @@ export function tickLabels(axis: Axis, locale: string, percent = false) {
 		maximumFractionDigits: Math.min(20, axis.decimals),
 	});
 	if (axis.compact) {
-		const compact = new Intl.NumberFormat(locale, {
-			notation: "compact",
-			maximumSignificantDigits: 3,
-		});
-		const labels = axis.values.map((v) => compact.format(v));
-		if (new Set(labels).size === labels.length) return labels;
+		const compactAt = (min: number, max: number) =>
+			new Intl.NumberFormat(locale, {
+				notation: "compact",
+				minimumFractionDigits: min,
+				maximumFractionDigits: max,
+			});
+		// Unrounded check: the trimmed rendering at `digits` must equal the
+		// trimmed 6-digit one; the shown label then pads to `digits`.
+		const exact = axis.values.map((v) => compactAt(0, 6).format(v));
+		for (let digits = 0; digits <= 3; digits++) {
+			const trimmed = axis.values.map((v) => compactAt(0, digits).format(v));
+			if (
+				new Set(trimmed).size === trimmed.length &&
+				trimmed.every((label, i) => label === exact[i])
+			) {
+				const fixed = compactAt(digits, digits);
+				return axis.values.map((v) => fixed.format(v));
+			}
+		}
 	}
 	return axis.values.map((v) => standard.format(v));
 }
@@ -241,44 +320,145 @@ export function tickLabels(axis: Axis, locale: string, percent = false) {
 /** §2 — the axis shows the label part before the first " · " annotation. */
 export const axisText = (label: string) => label.split(" · ")[0] ?? label;
 
+/** §2 — x of each category: line-like charts put points on the plot's ends,
+ * bars/histograms/heatmap columns at slot centres. One function so the
+ * renderer's anchors and the thinning tests agree. */
+export function categoryX(
+	count: number,
+	x0: number,
+	x1: number,
+	lineLike: boolean,
+) {
+	const span = x1 - x0;
+	const slot = lineLike
+		? count > 1
+			? span / (count - 1)
+			: span
+		: span / Math.max(1, count);
+	const at = (i: number) =>
+		lineLike
+			? count > 1
+				? x0 + i * slot
+				: x0 + span / 2
+			: x0 + (i + 0.5) * slot;
+	return { slot, at };
+}
+
+/** Truncate to `max` px of the shared estimate, ending in "…". */
+export function truncateLabel(text: string, max: number, fontScale = 1) {
+	if (labelWidth(text, fontScale) <= max) return text;
+	const chars = [...text];
+	for (let n = chars.length - 1; n > 0; n--) {
+		const candidate = `${chars.slice(0, n).join("").trimEnd()}…`;
+		if (labelWidth(candidate, fontScale) <= max) return candidate;
+	}
+	return labelWidth("…", fontScale) <= max ? "…" : "";
+}
+
+export type LabelBox = {
+	index: number;
+	/** What to draw: the label, or its "…" truncation to the box. */
+	text: string;
+	left: number;
+	width: number;
+	align: "left" | "center" | "right";
+};
+
+/** Minimum clear space between two shown x labels (X2). */
+export const LABEL_GAP = 4;
+
 /**
- * §2 x-label thinning. Shows indices 0, k, 2k… and always the last; when the
- * last collides with the previous shown label, the previous one goes. Returns
- * each shown index with the width it may use before truncating (k·slot − 8).
- * `edges` = line/scatter, where the first label anchors start and the last end.
+ * §2 / X2 x-label thinning on REAL boxes. Each label's box is measured with
+ * `labelWidth` at its actual anchor — `edges` (line/scatter): first label
+ * start-anchored, last end-anchored, the rest centred; otherwise all centred —
+ * and clamped inside `[lo, hi]`. Stride starts at the spec's
+ * `ceil((widest + 12) / slot)` and grows until no two shown boxes come within
+ * LABEL_GAP of each other; when only the first and last remain and still
+ * collide, the first keeps its room and the last truncates with "…" to the
+ * space it actually has. First and last always show.
  */
-export function thinLabels(
-	widths: readonly number[],
-	slot: number,
-	edges: boolean,
-): { index: number; maxWidth: number }[] {
-	const n = widths.length;
+export function layoutXLabels({
+	texts,
+	anchors,
+	edges,
+	lo,
+	hi,
+	fontScale = 1,
+}: {
+	texts: readonly string[];
+	anchors: readonly number[];
+	edges: boolean;
+	lo: number;
+	hi: number;
+	fontScale?: number;
+}): LabelBox[] {
+	const n = texts.length;
 	if (n === 0) return [];
-	if (n === 1) return [{ index: 0, maxWidth: Math.max(0, slot - 8) }];
-	const widest = Math.max(...widths);
-	const k = Math.max(1, Math.ceil((widest + 12) / Math.max(1, slot)));
-	const room = k * slot - 8;
-	const shown: number[] = [];
-	for (let i = 0; i < n; i += k) shown.push(i);
 	const last = n - 1;
-	if (shown[shown.length - 1] !== last) {
-		const previous = shown[shown.length - 1] ?? 0;
-		const extent = (i: number) => {
-			const w = Math.min(widths[i] ?? 0, room);
-			const x = edges ? i * slot : (i + 0.5) * slot;
-			if (edges && i === 0) return [x, x + w];
-			if (edges && i === last) return [x - w, x];
-			return [x - w / 2, x + w / 2];
-		};
-		// Never drop the first label: first and last always stay visible.
-		if (
-			previous !== 0 &&
-			(extent(previous)[1] ?? 0) + 4 > (extent(last)[0] ?? 0)
-		)
+	const span = Math.max(0, hi - lo);
+	const alignOf = (i: number): LabelBox["align"] =>
+		edges && n > 1 && i === 0
+			? "left"
+			: edges && n > 1 && i === last
+				? "right"
+				: "center";
+	// The box for label i drawn at most `cap` wide, inside [from, to].
+	const box = (i: number, cap = span, from = lo, to = hi): LabelBox => {
+		const x = anchors[i] ?? lo;
+		const align = alignOf(i);
+		const room =
+			align === "left" ? to - x : align === "right" ? x - from : to - from;
+		const text = truncateLabel(
+			texts[i] ?? "",
+			Math.max(0, Math.min(cap, room)),
+			fontScale,
+		);
+		const width = labelWidth(text, fontScale);
+		const left =
+			align === "left"
+				? x
+				: align === "right"
+					? x - width
+					: Math.min(to - width, Math.max(from, x - width / 2));
+		return { index: i, text, left, width, align };
+	};
+	if (n === 1) return [box(0)];
+	const disjoint = (boxes: LabelBox[]) =>
+		boxes.every((b, i) => {
+			const next = boxes[i + 1];
+			return !next || b.left + b.width + LABEL_GAP <= next.left;
+		});
+	const slot = Math.abs((anchors[1] ?? 0) - (anchors[0] ?? 0)) || 1;
+	const widest = Math.max(...texts.map((t) => labelWidth(t, fontScale)));
+	for (let k = Math.max(1, Math.ceil((widest + 12) / slot)); k < last; k++) {
+		const shown: number[] = [];
+		for (let i = 0; i < last; i += k) shown.push(i);
+		// The forced last label replaces a previous one it would crowd.
+		if (shown.length > 1 && last - (shown[shown.length - 1] ?? 0) < k)
 			shown.pop();
 		shown.push(last);
+		const boxes = shown.map((i) => box(i));
+		if (disjoint(boxes)) return boxes;
 	}
-	return shown.map((index) => ({ index, maxWidth: Math.max(0, room) }));
+	// Only the ends remain. Keep the first whole unless that would leave the
+	// last less than one character and "…"; the last takes what is left.
+	const ends = [box(0), box(last)];
+	if (disjoint(ends)) return ends;
+	const minLast = labelWidth(
+		`${[...(texts[last] ?? "")][0] ?? ""}…`,
+		fontScale,
+	);
+	const lastRight = alignOf(last) === "right" ? (anchors[last] ?? hi) : hi;
+	const limit = lastRight - LABEL_GAP - minLast;
+	// A centred first label moves as it shrinks, so shrink until its right
+	// edge clears `limit` (a few passes; each one only narrows it).
+	let first = box(0);
+	for (let pass = 0; pass < 8 && first.left + first.width > limit; pass++)
+		first = box(
+			0,
+			Math.max(0, first.width - (first.left + first.width - limit)),
+		);
+	return [first, box(last, span, first.left + first.width + LABEL_GAP, hi)];
 }
 
 /** §1 bar band: 30% padding, bars ≤ 48, grouped bars 2 apart. Offsets are
@@ -468,6 +648,10 @@ export const keyStep = (key: string): ChartStep | undefined => KEY_STEPS[key];
 /**
  * §5 placement: 8 above the anchor, flipped below when it would cross the top,
  * clamped 4 inside the chart box horizontally.
+ *
+ * X4: vertically it never leaves `[minTop, maxBottom]` — the plot area, which
+ * ends above the x labels, so a flipped tooltip can neither cover the axis
+ * labels nor spill onto the "Chart data" button below the chart.
  */
 export function tooltipPlacement({
 	x,
@@ -476,6 +660,8 @@ export function tooltipPlacement({
 	width,
 	height,
 	box,
+	minTop = 0,
+	maxBottom = Number.POSITIVE_INFINITY,
 }: {
 	x: number;
 	top: number;
@@ -483,14 +669,69 @@ export function tooltipPlacement({
 	width: number;
 	height: number;
 	box: number;
+	minTop?: number;
+	maxBottom?: number;
 }) {
 	const above = top - 8 - height;
-	const flipped = above < 0;
+	const flipped = above < minTop;
+	const y = flipped ? bottom + 8 : above;
 	return {
 		left: Math.max(4, Math.min(box - 4 - width, x - width / 2)),
-		top: flipped ? bottom + 8 : above,
+		top: Math.max(minTop, Math.min(maxBottom - height, y)),
 		flipped,
 	};
+}
+
+/**
+ * X5: the wide donut's tooltip sits BESIDE the ring, on the active slice's
+ * side (right half → right of the ring), 8 clear of the outer radius, so it
+ * never covers the ring it describes. Its width is capped to that side's room;
+ * vertically it centres on the slice and stays inside the plot.
+ */
+export function sideTooltipPlacement({
+	cx,
+	outer,
+	side,
+	y,
+	width,
+	height,
+	box,
+	boxHeight,
+}: {
+	cx: number;
+	outer: number;
+	side: 1 | -1;
+	y: number;
+	width: number;
+	height: number;
+	box: number;
+	boxHeight: number;
+}) {
+	const near = side > 0 ? cx + outer + 8 : cx - outer - 8;
+	const maxWidth = Math.max(0, side > 0 ? box - 4 - near : near - 4);
+	const w = Math.min(width, maxWidth);
+	return {
+		left: side > 0 ? near : near - w,
+		top: Math.max(0, Math.min(boxHeight - height, y - height / 2)),
+		maxWidth,
+	};
+}
+
+/** §5 heatmap screen-reader steps walk the cells in reading order, so
+ * increment/decrement reaches every row, not just the first one. */
+export function stepCell(
+	active: ActiveMark | null,
+	direction: 1 | -1,
+	columns: number,
+	rows: number,
+): ActiveMark | null {
+	if (columns === 0 || rows === 0) return null;
+	if (!active) return { category: 0, series: 0 };
+	const index = Math.min(
+		columns * rows - 1,
+		Math.max(0, active.series * columns + active.category + direction),
+	);
+	return { category: index % columns, series: Math.floor(index / columns) };
 }
 
 /** Live-region / `accessibilityValue` text: "Nov 18, Spend, 140.61 USD, 3 of 9". */
@@ -666,9 +907,14 @@ export function inlineChartModel(
 			category: i,
 			series: j,
 			value: byCategory[i]?.[j] ?? 0,
-			// "x% of total" only means something when every part is positive:
-			// a signed stack (gains and losses) has no whole to be a share of.
-			...(stacked && byCategory[i]?.every((n) => n >= 0)
+			// "x% of total" (X6): percent mode always keeps it — the share IS
+			// what it plots. A plain stack keeps it only when every part has
+			// the same sign; a mixed stack (gains and losses) has no whole to
+			// be a share of, while an all-negative one still does.
+			...(mode === "percent" ||
+			(mode === "stacked" &&
+				(byCategory[i]?.every((n) => n >= 0) ||
+					byCategory[i]?.every((n) => n <= 0)))
 				? { share: shares[i]?.[j] ?? 0 }
 				: {}),
 			from: left.position(stacked ? from : 0),
@@ -736,4 +982,33 @@ export function histogramAxisLabels(labels: readonly string[]) {
 	if (!unit || !parsed.every((match) => match?.[2] === unit))
 		return { labels, unit: undefined };
 	return { labels: parsed.map((match) => match?.[1] ?? ""), unit };
+}
+
+/**
+ * §4 heatmap, with the X10 floor. The spec's sequential scale is
+ * `t = 12 + 88 × fraction` of accent mixed into surface; at t = 12 a 0 cell
+ * measured 1.10:1 against the light canvas — indistinguishable from the
+ * message ground and from a "No data" cell. The floor is raised to 28, the
+ * cross-surface constant (0 cell ≥ 1.387:1 against canvas, surface and message
+ * ground in both shipped localOperator themes); the top stays 100 and the
+ * scale stays linear.
+ */
+export const HEAT_FLOOR = 0.28;
+/** §1 heatmap rows: 28 wide, 24 narrow. */
+export const heatRowHeight = (width: number) =>
+	width >= NARROW_WIDTH ? 28 : 24;
+
+export function heatmapModel(chart: HeatmapChart) {
+	const values = chart.rows.flat().filter((n): n is number => n !== null);
+	const min = values.length ? Math.min(...values) : 0;
+	const max = values.length ? Math.max(...values) : 0;
+	const range = max - min;
+	return {
+		min,
+		max,
+		hasData: values.length > 0,
+		/** Mix amount (HEAT_FLOOR…1) for a value; flat data paints the top. */
+		mix: (value: number) =>
+			HEAT_FLOOR + (1 - HEAT_FLOOR) * (range === 0 ? 1 : (value - min) / range),
+	};
 }

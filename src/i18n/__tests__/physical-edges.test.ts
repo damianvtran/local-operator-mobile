@@ -372,6 +372,39 @@ const ALLOWLIST: {
 		reason:
 			"symmetric: both edges get the same 16 pt, so the pair cannot be on the wrong side",
 	},
+	/* Inline charts (PR #397): plot geometry is physical — the value axis grows
+	 * rightwards and every label is placed at a measured pixel — so each chart
+	 * root is pinned `direction: "ltr"` (X8) and these edges name pixels of the
+	 * drawn plot, not reading edges. Gesture overlays use `inset-0`; the chart
+	 * data table, which follows the reading direction, uses TEXT_END_CLASS. */
+	{
+		file: "src/features/session/components/inline-chart.tsx",
+		token: "text-right",
+		count: 5,
+		reason:
+			"plot geometry in an LTR-pinned chart: y ticks, horizontal-bar and heatmap row labels end at the left gutter, the left-half donut labels end at their leader line, the x-axis caption ends at the plot's right edge",
+	},
+	{
+		file: "src/features/session/components/inline-chart.tsx",
+		token: "text-left",
+		count: 2,
+		reason:
+			"plot geometry in an LTR-pinned chart: right-axis ticks start at the right gutter; right-half donut labels start at their leader line",
+	},
+	{
+		file: "src/features/session/components/inline-chart.tsx",
+		token: "left",
+		count: 3,
+		reason:
+			"plot geometry in an LTR-pinned chart: the y-tick, horizontal-bar and heatmap row-label boxes start at the chart's left pixel edge",
+	},
+	{
+		file: "src/features/session/inline-chart-model.ts",
+		token: "right",
+		count: 1,
+		reason:
+			"the spec's plot margin on the physical right of an LTR-pinned plot (12 px, or the dual right-axis gutter)",
+	},
 ];
 
 const isTest = (path: string) =>

@@ -170,6 +170,7 @@ vi.mock("react-native", async () => {
 			View: view,
 			Value: class {
 				setValue() {}
+				stopAnimation() {}
 			},
 			timing: () => ({ start() {} }),
 		},
@@ -203,6 +204,7 @@ vi.mock("@/ui/appearance", () => ({
 vi.mock("@/ui/direction", () => ({
 	useIsRTL: () => false,
 	LTR_TEXT: { writingDirection: "ltr" },
+	TEXT_END_CLASS: "web:text-end native:text-right",
 }));
 vi.mock("@/ui/text-scale-provider", () => ({
 	useTextScale: () => ({ effectiveScale: 1 }),

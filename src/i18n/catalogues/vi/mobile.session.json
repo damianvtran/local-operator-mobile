@@ -117,7 +117,9 @@
 	"mobile.session.inline_chart.share": "{share} tổng số",
 	"mobile.session.inline_chart.total": "Tổng",
 	"mobile.session.inline_chart.more": "+{count} mục khác",
-	"mobile.session.inline_chart.also": "Ngoài ra: {items}",
+	"mobile.session.inline_chart.also_label": "Ngoài ra:",
+	"mobile.session.inline_chart.no_data": "Không có dữ liệu",
+	"mobile.session.inline_chart.value_count": "Giá trị: {count}",
 	"mobile.session.inline_chart.position": "{index} / {count}",
 	"mobile.session.inline_chart.right_axis": "{label} · trục phải"
 }

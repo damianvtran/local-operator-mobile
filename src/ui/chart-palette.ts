@@ -102,6 +102,18 @@ const luminance = (hex: string) => {
 	return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 };
 
+/**
+ * §4 heatmap: `color-mix(in oklab, from t, to)` — `t` (0…1) of `from` mixed
+ * into `to`, interpolated in OKLab like the web surfaces' CSS so the same
+ * fraction paints the same cell on every surface.
+ */
+export const mixOklab = (from: string, to: string, t: number) => {
+	const a = linearToOklab(parseHex(from).map(toLinear) as Rgb);
+	const b = linearToOklab(parseHex(to).map(toLinear) as Rgb);
+	const mixed = a.map((v, i) => v * t + (b[i] ?? 0) * (1 - t)) as Lab;
+	return toHex(oklabToLinear(mixed).map(fromLinear) as Rgb);
+};
+
 /** WCAG 2.x contrast ratio between two hex colours. */
 export const contrastRatio = (a: string, b: string) => {
 	const la = luminance(a);

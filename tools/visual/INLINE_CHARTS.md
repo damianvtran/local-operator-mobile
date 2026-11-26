@@ -44,12 +44,16 @@ What to look at (the shared inline-chart spec; geometry lives in
 `src/ui/chart-palette.ts`):
 
 - **Datadog spend** (`case=line`): the plot is 180 px tall at 360 wide and
-  240 at 760; y ticks read `80 100 120 140 160` (no zero), `USD` appears once
-  above them, and the last x label reads `Nov 24` while its tooltip reads
-  `Nov 24 · rollout`.
-- **Requests per day** (32 points): x labels thin without overlapping or
-  rotating, first and last stay visible, ticks are compact (`12K`) while the
-  tooltip value is exact.
+  240 at 760; at both widths the y ticks read `80 100 120 140 160` (no zero;
+  the tick target never drops below 4), `USD` appears once above them, and the
+  last x label reads `Nov 24` while its tooltip reads `Nov 24 · rollout`.
+- **Requests per day** (32 points, `Oct 1` … `Nov 1`): x labels thin without
+  overlapping or rotating, first and last stay visible, ticks are compact
+  (`12K`) while the tooltip value is exact.
+- **Weekly changes** (`case=heatmap`): cells fill the width with no text in
+  them; the darkest cell is the maximum, a `0`/minimum cell is still visibly
+  tinted, and `null` cells are hatched and read `No data`; a gradient legend
+  with the min and max sits top-right.
 - **Cloud spend by service** (`case=pie`, 12 items): six slices plus
   `Other (6)` in a neutral colour; the data table lists all twelve.
 - Hover (mouse) or tap (touch) any mark: a tooltip (pie: the donut centre)

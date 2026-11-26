@@ -39,6 +39,7 @@ vi.mock("react-native", () => ({
 		View: ({ children }: { children: ReactNode }) => children,
 		Value: class {
 			setValue() {}
+			stopAnimation() {}
 		},
 		timing: () => ({ start() {} }),
 	},

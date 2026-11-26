@@ -117,7 +117,9 @@
 	"mobile.session.inline_chart.share": "کل کا {share}",
 	"mobile.session.inline_chart.total": "کل",
 	"mobile.session.inline_chart.more": "+{count} مزید",
-	"mobile.session.inline_chart.also": "نیز: {items}",
+	"mobile.session.inline_chart.also_label": "نیز:",
+	"mobile.session.inline_chart.no_data": "کوئی ڈیٹا نہیں",
+	"mobile.session.inline_chart.value_count": "اقدار: {count}",
 	"mobile.session.inline_chart.position": "{count} میں سے {index}",
 	"mobile.session.inline_chart.right_axis": "{label} · دایاں محور"
 }

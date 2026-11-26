@@ -69,8 +69,10 @@ export const inlineChartExamples: (InlineUi & Json)[] = [
 		type: "line",
 		title: "Requests per day",
 		unit: "requests",
+		// Real dates: October has 31 days, so the 32nd point is Nov 1 (the
+		// last label a reviewer reads as "the last label stays visible").
 		data: Array.from({ length: 32 }, (_, i): [string, number] => [
-			`Oct ${i + 1}`,
+			i < 31 ? `Oct ${i + 1}` : "Nov 1",
 			12_000 + ((i * 7919) % 9000) + i * 250,
 		]),
 	},
