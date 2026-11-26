@@ -57,7 +57,7 @@ function mount({ keyed = true }: { keyed?: boolean } = {}) {
 	const root = createRoot(dom.container as Element);
 	let current!: ReturnType<typeof useSessionRuntime>;
 	function Probe({ sid }: { sid: string }) {
-		current = useSessionRuntime(sid);
+		current = useSessionRuntime(sid, true);
 		return null;
 	}
 	return {
@@ -66,6 +66,38 @@ function mount({ keyed = true }: { keyed?: boolean } = {}) {
 				root.render(createElement(Probe, keyed ? { key: sid, sid } : { sid })),
 			),
 		read: () => current,
+		close: async () => {
+			await act(async () => root.unmount());
+			dom.dispose();
+		},
+	};
+}
+
+/** Expo's stack retains the old reader when navigating to another dynamic id.
+ * Keep every route mounted; only the foreground flag changes on push/pop. */
+function mountStack() {
+	const dom = installDomShim();
+	const root = createRoot(dom.container as Element);
+	const readers = new Map<string, ReturnType<typeof useSessionRuntime>>();
+	function Probe({ route, focused }: { route: string; focused: boolean }) {
+		const sid = route.split("/")[0] ?? "";
+		readers.set(route, useSessionRuntime(sid, focused));
+		return null;
+	}
+	return {
+		show: (...routes: string[]) =>
+			act(async () =>
+				root.render(
+					routes.map((route, i) =>
+						createElement(Probe, {
+							key: route,
+							route,
+							focused: i === routes.length - 1,
+						}),
+					),
+				),
+			),
+		read: (sid: string) => readers.get(sid),
 		close: async () => {
 			await act(async () => root.unmount());
 			dom.dispose();
@@ -84,6 +116,7 @@ function transport(
 	gate?: (attempt: number) => Promise<void> | undefined,
 ) {
 	const requests: string[] = [];
+	const signals: (AbortSignal | null | undefined)[] = [];
 	const attempts: {
 		sid: string;
 		signal: AbortSignal | null | undefined;
@@ -100,6 +133,7 @@ function transport(
 			return Response.json({}, { status: 404 });
 		}
 		requests.push(sid);
+		signals.push(init?.signal);
 		const attempt = requests.length;
 		const code = status?.(attempt) ?? 200;
 		await gate?.(attempt);
@@ -134,7 +168,7 @@ function transport(
 		}),
 	);
 	admission.relay = () => client;
-	return { attempts, requests };
+	return { attempts, requests, signals };
 }
 
 const frame = (sid: string) =>
@@ -413,6 +447,111 @@ it("retires A's stream when switching to B and ignores A's late frame", async ()
 		expect(probe.read().projection).toBeNull();
 		await act(async () => attempts[1]?.send(frame("switch-b")));
 		expect(probe.read().projection?.session_id).toBe("switch-b");
+	} finally {
+		await probe.close();
+	}
+});
+
+it("retires retained slots for A → B → A and restores the live reader on Back", async () => {
+	vi.useFakeTimers();
+	const { attempts, requests } = transport();
+	const probe = mountStack();
+	const a = "stack-a";
+	const b = "stack-b";
+	const aAgain = `${a}/again`;
+	try {
+		await probe.show(a);
+		await act(async () => attempts[0]?.send(frame(a)));
+		const retained = probe.read(a)?.projection;
+		expect(retained?.session_id).toBe(a);
+
+		await probe.show(a, b);
+		expect(attempts[0]?.signal?.aborted).toBe(true);
+		await act(async () => attempts[1]?.send(frame(b)));
+		expect(probe.read(b)?.projection?.session_id).toBe(b);
+
+		await probe.show(a, b, aAgain);
+		expect(attempts[1]?.signal?.aborted).toBe(true);
+		await act(async () => attempts[2]?.send(frame(a)));
+		expect(probe.read(aAgain)?.projection?.session_id).toBe(a);
+		expect(probe.read(aAgain)?.connected).toBe(true);
+
+		await probe.show(a, b);
+		expect(attempts[2]?.signal?.aborted).toBe(true);
+		// Back preserved B's reader and transcript: the fresh seed can wait.
+		expect(probe.read(b)?.projection?.session_id).toBe(b);
+		expect(requests).toEqual([a, b, a, b]);
+		await act(async () => attempts[3]?.send(frame(b)));
+		expect(probe.read(b)?.connected).toBe(true);
+	} finally {
+		await probe.close();
+	}
+});
+
+it("ignores a retired frame and refusal during rapid A → B → C and waits for C's healthy seed", async () => {
+	vi.useFakeTimers();
+	let finishB: (() => void) | undefined;
+	const { attempts, requests, signals } = transport(
+		(attempt) => (attempt === 2 ? 401 : 200),
+		(attempt) =>
+			attempt === 2
+				? new Promise<void>((resolve) => {
+						finishB = resolve;
+					})
+				: undefined,
+	);
+	const probe = mountStack();
+	const a = "rapid-a";
+	const b = "rapid-b";
+	const c = "rapid-c";
+	try {
+		await probe.show(a);
+		await probe.show(a, b);
+		await probe.show(a, b, c);
+		expect(signals.map((signal) => signal?.aborted)).toEqual([
+			true,
+			true,
+			false,
+		]);
+		await act(async () => {
+			attempts[0]?.send(frame(a));
+			finishB?.();
+		});
+		await advance(RECONNECT_DEADLINE_MS + 100);
+		expect(probe.read(a)?.projection).toBeNull();
+		expect(probe.read(b)?.error).toBeNull();
+		expect(probe.read(c)?.error).toBeNull();
+		expect(probe.read(c)?.connection.id).toBeNull();
+		expect(requests).toEqual([a, b, c]);
+		await act(async () => attempts.at(-1)?.send(frame(c)));
+		expect(probe.read(c)?.projection?.session_id).toBe(c);
+
+		// The app-wide wake event must not restart every retained reader.
+		await changeAppState("background");
+		await changeAppState("active");
+		expect(requests).toEqual([a, b, c, c]);
+	} finally {
+		await probe.close();
+	}
+});
+
+it("hands a same-session stream to a focused child and back without ending the active reader", async () => {
+	const { attempts, requests } = transport();
+	const probe = mountStack();
+	const parent = "child-session";
+	const child = `${parent}/agent`;
+	try {
+		await probe.show(parent);
+		await act(async () => attempts[0]?.send(frame(parent)));
+		await probe.show(parent, child);
+		expect(attempts[0]?.signal?.aborted).toBe(true);
+		await act(async () => attempts[1]?.send(frame(parent)));
+		expect(probe.read(child)?.connected).toBe(true);
+		await probe.show(parent);
+		expect(attempts[1]?.signal?.aborted).toBe(true);
+		await act(async () => attempts[2]?.send(frame(parent)));
+		expect(probe.read(parent)?.connected).toBe(true);
+		expect(requests).toEqual([parent, parent, parent]);
 	} finally {
 		await probe.close();
 	}

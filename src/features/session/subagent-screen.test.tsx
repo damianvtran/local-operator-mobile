@@ -50,6 +50,7 @@ const host = vi.hoisted(() => ({
 }));
 
 vi.mock("expo-router", () => ({
+	useIsFocused: () => true,
 	useLocalSearchParams: () => host.params,
 	useRouter: () => ({ back: vi.fn(), push: vi.fn() }),
 }));

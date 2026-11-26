@@ -237,7 +237,16 @@ const isTransient = (error: RelayError): boolean =>
 export const hasSessionId = (sessionId: string): boolean =>
 	sessionId.trim() !== "";
 
-export const useSessionRuntime = (sessionId: string): SessionRuntime => {
+export const useSessionRuntime = (
+	sessionId: string,
+	focused: boolean,
+): SessionRuntime => {
+	// Expo retains a separate mounted screen for each dynamic path in the
+	// stack. The foreground reader, not the mounted screen, owns the live
+	// body: otherwise each visit leaves a subscriber (and its retries) behind.
+	// Keep the reader and its rows mounted for native Back and draft continuity.
+	const focusedRef = useRef(focused);
+	focusedRef.current = focused;
 	const providerConnection = useConnection();
 	const snapshot = useConnectionState((state) => state);
 	const route = snapshot.route;
@@ -293,7 +302,7 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 	const resumeClock = useRef(createResumeClock());
 	const dropGraceTimer = useRef<(() => void) | null>(null);
 	useEffect(() => {
-		if (!facts.droppedSinceFrame) {
+		if (!focused || !facts.droppedSinceFrame) {
 			// Recovery: cancel any pending report and clear at once.
 			dropGraceTimer.current?.();
 			dropGraceTimer.current = null;
@@ -306,14 +315,14 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 			OUTAGE_GRACE_MS,
 			() => {
 				dropGraceTimer.current = null;
-				setDroppedGrace(true);
+				if (focusedRef.current) setDroppedGrace(true);
 			},
 		);
 		return () => {
 			dropGraceTimer.current?.();
 			dropGraceTimer.current = null;
 		};
-	}, [facts.droppedSinceFrame, setDroppedGrace]);
+	}, [focused, facts.droppedSinceFrame, setDroppedGrace]);
 	const [, historyChanged] = useState(0);
 	// Endpoint and owner changes allocate a new reader synchronously, so an old
 	// account/session's cached rows cannot paint before effect cleanup runs.
@@ -402,9 +411,9 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 	// Claim before the stream effect below: a screen supersedes any seed take,
 	// while a same-session reconnect keeps its onscreen token continuously held.
 	useEffect(() => {
-		if (!hasSessionId(sessionId) || endpoints === null) return;
-		// Mounted does not mean onscreen while iOS suspends the app. Release
-		// only on background; reclaim on resume BEFORE reopening the live stream,
+		if (!focused || !hasSessionId(sessionId) || endpoints === null) return;
+		// Blur and background both give up the onscreen warm-sync claim.
+		// Reclaim on resume BEFORE reopening the live stream,
 		// so a push can seed the last-viewed session but never race its screen.
 		let release =
 			AppState.currentState === "background" ? null : warmSync.view(sessionId);
@@ -412,14 +421,14 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 			if (state === "background") {
 				release?.();
 				release = null;
-			} else if (state === "active" && !release)
+			} else if (state === "active" && focusedRef.current && !release)
 				release = warmSync.view(sessionId);
 		});
 		return () => {
 			release?.();
 			subscription.remove();
 		};
-	}, [sessionId, endpoints]);
+	}, [focused, sessionId, endpoints]);
 	/** Cancels a held resume history read (`holdResumeRead`) on unmount. */
 	const heldHistoryRead = useRef<(() => void) | null>(null);
 	const [historyErrorHeld, setHistoryErrorHeld] = useSessionValue<boolean>(
@@ -429,9 +438,21 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 
 	/* ------------------------------------------------------------- the stream */
 	useEffect(() => {
-		// An unnamed session has no stream to open (Q10).
-		if (!hasSessionId(sessionId)) return;
+		// A hidden or unnamed screen has no stream to open (Q10).
+		if (!focused || !hasSessionId(sessionId)) return;
+		// Refocus is a new visit, not evidence that the old leg dropped. Retain
+		// its transcript and age, but don't carry its retry debt or banner over.
+		recovering.current = false;
+		retries.current = 0;
+		resumePending.current = null;
+		setFacts((current) => ({ ...INITIAL_STREAM_FACTS, ageMs: current.ageMs }));
+		setDroppedGrace(false);
+		setHistoryErrorHeld(false);
+		if (AppState.currentState === "background")
+			resumeClock.current.background();
+		else if (resumeClock.current.backgrounded()) resumeClock.current.resume();
 		let active = true;
+		let sawFrameThisVisit = false;
 		const owner: ProjectionOwner = {
 			revision: snapshot.revision,
 			tunnelId: snapshot.tunnelId,
@@ -481,7 +502,11 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 					OUTAGE_GRACE_MS,
 					() => {
 						cancelSeedGrace = null;
-						if (active && sameProjectionOwner(owner, currentIdentity.current))
+						if (
+							focusedRef.current &&
+							active &&
+							sameProjectionOwner(owner, currentIdentity.current)
+						)
 							setFacts((current) => ({ ...current, overdue: true }));
 					},
 				);
@@ -499,7 +524,11 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 			});
 		};
 		const connect = () => {
-			if (!active || !sameProjectionOwner(owner, currentIdentity.current))
+			if (
+				!focusedRef.current ||
+				!active ||
+				!sameProjectionOwner(owner, currentIdentity.current)
+			)
 				return;
 			if (endpoints === null) {
 				setLoading(source.reason === "pending");
@@ -533,6 +562,7 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 			let cancelDeadline: (() => void) | null = null;
 			let awaitingSeed = false;
 			const isCurrent = () =>
+				focusedRef.current &&
 				!retired &&
 				active &&
 				sameProjectionOwner(owner, currentIdentity.current);
@@ -577,6 +607,7 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 					clearSeedGrace();
 					awaitingSeed = false;
 					projectionOwner.current = owner;
+					sawFrameThisVisit = true;
 					lastFrameAt.current = Date.now();
 					grace.healthy(lastFrameAt.current);
 					retries.current = 0;
@@ -642,7 +673,8 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 					 * `openEventStream`): under machine load the first answer is slow,
 					 * not lost, and a real failure still arrives via `onError`. */
 					const reconnecting =
-						recovering.current || lastFrameAt.current !== null;
+						recovering.current ||
+						(sawFrameThisVisit && lastFrameAt.current !== null);
 					if (status.state === "connecting" && reconnecting) {
 						cancelDeadline = heldTimer(
 							resumeClock.current,
@@ -719,10 +751,13 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 			active = false;
 			cancelRetry?.();
 			clearSeedGrace();
-			retireStream?.();
-			sessions.getState().endStream(sessionId);
+			if (retireStream !== null) {
+				retireStream();
+				sessions.getState().endStream(sessionId);
+			}
 		};
 	}, [
+		focused,
 		endpoints,
 		sessionId,
 		source.reason,
@@ -731,6 +766,7 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 		setLoading,
 		setError,
 		setFacts,
+		setDroppedGrace,
 		setHistoryErrorHeld,
 	]);
 
@@ -740,6 +776,7 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 
 	/* ---------------------------------------------------------- the age ticker */
 	useEffect(() => {
+		if (!focused) return;
 		const tick = setInterval(() => {
 			const at = lastFrameAt.current;
 			if (at === null) return;
@@ -751,13 +788,15 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 			);
 		}, 1000);
 		return () => clearInterval(tick);
-	}, [setFacts]);
+	}, [focused, setFacts]);
 
 	/* A screen that was backgrounded has a stale age and a possibly dead stream:
 	 * `beginStream` on return makes the next frame authoritative, which is the
 	 * contract's rule for the first frame of a connection. */
 	useEffect(() => {
+		if (!focused) return;
 		const subscription = AppState.addEventListener("change", (state) => {
+			if (!focusedRef.current) return;
 			// Only "background" means the process may be suspended; "inactive" is
 			// also a system sheet over a running app, which must not hide a drop.
 			if (state === "background") {
@@ -806,7 +845,7 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 		return () => subscription.remove();
 		// The reload refs are current, but the setter also has an identity lease.
 		// Re-register on identity changes rather than using a retired setter.
-	}, [setFacts]);
+	}, [focused, setFacts]);
 
 	/* ------------------------------------------------- the one-off read requests */
 	/* Also an act, for the same reason as the stream: these are the three requests a
@@ -935,6 +974,7 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 	);
 	saveWarmRef.current = () => saveWarmFor(sessionId, identity);
 	useEffect(() => {
+		if (!focused) return;
 		const sid = sessionId;
 		const owner = identity;
 		/* The scope is captured HERE, with the owner, not read at cleanup (PR #246
@@ -948,7 +988,7 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 			heldHistoryRead.current = null;
 			if (hasSessionId(sid)) saveWarmFor(sid, owner, scope);
 		};
-	}, [sessionId, identity, saveWarmFor]);
+	}, [focused, sessionId, identity, saveWarmFor]);
 
 	/* CATALOGUES FOLLOW THE CONFIG STREAM, not the AppState. A config frame
 	 * that names any changed key re-reads commands and models; the seed frame

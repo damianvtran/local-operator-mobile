@@ -1,4 +1,4 @@
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useIsFocused, useLocalSearchParams, useRouter } from "expo-router";
 import { Search } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -260,7 +260,8 @@ function Session() {
 	 *  reconcile against the same SSE frame. */
 	const [tagsOpen, setTagsOpen] = useState(false);
 
-	const runtime = useSessionRuntime(sessionId);
+	const focused = useIsFocused();
+	const runtime = useSessionRuntime(sessionId, focused);
 	const provisional = useStartup(null, sessionId);
 	const provisionalEditor =
 		provisional.coordinator === null
