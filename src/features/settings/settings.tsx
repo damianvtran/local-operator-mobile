@@ -29,6 +29,7 @@ import {
 import { diagnosticReason } from "@/features/auth/stream-health-reason";
 import { TransientNotice } from "@/features/auth/transient-notice";
 import { attachHandoffDiagnostics } from "@/features/session/attach-handoff";
+import { WorkspaceDrawerButton } from "@/features/sessions/workspace-drawer";
 import {
 	diagnosticsReasonValue,
 	diagnosticsText,
@@ -38,7 +39,6 @@ import { t } from "@/i18n";
 import type { ThemeMode } from "@/state/theme-preference";
 import { useUiStore } from "@/state/ui-store";
 import { CONTROL, computerRowIds, REGION, ROLE, SCREEN } from "@/ui/a11y";
-import { BackButton } from "@/ui/components/back-button";
 import { Badge } from "@/ui/components/badge";
 import { Button } from "@/ui/components/button";
 import {
@@ -329,12 +329,7 @@ export default function Settings() {
 			title={t("mobile.settings.screen_title")}
 			testID={SCREEN.settings}
 			scrollRef={scrollRef}
-			headerLeading={
-				<BackButton
-					testID={CONTROL.settingsBack}
-					onPress={() => router.back()}
-				/>
-			}
+			headerLeading={<WorkspaceDrawerButton testID={CONTROL.settingsBack} />}
 		>
 			<View className="gap-4 pt-2">
 				{/* ---------------------------------------------------------- account */}

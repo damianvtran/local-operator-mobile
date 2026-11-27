@@ -133,6 +133,10 @@ import {
 } from "@/features/sessions/session-projection";
 import { canAssignSessionTags } from "@/features/sessions/tags";
 import { SessionTagsSheet } from "@/features/sessions/tags-sheet";
+import {
+	sessionTarget,
+	useOpenTopLevel,
+} from "@/features/sessions/top-level-navigation";
 import { WorkspaceDrawerButton } from "@/features/sessions/workspace-drawer";
 import { t } from "@/i18n";
 import { CONTROL, EMPTY, ROLE, SCREEN, SURFACE } from "@/ui/a11y";
@@ -252,6 +256,7 @@ function Session() {
 	 *  header needs no request of its own to know whether a picture exists. */
 	const headerAvatarRef = listRow === undefined ? null : avatarRefOf(listRow);
 	const router = useRouter();
+	const openTopLevel = useOpenTopLevel();
 	/* The header's tag line is a DISCLOSURE when this conversation is the local
 	 *  one and the relay offers the routes: it opens the same sheet the list
 	 *  row's menu does, fed by this same list frame. A remote row keeps the line
@@ -2254,7 +2259,7 @@ function Session() {
 				sessions={listSessions}
 				onOpenConversation={(target, askIds) => {
 					asksSheet.leave(target, askIds);
-					router.push(`/session/${target}`);
+					openTopLevel(sessionTarget(target));
 				}}
 			/>
 		</Screen>

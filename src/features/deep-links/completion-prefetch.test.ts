@@ -11,13 +11,20 @@ const seam = vi.hoisted(() => ({
 	toast: vi.fn(),
 }));
 vi.mock("react", () => ({
+	useCallback: <T>(fn: T) => fn,
 	useEffect: (effect: () => unknown) => seam.effects.push(effect),
 	useMemo: (read: () => unknown) => read(),
 	useSyncExternalStore: (_subscribe: unknown, read: () => unknown) => read(),
 }));
 vi.mock("react-native", () => ({ Platform: { OS: "ios" } }));
 vi.mock("expo-router", () => ({
+	router: { navigate: seam.navigate },
 	useRouter: () => ({ navigate: seam.navigate, replace: seam.replace }),
+	useNavigationContainerRef: () => ({
+		isReady: () => false,
+		getRootState: () => undefined,
+		dispatch: () => undefined,
+	}),
 }));
 vi.mock("@/features/auth/connection-provider", () => ({
 	useConnection: () => ({

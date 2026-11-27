@@ -132,6 +132,12 @@ vi.mock("lucide-react-native", () => {
 });
 vi.mock("expo-router", () => ({
 	useRouter: () => ({ push: () => undefined, replace: () => undefined }),
+	router: { navigate: () => undefined },
+	useNavigationContainerRef: () => ({
+		isReady: () => false,
+		getRootState: () => undefined,
+		dispatch: () => undefined,
+	}),
 }));
 vi.mock("@/ui/appearance", () => ({
 	useTokenColor: () => "#000000",

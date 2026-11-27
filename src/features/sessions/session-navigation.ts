@@ -1,17 +1,34 @@
 import type { Capabilities, SessionSummary } from "@/contracts";
 import { sessionSupplementsAvailable } from "@/features/session/remote-supplements";
+import type { TopLevelTarget } from "@/features/sessions/top-level-navigation";
 import { isRemoteRow } from "./session-projection";
 
 /** Owner metadata survives navigation even when a later list omits an offline
  * peer. It is NOT authority: every request still uses the relay's session-id
  * route, whose server resolves and pins the authorized owner. */
+const remoteMetadata = (session: SessionSummary): Record<string, string> => {
+	if (!isRemoteRow(session)) return {};
+	const query: Record<string, string> = { remote: "1" };
+	if (session.owner_device) query.owner = session.owner_device;
+	return query;
+};
+
 export const sessionLocation = (session: SessionSummary): string => {
 	const path = `/session/${encodeURIComponent(session.session_id)}`;
-	if (!isRemoteRow(session)) return path;
-	const query = new URLSearchParams({ remote: "1" });
-	if (session.owner_device) query.set("owner", session.owner_device);
-	return `${path}?${query}`;
+	const metadata = remoteMetadata(session);
+	return Object.keys(metadata).length === 0
+		? path
+		: `${path}?${new URLSearchParams(metadata)}`;
 };
+
+/** The same destination as a route target, so a drawer pick or a list tap can
+ *  REPLACE the top-level screen instead of pushing a second one. Params stay
+ *  raw here: the router rehydrates them, and `sessionLocation` keeps the URL
+ *  encoding for the paths that still navigate by string. */
+export const sessionTargetOf = (session: SessionSummary): TopLevelTarget => ({
+	name: "session/[id]",
+	params: { id: session.session_id, ...remoteMetadata(session) },
+});
 
 /** Whether the open conversation is remote. The live list row wins once it
  * exists — a conversation recalled to this computer while open must stop being

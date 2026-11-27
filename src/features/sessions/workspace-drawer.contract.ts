@@ -1,8 +1,13 @@
 import type { ReactNode } from "react";
+import type { SharedValue } from "react-native-reanimated";
 
 /** Content modes share one modal/focus owner; switching is not navigation. */
 export type WorkspaceDrawerMode = "agents" | "team-bridge";
 export type WorkspaceDrawerController = {
+	/** The drawer's opening progress (0 closed … 1 full width), on the UI
+	 *  thread. Lives here so a future gesture (`commit B`) can drive the same
+	 *  value the shell reads, without a second owner. */
+	progress: SharedValue<number>;
 	open: (options?: {
 		mode?: WorkspaceDrawerMode;
 		returnFocus?: () => void;

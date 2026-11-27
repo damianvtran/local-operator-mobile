@@ -6,6 +6,7 @@ import {
 	sessionCapabilities,
 	sessionLocation,
 	sessionSupplementClient,
+	sessionTargetOf,
 } from "./session-navigation";
 
 const baseline = {
@@ -74,6 +75,20 @@ describe("normal remote conversation navigation", () => {
 			"/session/synthetic-peer-session?remote=1&owner=synthetic-owner",
 		);
 		expect(sessionLocation(row(false))).toBe("/session/synthetic-peer-session");
+		/* The SAME destination as a drawer-pick target carries the metadata as
+		 * route params, so a reset rehydrates the remote conversation intact. */
+		expect(sessionTargetOf(row())).toEqual({
+			name: "session/[id]",
+			params: {
+				id: "synthetic-peer-session",
+				remote: "1",
+				owner: "synthetic-owner",
+			},
+		});
+		expect(sessionTargetOf(row(false))).toEqual({
+			name: "session/[id]",
+			params: { id: "synthetic-peer-session" },
+		});
 	});
 	it("encodes session and owner identifiers without adding relay routing authority", () => {
 		const session = row();
@@ -145,7 +160,7 @@ describe("normal remote conversation navigation", () => {
 			?.split("/* STABLE ROW")[0];
 		expect(activate).toContain("openSession(session)");
 		expect(activate).not.toContain("setMoveTarget");
-		expect(pane).toContain("router.navigate(sessionLocation(session)");
+		expect(pane).toContain("openTopLevel(sessionTargetOf(session))");
 		const secondary = pane
 			.split("const onRowLongPress =")[1]
 			?.split("/* Hoisted")[0];

@@ -77,6 +77,12 @@ vi.mock("lucide-react-native", () => ({
 	MessageSquare: () => null,
 	UserRound: () => null,
 }));
+vi.mock("react-native-reanimated", async () => {
+	const { reanimatedModuleMock } = await import(
+		"@/testing/native-gesture-mocks"
+	);
+	return reanimatedModuleMock();
+});
 vi.mock("react-native", () => ({
 	Platform: {
 		get OS() {
@@ -84,6 +90,7 @@ vi.mock("react-native", () => ({
 		},
 	},
 	Keyboard: { dismiss: vi.fn() },
+	ScrollView: (props: ViewProps) => props.children ?? null,
 	useWindowDimensions: () => ({ width: 390, height: 844 }),
 	View: (props: ViewProps) => {
 		host.views.push(props);
@@ -151,7 +158,10 @@ vi.mock("@/team-bridge/provider", () => ({
 				}),
 		),
 }));
-vi.mock("@/ui/appearance", () => ({ useTokenColor: () => "black" }));
+vi.mock("@/ui/appearance", () => ({
+	useTokenColor: () => "black",
+	useReducedMotion: () => false,
+}));
 vi.mock("@/ui/layout", () => ({ TOUCH_FLOOR: 44 }));
 vi.mock("@/ui/text-scale-provider", () => ({
 	useTextScale: () => ({ effectiveScale: host.scale }),

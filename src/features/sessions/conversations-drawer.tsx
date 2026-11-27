@@ -1,7 +1,8 @@
 import { type ReactNode, useEffect, useRef } from "react";
 import {
-	Animated,
-	Easing,
+	AccessibilityInfo,
+	BackHandler,
+	findNodeHandle,
 	Keyboard,
 	Modal,
 	Platform,
@@ -9,6 +10,10 @@ import {
 	useWindowDimensions,
 	View,
 } from "react-native";
+import Animated, {
+	type SharedValue,
+	useAnimatedStyle,
+} from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import {
@@ -22,15 +27,13 @@ import {
 } from "@/features/sessions/drawer-focus";
 import { t } from "@/i18n";
 import { CONTROL, ROLE, SURFACE } from "@/ui/a11y";
-import { useReducedMotion, useTokenColor } from "@/ui/appearance";
+import { useTokenColor } from "@/ui/appearance";
 import {
 	ModalScopeContext,
 	useModalStackEntry,
 } from "@/ui/components/modal-stack-entry";
 import { useShadow } from "@/ui/elevation";
-import { sidebarWidthFor, TOUCH_FLOOR } from "@/ui/layout";
-import { exitPointerEvents, useModalExit } from "@/ui/modal-exit";
-import { effectiveDuration, parseCubicBezier } from "@/ui/motion";
+import { exitPointerEvents } from "@/ui/modal-exit";
 import {
 	guardScrimFocus,
 	keyboardInput,
@@ -39,7 +42,6 @@ import {
 	webPointerOnly,
 } from "@/ui/programmatic-focus";
 import { TextScaleProvider } from "@/ui/text-scale-provider";
-import { DURATIONS, EASINGS } from "@/ui/tokens.gen";
 import { cx } from "@/ui/variants";
 
 /**
@@ -47,26 +49,36 @@ import { cx } from "@/ui/variants";
  * drawer, which is the one Material requires on a phone.
  *
  * **It is an overlay, not a route.** The panel is not a destination — closing it
- * returns the reader to the composer they were on, the draft included — so it is
- * a `Modal` over the home rather than a pushed screen. The panel COVERs; the home
- * beneath is never unmounted (a push would lose a draft and re-run the home's
- * cold-start effects). The panel itself: `elevated` ground and the overlay shadow,
- * BORDERLESS since TestFlight 578 (the operator: "I don't like the right
- * border"). It used to draw the scoped `panel-edge` hairline on its facing edge
- * because in dark the fill's own step against the scrim ground measured 1.38:1
- * (D-dark-1); that role and its contract pair (`design/tokens/contrast-contract.mjs`
- * § 'the overlay panel edge') still exist, unused here, if a design round
- * restores an edge. Light's fill step is ≈ 8.2:1 on its own.
+ * returns the reader to the composer they were on, the draft included — so it
+ * is an overlay over the route stack rather than a pushed screen. The panel
+ * COVERs; the home beneath is never unmounted (a push would lose a draft and
+ * re-run the home's cold-start effects).
+ *
+ * **NATIVE IS A ROOT OVERLAY; WEB KEEPS THE MODAL.** The drawer follows the
+ * finger from the first frame (a `Modal` has to be presented before its panel
+ * can move, which costs frames), so on native it is an absolute-fill view at
+ * the layout root, rendered after the stack. Its a11y and back behaviour are
+ * recreated here: `accessibilityViewIsModal` and the escape action, an Android
+ * `BackHandler` while it is open, and focus moved to the panel on open. On web
+ * a `Modal` still owns the focus trap and Escape (`onRequestClose`); the shell
+ * is the same panel and the same curve.
+ *
+ * **FULL WIDTH, ONE CURVE (operator, 2026-11-26).** The drawer covers 100 % of
+ * the screen, so there is no page beside it to tap: the panel slides in on
+ * `cubic-bezier(.42,0,.58,1)`, 320 ms for a full travel with a 120 ms floor,
+ * the same curve for open, close and tap-open (the release path resumes it from
+ * the finger's position — `@/ui/drawer-motion`). The scrim still fades with the
+ * travel, but at rest it sits entirely behind the panel.
+ *
+ * **The dim claim moves to the pane's own modals.** A full-width drawer never
+ * shows the page, so the host does not claim a dim (`scrim: false`): a sheet
+ * raised inside the drawer paints its own. The scrim element remains the
+ * dismiss target while the panel is mid-travel.
  *
  * **Dismissal is threefold, and all three close the same way**: the scrim, the
- * pane's own close control, and Android's back gesture (`onRequestClose` — the
- * flow § 11 rule that every modal surface is back-dismissible). Closing dismisses
- * the keyboard first when the composer had focus, so the reader sees the home
- * they were returning to rather than a keyboard over it.
- *
- * The slide is `duration.slow` through `effectiveDuration`, so reduced motion
- * caps it instead of killing it (a press is a press); the scrim fades on
- * `duration.fast`. Same pattern as `Sheet`, deliberately — one motion idiom.
+ * pane's own close control, and Android's back gesture. Closing dismisses the
+ * keyboard first when the composer had focus, so the reader sees the home they
+ * were returning to rather than a keyboard over it.
  */
 /** The panel's fill, named ONCE: it paints the panel AND is the surface the rows'
  *  corner badge rings itself in (`ConversationsPane`'s `surfaceClassName`). Two
@@ -76,7 +88,15 @@ import { cx } from "@/ui/variants";
 const PANEL_SURFACE = "bg-elevated";
 
 export type ConversationsDrawerProps = {
+	/** The reader's intent: open. False from the instant a close starts, which
+	 *  is what makes the panel inert while it exits. */
 	visible: boolean;
+	/** Whether the shell is on screen. True from open until the close settle
+	 *  ends, so the exit animation is visible rather than cut off at its start. */
+	presented: boolean;
+	/** 0 (closed) … 1 (full width) on the UI thread; `open()`/`close()` in the
+	 *  provider settle it. The shell only reads it. */
+	progress: SharedValue<number>;
 	onClose: () => void;
 	onNavigate?: () => void;
 	onDismiss?: () => void;
@@ -94,6 +114,8 @@ export type ConversationsDrawerProps = {
 
 export const ConversationsDrawer = ({
 	visible,
+	presented,
+	progress,
 	onClose,
 	onNavigate,
 	onDismiss,
@@ -106,83 +128,8 @@ export const ConversationsDrawer = ({
 }: ConversationsDrawerProps) => {
 	const insets = useSafeAreaInsets();
 	const { width } = useWindowDimensions();
-	/* The designed panel width PLUS the left inset — the inset is added to the
-	 *  panel's OUTER geometry, never spent out of its content column.
-	 *
-	 *  Widening is what makes the inset free for the content. With the width left
-	 *  alone and only padding added, the panel's column takes the whole hit:
-	 *  measured at iphone-15-landscape (insets 59/59, env() resolved by the capture
-	 *  rig) the empty state's column went 247 → 188 pt, the copy reflowed one line
-	 *  and the drawer's own "New chat" CTA fell from 27 of its 48 pt visible to
-	 *  6.5 — its label out of view at 100 % text in both themes — while the
-	 *  header's host label ellipsized at the DEFAULT text size. The widened panel
-	 *  restores the column to its designed width (the safe panel less its 16 pt
-	 *  gutters: 368 pt at the 400 ceiling) and the CTA to its before position, at
-	 *  every scale.
-	 *
-	 *  The touch-floor sliver inside `sidebarWidthFor` binds only below 444 pt
-	 *  (iOS) / 448 pt of viewport, i.e. on portrait phones, where no side inset
-	 *  exists (a side inset this large implies a landscape phone 844 pt wide, where
-	 *  the 400 pt ceiling binds instead: 400 + the 59 pt left inset = 459 pt of
-	 *  panel, a 385 pt page beside it), so adding the inset cannot eat the page —
-	 *  and with it the one-handed close target — behind the panel. */
-	const panelWidth = sidebarWidthFor(width, TOUCH_FLOOR) + insets.left;
-	const reduceMotion = useReducedMotion();
 	const shadow = useShadow("overlay");
 	const scrimColour = useTokenColor("scrim");
-	const slide = useRef(new Animated.Value(0)).current;
-	const scrimFade = useRef(new Animated.Value(0)).current;
-
-	/* THE EXIT (perf audit P7; rule and limits in `@/ui/modal-exit`): the panel
-	 *  slides back toward the leading edge and the scrim fades, on the native
-	 *  driver, while the `Modal` stays mounted (`exiting`). Skipped — reset, as
-	 *  before — under reduced motion and whenever the close is a hand-off to
-	 *  another modal (the workspace row raising the computer switcher). */
-	const exitMs = effectiveDuration(DURATIONS.fast, reduceMotion);
-	const exiting = useModalExit({
-		visible,
-		reduceMotion,
-		durationMs: exitMs,
-		reset: () => {
-			slide.setValue(0);
-			scrimFade.setValue(0);
-		},
-		animateOut: (done) => {
-			Animated.parallel([
-				Animated.timing(slide, {
-					toValue: 0,
-					duration: exitMs,
-					/* The kit's `in-out` token: there is no "in" curve in the
-					 *  token set and an exit does not earn a new one. */
-					easing: Easing.bezier(...parseCubicBezier(EASINGS["in-out"])),
-					useNativeDriver: true,
-				}),
-				Animated.timing(scrimFade, {
-					toValue: 0,
-					duration: exitMs,
-					useNativeDriver: true,
-				}),
-			]).start(done);
-		},
-	});
-
-	useEffect(() => {
-		/* Closed: `useModalExit` above owns the values (animated or reset). */
-		if (!visible) return;
-		Animated.parallel([
-			Animated.timing(slide, {
-				toValue: 1,
-				duration: effectiveDuration(DURATIONS.slow, reduceMotion),
-				easing: Easing.bezier(...parseCubicBezier(EASINGS["out-expo"])),
-				useNativeDriver: true,
-			}),
-			Animated.timing(scrimFade, {
-				toValue: 1,
-				duration: effectiveDuration(DURATIONS.fast, reduceMotion),
-				useNativeDriver: true,
-			}),
-		]).start();
-	}, [visible, slide, scrimFade, reduceMotion]);
 
 	const newChatIntent = useRef(false);
 	// Changing the owning callback or unmounting cancels an old intent; reopening
@@ -210,25 +157,32 @@ export const ConversationsDrawer = ({
 			requestDrawerNewChat(Platform.OS, newChatIntent, dismiss, onNewChat);
 	};
 
-	/* The drawer is a THIRD `Modal` renderer, and the stack rule is the primitive's:
-	 *  it stands down if a newer modal is mounted over it rather than painting two
-	 *  full-viewport surfaces over each other (`@/ui/modal-stack`). It was the
-	 *  renderer that made that module's "only two callers" claim false. */
-	const { covered, nested, scope } = useModalStackEntry(visible, {
-		scrim: true,
+	/* The drawer is a THIRD `Modal` renderer on web, and the stack rule is the
+	 *  primitive's: it stands down if a newer root modal is mounted over it
+	 *  rather than painting two full-viewport surfaces over each other
+	 *  (`@/ui/modal-stack`). The native overlay is not a `Modal`, but it still
+	 *  PUBLISHES its scope, because the pane's long-press `Sheet` can be raised
+	 *  inside it. */
+	const { covered, nested, scope } = useModalStackEntry(presented, {
+		scrim: false,
 	});
 
-	/* Web only: react-native-web's modal trap focuses the first node that ACCEPTS
-	 *  focus — on open, and whenever Tab wraps past the last or first control —
-	 *  and the scrim is first in DOM order. `tabIndex={-1}` keeps it out of the
-	 *  browser's Tab sequence but not out of the trap's reach, so each wrap landed
-	 *  on an unmarked stop named "Close conversations" that Enter would act on
-	 *  (review round 1: R1 / D1 / Q1). The guard (`guardScrimFocus`) moves
-	 *  KEYBOARD focus off the scrim, so the trap's walk continues to the panel's
-	 *  first control — the Agents segment, ringed — on open and on every forward
-	 *  wrap; a backward wrap reaches the last control (review round 2, R2-1). A
-	 *  tap, or no input at all (a deep link to /conversations, Q6), leaves the
-	 *  open-time focus on the ringless scrim. Native has no `<div>` and no trap. */
+	/* The panel translates from one full width off-screen to 0, driven by the
+	 *  provider's shared value. One path for the finger, tap-open, spring-back
+	 *  and close. */
+	const panelStyle = useAnimatedStyle(() => ({
+		transform: [{ translateX: (progress.value - 1) * width }],
+	}));
+	const scrimStyle = useAnimatedStyle(() => ({ opacity: progress.value }));
+
+	/* Web only: react-native-web's modal trap focuses the first node that
+	 *  ACCEPTS focus — on open, and whenever Tab wraps — and the scrim is first
+	 *  in DOM order. `tabIndex={-1}` keeps it out of the tab sequence but not
+	 *  out of the trap's reach, so each wrap landed on an unmarked stop named
+	 *  "Close conversations" that Enter would act on (review round 1: R1 / D1 /
+	 *  Q1). The guard moves KEYBOARD focus off the scrim, so the trap's walk
+	 *  continues to the panel's first control on open and on every forward
+	 *  wrap; a backward wrap reaches the last control (review round 2, R2-1). */
 	const scrimRef = useRef<View>(null);
 	useEffect(() => {
 		if (!visible || nested || Platform.OS !== "web") return;
@@ -238,7 +192,7 @@ export const ConversationsDrawer = ({
 			scrimFocusRedirect(false, keyboardInput())
 				? /* THIS modal's Close, scoped to the dialog the scrim sits in. A
 					 *  trap walk does not stop here: it moves on to the panel's first
-					 *  control (the Agents segment), which is where a wrap lands. */
+					 *  control, which is where a wrap lands. */
 					scrim
 						.closest<HTMLElement>('[aria-modal="true"]')
 						?.querySelector<HTMLElement>(
@@ -248,188 +202,173 @@ export const ConversationsDrawer = ({
 		);
 	}, [visible, nested]);
 
-	return (
-		/* The scope is what keeps this fix and R13's together: the pane's long-press
-		 *  menu is a `Sheet` rendered INSIDE this `Modal`, so the scope tells the
-		 *  primitive that the menu is this drawer's CONTENT — a modal nested in
-		 *  another is not a second full-viewport layer, and standing this drawer down
-		 *  would unmount the pane, the menu and the reader's press with it (measured:
-		 *  a ~9 ms flicker and no menu). */
-		<ModalScopeContext.Provider value={scope}>
-			<Modal
-				visible={(visible || exiting) && !covered}
-				transparent
-				animationType="none"
-				onRequestClose={close}
-				onDismiss={() => {
-					finishDrawerDismiss(newChatIntent, onNewChat);
-					onDismiss?.();
+	/* Android has no native stack entry to pop for the overlay: while it is
+	 *  OPEN, back closes it. A `Modal` above it is a separate window and takes
+	 *  back first, which is the §4.3 order. */
+	useEffect(() => {
+		if (Platform.OS !== "android" || !presented || !visible) return;
+		const subscription = BackHandler.addEventListener(
+			"hardwareBackPress",
+			() => {
+				onClose();
+				return true;
+			},
+		);
+		return () => subscription.remove();
+	}, [presented, visible, onClose]);
+
+	/* The panel takes VoiceOver's focus on open; the trigger is restored by the
+	 *  provider's `returnFocus` on close. `setAccessibilityFocus` needs a native
+	 *  tag, so this is a no-op on web (which has the Modal's own trap). */
+	const panelRef = useRef<View>(null);
+	useEffect(() => {
+		if (!visible || Platform.OS === "web") return;
+		const tag = findNodeHandle(panelRef.current);
+		if (tag !== null) AccessibilityInfo.setAccessibilityFocus(tag);
+	}, [visible]);
+
+	const panel = (
+		<Animated.View
+			className="absolute inset-y-0 left-0"
+			testID={SURFACE.sidebar}
+			style={[{ width }, shadow, panelStyle]}
+		>
+			<View
+				ref={panelRef}
+				/* BORDERLESS (operator, TestFlight 578: "Make the conversation
+				 *  sidebar borderless, I don't like the right border"). The
+				 *  `panel-edge` hairline on the facing edge is gone; the panel's
+				 *  edge is now drawn by the overlay shadow (`useShadow("overlay")`
+				 *  on the sliding view above) and the scrim's dim on the page. */
+				className={`flex-1 ${PANEL_SURFACE}`}
+				style={{
+					paddingTop: insets.top,
+					paddingBottom: insets.bottom,
+					/* The panel spans the whole viewport, but its CONTENT still has
+					 *  to stay out of the horizontal safe area: the panel is anchored
+					 *  to the physical left edge, so `insets.left` is the band that
+					 *  applies to its first column (a landscape notch). LEFT ONLY,
+					 *  because the panel never ends at the right edge. */
+					paddingLeft: insets.left,
+					paddingRight: insets.right,
 				}}
-				// The covered application is inert while the drawer is up: `aria-modal`
-				// alone does not remove it from keyboard or screen-reader navigation.
-				accessibilityViewIsModal
 			>
-				{/* Inert from the close on: the exit keeps the drawer mounted, and a
-				 *  second tap on a footer destination must not push its route twice
-				 *  (review round 1, R2; the rule is `exitPointerEvents`). */}
-				<View className="flex-1" pointerEvents={exitPointerEvents(visible)}>
-					{/*
-					 * THE HOST KEEPS THE ONE DIM (design round 5, D7/D8/D9).
-					 *
-					 * Round 4 stood this scrim down while the pane's long-press menu was up,
-					 * so two dims could not stack into a second, undeclared ground — measured
-					 * at 1.77:1 light / 1.41:1 dark where the contract pins this panel's edge
-					 * at 5.68:1 / 4.53:1 alone, and the app strip beside the drawer dropping
-					 * from rgb(84,82,81) to rgb(32,30,28). (Those numbers are the drawer's
-					 * ALONE, with nothing nested — that is the contract's scope; with a menu
-					 * up the panel edge against the strip reads 1.36:1 / 1.13:1, and the
-					 * number is expected to move.) The state was right; the TRANSITION was
-					 * wrong, and every one of the designer's three findings was the
-					 * transition: the strip beside the drawer went fully undimmed for 40-89 ms
-					 * on close (rgb(80,78,74) -> rgb(242,237,227) -> back, in 30 of 32 reps),
-					 * the dim dipped to 0.570 on open when the release timer fired mid-fade,
-					 * and the overlap itself pulsed 0.70 -> 0.91.
-					 *
-					 * So the drawer keeps its dim for as long as it is up, and the nested
-					 * sheet's scrim becomes the press layer it always also was: `Sheet` and
-					 * `Dialog` render no dim when `hostDims` says an ancestor already does
-					 * (`@/ui/modal-stack`). There is NO transition in the dim to get wrong,
-					 * which is why all three close at once instead of becoming rarer. The panel
-					 * and content are unchanged, and the reader who closes the menu gets the same
-					 * scrim back because it was never taken away.
-					 *
-					 * IT STOPS BEING A CONTROL WHILE A MODAL INSIDE IT IS UP (round 7, R29 =
-					 * QA Q1). Round 6 claimed a transparent guest scrim was "a ghost to the
-					 * audit's overlap rule" and CI disproved it — six `U-08` FAILs on the
-					 * `S15/menu-open` iphone-se cells, `Close conversations ∩ Close`, because
-					 * `isGhost` is `clippedAway || (ariaHidden && !ownInk)` and a transparent
-					 * PRESSABLE is neither. The honest repair is on this side: a nested modal's
-					 * scrim is above this one, so this one can never receive the press it exists
-					 * for, and a painter with no text and no interactivity is outside the rule's
-					 * pair set. So while `nested` it renders as a plain painted `View` — same
-					 * colour, same box, same frames — and the guest's scrim takes the dismiss,
-					 * which is what round 5 verified happens. Nothing about the rendering
-					 * changes; one attribute of the tree does.
-					 */}
-					<Animated.View
-						style={{ opacity: scrimFade }}
-						className="absolute inset-0"
-					>
-						{nested ? (
-							/* The dim, with no claim to a press this layer cannot receive. */
-							<View style={{ flex: 1, backgroundColor: scrimColour }} />
-						) : (
-							/* Pointer-only on the web: the pane's own labelled Close is the
+				{/* The type scale is re-published INSIDE the shell because the web
+				 *  Modal is a PORTAL: react-native-web appends its node to
+				 *  `document.body`, OUTSIDE the `ScopedVariables` div the app's
+				 *  provider renders, so the pane's `var(--text-*)` fell back to the
+				 *  stylesheet's fixed px values and the drawer was the one surface
+				 *  that ignored the reader's text size (PR #34 review round 2, F1).
+				 *  On native the provider is context-only, so this re-declares the
+				 *  same values rather than computing a second scale. */}
+				<TextScaleProvider>
+					{header}
+					{content ? (
+						<View className="min-h-0 flex-1">
+							{content}
+							<WorkspaceSidebarFooter
+								onNavigate={onNavigate ?? close}
+								hasModeHeader={Boolean(header)}
+							/>
+						</View>
+					) : (
+						<ConversationsPane
+							onClose={close}
+							hideCloseButton={Boolean(header)}
+							onNavigate={onNavigate ?? close}
+							currentSessionId={currentSessionId}
+							onNewChat={onNewChat ? newChat : undefined}
+							notice={notice}
+							homeDirectory={homeDirectory}
+							/* The rows are painted on THIS panel's fill, not on the
+							 *  screen's canvas: the corner badge's ring must be the same
+							 *  colour or it reads as a halo (agent review round 2, R2-2). */
+							surfaceClassName={PANEL_SURFACE}
+						/>
+					)}
+				</TextScaleProvider>
+			</View>
+		</Animated.View>
+	);
+
+	if (Platform.OS === "web") {
+		return (
+			/* The scope is what keeps this fix and R13's together: the pane's
+			 *  long-press menu is a `Sheet` rendered INSIDE this `Modal`, so the
+			 *  scope tells the primitive that the menu is this drawer's CONTENT —
+			 *  a modal nested in another is not a second full-viewport layer, and
+			 *  standing this drawer down would unmount the pane, the menu and the
+			 *  reader's press with it (measured: a ~9 ms flicker and no menu). */
+			<ModalScopeContext.Provider value={scope}>
+				<Modal
+					visible={presented && !covered}
+					transparent
+					animationType="none"
+					onRequestClose={close}
+					onDismiss={() => {
+						finishDrawerDismiss(newChatIntent, onNewChat);
+						onDismiss?.();
+					}}
+					// The covered application is inert while the drawer is up:
+					// `aria-modal` alone does not remove it from keyboard or
+					// screen-reader navigation.
+					accessibilityViewIsModal
+				>
+					{/* Inert from the close on: the exit keeps the drawer mounted, and a
+					 *  second tap on a footer destination must not push its route twice
+					 *  (review round 1, R2; the rule is `exitPointerEvents`). */}
+					<View className="flex-1" pointerEvents={exitPointerEvents(visible)}>
+						<Animated.View
+							style={[scrimStyle, { backgroundColor: scrimColour }]}
+							className="absolute inset-0"
+							pointerEvents="box-none"
+						>
+							{/* Pointer-only on the web: the pane's own labelled Close is the
 							 *  keyboard route, and react-native-web's focus trap lands on
 							 *  this first focusable node on open — its browser ring drew a
-							 *  1 px line down the drawer's edge (`@/ui/programmatic-focus`).
-							 *  Native keeps the scrim exactly as it was. */
+							 *  1 px line down the drawer's edge (`@/ui/programmatic-focus`). */}
 							<Pressable
 								ref={scrimRef}
 								className={cx("flex-1", PROGRAMMATIC_FOCUS_CLASS)}
-								style={{ backgroundColor: scrimColour }}
 								accessibilityRole={ROLE.button}
 								accessibilityLabel={t("mobile.chrome.close_conversations")}
 								{...webPointerOnly(Platform.OS)}
 								onPress={close}
 							/>
-						)}
-					</Animated.View>
+						</Animated.View>
+						{panel}
+					</View>
+				</Modal>
+			</ModalScopeContext.Provider>
+		);
+	}
 
-					<Animated.View
-						className="absolute inset-y-0 left-0"
-						testID={SURFACE.sidebar}
-						style={{
-							width: panelWidth,
-							...shadow,
-							transform: [
-								{
-									translateX: slide.interpolate({
-										inputRange: [0, 1],
-										outputRange: [-panelWidth, 0],
-									}),
-								},
-							],
-						}}
-					>
-						<View
-							/* BORDERLESS (operator, TestFlight 578: "Make the conversation
-							 *  sidebar borderless, I don't like the right border"). The
-							 *  `panel-edge` hairline on the facing edge is gone; the panel's
-							 *  edge is now drawn by the overlay shadow (`useShadow("overlay")`
-							 *  on the sliding view above) and the scrim's dim on the page
-							 *  beside it. The trade-off is the dark theme, where the fill's own
-							 *  step against the scrim ground is 1.38:1 (D-dark-1, the reason
-							 *  the hairline existed): the shadow and dim carry that edge now,
-							 *  on the operator's explicit call. */
-							className={`flex-1 ${PANEL_SURFACE}`}
-							style={{
-								paddingTop: insets.top,
-								paddingBottom: insets.bottom,
-								/* The panel is anchored to the viewport's LEFT edge, so its own left inset is
-								 *  the horizontal safe area that applies to it — and it has to carry it
-								 *  itself: a Modal portals onto `document.body` (the note below), which puts
-								 *  the panel OUTSIDE the `Screen` that applies `paddingLeft` for every other
-								 *  surface, so its rows painted inside the unsafe band on anything with a
-								 *  side inset. Measured at iphone-15-landscape (insets 59/59, the env() value
-								 *  resolved by the capture rig): the header's host label painted at x=16 and
-								 *  the footer tabs at x=35.9, both inside the 59 pt band.
-								 *
-								 *  The padding goes on the panel's own content view, and the panel ITSELF is
-								 *  widened by the same inset (see `panelWidth` above): together they spend the
-								 *  inset out of the panel's OUTER geometry while the fill stays full-bleed
-								 *  behind the band and the content column keeps its designed width — the same
-								 *  shape as the `Screen`, which pads its root rather than its children.
-								 *
-								 *  LEFT ONLY. The panel is anchored to the left edge and never reaches the
-								 *  right one (459 pt of an 844 pt landscape phone, its 59 pt left inset
-								 *  included, a 385 pt page beside it),
-								 *  so `insets.right` describes a screen edge the panel does not touch;
-								 *  reserving it would cost another 59 pt for nothing. `left` is the one that
-								 *  moves when the notch (or a rounded corner) is on the side the drawer
-								 *  slides in from. */
-								paddingLeft: insets.left,
-							}}
-						>
-							{/* The type scale is re-published INSIDE the Modal because a modal is a
-							 *  PORTAL: react-native-web appends its node to `document.body`, OUTSIDE the
-							 *  `ScopedVariables` div the app's provider renders, so the pane's
-							 *  `var(--text-*)` fell back to the stylesheet's fixed px values and the
-							 *  drawer was the one surface that ignored the reader's text size —
-							 *  measured by the capture: at iphone-se / 200 % the drawer's cells scaled
-							 *  1.0-1.17x while every surface beside them scaled 2.00x (PR #34 review
-							 *  round 2, F1). On native the provider is context-only, so this
-							 *  re-declares the same values rather than computing a second scale. */}
-							<TextScaleProvider>
-								{header}
-								{content ? (
-									<View className="min-h-0 flex-1">
-										{content}
-										<WorkspaceSidebarFooter
-											onNavigate={onNavigate ?? close}
-											hasModeHeader={Boolean(header)}
-										/>
-									</View>
-								) : (
-									<ConversationsPane
-										onClose={close}
-										hideCloseButton={Boolean(header)}
-										onNavigate={onNavigate ?? close}
-										currentSessionId={currentSessionId}
-										onNewChat={onNewChat ? newChat : undefined}
-										notice={notice}
-										homeDirectory={homeDirectory}
-										/* The rows are painted on THIS panel's fill, not on the
-										 *  screen's canvas: the corner badge's ring must be the same
-										 *  colour or it reads as a halo (agent review round 2, R2-2). */
-										surfaceClassName={PANEL_SURFACE}
-									/>
-								)}
-							</TextScaleProvider>
-						</View>
-					</Animated.View>
-				</View>
-			</Modal>
+	if (!presented || covered) return null;
+	/* The native overlay root: the panel plus the scrim that receives a tap while
+	 *  the panel is still travelling. It is `accessibilityViewIsModal` so
+	 *  VoiceOver treats the page behind it as inert, and the two-finger escape
+	 *  closes it. */
+	return (
+		<ModalScopeContext.Provider value={scope}>
+			<View
+				className="absolute inset-0"
+				pointerEvents={visible ? "auto" : "none"}
+				accessibilityViewIsModal
+				onAccessibilityEscape={close}
+			>
+				<Animated.View
+					style={[scrimStyle, { backgroundColor: scrimColour }]}
+					className="absolute inset-0"
+				>
+					<Pressable
+						className="flex-1"
+						accessibilityRole={ROLE.button}
+						accessibilityLabel={t("mobile.chrome.close_conversations")}
+						onPress={close}
+					/>
+				</Animated.View>
+				{panel}
+			</View>
 		</ModalScopeContext.Provider>
 	);
 };

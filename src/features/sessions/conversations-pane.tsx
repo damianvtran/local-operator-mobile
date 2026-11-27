@@ -1,4 +1,3 @@
-import { useRouter } from "expo-router";
 import {
 	ArrowRightLeft,
 	CalendarClock,
@@ -69,7 +68,7 @@ import {
 	type KeyEventTarget,
 } from "@/features/sessions/search-escape";
 import { sectionHeaderIndentPt } from "@/features/sessions/section-indent";
-import { sessionLocation } from "@/features/sessions/session-navigation";
+import { sessionTargetOf } from "@/features/sessions/session-navigation";
 import {
 	degradedNote,
 	degradedShortNote,
@@ -94,6 +93,10 @@ import { SIDEBAR_SECTION_LABEL } from "@/features/sessions/sidebar-view-controls
 import { SidebarViewButton } from "@/features/sessions/sidebar-view-sheet";
 import { canAssignSessionTags } from "@/features/sessions/tags";
 import { SessionTagsSheet } from "@/features/sessions/tags-sheet";
+import {
+	type TopLevelTarget,
+	useOpenTopLevel,
+} from "@/features/sessions/top-level-navigation";
 import { useSidebarView } from "@/features/sessions/use-sidebar-view";
 import { useOptionalWorkspaceDrawer } from "@/features/sessions/workspace-drawer-context";
 import { WorkspaceModeBar } from "@/features/sessions/workspace-mode-bar";
@@ -237,7 +240,7 @@ export const WorkspaceSidebarFooter = ({
 	 *  split pane with one), so the compact footer icon is not rendered a second time. */
 	hasModeHeader?: boolean;
 }) => {
-	const router = useRouter();
+	const openTopLevel = useOpenTopLevel();
 	const capabilities = useListState((state) => state.capabilities);
 	const inboxBlock = useListState((state) => state.notifications);
 	const inboxCount = inboxBadgeCount(inboxBlock);
@@ -258,7 +261,7 @@ export const WorkspaceSidebarFooter = ({
 									count: inboxCount ?? 0,
 								})
 							: t("mobile.chrome.destination.inbox"),
-						route: "/notifications",
+						name: "notifications/index",
 						Icon: Inbox,
 						count: hasInboxCount ? inboxCount : null,
 						testID: CONTROL.sidebarNotifications,
@@ -269,7 +272,7 @@ export const WorkspaceSidebarFooter = ({
 			key: "past",
 			label: t("mobile.chrome.destination.past"),
 			accessibilityLabel: t("relay.chrome.drawer.past"),
-			route: "/past",
+			name: "past",
 			Icon: History,
 			count: null,
 			testID: CONTROL.sidebarPast,
@@ -278,7 +281,7 @@ export const WorkspaceSidebarFooter = ({
 			key: "projects",
 			label: t("relay.chrome.drawer.projects"),
 			accessibilityLabel: t("relay.chrome.drawer.projects"),
-			route: "/projects",
+			name: "projects",
 			Icon: FolderKanban,
 			count: null,
 			testID: CONTROL.sidebarProjects,
@@ -287,7 +290,7 @@ export const WorkspaceSidebarFooter = ({
 			key: "schedules",
 			label: t("mobile.chrome.destination.schedules"),
 			accessibilityLabel: t("mobile.chrome.destination.schedules"),
-			route: "/schedules",
+			name: "schedules",
 			Icon: CalendarClock,
 			count: null,
 			testID: CONTROL.sidebarSchedules,
@@ -298,7 +301,7 @@ export const WorkspaceSidebarFooter = ({
 						key: "library",
 						label: t("relay.chrome.drawer.library"),
 						accessibilityLabel: t("relay.chrome.drawer.library"),
-						route: "/library",
+						name: "library",
 						Icon: Library,
 						count: null,
 						testID: CONTROL.sidebarLibrary,
@@ -307,9 +310,9 @@ export const WorkspaceSidebarFooter = ({
 			: []),
 	] as const;
 
-	const go = (route: string) => {
+	const go = (target: TopLevelTarget) => {
 		onNavigate?.();
-		router.push(route as never);
+		openTopLevel(target);
 	};
 
 	return (
@@ -347,7 +350,7 @@ export const WorkspaceSidebarFooter = ({
 					)}
 					<IconButton
 						accessibilityLabel={t("relay.chrome.drawer.settings")}
-						onPress={() => go("/settings")}
+						onPress={() => go({ name: "settings" })}
 						icon={({ color, size }) => <Settings color={color} size={size} />}
 						testID={CONTROL.settingsButton}
 					/>
@@ -381,7 +384,7 @@ export const WorkspaceSidebarFooter = ({
 								key={item.key}
 								accessibilityRole={ROLE.button}
 								accessibilityLabel={item.accessibilityLabel}
-								onPress={() => go(item.route)}
+								onPress={() => go({ name: item.name })}
 								testID={item.testID}
 								className="min-w-0 flex-1 items-center justify-center gap-1"
 								style={{ minHeight: TOUCH_FLOOR, minWidth: TOUCH_FLOOR }}
@@ -430,7 +433,7 @@ export const WorkspaceSidebarFooter = ({
 							accessibilityLabel={item.accessibilityLabel}
 							onPress={() => {
 								setDestinationsOpen(false);
-								go(item.route);
+								go({ name: item.name });
 							}}
 							className="flex-row items-center gap-3 px-4"
 							style={{ minHeight: TOUCH_FLOOR }}
@@ -462,7 +465,7 @@ export const ConversationsPane = ({
 	hideCloseButton = false,
 	surfaceClassName,
 }: ConversationsPaneProps) => {
-	const router = useRouter();
+	const openTopLevel = useOpenTopLevel();
 	const { refreshList, relay, busy, streamHealth, lastError } = useConnection();
 	const showToast = useUiStore((state) => state.showToast);
 	/* The New chat row's glyph, in the same ink as every other quiet control in
@@ -731,7 +734,7 @@ export const ConversationsPane = ({
 		// Selecting the current chat is a dismissal, not a duplicate route that
 		// remounts its input. Other selections switch directly, without Home.
 		if (session.session_id !== currentSessionId)
-			router.navigate(sessionLocation(session) as `/session/${string}`);
+			openTopLevel(sessionTargetOf(session));
 		onNavigate?.();
 	};
 

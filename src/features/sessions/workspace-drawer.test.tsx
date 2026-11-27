@@ -46,13 +46,22 @@ vi.mock("expo-router", () => ({
 	useRouter: () => ({ navigate: host.navigate }),
 }));
 vi.mock("lucide-react-native", () => ({ Menu: () => null, X: () => null }));
+vi.mock("react-native-reanimated", async () => {
+	const { reanimatedModuleMock } = await import(
+		"@/testing/native-gesture-mocks"
+	);
+	return reanimatedModuleMock();
+});
 vi.mock("react-native", () => ({
+	useWindowDimensions: () => ({ width: 390, height: 844 }),
 	Platform: {
 		get OS() {
 			return host.platform;
 		},
 	},
 	Keyboard: { dismiss: host.dismiss },
+	ScrollView: (props: { children?: import("react").ReactNode }) =>
+		props.children ?? null,
 	View: (props: {
 		children?: import("react").ReactNode;
 		onLayout?: (event: LayoutEvent) => void;
@@ -98,7 +107,10 @@ vi.mock("@/features/auth/connection-provider", () => ({
 	useListState: (select: (state: unknown) => unknown) =>
 		select({ unread: host.unread }),
 }));
-vi.mock("@/ui/appearance", () => ({ useTokenColor: () => "black" }));
+vi.mock("@/ui/appearance", () => ({
+	useTokenColor: () => "black",
+	useReducedMotion: () => false,
+}));
 vi.mock("@/ui/layout", () => ({ TOUCH_FLOOR: 44 }));
 vi.mock("@/ui/text-scale-provider", () => ({
 	useTextScale: () => ({ effectiveScale: host.textScale }),

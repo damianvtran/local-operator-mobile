@@ -52,6 +52,10 @@ import {
 	unreachableComputerNote,
 } from "@/features/deep-links/sentences";
 import { sessionLinkOutcome } from "@/features/deep-links/session-link";
+import {
+	sessionTarget,
+	useOpenTopLevel,
+} from "@/features/sessions/top-level-navigation";
 import { isRelayMissing } from "@/relay";
 import { useUiStore } from "@/state/ui-store";
 import { warmSync } from "@/state/warm-sync";
@@ -81,6 +85,7 @@ const useComputerLabel = (): string => {
 
 export const useDeepLinkResolution = (): void => {
 	const router = useRouter();
+	const openTopLevel = useOpenTopLevel();
 	const connect = useConnection();
 	const showToast = useUiStore((state) => state.showToast);
 	const phase = useConnectionState((state) => state.phase);
@@ -138,7 +143,7 @@ export const useDeepLinkResolution = (): void => {
 					 * cheap. */
 					await client.history(destination.sessionId, { limit: 1 });
 					if (connectionStore.getState().revision !== askedOn) return;
-					router.navigate(`/session/${destination.sessionId}`);
+					openTopLevel(sessionTarget(destination.sessionId));
 				} catch (error) {
 					if (connectionStore.getState().revision !== askedOn) return;
 					/* A clean 404 is the §6.6 "no longer there" sentence (the same
@@ -169,7 +174,7 @@ export const useDeepLinkResolution = (): void => {
 				// Navigation remains the one route owner. A prior receipt shares this
 				// seed; mounting the screen supersedes it before its live stream opens.
 				void warmSync.prefetch(answer.session_id);
-				router.navigate(`/session/${answer.session_id}`);
+				openTopLevel(sessionTarget(answer.session_id));
 			} catch (error) {
 				if (connectionStore.getState().revision !== askedOn) return;
 				/* The relay's own 404 is §6.6's "no longer there"; anything else —
@@ -186,7 +191,7 @@ export const useDeepLinkResolution = (): void => {
 				router.replace("/");
 			}
 		})();
-	}, [pending, phase, connect, router, showToast, label]);
+	}, [pending, phase, connect, openTopLevel, router, showToast, label]);
 
 	/* The bounded wait: a destination that never reaches a live route. */
 	useEffect(() => {

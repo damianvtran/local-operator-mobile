@@ -32,6 +32,10 @@ import { refusalSentence } from "@/features/notifications/use-notifications";
 import { AsksSheet } from "@/features/session/components/asks-sheet";
 import { Markdown } from "@/features/session/components/markdown";
 import { useSessionRuntime } from "@/features/session/use-session";
+import {
+	sessionTarget,
+	useOpenTopLevel,
+} from "@/features/sessions/top-level-navigation";
 import { t } from "@/i18n";
 import { isRelayError, isRelayMissing } from "@/relay";
 import {
@@ -89,6 +93,7 @@ type DetailState =
  */
 export default function NotificationDetail({ itemId }: { itemId: string }) {
 	const router = useRouter();
+	const openTopLevel = useOpenTopLevel();
 	const { relay } = useConnection();
 	const client = relay();
 	const [state, setState] = useState<DetailState>({ kind: "loading" });
@@ -250,9 +255,9 @@ export default function NotificationDetail({ itemId }: { itemId: string }) {
 
 	const openConversation = useCallback(
 		(sessionId: string) => {
-			router.push(`/session/${encodeURIComponent(sessionId)}`);
+			openTopLevel(sessionTarget(sessionId));
 		},
-		[router],
+		[openTopLevel],
 	);
 
 	const body = (() => {

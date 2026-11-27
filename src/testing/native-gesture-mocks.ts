@@ -15,18 +15,31 @@
  * worklet would be given, read at render.
  */
 import type { ReactNode } from "react";
+import { useRef } from "react";
 import { ScrollView, View } from "react-native";
 
 export const reanimatedModuleMock = () => ({
 	__esModule: true,
-	default: { ScrollView },
-	/** A shared value without a UI thread: the write is what a test can read. */
-	useSharedValue: <T>(initial: T) => ({ value: initial }),
+	default: { ScrollView, View },
+	/** A shared value without a UI thread: the write is what a test can read.
+	 *  Held in a ref, like the real hook — a new object every render would make
+	 *  every callback that reads it a new identity, and an effect keyed on one
+	 *  (the drawer's open) would fire again on each render. */
+	useSharedValue: <T>(initial: T) => {
+		const value = useRef({ value: initial });
+		return value.current;
+	},
 	useAnimatedStyle: <T extends object>(factory: () => T) => factory(),
+	/** The reaction runs once with the clock's initial value; a Node test cannot
+	 *  tick it, and nothing it does here is an assertion about motion. */
+	useAnimatedReaction: <T>(prepare: () => T, react: (value: T) => void) => {
+		react(prepare());
+	},
 	withSpring: <T>(toValue: T) => toValue,
 	withTiming: <T>(toValue: T) => toValue,
 	cancelAnimation: () => {},
 	runOnJS: <A extends unknown[]>(fn: (...args: A) => void) => fn,
+	Easing: { linear: (value: number) => value },
 });
 
 /** A chainable pan builder: every configuration call returns the same object, so

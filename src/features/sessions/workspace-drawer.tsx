@@ -9,6 +9,7 @@ import {
 import { MENU_BADGE_INSET } from "@/features/home/header-fit";
 import { countLabel } from "@/features/notifications/notifications-model";
 import { ConversationsDrawer } from "@/features/sessions/conversations-drawer";
+import { useDrawerProgress } from "@/features/sessions/drawer-progress";
 import { unreadBadgeCount } from "@/features/sessions/session-projection";
 import type {
 	WorkspaceDrawerBridgeAdapter,
@@ -22,7 +23,7 @@ import {
 import { WorkspaceModeBar } from "@/features/sessions/workspace-mode-bar";
 import { t } from "@/i18n";
 import { CONTROL, ROLE } from "@/ui/a11y";
-import { useTokenColor } from "@/ui/appearance";
+import { useReducedMotion, useTokenColor } from "@/ui/appearance";
 import { Badge } from "@/ui/components/badge";
 import { TOUCH_FLOOR } from "@/ui/layout";
 import { useTextScale } from "@/ui/text-scale-provider";
@@ -43,6 +44,13 @@ export const WorkspaceDrawerProvider = ({
 	useLocaleFrame();
 	const pathname = usePathname();
 	const [visible, setVisible] = useState(false);
+	const reduceMotion = useReducedMotion();
+	const {
+		progress,
+		presented,
+		open: openProgress,
+		close: closeProgress,
+	} = useDrawerProgress({ reduceMotion });
 	const [mode, setMode] = useState<WorkspaceDrawerMode>("agents");
 	const [newChatRequest, setNewChatRequest] = useState(0);
 	const [agentsPresentation, setAgentsPresentation] = useState<{
@@ -63,10 +71,11 @@ export const WorkspaceDrawerProvider = ({
 	}, []);
 	const close = useCallback(() => {
 		setVisible(false);
+		closeProgress();
 		// RN web restores focus after its modal trap is removed. Android has no
 		// onDismiss event, so its trigger restoration belongs to the close path.
 		if (Platform.OS !== "web") finishClose();
-	}, [finishClose]);
+	}, [closeProgress, finishClose]);
 	const navigate = useCallback(() => {
 		returnFocus.current = undefined;
 		close();
@@ -76,12 +85,16 @@ export const WorkspaceDrawerProvider = ({
 		setNewChatRequest((request) => request + 1);
 		router.navigate("/");
 	}, [navigate, router]);
-	const open = useCallback<WorkspaceDrawerController["open"]>((options) => {
-		Keyboard.dismiss();
-		returnFocus.current = options?.returnFocus;
-		if (options?.mode) setMode(options.mode);
-		setVisible(true);
-	}, []);
+	const open = useCallback<WorkspaceDrawerController["open"]>(
+		(options) => {
+			Keyboard.dismiss();
+			returnFocus.current = options?.returnFocus;
+			if (options?.mode) setMode(options.mode);
+			setVisible(true);
+			openProgress();
+		},
+		[openProgress],
+	);
 	const selectMode = useCallback(
 		(next: WorkspaceDrawerMode) => {
 			if (next === "agents" || bridgeAdapter) setMode(next);
@@ -90,6 +103,21 @@ export const WorkspaceDrawerProvider = ({
 	);
 	const currentSessionId = SESSION_PATH.exec(pathname)?.[1];
 	const bridge = mode === "team-bridge" && bridgeAdapter;
+	/* Android keeps the page beneath the overlay out of TalkBack's tree while the
+	 *  drawer is up. The wrapper is layout-neutral (a flex child of the root) and
+	 *  exists only on Android: iOS gets the same containment from the overlay's
+	 *  `accessibilityViewIsModal`. */
+	const page =
+		Platform.OS === "android" ? (
+			<View
+				className="flex-1"
+				importantForAccessibility={visible ? "no-hide-descendants" : "auto"}
+			>
+				{children}
+			</View>
+		) : (
+			children
+		);
 	return (
 		<WorkspaceDrawerContext.Provider
 			value={{
@@ -97,15 +125,18 @@ export const WorkspaceDrawerProvider = ({
 				bridgeAdapter,
 				open,
 				close,
+				progress,
 				selectMode,
 				newChatRequest,
 				consumeNewChatRequest,
 				setAgentsPresentation,
 			}}
 		>
-			{children}
+			{page}
 			<ConversationsDrawer
 				visible={visible}
+				presented={presented}
+				progress={progress}
 				onClose={close}
 				onNavigate={navigate}
 				onDismiss={finishClose}
