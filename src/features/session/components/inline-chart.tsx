@@ -101,6 +101,7 @@ import type { CategoryChart } from "@/features/session/inline-ui-parts";
 import { t } from "@/i18n";
 import { useTheme } from "@/ui/appearance";
 import { contrastRatio, mixOklab } from "@/ui/chart-palette";
+import { DrawerSwipeClaim } from "@/ui/drawer-swipe-claim";
 import { useShadow } from "@/ui/elevation";
 import { lineBoxPt } from "@/ui/text-scale";
 import { useTextScale } from "@/ui/text-scale-provider";
@@ -2128,86 +2129,93 @@ export function InlineChartPlot({
 		? Math.min(total, active.series * mark.count[0] + active.category + 1)
 		: 0;
 	return (
-		<View
-			ref={rootRef}
-			onLayout={({ nativeEvent }: LayoutChangeEvent) =>
-				setWidth(Math.round(nativeEvent.layout.width))
-			}
-			accessible
-			focusable
-			accessibilityRole="adjustable"
-			accessibilityLabel={chart.title}
-			accessibilityValue={{ min: 0, max: total, now, text: valueText }}
-			aria-valuetext={valueText}
-			aria-valuemin={0}
-			aria-valuemax={total}
-			aria-valuenow={now}
-			accessibilityActions={[{ name: "increment" }, { name: "decrement" }]}
-			onAccessibilityAction={({ nativeEvent }: AccessibilityActionEvent) => {
-				const direction =
-					nativeEvent.actionName === "increment"
-						? 1
-						: nativeEvent.actionName === "decrement"
-							? -1
-							: 0;
-				if (!direction) return;
-				// A heatmap walks every cell in reading order; others walk categories.
-				if (heatmap)
-					setActive((current) =>
-						stepCell(current, direction, mark.count[0], mark.count[1]),
-					);
-				else step(direction > 0 ? "next" : "previous");
-			}}
-			onFocus={(event) => {
-				// §5 Keyboard: focus activates mark 0, so the first arrow moves.
-				// Web: only keyboard focus (`:focus-visible`) — a click or tap
-				// also focuses the root, and must not pin mark 0 under the finger.
-				const target = event.target as unknown as {
-					matches?: (selector: string) => boolean;
-				};
-				const keyboard =
-					Platform.OS !== "web" || target?.matches?.(":focus-visible") === true;
-				if (keyboard)
-					setActive((current) => current ?? { category: 0, series: 0 });
-			}}
-			onBlur={() => setActive(null)}
-			onTouchStart={() => noteChartTouch(clear)}
-			// X8: plot geometry is physical; an RTL root must not mirror it.
-			style={{ direction: "ltr" }}
-			className="rounded-sm web:focus-visible:outline web:focus-visible:outline-2 web:focus-visible:outline-accent"
-		>
-			{/* Horizontal bars keep the unit row too: their value axis is x, but
-			 * the unit still reads once, above the plot. */}
-			{chart.type !== "pie" && chart.type !== "heatmap" ? (
-				<CartesianHeader chart={chart} paint={paint} />
-			) : null}
-			<Animated.View style={{ opacity }}>
-				{width === 0 ? (
-					<View style={{ height: reservedHeight(chart, 0, fontScale) }} />
-				) : chart.type === "heatmap" ? (
-					<HeatmapPlot chart={chart} {...props} />
-				) : chart.type === "pie" ? (
-					<DonutPlot chart={chart} {...props} />
-				) : horizontal && chart.type === "bar" ? (
-					<HorizontalBarPlot chart={chart} {...props} />
-				) : (
-					<CartesianPlot chart={chart} {...props} />
-				)}
-			</Animated.View>
-			{/* Visually hidden polite live region mirroring the active mark. */}
-			<Text
-				accessibilityLiveRegion="polite"
-				aria-live="polite"
-				style={{
-					position: "absolute",
-					width: 1,
-					height: 1,
-					opacity: 0,
-					overflow: "hidden",
+		/* The plot owns its own horizontal drag: the scrub `PanResponder` below
+		 *  scrubs a series, so the page's drawer swipe must never take it. A
+		 *  claim rather than props, because there is no scroller here to
+		 *  configure (memo E4, risk 3). */
+		<DrawerSwipeClaim>
+			<View
+				ref={rootRef}
+				onLayout={({ nativeEvent }: LayoutChangeEvent) =>
+					setWidth(Math.round(nativeEvent.layout.width))
+				}
+				accessible
+				focusable
+				accessibilityRole="adjustable"
+				accessibilityLabel={chart.title}
+				accessibilityValue={{ min: 0, max: total, now, text: valueText }}
+				aria-valuetext={valueText}
+				aria-valuemin={0}
+				aria-valuemax={total}
+				aria-valuenow={now}
+				accessibilityActions={[{ name: "increment" }, { name: "decrement" }]}
+				onAccessibilityAction={({ nativeEvent }: AccessibilityActionEvent) => {
+					const direction =
+						nativeEvent.actionName === "increment"
+							? 1
+							: nativeEvent.actionName === "decrement"
+								? -1
+								: 0;
+					if (!direction) return;
+					// A heatmap walks every cell in reading order; others walk categories.
+					if (heatmap)
+						setActive((current) =>
+							stepCell(current, direction, mark.count[0], mark.count[1]),
+						);
+					else step(direction > 0 ? "next" : "previous");
 				}}
+				onFocus={(event) => {
+					// §5 Keyboard: focus activates mark 0, so the first arrow moves.
+					// Web: only keyboard focus (`:focus-visible`) — a click or tap
+					// also focuses the root, and must not pin mark 0 under the finger.
+					const target = event.target as unknown as {
+						matches?: (selector: string) => boolean;
+					};
+					const keyboard =
+						Platform.OS !== "web" ||
+						target?.matches?.(":focus-visible") === true;
+					if (keyboard)
+						setActive((current) => current ?? { category: 0, series: 0 });
+				}}
+				onBlur={() => setActive(null)}
+				onTouchStart={() => noteChartTouch(clear)}
+				// X8: plot geometry is physical; an RTL root must not mirror it.
+				style={{ direction: "ltr" }}
+				className="rounded-sm web:focus-visible:outline web:focus-visible:outline-2 web:focus-visible:outline-accent"
 			>
-				{description ?? ""}
-			</Text>
-		</View>
+				{/* Horizontal bars keep the unit row too: their value axis is x, but
+				 * the unit still reads once, above the plot. */}
+				{chart.type !== "pie" && chart.type !== "heatmap" ? (
+					<CartesianHeader chart={chart} paint={paint} />
+				) : null}
+				<Animated.View style={{ opacity }}>
+					{width === 0 ? (
+						<View style={{ height: reservedHeight(chart, 0, fontScale) }} />
+					) : chart.type === "heatmap" ? (
+						<HeatmapPlot chart={chart} {...props} />
+					) : chart.type === "pie" ? (
+						<DonutPlot chart={chart} {...props} />
+					) : horizontal && chart.type === "bar" ? (
+						<HorizontalBarPlot chart={chart} {...props} />
+					) : (
+						<CartesianPlot chart={chart} {...props} />
+					)}
+				</Animated.View>
+				{/* Visually hidden polite live region mirroring the active mark. */}
+				<Text
+					accessibilityLiveRegion="polite"
+					aria-live="polite"
+					style={{
+						position: "absolute",
+						width: 1,
+						height: 1,
+						opacity: 0,
+						overflow: "hidden",
+					}}
+				>
+					{description ?? ""}
+				</Text>
+			</View>
+		</DrawerSwipeClaim>
 	);
 }

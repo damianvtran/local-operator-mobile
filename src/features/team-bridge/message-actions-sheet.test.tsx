@@ -40,6 +40,14 @@ const rec = vi.hoisted(() => ({
 	width: 390,
 }));
 
+/* The chart's plot is wrapped in `DrawerSwipeClaim`, which imports
+ *  gesture-handler at module scope; its Node reduction is the shared one. */
+vi.mock("react-native-gesture-handler", async () => {
+	const { gestureHandlerModuleMock } = await import(
+		"@/testing/native-gesture-mocks"
+	);
+	return gestureHandlerModuleMock();
+});
 vi.mock("react-native", async (importOriginal) => {
 	const rnw = (await importOriginal()) as Record<string, unknown>;
 	const { createElement, useEffect } = await import("react");

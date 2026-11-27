@@ -13,6 +13,11 @@ import type { PastSession } from "@/contracts";
 import { useConnection } from "@/features/auth/connection-provider";
 import { SessionTagLine } from "@/features/sessions/tag-line";
 import { tagAnnouncement } from "@/features/sessions/tags";
+import {
+	sessionTarget,
+	useOpenTopLevel,
+} from "@/features/sessions/top-level-navigation";
+import { WorkspaceDrawerButton } from "@/features/sessions/workspace-drawer";
 import { t } from "@/i18n";
 import {
 	CONTROL,
@@ -24,7 +29,6 @@ import {
 	SCREEN,
 } from "@/ui/a11y";
 import { Alert } from "@/ui/components/alert";
-import { BackButton } from "@/ui/components/back-button";
 import { Button } from "@/ui/components/button";
 import { EmptyState } from "@/ui/components/empty-state";
 import { Input } from "@/ui/components/input";
@@ -51,6 +55,7 @@ import { Skeleton } from "@/ui/components/skeleton";
  */
 export default function PastSessions() {
 	const router = useRouter();
+	const openTopLevel = useOpenTopLevel();
 	const { relay } = useConnection();
 
 	const [rows, setRows] = useState<PastSession[]>([]);
@@ -113,7 +118,7 @@ export default function PastSessions() {
 		setRefusal(null);
 		try {
 			await client.resumeSession(session.id);
-			router.push(`/session/${session.id}`);
+			openTopLevel(sessionTarget(session.id));
 		} catch {
 			setRefusal("This session is no longer saved.");
 		} finally {
@@ -139,9 +144,7 @@ export default function PastSessions() {
 		<Screen
 			title="Past sessions"
 			testID={SCREEN.past}
-			headerLeading={
-				<BackButton testID={CONTROL.pastBack} onPress={() => router.back()} />
-			}
+			headerLeading={<WorkspaceDrawerButton testID={CONTROL.pastBack} />}
 		>
 			<View className="gap-3 pt-2">
 				<View className="flex-row items-end gap-2">

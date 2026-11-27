@@ -147,6 +147,12 @@ for (const leaf of [
 	}));
 }
 
+/* The six drawer destinations swapped their chevron for the drawer button; the
+ * Node renderer cannot load its provider, and this test is about copy. */
+vi.doMock("@/features/sessions/workspace-drawer", () => ({
+	WorkspaceDrawerButton: Recorder,
+}));
+
 const SUMMARY: ProjectSummary = {
 	id: "p1",
 	name: "payments",

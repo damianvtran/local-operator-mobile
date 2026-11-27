@@ -70,6 +70,11 @@ import {
 } from "@/features/notifications/use-notifications";
 import { AsksSheet } from "@/features/session/components/asks-sheet";
 import { useSessionRuntime } from "@/features/session/use-session";
+import {
+	sessionTarget,
+	useOpenTopLevel,
+} from "@/features/sessions/top-level-navigation";
+import { WorkspaceDrawerButton } from "@/features/sessions/workspace-drawer";
 import { t } from "@/i18n";
 import {
 	CONTROL,
@@ -85,7 +90,6 @@ import {
 	SURFACE,
 } from "@/ui/a11y";
 import { Alert } from "@/ui/components/alert";
-import { BackIcon } from "@/ui/components/back-icon";
 import { Badge } from "@/ui/components/badge";
 import { Button } from "@/ui/components/button";
 import { Dialog } from "@/ui/components/dialog";
@@ -121,6 +125,7 @@ import { cx } from "@/ui/variants";
  */
 export default function Notifications() {
 	const router = useRouter();
+	const openTopLevel = useOpenTopLevel();
 	const { relay } = useConnection();
 	const client = relay();
 	const capabilities = useListState((state) => state.capabilities);
@@ -544,16 +549,7 @@ export default function Notifications() {
 			titleLines={1}
 			testID={SCREEN.notifications}
 			scroll={false}
-			headerLeading={
-				<IconButton
-					accessibilityLabel={t("mobile.notifications.back")}
-					onPress={() => router.back()}
-					icon={({ color, size }) => (
-						<BackIcon color={color} size={size} glyph="chevron" />
-					)}
-					testID={CONTROL.inboxBack}
-				/>
-			}
+			headerLeading={<WorkspaceDrawerButton testID={CONTROL.inboxBack} />}
 			headerAction={
 				/* THE VERBS LIVE IN THE HEADER. As an in-scroll row above the reel
 				 * they cost 48 pt of the height the rows need (design review ND11:
@@ -809,7 +805,7 @@ export default function Notifications() {
 				currentSessionId={answerSession ?? undefined}
 				onOpenConversation={(target) => {
 					setAnswerSession(null);
-					router.push(`/session/${target}`);
+					openTopLevel(sessionTarget(target));
 				}}
 			/>
 			<Dialog

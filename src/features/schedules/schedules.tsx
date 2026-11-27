@@ -31,6 +31,7 @@ import {
 	wakeSectionSummary,
 } from "@/features/schedules/schedules-copy";
 import { SchedulesStateMarkers } from "@/features/schedules/schedules-markers";
+import { WorkspaceDrawerButton } from "@/features/sessions/workspace-drawer";
 import { t } from "@/i18n";
 import {
 	CONTROL,
@@ -42,7 +43,6 @@ import {
 	scheduleWakeRowId,
 } from "@/ui/a11y";
 import { Alert } from "@/ui/components/alert";
-import { BackButton } from "@/ui/components/back-button";
 import { Button } from "@/ui/components/button";
 import { EmptyState } from "@/ui/components/empty-state";
 import { RefusalSurface } from "@/ui/components/refusal-surface";
@@ -173,12 +173,7 @@ export default function Schedules() {
 		<Screen
 			title={t("mobile.chrome.destination.schedules")}
 			testID={SCREEN.schedules}
-			headerLeading={
-				<BackButton
-					testID={CONTROL.schedulesBack}
-					onPress={() => router.back()}
-				/>
-			}
+			headerLeading={<WorkspaceDrawerButton testID={CONTROL.schedulesBack} />}
 		>
 			<SchedulesStateMarkers empty={empty} />
 

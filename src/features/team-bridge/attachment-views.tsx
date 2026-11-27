@@ -44,6 +44,7 @@ import {
 	ModalScopeContext,
 	useModalStackEntry,
 } from "@/ui/components/modal-stack-entry";
+import { HORIZONTAL_SCROLL_PROPS } from "@/ui/horizontal-scroll";
 import { TOUCH_FLOOR } from "@/ui/layout";
 import {
 	CHIP_STRIP_LAYOUT,
@@ -523,6 +524,7 @@ function ImageViewer({
 						onScrollBeginDrag={onUserScroll}
 						onTouchStart={onUserScroll}
 						scrollEventThrottle={16}
+						{...HORIZONTAL_SCROLL_PROPS}
 					>
 						{images.map((descriptor, page) => (
 							<ViewerPage
@@ -708,6 +710,7 @@ export function ComposerAttachments({
 				showsHorizontalScrollIndicator={false}
 				style={CHIP_STRIP_LAYOUT.scroll}
 				contentContainerStyle={CHIP_STRIP_LAYOUT.content}
+				{...HORIZONTAL_SCROLL_PROPS}
 			>
 				<View className="flex-row gap-3">
 					{chips.map((chip, index) => {

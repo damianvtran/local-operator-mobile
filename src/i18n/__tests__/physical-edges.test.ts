@@ -276,6 +276,13 @@ const ALLOWLIST: {
 		token: "paddingLeft",
 		count: 1,
 	},
+	{
+		file: "src/features/sessions/conversations-drawer.tsx",
+		reason:
+			"holdout: the panel spans the viewport, so its content also keeps clear of the physical right inset while the anchor and slide stay physical",
+		token: "paddingRight",
+		count: 1,
+	},
 	/* Mixed-content isolation itself: the ONE definition of "this text keeps its
 	 * own direction". RN's `textAlign` type has no start/end, so the pair
 	 * `writingDirection: "ltr"` + `textAlign: "left"` is the only way to state it. */

@@ -166,6 +166,9 @@ for (const leaf of [
 	"segmented",
 ]) {
 	// Not hoisted, and need not be: Settings is imported inside the test.
+	vi.doMock("@/features/sessions/workspace-drawer", () => ({
+		WorkspaceDrawerButton: Recorder,
+	}));
 	vi.doMock(`@/ui/components/${leaf}`, () => ({
 		BackButton: Recorder,
 		Badge: Recorder,

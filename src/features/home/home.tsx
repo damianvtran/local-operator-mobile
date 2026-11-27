@@ -117,6 +117,7 @@ import { useChromeGlass } from "@/ui/components/chrome-surface";
 import { RefusalSurface } from "@/ui/components/refusal-surface";
 import { Screen } from "@/ui/components/screen";
 import { Sheet } from "@/ui/components/sheet";
+import { DrawerSwipeClaim } from "@/ui/drawer-swipe-claim";
 import { TOUCH_FLOOR, useLayout } from "@/ui/layout";
 import { useTextScale } from "@/ui/text-scale-provider";
 import { cx } from "@/ui/variants";
@@ -1216,100 +1217,102 @@ export default function Home({
 					</View>
 				) : null}
 			</ScrollView>
-			<Composer
-				testID={SURFACE.homeComposer}
-				glass={chromeGlass}
-				onEditingChange={setEditing}
-				onOpenQueue={() => setQueueOpen(true)}
-				suppressDisabledHint={homeRecovery !== null}
-				controls={controls}
-				draft={draft}
-				onDraftChange={editDraft}
-				images={images}
-				onRemoveImage={(index) =>
-					setImages((current) => current.filter((_, at) => at !== index))
-				}
-				onAttach={attach}
-				onPasteFile={pasteFile}
-				onPasteImages={pasteImages}
-				attaching={attaching}
-				onAttachOpen={attachLatch.abandon}
-				/* A send takes the composer: a take still live is dropped and said at
-				 *  the tap (design §2.5/U2); a resting mic line ends only once the
-				 *  message is admitted (#323, round 1 m1). */
-				onSend={() => sendFromHome(voice, send)}
-				voice={voice}
-				onStop={() => {
-					const sid = startup.snapshot.sessionId;
-					const active = relay();
-					if (sid && active)
-						void active
-							.command(sid, { op: "abort" })
-							.catch(() => setComposerError("Could not stop the turn."));
-				}}
-				retainedMessage={
-					startup.snapshot.phase === "blocked"
-						? "Your queued message is retained."
-						: null
-				}
-				notice={null}
-				onRetry={startup.retry}
-				showResume={false}
-				onResume={() => undefined}
-				error={startup.snapshot.error ?? composerError}
-				/* The attach/paste line is the reader's to dismiss, as on the session
-				 *  view. Offered only while it is the line SHOWN: a startup error
-				 *  outranks it above, and a Dismiss that cleared the hidden line
-				 *  would be a control that visibly does nothing. */
-				onDismissError={
-					startup.snapshot.error == null && composerError !== null
-						? () => setComposerError(null)
-						: undefined
-				}
-				queuedCount={startup.snapshot.queue.length}
-				/* The folder is data, not an element: the composer's row decides
-				 *  whether its icon fits or it waits in More (issue #325). Its
-				 *  sheet shows the full path, and the choices while they apply. */
-				folder={
-					startFolder !== null
-						? {
-								...homeFolderControl(startFolder, folders),
-								editable: selectionEditable,
-								onPress: () => setPicker("folder"),
-								testID: CONTROL.homeFolderChip,
-							}
-						: null
-				}
-				bottomInset={insets.bottom}
-				modelChip={chips.model}
-				effortChip={chips.effort}
-				onOpenRunSettings={() => setPicker("run")}
-				runSettingsCustom={homeRunSettingsCustom({
-					chosenModel,
-					chosenEffort,
-					offer,
-				})}
-				identityRow={
-					target.moreRow
-						? {
-								value: identity.label,
-								accessibilityLabel: t("mobile.home.identity.pill_label", {
-									target: identity.label,
-								}),
-								disabled: !connected,
-								onPress: () => setPicker("identity"),
-							}
-						: null
-				}
-				slashQuery={null}
-				slashSheet={null}
-				/* No `skills` here on purpose: `$skill` autocomplete asks
-				 *  `GET /api/skills?session_id=`, and a new chat has no session id yet
-				 *  (discovery is per conversation directory). The session composer
-				 *  has it; extending it to the home needs the relay to answer for a
-				 *  folder, which it does not today. */
-				fieldRef={fieldRef}
-			/>
+			<DrawerSwipeClaim>
+				<Composer
+					testID={SURFACE.homeComposer}
+					glass={chromeGlass}
+					onEditingChange={setEditing}
+					onOpenQueue={() => setQueueOpen(true)}
+					suppressDisabledHint={homeRecovery !== null}
+					controls={controls}
+					draft={draft}
+					onDraftChange={editDraft}
+					images={images}
+					onRemoveImage={(index) =>
+						setImages((current) => current.filter((_, at) => at !== index))
+					}
+					onAttach={attach}
+					onPasteFile={pasteFile}
+					onPasteImages={pasteImages}
+					attaching={attaching}
+					onAttachOpen={attachLatch.abandon}
+					/* A send takes the composer: a take still live is dropped and said at
+					 *  the tap (design §2.5/U2); a resting mic line ends only once the
+					 *  message is admitted (#323, round 1 m1). */
+					onSend={() => sendFromHome(voice, send)}
+					voice={voice}
+					onStop={() => {
+						const sid = startup.snapshot.sessionId;
+						const active = relay();
+						if (sid && active)
+							void active
+								.command(sid, { op: "abort" })
+								.catch(() => setComposerError("Could not stop the turn."));
+					}}
+					retainedMessage={
+						startup.snapshot.phase === "blocked"
+							? "Your queued message is retained."
+							: null
+					}
+					notice={null}
+					onRetry={startup.retry}
+					showResume={false}
+					onResume={() => undefined}
+					error={startup.snapshot.error ?? composerError}
+					/* The attach/paste line is the reader's to dismiss, as on the session
+					 *  view. Offered only while it is the line SHOWN: a startup error
+					 *  outranks it above, and a Dismiss that cleared the hidden line
+					 *  would be a control that visibly does nothing. */
+					onDismissError={
+						startup.snapshot.error == null && composerError !== null
+							? () => setComposerError(null)
+							: undefined
+					}
+					queuedCount={startup.snapshot.queue.length}
+					/* The folder is data, not an element: the composer's row decides
+					 *  whether its icon fits or it waits in More (issue #325). Its
+					 *  sheet shows the full path, and the choices while they apply. */
+					folder={
+						startFolder !== null
+							? {
+									...homeFolderControl(startFolder, folders),
+									editable: selectionEditable,
+									onPress: () => setPicker("folder"),
+									testID: CONTROL.homeFolderChip,
+								}
+							: null
+					}
+					bottomInset={insets.bottom}
+					modelChip={chips.model}
+					effortChip={chips.effort}
+					onOpenRunSettings={() => setPicker("run")}
+					runSettingsCustom={homeRunSettingsCustom({
+						chosenModel,
+						chosenEffort,
+						offer,
+					})}
+					identityRow={
+						target.moreRow
+							? {
+									value: identity.label,
+									accessibilityLabel: t("mobile.home.identity.pill_label", {
+										target: identity.label,
+									}),
+									disabled: !connected,
+									onPress: () => setPicker("identity"),
+								}
+							: null
+					}
+					slashQuery={null}
+					slashSheet={null}
+					/* No `skills` here on purpose: `$skill` autocomplete asks
+					 *  `GET /api/skills?session_id=`, and a new chat has no session id yet
+					 *  (discovery is per conversation directory). The session composer
+					 *  has it; extending it to the home needs the relay to answer for a
+					 *  folder, which it does not today. */
+					fieldRef={fieldRef}
+				/>
+			</DrawerSwipeClaim>
 		</ReadableColumn>
 	);
 

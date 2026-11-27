@@ -16,10 +16,10 @@ import {
 	staleBadgeLabel,
 } from "@/features/projects/projects-copy";
 import { ProjectsStateMarkers } from "@/features/projects/projects-markers";
+import { WorkspaceDrawerButton } from "@/features/sessions/workspace-drawer";
 import { t } from "@/i18n";
 import { CONTROL, EMPTY, projectRowId, ROLE, SCREEN, SURFACE } from "@/ui/a11y";
 import { Alert } from "@/ui/components/alert";
-import { BackButton } from "@/ui/components/back-button";
 import { Badge } from "@/ui/components/badge";
 import { Button } from "@/ui/components/button";
 import { EmptyState } from "@/ui/components/empty-state";
@@ -147,12 +147,7 @@ export default function Projects() {
 		<Screen
 			title={t("mobile.projects.title")}
 			testID={SCREEN.projects}
-			headerLeading={
-				<BackButton
-					testID={CONTROL.projectsBack}
-					onPress={() => router.back()}
-				/>
-			}
+			headerLeading={<WorkspaceDrawerButton testID={CONTROL.projectsBack} />}
 			headerAction={
 				/* The listing's one write. It sends NOTHING on its own: it opens a
 				 *  sheet, and the sheet's own Create is what writes. */

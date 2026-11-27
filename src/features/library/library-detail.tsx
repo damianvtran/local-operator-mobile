@@ -66,6 +66,10 @@ import {
 } from "@/features/library/library-model";
 import { publishLibraryUpdate } from "@/features/library/library-updates";
 import { Markdown } from "@/features/session/components/markdown";
+import {
+	sessionTarget,
+	useOpenTopLevel,
+} from "@/features/sessions/top-level-navigation";
 import { t } from "@/i18n";
 import type { RelayEndpoints } from "@/relay";
 import { isRelayError } from "@/relay";
@@ -102,6 +106,7 @@ const MAX_ASSET_TAGS = 12;
 
 export default function LibraryDetail() {
 	const router = useRouter();
+	const openTopLevel = useOpenTopLevel();
 	const { id } = useLocalSearchParams<{ id: string }>();
 	const assetId = typeof id === "string" ? id : "";
 	const { relay } = useConnection();
@@ -314,7 +319,7 @@ export default function LibraryDetail() {
 									<Button
 										label={t("mobile.library.action.open_chat")}
 										onPress={() =>
-											router.push(`/session/${asset.chat?.session_id}`)
+											openTopLevel(sessionTarget(asset.chat?.session_id ?? ""))
 										}
 										variant="outline"
 										size="sm"
@@ -358,7 +363,7 @@ export default function LibraryDetail() {
 											disabled={occurrence.session_id === ""}
 											onPress={() => {
 												if (occurrence.session_id !== "")
-													router.push(`/session/${occurrence.session_id}`);
+													openTopLevel(sessionTarget(occurrence.session_id));
 											}}
 											testID={librarySourceId(occurrence.session_id)}
 											className="min-h-11 justify-center border-hairline border-b py-2"
@@ -579,7 +584,7 @@ function AssetComposer({
 	client: RelayEndpoints | null;
 	onLinked: (asset: LibraryAsset) => void;
 }) {
-	const router = useRouter();
+	const openTopLevel = useOpenTopLevel();
 	const insets = useSafeAreaInsets();
 	const [draft, setDraft] = useState("");
 	const [sending, setSending] = useState(false);
@@ -632,7 +637,7 @@ function AssetComposer({
 					}
 				}
 				setDraft("");
-				router.push(`/session/${sessionId}`);
+				openTopLevel(sessionTarget(sessionId));
 			} catch (failure) {
 				setRefusal(
 					displaySentence(
@@ -647,7 +652,7 @@ function AssetComposer({
 				setSending(false);
 			}
 		})();
-	}, [asset, client, draft, onLinked, router]);
+	}, [asset, client, draft, onLinked, openTopLevel]);
 
 	return (
 		<View

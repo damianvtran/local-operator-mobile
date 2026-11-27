@@ -189,7 +189,11 @@ describe("an exiting modal is inert", () => {
 		expect(DRAWER).toContain(
 			'<View className="flex-1" pointerEvents={exitPointerEvents(visible)}>',
 		);
-		expect(DRAWER).toContain("visible={(visible || exiting) && !covered}");
+		/* The web Modal's `visible` is the MOUNT (`presented`), not the intent:
+		 *  the shell has to stay on screen for the close settle, and a
+		 *  `visible`-keyed Modal would cut the exit at its first frame
+		 *  (`drawer-progress.tsx`). `visible` still keys the inertness above. */
+		expect(DRAWER).toContain("visible={presented && !covered}");
 	});
 });
 

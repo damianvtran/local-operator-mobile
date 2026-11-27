@@ -650,7 +650,6 @@ export type CatalogueKey =
 	| "mobile.library.editor.title"
 	| "mobile.library.title"
 	| "mobile.notifications.answer"
-	| "mobile.notifications.back"
 	| "mobile.notifications.category.completion_placeholder"
 	| "mobile.notifications.category.completion_summary"
 	| "mobile.notifications.category.digest_placeholder"
@@ -2045,7 +2044,6 @@ export type NoParamKey =
 	| "mobile.library.editor.title"
 	| "mobile.library.title"
 	| "mobile.notifications.answer"
-	| "mobile.notifications.back"
 	| "mobile.notifications.category.completion_placeholder"
 	| "mobile.notifications.category.completion_summary"
 	| "mobile.notifications.category.digest_placeholder"
@@ -3379,7 +3377,6 @@ export type MessageParams = {
 	"mobile.library.editor.title": NoParams;
 	"mobile.library.title": NoParams;
 	"mobile.notifications.answer": NoParams;
-	"mobile.notifications.back": NoParams;
 	"mobile.notifications.category.completion_placeholder": NoParams;
 	"mobile.notifications.category.completion_summary": NoParams;
 	"mobile.notifications.category.digest_placeholder": NoParams;
@@ -4894,7 +4891,6 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.library.editor.title": "Edit details",
 	"mobile.library.title": "Library",
 	"mobile.notifications.answer": "Answer",
-	"mobile.notifications.back": "Back",
 	"mobile.notifications.category.completion_placeholder": "Agent update",
 	"mobile.notifications.category.completion_summary": "%u more from your agents",
 	"mobile.notifications.category.digest_placeholder": "Digest",
@@ -6394,7 +6390,6 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.library.editor.title": { role: "heading", note: "Title of the sheet where an asset's name, description and tags are changed. Imperative, no final full stop." },
 	"mobile.library.title": { role: "heading", note: "Title of the Library screens (the list and the single-asset view). 'Library' is the name of the feature that catalogues files and images from the user's conversations, not a building or a book collection; no final full stop." },
 	"mobile.notifications.answer": { role: "button", note: "Button on an ask in the inbox list that opens it to be answered. One word, imperative." },
-	"mobile.notifications.back": { role: "button", note: "Accessibility label of the icon-only back button in the inbox header." },
 	"mobile.notifications.category.completion_placeholder": { role: "meta", note: "Generic placeholder iOS shows INSTEAD of a agent (finished-work) notification's text when the reader has hidden notification previews. Must stay generic: it never names a session, a person or message content. A short noun phrase, sentence case, no final full stop." },
 	"mobile.notifications.category.completion_summary": { role: "meta", note: "Summary line iOS writes under a stack of grouped agent (finished-work) notifications on the lock screen and in Notification Centre. Keep the literal %u exactly once: iOS replaces it with the number of OTHER notifications in the stack (1 or more). Phrase it so it reads correctly for any number (no singular/plural agreement on a noun), e.g. \"3 more from …\". No other % sequences, no final full stop." },
 	"mobile.notifications.category.digest_placeholder": { role: "meta", note: "Generic placeholder iOS shows INSTEAD of a digest notification's text when the reader has hidden notification previews. Must stay generic: it never names a session, a person or message content. A short noun phrase, sentence case, no final full stop." },
@@ -7908,7 +7903,6 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.library.editor.title": "Editar detalles",
 		"mobile.library.title": "Biblioteca",
 		"mobile.notifications.answer": "Responder",
-		"mobile.notifications.back": "Atrás",
 		"mobile.notifications.category.completion_placeholder": "Novedad del agente",
 		"mobile.notifications.category.completion_summary": "%u más de tus agentes",
 		"mobile.notifications.category.digest_placeholder": "Resumen",
@@ -9406,7 +9400,6 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.library.editor.title": "Modifier les détails",
 		"mobile.library.title": "Bibliothèque",
 		"mobile.notifications.answer": "Répondre",
-		"mobile.notifications.back": "Retour",
 		"mobile.notifications.category.completion_placeholder": "Mise à jour d'agent",
 		"mobile.notifications.category.completion_summary": "%u de plus de vos agents",
 		"mobile.notifications.category.digest_placeholder": "Résumé",
@@ -10904,7 +10897,6 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.library.editor.title": "विवरण संपादित करें",
 		"mobile.library.title": "लाइब्रेरी",
 		"mobile.notifications.answer": "उत्तर दें",
-		"mobile.notifications.back": "वापस",
 		"mobile.notifications.category.completion_placeholder": "एजेंट अपडेट",
 		"mobile.notifications.category.completion_summary": "आपके एजेंटों से %u और",
 		"mobile.notifications.category.digest_placeholder": "सारांश",
@@ -12402,7 +12394,6 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.library.editor.title": "Изменить сведения",
 		"mobile.library.title": "Библиотека",
 		"mobile.notifications.answer": "Ответить",
-		"mobile.notifications.back": "Назад",
 		"mobile.notifications.category.completion_placeholder": "Обновление агента",
 		"mobile.notifications.category.completion_summary": "Ещё %u от ваших агентов",
 		"mobile.notifications.category.digest_placeholder": "Сводка",
@@ -13900,7 +13891,6 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.library.editor.title": "تفصیلات میں ترمیم کریں",
 		"mobile.library.title": "لائبریری",
 		"mobile.notifications.answer": "جواب دیں",
-		"mobile.notifications.back": "واپس",
 		"mobile.notifications.category.completion_placeholder": "ایجنٹ اپڈیٹ",
 		"mobile.notifications.category.completion_summary": "آپ کے ایجنٹس سے مزید %u",
 		"mobile.notifications.category.digest_placeholder": "خلاصہ",
@@ -15398,7 +15388,6 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.library.editor.title": "Chỉnh sửa chi tiết",
 		"mobile.library.title": "Thư viện",
 		"mobile.notifications.answer": "Trả lời",
-		"mobile.notifications.back": "Quay lại",
 		"mobile.notifications.category.completion_placeholder": "Cập nhật agent",
 		"mobile.notifications.category.completion_summary": "Thêm %u từ các agent của bạn",
 		"mobile.notifications.category.digest_placeholder": "Bản tóm tắt",
@@ -16896,7 +16885,6 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.library.editor.title": "编辑详情",
 		"mobile.library.title": "资料库",
 		"mobile.notifications.answer": "回答",
-		"mobile.notifications.back": "返回",
 		"mobile.notifications.category.completion_placeholder": "智能体更新",
 		"mobile.notifications.category.completion_summary": "另有 %u 条来自你的智能体",
 		"mobile.notifications.category.digest_placeholder": "摘要",

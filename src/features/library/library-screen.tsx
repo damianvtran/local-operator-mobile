@@ -72,6 +72,7 @@ import {
 } from "@/features/library/library-model";
 import { libraryUpdateState } from "@/features/library/library-updates";
 import { useLibraryList } from "@/features/library/use-library-list";
+import { WorkspaceDrawerButton } from "@/features/sessions/workspace-drawer";
 import { t } from "@/i18n";
 import type { RelayEndpoints } from "@/relay";
 import {
@@ -91,7 +92,6 @@ import {
 } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
 import { Alert } from "@/ui/components/alert";
-import { BackButton } from "@/ui/components/back-button";
 import { Button } from "@/ui/components/button";
 import { Chip } from "@/ui/components/chip";
 import { EmptyState } from "@/ui/components/empty-state";
@@ -100,6 +100,7 @@ import { Input } from "@/ui/components/input";
 import { Screen } from "@/ui/components/screen";
 import { Sheet } from "@/ui/components/sheet";
 import { Skeleton } from "@/ui/components/skeleton";
+import { HORIZONTAL_SCROLL_PROPS } from "@/ui/horizontal-scroll";
 import { TOUCH_FLOOR } from "@/ui/layout";
 
 const KIND_ICON: Record<
@@ -215,12 +216,7 @@ export default function Library() {
 		<Screen
 			title={t("mobile.library.title")}
 			testID={SCREEN.library}
-			headerLeading={
-				<BackButton
-					testID={CONTROL.libraryBack}
-					onPress={() => router.back()}
-				/>
-			}
+			headerLeading={<WorkspaceDrawerButton testID={CONTROL.libraryBack} />}
 			headerAction={
 				<IconButton
 					accessibilityLabel={t("mobile.library.browse.refresh")}
@@ -268,6 +264,7 @@ export default function Library() {
 							 *  up, rather than only dismissing it. */
 							keyboardShouldPersistTaps="handled"
 							testID={CONTROL.libraryMore}
+							{...HORIZONTAL_SCROLL_PROPS}
 						>
 							{segments.map((segment) => (
 								<Chip

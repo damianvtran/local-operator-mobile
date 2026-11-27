@@ -36,13 +36,8 @@ describe("D16: one back control", () => {
 	});
 
 	it.each([
-		"settings/settings.tsx",
 		"settings/theme-picker.tsx",
-		"past/past.tsx",
-		"projects/projects.tsx",
 		"projects/project-detail.tsx",
-		"schedules/schedules.tsx",
-		"library/library-screen.tsx",
 		"library/library-detail.tsx",
 		"auth/sign-in.tsx",
 		"auth/own-tunnel.tsx",
@@ -50,6 +45,17 @@ describe("D16: one back control", () => {
 		"team-bridge/gate.tsx",
 	])("%s uses the shared chevron BackButton", (path) => {
 		expect(read(path)).toContain("<BackButton");
+	});
+
+	it.each([
+		"settings/settings.tsx",
+		"past/past.tsx",
+		"projects/projects.tsx",
+		"schedules/schedules.tsx",
+		"library/library-screen.tsx",
+		"notifications/notifications.tsx",
+	])("%s opens the drawer from its header", (path) => {
+		expect(read(path)).toContain("<WorkspaceDrawerButton");
 	});
 
 	it("the shared control is the chevron icon button", () => {

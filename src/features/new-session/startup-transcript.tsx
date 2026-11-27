@@ -16,6 +16,10 @@ import {
 import { turnRunning } from "@/features/session/projection";
 import { TRANSCRIPT_FADE_PT } from "@/features/session/transcript-presence";
 import { useSessionRuntime } from "@/features/session/use-session";
+import {
+	sessionTarget,
+	useOpenTopLevel,
+} from "@/features/sessions/top-level-navigation";
 import { t } from "@/i18n";
 import { CONTROL, SURFACE } from "@/ui/a11y";
 import { Button } from "@/ui/components/button";
@@ -149,6 +153,7 @@ export function StartupTranscript({
 	const focused = useIsFocused();
 	const runtime = useSessionRuntime(sessionId, focused);
 	const router = useRouter();
+	const openTopLevel = useOpenTopLevel();
 	const entries: readonly TranscriptEntry[] = runtime.entries;
 	/* Filtered in the SAME render that receives the entries, so the frame that
 	 *  first carries the real row never also carries its echo (the session
@@ -222,7 +227,7 @@ export function StartupTranscript({
 						variant="outline"
 						size="sm"
 						testID={CONTROL.startupOpenConversation}
-						onPress={() => router.push(`/session/${sessionId}`)}
+						onPress={() => openTopLevel(sessionTarget(sessionId))}
 					/>
 				</View>
 			) : null}

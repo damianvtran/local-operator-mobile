@@ -12,6 +12,7 @@ import type { InlineUi } from "@/features/session/inline-ui-parts";
 import { activeLocale, t } from "@/i18n";
 import { useTokenColor } from "@/ui/appearance";
 import { TEXT_END_CLASS } from "@/ui/direction";
+import { HORIZONTAL_SCROLL_PROPS } from "@/ui/horizontal-scroll";
 import { InlineChartPlot } from "./inline-chart";
 
 /** A numeric cell of a chart's data table, kept as a number so the table can
@@ -218,7 +219,7 @@ function InlineUiGrid({
 	// table follows the reading direction (it is not pinned LTR like the plot).
 	const align = (j: number) => (chart && j > 0 ? TEXT_END_CLASS : "");
 	return (
-		<ScrollView horizontal>
+		<ScrollView horizontal {...HORIZONTAL_SCROLL_PROPS}>
 			<View>
 				{header ? (
 					<View className="flex-row border-b border-hairline">

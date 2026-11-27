@@ -39,6 +39,14 @@ const host = vi.hoisted(() => ({
 	 *  from it before `onLayout` (which static markup never fires). */
 	window: { width: 390, height: 844 },
 }));
+/* The chart's plot is wrapped in `DrawerSwipeClaim`, which imports
+ *  gesture-handler at module scope; its Node reduction is the shared one. */
+vi.mock("react-native-gesture-handler", async () => {
+	const { gestureHandlerModuleMock } = await import(
+		"@/testing/native-gesture-mocks"
+	);
+	return gestureHandlerModuleMock();
+});
 vi.mock("react-native", async () => {
 	const { createElement } = await import("react");
 	/* The host's styling props are serialised onto the markup (`data-class`,

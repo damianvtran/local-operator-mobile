@@ -1,6 +1,12 @@
 import { usePathname, useRouter } from "expo-router";
 import { Menu } from "lucide-react-native";
-import { type ReactNode, useCallback, useRef, useState } from "react";
+import {
+	type ReactNode,
+	useCallback,
+	useEffect,
+	useRef,
+	useState,
+} from "react";
 import { Keyboard, Platform, Pressable, View } from "react-native";
 import {
 	useListState,
@@ -9,6 +15,7 @@ import {
 import { MENU_BADGE_INSET } from "@/features/home/header-fit";
 import { countLabel } from "@/features/notifications/notifications-model";
 import { ConversationsDrawer } from "@/features/sessions/conversations-drawer";
+import { useDrawerProgress } from "@/features/sessions/drawer-progress";
 import { unreadBadgeCount } from "@/features/sessions/session-projection";
 import type {
 	WorkspaceDrawerBridgeAdapter,
@@ -22,7 +29,7 @@ import {
 import { WorkspaceModeBar } from "@/features/sessions/workspace-mode-bar";
 import { t } from "@/i18n";
 import { CONTROL, ROLE } from "@/ui/a11y";
-import { useTokenColor } from "@/ui/appearance";
+import { useReducedMotion, useTokenColor } from "@/ui/appearance";
 import { Badge } from "@/ui/components/badge";
 import { TOUCH_FLOOR } from "@/ui/layout";
 import { useTextScale } from "@/ui/text-scale-provider";
@@ -43,6 +50,18 @@ export const WorkspaceDrawerProvider = ({
 	useLocaleFrame();
 	const pathname = usePathname();
 	const [visible, setVisible] = useState(false);
+	const reduceMotion = useReducedMotion();
+	const {
+		progress,
+		presented,
+		revealed,
+		open: openProgress,
+		close: closeProgress,
+		prime: primeProgress,
+		reveal: revealProgress,
+		unprime: unprimeProgress,
+		resume: resumeProgress,
+	} = useDrawerProgress({ reduceMotion });
 	const [mode, setMode] = useState<WorkspaceDrawerMode>("agents");
 	const [newChatRequest, setNewChatRequest] = useState(0);
 	const [agentsPresentation, setAgentsPresentation] = useState<{
@@ -56,17 +75,36 @@ export const WorkspaceDrawerProvider = ({
 		return true;
 	}, []);
 	const returnFocus = useRef<(() => void) | undefined>(undefined);
+	/* The gesture hooks below run from worklets through `runOnJS`, so they cannot
+	 *  read this render's `visible`: a settle at release and the `onFinalize` that
+	 *  follows it are the same JS batch. The ref is the synchronous truth the
+	 *  abandon path needs, and it is written everywhere the state is. */
+	const visibleRef = useRef(false);
+	const setDrawerVisible = useCallback((next: boolean) => {
+		visibleRef.current = next;
+		setVisible(next);
+	}, []);
+	/* Whether the touch that primed the panel ever travelled far enough to
+	 *  commit: `abandon` must not undo a release's settle. */
+	const dragSettled = useRef(false);
 	const finishClose = useCallback(() => {
 		const restore = returnFocus.current;
 		returnFocus.current = undefined;
 		restore?.();
 	}, []);
 	const close = useCallback(() => {
-		setVisible(false);
-		// RN web restores focus after its modal trap is removed. Android has no
-		// onDismiss event, so its trigger restoration belongs to the close path.
-		if (Platform.OS !== "web") finishClose();
-	}, [finishClose]);
+		setDrawerVisible(false);
+		closeProgress();
+	}, [closeProgress, setDrawerVisible]);
+	/* The trigger takes focus back when the panel is GONE, not when the close
+	 *  starts: the native overlay keeps `accessibilityViewIsModal` for the whole
+	 *  settle, and focusing into a page it still hides is ignored by iOS (m2).
+	 *  Web is unchanged: react-native-web restores focus after the `Modal` trap
+	 *  is removed (`onDismiss`). */
+	useEffect(() => {
+		if (Platform.OS === "web" || presented) return;
+		finishClose();
+	}, [presented, finishClose]);
 	const navigate = useCallback(() => {
 		returnFocus.current = undefined;
 		close();
@@ -76,12 +114,48 @@ export const WorkspaceDrawerProvider = ({
 		setNewChatRequest((request) => request + 1);
 		router.navigate("/");
 	}, [navigate, router]);
-	const open = useCallback<WorkspaceDrawerController["open"]>((options) => {
-		Keyboard.dismiss();
-		returnFocus.current = options?.returnFocus;
-		if (options?.mode) setMode(options.mode);
-		setVisible(true);
-	}, []);
+	const open = useCallback<WorkspaceDrawerController["open"]>(
+		(options) => {
+			Keyboard.dismiss();
+			returnFocus.current = options?.returnFocus;
+			if (options?.mode) setMode(options.mode);
+			setDrawerVisible(true);
+			openProgress();
+		},
+		[openProgress, setDrawerVisible],
+	);
+	/* --- the page swipe's three hooks (commit 2) ---------------------------- */
+	const prime = useCallback(() => {
+		dragSettled.current = false;
+		primeProgress();
+	}, [primeProgress]);
+	const reveal = useCallback(() => {
+		revealProgress();
+	}, [revealProgress]);
+	const abandon = useCallback(() => {
+		/* A touch that took a running settle over gives it back untouched: no
+		 *  activation is not a choice, and dropping the panel would cut the
+		 *  settle off mid-flight. Nothing held means the touch was only ever a
+		 *  prime, so the shell goes. */
+		if (resumeProgress()) return;
+		if (visibleRef.current || dragSettled.current) return;
+		unprimeProgress();
+	}, [resumeProgress, unprimeProgress]);
+	const settle = useCallback(
+		(nextOpen: boolean) => {
+			dragSettled.current = true;
+			if (!nextOpen) {
+				close();
+				return;
+			}
+			/* Spring-back and a committed open share the panel's own curve from
+			 *  the finger's position; no `returnFocus` is touched, because a drag
+			 *  did not come from a trigger. */
+			setDrawerVisible(true);
+			openProgress();
+		},
+		[close, openProgress, setDrawerVisible],
+	);
 	const selectMode = useCallback(
 		(next: WorkspaceDrawerMode) => {
 			if (next === "agents" || bridgeAdapter) setMode(next);
@@ -90,6 +164,21 @@ export const WorkspaceDrawerProvider = ({
 	);
 	const currentSessionId = SESSION_PATH.exec(pathname)?.[1];
 	const bridge = mode === "team-bridge" && bridgeAdapter;
+	/* Android keeps the page beneath the overlay out of TalkBack's tree while the
+	 *  drawer is up. The wrapper is layout-neutral (a flex child of the root) and
+	 *  exists only on Android: iOS gets the same containment from the overlay's
+	 *  `accessibilityViewIsModal`. */
+	const page =
+		Platform.OS === "android" ? (
+			<View
+				className="flex-1"
+				importantForAccessibility={visible ? "no-hide-descendants" : "auto"}
+			>
+				{children}
+			</View>
+		) : (
+			children
+		);
 	return (
 		<WorkspaceDrawerContext.Provider
 			value={{
@@ -97,15 +186,25 @@ export const WorkspaceDrawerProvider = ({
 				bridgeAdapter,
 				open,
 				close,
+				progress,
+				visible,
+				prime,
+				reveal,
+				abandon,
+				settle,
+				resume: resumeProgress,
 				selectMode,
 				newChatRequest,
 				consumeNewChatRequest,
 				setAgentsPresentation,
 			}}
 		>
-			{children}
+			{page}
 			<ConversationsDrawer
 				visible={visible}
+				presented={presented}
+				revealed={revealed}
+				progress={progress}
 				onClose={close}
 				onNavigate={navigate}
 				onDismiss={finishClose}

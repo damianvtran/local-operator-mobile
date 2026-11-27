@@ -15,45 +15,115 @@
  * worklet would be given, read at render.
  */
 import type { ReactNode } from "react";
+import { useRef } from "react";
 import { ScrollView, View } from "react-native";
 
 export const reanimatedModuleMock = () => ({
 	__esModule: true,
-	default: { ScrollView },
-	/** A shared value without a UI thread: the write is what a test can read. */
-	useSharedValue: <T>(initial: T) => ({ value: initial }),
+	default: { ScrollView, View },
+	/** A shared value without a UI thread: the write is what a test can read.
+	 *  Held in a ref, like the real hook — a new object every render would make
+	 *  every callback that reads it a new identity, and an effect keyed on one
+	 *  (the drawer's open) would fire again on each render. */
+	useSharedValue: <T>(initial: T) => {
+		const value = useRef({ value: initial });
+		return value.current;
+	},
 	useAnimatedStyle: <T extends object>(factory: () => T) => factory(),
+	/** The reaction runs once with the clock's initial value; a Node test cannot
+	 *  tick it, and nothing it does here is an assertion about motion. */
+	useAnimatedReaction: <T>(prepare: () => T, react: (value: T) => void) => {
+		react(prepare());
+	},
 	withSpring: <T>(toValue: T) => toValue,
-	withTiming: <T>(toValue: T) => toValue,
+	/** The timing never runs here, so its COMPLETION is what a test can drive:
+	 *  the callbacks are recorded in order and the last one fired is the settle
+	 *  a test wants to finish (the drawer's close, usually). */
+	withTiming: <T>(
+		toValue: T,
+		_config?: unknown,
+		callback?: (finished?: boolean) => void,
+	) => {
+		if (callback) timingCompletions.push(callback);
+		return toValue;
+	},
 	cancelAnimation: () => {},
 	runOnJS: <A extends unknown[]>(fn: (...args: A) => void) => fn,
+	Easing: { linear: (value: number) => value },
 });
 
+/** Every `withTiming` completion, in call order (`reanimatedModuleMock`). */
+export const timingCompletions: Array<(finished?: boolean) => void> = [];
+
 /** A chainable pan builder: every configuration call returns the same object, so
- *  `Gesture.Pan().minDistance(8).onEnd(…)` builds without a gesture runtime. */
-const panBuilder = () => {
+ *  `Gesture.Pan().minDistance(8).onEnd(…)` builds without a gesture runtime.
+ *
+ *  Every call is RECORDED, because the page swipe's thresholds and the claim's
+ *  `blocksExternalGesture` are the two facts a Node test can prove about
+ *  arbitration (the recognisers themselves only exist on a device): the test
+ *  reads back what the component actually configured. */
+export type RecordedGestureCall = { name: string; args: unknown[] };
+
+export const panCalls: RecordedGestureCall[] = [];
+export const nativeCalls: RecordedGestureCall[] = [];
+
+const recordingBuilder = (calls: RecordedGestureCall[]) => {
 	const builder: Record<string, unknown> = {};
 	for (const name of [
 		"minDistance",
+		"activeOffsetX",
 		"failOffsetX",
 		"activeOffsetY",
+		"failOffsetY",
+		"hitSlop",
+		"enabled",
+		"withRef",
+		"manualActivation",
+		"blocksExternalGesture",
+		"simultaneousWithExternalGesture",
+		"requireExternalGestureToFail",
 		"onBegin",
 		"onStart",
 		"onUpdate",
 		"onEnd",
 		"onFinalize",
+		"onTouchesDown",
+		"onTouchesMove",
+		"onTouchesUp",
+		"onTouchesCancelled",
 	]) {
-		builder[name] = () => builder;
+		builder[name] = (...args: unknown[]) => {
+			calls.push({ name, args });
+			return builder;
+		};
 	}
 	return builder;
 };
 
+const panBuilder = () => recordingBuilder(panCalls);
+const nativeBuilder = () => recordingBuilder(nativeCalls);
+
+/**
+ * Every child handed to a `GestureDetector`, in render order.
+ *
+ * WHY RECORDED. RNGH clones this element with `collapsable: false` to give the
+ *  recogniser a host node; a child that is a custom component swallows the
+ *  prop, and on Fabric its host view is flattened away, so the detector has
+ *  nothing to attach to (the drawer-swipe claim's real failure, QA round 2).
+ *  The wrapper is a passthrough, so the element is the only place a Node test
+ *  can see which shape the detector was given.
+ */
+export const detectorChildren: ReactNode[] = [];
+
 export const gestureHandlerModuleMock = () => ({
 	__esModule: true,
-	Gesture: { Pan: panBuilder },
+	Gesture: { Pan: panBuilder, Native: nativeBuilder },
 	/* The detector is a wrapper, not a view: the sheet's header keeps the exact
 	 *  host a test looks for. */
-	GestureDetector: ({ children }: { children?: ReactNode }) => children ?? null,
+	GestureDetector: ({ children }: { children?: ReactNode }) => {
+		detectorChildren.push(children);
+		return children ?? null;
+	},
 	GestureHandlerRootView: View,
 });
 

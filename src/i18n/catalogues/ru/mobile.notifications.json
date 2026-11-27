@@ -1,6 +1,5 @@
 {
 	"mobile.notifications.answer": "Ответить",
-	"mobile.notifications.back": "Назад",
 	"mobile.notifications.category.completion_placeholder": "Обновление агента",
 	"mobile.notifications.category.completion_summary": "Ещё %u от ваших агентов",
 	"mobile.notifications.category.digest_placeholder": "Сводка",

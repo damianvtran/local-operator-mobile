@@ -119,6 +119,11 @@ vi.mock("@/features/session/use-session", () => ({
 vi.mock("expo-router", () => ({
 	useIsFocused: () => true,
 	useRouter: () => ({ push: () => {} }),
+	useNavigationContainerRef: () => ({
+		isReady: () => false,
+		getRootState: () => undefined,
+		dispatch: () => undefined,
+	}),
 }));
 /* The list stands in as its own three slots, in the order it renders them:
  * the empty state (only with no rows), then the pending footer. */
