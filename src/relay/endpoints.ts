@@ -461,6 +461,82 @@ export class RelayEndpoints {
 		});
 	}
 
+	/* ------------------------------------------------------------ Radient Guard
+	 * The phone reaches Guard ONLY through the relay's `/api/guard*` twin of the
+	 * desktop plane (`/v1/desktop/guard`); no function here, or anywhere in the
+	 * app, names a `/v1/guard/*` path — that is Radient's server, spoken to by the
+	 * HOST alone, with the host's install key. The phone sends the member's
+	 * answer to the host over this paired channel and the host decides, signs and
+	 * sends. There is deliberately NO "grant" method: `answerGuardConsent` carries
+	 * the digests the host re-checks, and the host refuses anything it did not
+	 * queue. See `docs/guard.md`. */
+
+	/** Local facts only on the host: zero network, for every account. */
+	async guardStatus(): Promise<Payload<"guardStatus">> {
+		return this.http.json("guardStatus", { method: "GET", path: "/api/guard" });
+	}
+
+	/** The non-Team card's trial length (the host's one network read, and it is
+	 *  the team-trial eligibility, never a Guard route). */
+	async guardNonTeamCard(): Promise<Payload<"guardNonTeamCard">> {
+		return this.http.json("guardNonTeamCard", {
+			method: "GET",
+			path: "/api/guard/non-team-card",
+		});
+	}
+
+	async guardRevoke(tenant: string): Promise<Payload<"guardRevoke">> {
+		return this.http.json("guardRevoke", {
+			method: "POST",
+			path: `/api/guard/orgs/${encodeURIComponent(tenant)}/revoke`,
+		});
+	}
+
+	async guardShareAgain(tenant: string): Promise<Payload<"guardShareAgain">> {
+		return this.http.json("guardShareAgain", {
+			method: "POST",
+			path: `/api/guard/orgs/${encodeURIComponent(tenant)}/share-again`,
+		});
+	}
+
+	/** The queued consent card, as the host would sign it. */
+	async guardConsentCard(
+		approvalId: string,
+	): Promise<Payload<"guardConsentCard">> {
+		return this.http.json("guardConsentCard", {
+			method: "GET",
+			path: `/api/guard/consents/${encodeURIComponent(approvalId)}`,
+		});
+	}
+
+	/** "Share" / "Share the new items": the member's yes, relayed. The body is
+	 *  the two digests the card was drawn from and NOTHING else — no scope, no
+	 *  tenant, no signature — so it cannot narrow, widen or forge what the host
+	 *  queued (RFC §5.2.2). The host signs; the phone cannot. */
+	async acceptGuardConsent(
+		approvalId: string,
+		digests: { request_digest: string; disclosure_digest: string },
+	): Promise<Payload<"guardConsentAnswer">> {
+		return this.http.json("guardConsentAnswer", {
+			method: "POST",
+			path: `/api/guard/consents/${encodeURIComponent(approvalId)}/accept`,
+			body: {
+				request_digest: digests.request_digest,
+				disclosure_digest: digests.disclosure_digest,
+			},
+		});
+	}
+
+	/** "Don't share" / "Keep current": the safe direction, no digests. */
+	async declineGuardConsent(
+		approvalId: string,
+	): Promise<Payload<"guardConsentAnswer">> {
+		return this.http.json("guardConsentAnswer", {
+			method: "POST",
+			path: `/api/guard/consents/${encodeURIComponent(approvalId)}/decline`,
+		});
+	}
+
 	/** The reachability probe. Public, no cookie, and `dist: false` is not a
 	 *  health problem — the native client never needs the web bundle. */
 	async healthz(): Promise<Payload<"healthz">> {

@@ -28,6 +28,8 @@ import composerInputContext from "@/i18n/catalogues/en/mobile.composer_input.con
 import composerInput from "@/i18n/catalogues/en/mobile.composer_input.json";
 import computersContext from "@/i18n/catalogues/en/mobile.computers.context.json";
 import computers from "@/i18n/catalogues/en/mobile.computers.json";
+import guardContext from "@/i18n/catalogues/en/mobile.guard.context.json";
+import guard from "@/i18n/catalogues/en/mobile.guard.json";
 import homeContext from "@/i18n/catalogues/en/mobile.home.context.json";
 import home from "@/i18n/catalogues/en/mobile.home.json";
 import libraryContext from "@/i18n/catalogues/en/mobile.library.context.json";
@@ -81,6 +83,15 @@ const ROLES = ["heading", "help", "status", "button", "confirm", "meta"];
 const JSON_SUFFIX = /\.json$/;
 
 const NAMESPACES = [
+	{
+		name: "mobile.guard",
+		messages: guard,
+		context: guardContext,
+		// Radient Guard on the phone (RFC v0.9, slice M1): 89 keys, counted over the
+		// en JSON. 69 mirror the core TUI catalogue's audited tui.guard.* wording and
+		// the rest are phone-specific.
+		expected: 89,
+	},
 	{
 		name: "mobile.community",
 		messages: community,
@@ -559,6 +570,8 @@ const IDENTICAL_BY_DESIGN_JUDGED: Readonly<
 > = {
 	en: {},
 	fr: {
+		"mobile.guard.screen_title":
+			"Radient Guard is the product name, kept in Latin script in every locale (the core TUI catalogue keeps it too); there is no word to translate.",
 		"mobile.session.inline_chart.total":
 			"« Total » is the French word for a sum (stacked-chart tooltip row, donut centre caption), spelled as in English; identical spelling is idiomatic, not an English fallback.",
 		"mobile.asks.title_fallback":
@@ -688,6 +701,8 @@ const IDENTICAL_BY_DESIGN_JUDGED: Readonly<
 	/* Spanish preserves these placeholder-only templates: names and separators
 	 * have no English prose to translate. Each key remains explicitly listed. */
 	es: {
+		"mobile.guard.screen_title":
+			"Radient Guard is the product name, kept in Latin script in every locale (the core TUI catalogue keeps it too); there is no word to translate.",
 		"mobile.session.inline_chart.total":
 			"«Total» is the Spanish word for a sum (stacked-chart tooltip row, donut centre caption), spelled as in English; identical spelling is idiomatic, not an English fallback.",
 		"mobile.settings.account.app_name":
@@ -726,6 +741,8 @@ const IDENTICAL_BY_DESIGN_JUDGED: Readonly<
 			"«min» is the Spanish abbreviation of «minuto(s)» too, with no «de» after an abbreviated unit, so `{count, plural, one {# min} other {# min}}` is the correct Spanish value; the es audit passed it (i18n/audits/evidence/es/mobile.time/o3a-es-268e89/).",
 	},
 	"zh-CN": {
+		"mobile.guard.screen_title":
+			"Radient Guard is the product name, kept in Latin script in every locale (the core TUI catalogue keeps it too); there is no word to translate.",
 		"mobile.settings.account.app_name":
 			"Local Operator is the product name, kept in Latin script in every locale (glossary: never translated); audited as required in the M2 expression-literal wave.",
 		"mobile.team_bridge.title":
@@ -749,6 +766,8 @@ const IDENTICAL_BY_DESIGN_JUDGED: Readonly<
 		...ISO_DATE_MASK("zh-CN", "o3b-zh-CN-50d18d"),
 	},
 	ru: {
+		"mobile.guard.screen_title":
+			"Radient Guard is the product name, kept in Latin script in every locale (the core TUI catalogue keeps it too); there is no word to translate.",
 		"mobile.settings.account.app_name":
 			"Local Operator is the product name, kept in Latin script in every locale (glossary: never translated); audited as required in the M2 expression-literal wave.",
 		"mobile.team_bridge.profile.name_with_owner":
@@ -781,6 +800,8 @@ const IDENTICAL_BY_DESIGN_JUDGED: Readonly<
 			"TUI is an acronym on the style guide's keep-in-English list, the label of the set-up screen's TUI command block; the ru audit accepted it as kept Latin (i18n/audits/evidence/ru/m3-s2b2b-computers-setup/).",
 	},
 	vi: {
+		"mobile.guard.screen_title":
+			"Radient Guard is the product name, kept in Latin script in every locale (the core TUI catalogue keeps it too); there is no word to translate.",
 		"mobile.settings.account.app_name":
 			"Local Operator is the product name, kept in Latin script in every locale (glossary: never translated); audited as required in the M2 expression-literal wave.",
 		"mobile.session.video.title_fallback":
@@ -823,6 +844,8 @@ const IDENTICAL_BY_DESIGN_JUDGED: Readonly<
 		...ISO_DATE_MASK("vi", "o3b-vi-a2593f"),
 	},
 	hi: {
+		"mobile.guard.screen_title":
+			"Radient Guard is the product name, kept in Latin script in every locale (the core TUI catalogue keeps it too); there is no word to translate.",
 		"mobile.settings.account.app_name":
 			"Local Operator is the product name, kept in Latin script in every locale (glossary: never translated); audited as required in the M2 expression-literal wave.",
 		"mobile.team_bridge.profile.name_with_owner":
@@ -859,6 +882,8 @@ const IDENTICAL_BY_DESIGN_JUDGED: Readonly<
 			"TUI is an acronym on the style guide's keep-in-English list, the label of the set-up screen's TUI command block; the hi audit accepted it as kept Latin (i18n/audits/evidence/hi/m3-s2b2b-computers-setup/).",
 	},
 	ur: {
+		"mobile.guard.screen_title":
+			"Radient Guard is the product name, kept in Latin script in every locale (the core TUI catalogue keeps it too); there is no word to translate.",
 		"mobile.settings.account.app_name":
 			"Local Operator is the product name, kept in Latin script in every locale (glossary: never translated); audited as required in the M2 expression-literal wave.",
 		"mobile.team_bridge.profile.name_with_owner":

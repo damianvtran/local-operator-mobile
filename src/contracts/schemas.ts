@@ -45,6 +45,12 @@ import type {
 	CompletionAttention,
 	ConfigFramePayload,
 	Directories,
+	GuardConsentAnswer,
+	GuardConsentCard,
+	GuardNonTeamCard,
+	GuardRevokeResult,
+	GuardShareAgainResult,
+	GuardStatus,
 	HealthzResponse,
 	HistoryResponse,
 	LibraryAsset,
@@ -2039,6 +2045,107 @@ export const projectionStreamFrameSchema = z.looseObject({
 	data: sessionProjectionSchema,
 });
 
+/* ------------------------------------------------------- Radient Guard (twin) */
+
+/* Loose on purpose (see `GuardPrompt` in types.gen.ts): the host's enums grow,
+ * and a value this build does not know is handled by the model layer, not
+ * rejected at the boundary. The two things that ARE required are the ones a
+ * wrong answer would turn into a wrong sentence about sharing: `mode`, and each
+ * org's `state`. */
+const guardPromptSchema = z.looseObject({
+	approval_id: z.string().nullable(),
+	collection_rev: z.number(),
+	reason: z.string(),
+	widening: z.boolean(),
+	asked_scopes: z.array(z.string()),
+	grant_scopes: z.array(z.string()),
+});
+const guardOrgSchema = z.looseObject({
+	tenant: z.string().min(1),
+	org: z.string(),
+	role: z.string(),
+	state: z.string().min(1),
+	reason: z.string().default(""),
+	since: z.number().nullable().default(null),
+	answered_via: z.string().default(""),
+	scopes_shared: z.array(z.string()).default([]),
+	prompt: guardPromptSchema.nullable().default(null),
+	can_revoke: z.boolean(),
+	can_share_again: z.boolean(),
+});
+export const guardNonTeamCardSchema = z.looseObject({
+	trial_days: z.number().int().nullable().default(null),
+	org: z.string().nullable().default(null),
+	url: z.string(),
+	role: z.string().nullable().optional(),
+});
+export const guardStatusSchema = z.looseObject({
+	mode: z.string().min(1),
+	badge: z.string().default(""),
+	orgs: z.array(guardOrgSchema).default([]),
+	reports: z
+		.array(
+			z.looseObject({
+				id: z.string(),
+				tenant: z.string(),
+				org: z.string(),
+				kind: z.string(),
+				created_at: z.number(),
+			}),
+		)
+		.default([]),
+	notices: z
+		.array(
+			z.looseObject({
+				id: z.number(),
+				tenant: z.string(),
+				kind: z.string(),
+				org: z.string(),
+				scopes: z.array(z.string()),
+				at: z.number(),
+			}),
+		)
+		.default([]),
+	insights: z
+		.array(
+			z.looseObject({ tenant: z.string(), org: z.string(), url: z.string() }),
+		)
+		.default([]),
+	non_team: guardNonTeamCardSchema.nullable().default(null),
+	backup_days: z.number().int().nullable().default(null),
+	this_computer: z.string().default(""),
+	can_answer: z.boolean().default(false),
+	team_url: z.string(),
+});
+export const guardRevokeResultSchema = z.looseObject({
+	tenant: z.string(),
+	status: z.string(),
+	code: z.string().default(""),
+	org: guardOrgSchema.nullable().default(null),
+});
+export const guardShareAgainResultSchema = z.looseObject({
+	tenant: z.string(),
+	org: guardOrgSchema.nullable().default(null),
+});
+export const guardConsentCardSchema = z.looseObject({
+	approval_id: z.string().min(1),
+	state: z.string(),
+	tenant: z.string(),
+	org: z.string(),
+	reason: z.string(),
+	widening: z.boolean(),
+	asked_scopes: z.array(z.string()),
+	request_digest: z.string().regex(/^sha256:[0-9a-f]{64}$/),
+	disclosure_digest: z.string().regex(/^sha256:[0-9a-f]{64}$/),
+	signable: z.boolean(),
+	refusal: z.string().optional(),
+});
+export const guardConsentAnswerSchema = z.looseObject({
+	approval_id: z.string(),
+	state: z.string(),
+	tenant: z.string(),
+});
+
 /** Specific safe setting only, never a generic config mutation capability.
  * The backend owns policy choices, labels and defaults, including additions.
  * Refuse inconsistent/missing metadata rather than invent a saved phone value. */
@@ -2426,6 +2533,12 @@ export const SCHEMAS = {
 	projectionStreamFrame: projectionStreamFrameSchema,
 	/** `GET /api/config/events`: one `config` frame's payload, and its envelope. */
 	accountRouting: accountRoutingSchema,
+	guardStatus: guardStatusSchema,
+	guardNonTeamCard: guardNonTeamCardSchema,
+	guardRevoke: guardRevokeResultSchema,
+	guardShareAgain: guardShareAgainResultSchema,
+	guardConsentCard: guardConsentCardSchema,
+	guardConsentAnswer: guardConsentAnswerSchema,
 	configFrame: configFrameSchema,
 	configStreamFrame: configStreamFrameSchema,
 	gatewayRefusal: gatewayRefusalSchema,
@@ -2534,6 +2647,12 @@ type WireMirror = {
 	 *  that stops being assignable reds `WireConformance` before a phone reads a
 	 *  language the daemon no longer sends. */
 	accountRouting: AccountRoutingPayload;
+	guardStatus: GuardStatus;
+	guardNonTeamCard: GuardNonTeamCard;
+	guardRevoke: GuardRevokeResult;
+	guardShareAgain: GuardShareAgainResult;
+	guardConsentCard: GuardConsentCard;
+	guardConsentAnswer: GuardConsentAnswer;
 	configFrame: ConfigFramePayload;
 	transferReceipt: TransferReceipt;
 	sessionProjection: SessionProjection;

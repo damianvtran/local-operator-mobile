@@ -33,6 +33,7 @@ import type { Json } from "../lib/json.ts";
 import { isRecord } from "../lib/json.ts";
 import type { FixtureCorpus } from "./fixtures.ts";
 import { repoRoot } from "./fixtures.ts";
+import { GUARD_SEEDS, type GuardSeed } from "./guard.ts";
 import { type InlineUiFixture, inlineChartWorld } from "./inline-charts.ts";
 import type { TranscribeAnswer } from "./transcribe.ts";
 import { syntheticSessionId } from "./wire.ts";
@@ -99,6 +100,14 @@ export interface FixtureOverride {
  * must not leak into the next run of the same scenario.
  */
 export interface ScenarioWorld {
+	/**
+	 * Radient Guard (RFC v0.9, slice M1). Present means this relay serves the
+	 * `/api/guard*` twin and advertises `capabilities.features.guard`; ABSENT is an
+	 * older relay (every other scenario), so the phone must show its calm
+	 * "unavailable" state and send no Guard request. SYNTHETIC: no host serves
+	 * these routes yet (`docs/guard.md`).
+	 */
+	guard?: GuardSeed;
 	/** Synthetic rich parts, exposed only on negotiated reads for this session. */
 	inlineUi?: InlineUiFixture;
 	/** Session id → projection. An empty object is "no conversations at all". */
@@ -3423,6 +3432,16 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 			};
 		},
 	);
+
+	/* ------------------------------------------------------------------ guard -- */
+
+	/* Radient Guard (slice M1). `shows` is EMPTY on purpose: these states are
+	 * photographed by the slice's own capture script, and declaring cells here would
+	 * change the audit matrix's counts (and the documents that quote them) for a
+	 * surface the matrix does not model yet. */
+	for (const [name, { description, seed }] of Object.entries(GUARD_SEEDS)) {
+		add(name, description, [], () => ({ guard: seed }));
+	}
 
 	/* ----------------------------------------------------------- notifications -- */
 

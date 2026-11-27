@@ -68,6 +68,7 @@ import { TEXT_SCALE_OPTIONS, useTextScale } from "@/ui/text-scale-provider";
 import { AccountCard } from "./account-card";
 import { AccountRoutingSection } from "./account-routing-section";
 import { type CopyFeedback, createCopyFeedback } from "./copy-feedback";
+import { GuardSection } from "./guard-section";
 import { NotificationsSection } from "./notifications-section";
 import { OwnTunnelSettings } from "./own-tunnel-settings";
 import {
@@ -617,6 +618,12 @@ export default function Settings() {
 				<NotificationsSection />
 
 				<Divider />
+
+				{/* ------------------------------------------------------------ guard
+				 *  Radient Guard's host-level entry (RFC v0.9, slice M1). It carries
+				 *  its own divider so a section that has nothing to say (a non-Team
+				 *  member) leaves no empty band behind. */}
+				<GuardSection />
 
 				{/* -------------------------------------------------------- diagnostics */}
 				<View className="gap-2" testID={REGION.settingsDiagnostics}>

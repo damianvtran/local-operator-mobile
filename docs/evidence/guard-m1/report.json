@@ -1,0 +1,252 @@
+[
+ {
+  "frame": "settings__guard-waiting__light",
+  "bytes": 131695,
+  "guardSectionPresent": true,
+  "text": "Settings\nLO\nNot signed in with Radient\nConnected directly to http://127.0.0.1:58648\nSign in with Radient\nCONNECTION\nStatus\nConnected\nRefresh\nSwitch computer\nAdd a computer\nYOUR OWN TUNNEL\nSet up your own tunnel\nACCOUNT ROUTING\nChanges apply only to this computer.\nAccount routing settings are unavailable on this relay. Update Local Operator on this computer.\nTry again\nAPPEARANCE\nTheme mode\nSystem\nLight\nDark\nTheme\nLocal Operator Light\nText size\nSystem\n100%\n150%\n200%\nThis phone's own text size is 100%. Following it.\nSIDEBAR\nOrder by\nActive first\nMost recent\nGroup by\nTime section\nIn one list\nTime basis\nLast active\nCreated\nDates and ordering follow the selected clock.\nShow ended sessions\nPinned and running conversations always show.\nSections\nPinned\nRunning\nToday\nThis week\nOlder\nNOTIFICATIONS\nThis build does not include notifications.\nNo devices are registered with this computer yet.\nRADIENT GUARD\nRadient Guard can share guardrail stats from a computer with your Team organization, only after you agree. Local Operator on that computer carries out your answer; this phone only relays it.\nThis computer: Example Mac\nGuard: Example Org is waiting for your choice\nReview\nDIAGNOSTICS\nRoute\nDirect relay\nStream\nlive\nReason\nNone\nLast error\nNone\nCopy diagnostics\nThese lines never include a token, a password, or a session's content.\nABOUT\nVersion\n0.0.0\nLocal Operator is open source (MIT). Agent sessions connect to your relay. Team Bridge messages and notification registration connect directly to"
+ },
+ {
+  "frame": "settings__guard-widening__light",
+  "bytes": 147856,
+  "guardSectionPresent": true,
+  "text": "Settings\nLO\nNot signed in with Radient\nConnected directly to http://127.0.0.1:58648\nSign in with Radient\nCONNECTION\nStatus\nConnected\nRefresh\nSwitch computer\nAdd a computer\nYOUR OWN TUNNEL\nSet up your own tunnel\nACCOUNT ROUTING\nChanges apply only to this computer.\nAccount routing settings are unavailable on this relay. Update Local Operator on this computer.\nTry again\nAPPEARANCE\nTheme mode\nSystem\nLight\nDark\nTheme\nLocal Operator Light\nText size\nSystem\n100%\n150%\n200%\nThis phone's own text size is 100%. Following it.\nSIDEBAR\nOrder by\nActive first\nMost recent\nGroup by\nTime section\nIn one list\nTime basis\nLast active\nCreated\nDates and ordering follow the selected clock.\nShow ended sessions\nPinned and running conversations always show.\nSections\nPinned\nRunning\nToday\nThis week\nOlder\nNOTIFICATIONS\nThis build does not include notifications.\nNo devices are registered with this computer yet.\nRADIENT GUARD\nRadient Guard can share guardrail stats from a computer with your Team organization, only after you agree. Local Operator on that computer carries out your answer; this phone only relays it.\nThis computer: Example Mac\nGuard: sharing with Example Org · new items waiting for your choice\nShared with Example Org from this computer:\nguardrail results and task time\nReview\nStop sharing\nStopping sharing applies to all your computers. You can review them in Console.\nDIAGNOSTICS\nRoute\nDirect relay\nStream\nlive\nReason\nNone\nLast error\nNone\nCopy diagnostics\nThese lines never include a token, a password"
+ },
+ {
+  "frame": "settings__guard-sharing__light",
+  "bytes": 138415,
+  "guardSectionPresent": true,
+  "text": "Settings\nLO\nNot signed in with Radient\nConnected directly to http://127.0.0.1:58648\nSign in with Radient\nCONNECTION\nStatus\nConnected\nRefresh\nSwitch computer\nAdd a computer\nYOUR OWN TUNNEL\nSet up your own tunnel\nACCOUNT ROUTING\nChanges apply only to this computer.\nAccount routing settings are unavailable on this relay. Update Local Operator on this computer.\nTry again\nAPPEARANCE\nTheme mode\nSystem\nLight\nDark\nTheme\nLocal Operator Light\nText size\nSystem\n100%\n150%\n200%\nThis phone's own text size is 100%. Following it.\nSIDEBAR\nOrder by\nActive first\nMost recent\nGroup by\nTime section\nIn one list\nTime basis\nLast active\nCreated\nDates and ordering follow the selected clock.\nShow ended sessions\nPinned and running conversations always show.\nSections\nPinned\nRunning\nToday\nThis week\nOlder\nNOTIFICATIONS\nThis build does not include notifications.\nNo devices are registered with this computer yet.\nRADIENT GUARD\nRadient Guard can share guardrail stats from a computer with your Team organization, only after you agree. Local Operator on that computer carries out your answer; this phone only relays it.\nThis computer: Example Mac\nGuard: sharing with Example Org\nShared with Example Org from this computer:\nguardrail results and task time\nStop sharing\nStopping sharing applies to all your computers. You can review them in Console.\nDIAGNOSTICS\nRoute\nDirect relay\nStream\nlive\nReason\nNone\nLast error\nNone\nCopy diagnostics\nThese lines never include a token, a password, or a session's content.\nABOUT\nVersion\n0.0"
+ },
+ {
+  "frame": "settings__guard-mixed__light",
+  "bytes": 126025,
+  "guardSectionPresent": true,
+  "text": "Settings\nLO\nNot signed in with Radient\nConnected directly to http://127.0.0.1:58648\nSign in with Radient\nCONNECTION\nStatus\nConnected\nRefresh\nSwitch computer\nAdd a computer\nYOUR OWN TUNNEL\nSet up your own tunnel\nACCOUNT ROUTING\nChanges apply only to this computer.\nAccount routing settings are unavailable on this relay. Update Local Operator on this computer.\nTry again\nAPPEARANCE\nTheme mode\nSystem\nLight\nDark\nTheme\nLocal Operator Light\nText size\nSystem\n100%\n150%\n200%\nThis phone's own text size is 100%. Following it.\nSIDEBAR\nOrder by\nActive first\nMost recent\nGroup by\nTime section\nIn one list\nTime basis\nLast active\nCreated\nDates and ordering follow the selected clock.\nShow ended sessions\nPinned and running conversations always show.\nSections\nPinned\nRunning\nToday\nThis week\nOlder\nNOTIFICATIONS\nThis build does not include notifications.\nNo devices are registered with this computer yet.\nRADIENT GUARD\nRadient Guard can share guardrail stats from a computer with your Team organization, only after you agree. Local Operator on that computer carries out your answer; this phone only relays it.\nThis computer: Example Mac\nGuard: paused, turned off by Example Org Two\nGuard: not sharing with Example Org Three\nShare again\nGuard: paused, you stopped sharing from Console on Nov 15\nShare again\nDIAGNOSTICS\nRoute\nDirect relay\nStream\nlive\nReason\nNone\nLast error\nNone\nCopy diagnostics\nThese lines never include a token, a password, or a session's content.\nABOUT\nVersion\n0.0.0\nLocal Operator is open source"
+ },
+ {
+  "frame": "settings__guard-non-team-owner__light",
+  "bytes": 129202,
+  "guardSectionPresent": true,
+  "text": "Settings\nLO\nNot signed in with Radient\nConnected directly to http://127.0.0.1:58648\nSign in with Radient\nCONNECTION\nStatus\nConnected\nRefresh\nSwitch computer\nAdd a computer\nYOUR OWN TUNNEL\nSet up your own tunnel\nACCOUNT ROUTING\nChanges apply only to this computer.\nAccount routing settings are unavailable on this relay. Update Local Operator on this computer.\nTry again\nAPPEARANCE\nTheme mode\nSystem\nLight\nDark\nTheme\nLocal Operator Light\nText size\nSystem\n100%\n150%\n200%\nThis phone's own text size is 100%. Following it.\nSIDEBAR\nOrder by\nActive first\nMost recent\nGroup by\nTime section\nIn one list\nTime basis\nLast active\nCreated\nDates and ordering follow the selected clock.\nShow ended sessions\nPinned and running conversations always show.\nSections\nPinned\nRunning\nToday\nThis week\nOlder\nNOTIFICATIONS\nThis build does not include notifications.\nNo devices are registered with this computer yet.\nRADIENT GUARD\nRadient Guard is part of Radient Team\nRadient Team is for software factories, consulting teams and knowledge work done as a team. Agents share context and hand work between people, and Guard gives admins guardrail stats from members who opt in.\nStart 14-day free trial\nNothing is collected from this account.\nDIAGNOSTICS\nRoute\nDirect relay\nStream\nlive\nReason\nNone\nLast error\nNone\nCopy diagnostics\nThese lines never include a token, a password, or a session's content.\nABOUT\nVersion\n0.0.0\nLocal Operator is open source (MIT). Agent sessions connect to your relay. Team Bridge messages and notific"
+ },
+ {
+  "frame": "settings__guard-non-team-admin__light",
+  "bytes": 144809,
+  "guardSectionPresent": true,
+  "text": "Settings\nLO\nNot signed in with Radient\nConnected directly to http://127.0.0.1:58648\nSign in with Radient\nCONNECTION\nStatus\nConnected\nRefresh\nSwitch computer\nAdd a computer\nYOUR OWN TUNNEL\nSet up your own tunnel\nACCOUNT ROUTING\nChanges apply only to this computer.\nAccount routing settings are unavailable on this relay. Update Local Operator on this computer.\nTry again\nAPPEARANCE\nTheme mode\nSystem\nLight\nDark\nTheme\nLocal Operator Light\nText size\nSystem\n100%\n150%\n200%\nThis phone's own text size is 100%. Following it.\nSIDEBAR\nOrder by\nActive first\nMost recent\nGroup by\nTime section\nIn one list\nTime basis\nLast active\nCreated\nDates and ordering follow the selected clock.\nShow ended sessions\nPinned and running conversations always show.\nSections\nPinned\nRunning\nToday\nThis week\nOlder\nNOTIFICATIONS\nThis build does not include notifications.\nNo devices are registered with this computer yet.\nRADIENT GUARD\nRadient Guard is part of Radient Team\nRadient Team is for software factories, consulting teams and knowledge work done as a team. Agents share context and hand work between people, and Guard gives admins guardrail stats from members who opt in.\nAsk your owner to upgrade\nNothing is collected from this account.\nDIAGNOSTICS\nRoute\nDirect relay\nStream\nlive\nReason\nNone\nLast error\nNone\nCopy diagnostics\nThese lines never include a token, a password, or a session's content.\nABOUT\nVersion\n0.0.0\nLocal Operator is open source (MIT). Agent sessions connect to your relay. Team Bridge messages and notif"
+ },
+ {
+  "frame": "settings__guard-non-team-member__light",
+  "bytes": 129304,
+  "guardSectionPresent": false,
+  "text": "Settings\nLO\nNot signed in with Radient\nConnected directly to http://127.0.0.1:58648\nSign in with Radient\nCONNECTION\nStatus\nConnected\nRefresh\nSwitch computer\nAdd a computer\nYOUR OWN TUNNEL\nSet up your own tunnel\nACCOUNT ROUTING\nChanges apply only to this computer.\nAccount routing settings are unavailable on this relay. Update Local Operator on this computer.\nTry again\nAPPEARANCE\nTheme mode\nSystem\nLight\nDark\nTheme\nLocal Operator Light\nText size\nSystem\n100%\n150%\n200%\nThis phone's own text size is 100%. Following it.\nSIDEBAR\nOrder by\nActive first\nMost recent\nGroup by\nTime section\nIn one list\nTime basis\nLast active\nCreated\nDates and ordering follow the selected clock.\nShow ended sessions\nPinned and running conversations always show.\nSections\nPinned\nRunning\nToday\nThis week\nOlder\nNOTIFICATIONS\nThis build does not include notifications.\nNo devices are registered with this computer yet.\nDIAGNOSTICS\nRoute\nDirect relay\nStream\nlive\nReason\nNone\nLast error\nNone\nCopy diagnostics\nThese lines never include a token, a password, or a session's content.\nABOUT\nVersion\n0.0.0\nLocal Operator is open source (MIT). Agent sessions connect to your relay. Team Bridge messages and notification registration connect directly to Radient.\nSign out\nDelete my Radient account\nDeleting your account happens in the Radient Console, in the browser — this app cannot do it for you. It deletes the account and every tunnel on it. Sessions on your computer are not touched."
+ },
+ {
+  "frame": "settings__idle__light",
+  "bytes": 124338,
+  "guardSectionPresent": true,
+  "text": "Settings\nLO\nNot signed in with Radient\nConnected directly to http://127.0.0.1:58648\nSign in with Radient\nCONNECTION\nStatus\nConnected\nRefresh\nSwitch computer\nAdd a computer\nYOUR OWN TUNNEL\nSet up your own tunnel\nACCOUNT ROUTING\nChanges apply only to this computer.\nAccount routing settings are unavailable on this relay. Update Local Operator on this computer.\nTry again\nAPPEARANCE\nTheme mode\nSystem\nLight\nDark\nTheme\nLocal Operator Light\nText size\nSystem\n100%\n150%\n200%\nThis phone's own text size is 100%. Following it.\nSIDEBAR\nOrder by\nActive first\nMost recent\nGroup by\nTime section\nIn one list\nTime basis\nLast active\nCreated\nDates and ordering follow the selected clock.\nShow ended sessions\nPinned and running conversations always show.\nSections\nPinned\nRunning\nToday\nThis week\nOlder\nNOTIFICATIONS\nThis build does not include notifications.\nNo devices are registered with this computer yet.\nRADIENT GUARD\nThis computer’s Local Operator can’t show Radient Guard to your phone yet. Update Local Operator on it to review or stop sharing from here.\nDIAGNOSTICS\nRoute\nDirect relay\nStream\nlive\nReason\nNone\nLast error\nNone\nCopy diagnostics\nThese lines never include a token, a password, or a session's content.\nABOUT\nVersion\n0.0.0\nLocal Operator is open source (MIT). Agent sessions connect to your relay. Team Bridge messages and notification registration connect directly to Radient.\nSign out\nDelete my Radient account\nDeleting your account happens in the Radient Console, in the browser — this app cannot"
+ },
+ {
+  "frame": "settings__guard-waiting__dark",
+  "bytes": 133025,
+  "guardSectionPresent": true,
+  "text": "Settings\nLO\nNot signed in with Radient\nConnected directly to http://127.0.0.1:58648\nSign in with Radient\nCONNECTION\nStatus\nConnected\nRefresh\nSwitch computer\nAdd a computer\nYOUR OWN TUNNEL\nSet up your own tunnel\nACCOUNT ROUTING\nChanges apply only to this computer.\nAccount routing settings are unavailable on this relay. Update Local Operator on this computer.\nTry again\nAPPEARANCE\nTheme mode\nSystem\nLight\nDark\nTheme\nLocal Operator Dark\nText size\nSystem\n100%\n150%\n200%\nThis phone's own text size is 100%. Following it.\nSIDEBAR\nOrder by\nActive first\nMost recent\nGroup by\nTime section\nIn one list\nTime basis\nLast active\nCreated\nDates and ordering follow the selected clock.\nShow ended sessions\nPinned and running conversations always show.\nSections\nPinned\nRunning\nToday\nThis week\nOlder\nNOTIFICATIONS\nThis build does not include notifications.\nNo devices are registered with this computer yet.\nRADIENT GUARD\nRadient Guard can share guardrail stats from a computer with your Team organization, only after you agree. Local Operator on that computer carries out your answer; this phone only relays it.\nThis computer: Example Mac\nGuard: Example Org is waiting for your choice\nReview\nDIAGNOSTICS\nRoute\nDirect relay\nStream\nlive\nReason\nNone\nLast error\nNone\nCopy diagnostics\nThese lines never include a token, a password, or a session's content.\nABOUT\nVersion\n0.0.0\nLocal Operator is open source (MIT). Agent sessions connect to your relay. Team Bridge messages and notification registration connect directly to "
+ },
+ {
+  "frame": "settings__guard-widening__dark",
+  "bytes": 150060,
+  "guardSectionPresent": true,
+  "text": "Settings\nLO\nNot signed in with Radient\nConnected directly to http://127.0.0.1:58648\nSign in with Radient\nCONNECTION\nStatus\nConnected\nRefresh\nSwitch computer\nAdd a computer\nYOUR OWN TUNNEL\nSet up your own tunnel\nACCOUNT ROUTING\nChanges apply only to this computer.\nAccount routing settings are unavailable on this relay. Update Local Operator on this computer.\nTry again\nAPPEARANCE\nTheme mode\nSystem\nLight\nDark\nTheme\nLocal Operator Dark\nText size\nSystem\n100%\n150%\n200%\nThis phone's own text size is 100%. Following it.\nSIDEBAR\nOrder by\nActive first\nMost recent\nGroup by\nTime section\nIn one list\nTime basis\nLast active\nCreated\nDates and ordering follow the selected clock.\nShow ended sessions\nPinned and running conversations always show.\nSections\nPinned\nRunning\nToday\nThis week\nOlder\nNOTIFICATIONS\nThis build does not include notifications.\nNo devices are registered with this computer yet.\nRADIENT GUARD\nRadient Guard can share guardrail stats from a computer with your Team organization, only after you agree. Local Operator on that computer carries out your answer; this phone only relays it.\nThis computer: Example Mac\nGuard: sharing with Example Org · new items waiting for your choice\nShared with Example Org from this computer:\nguardrail results and task time\nReview\nStop sharing\nStopping sharing applies to all your computers. You can review them in Console.\nDIAGNOSTICS\nRoute\nDirect relay\nStream\nlive\nReason\nNone\nLast error\nNone\nCopy diagnostics\nThese lines never include a token, a password,"
+ },
+ {
+  "frame": "settings__guard-sharing__dark",
+  "bytes": 140035,
+  "guardSectionPresent": true,
+  "text": "Settings\nLO\nNot signed in with Radient\nConnected directly to http://127.0.0.1:58648\nSign in with Radient\nCONNECTION\nStatus\nConnected\nRefresh\nSwitch computer\nAdd a computer\nYOUR OWN TUNNEL\nSet up your own tunnel\nACCOUNT ROUTING\nChanges apply only to this computer.\nAccount routing settings are unavailable on this relay. Update Local Operator on this computer.\nTry again\nAPPEARANCE\nTheme mode\nSystem\nLight\nDark\nTheme\nLocal Operator Dark\nText size\nSystem\n100%\n150%\n200%\nThis phone's own text size is 100%. Following it.\nSIDEBAR\nOrder by\nActive first\nMost recent\nGroup by\nTime section\nIn one list\nTime basis\nLast active\nCreated\nDates and ordering follow the selected clock.\nShow ended sessions\nPinned and running conversations always show.\nSections\nPinned\nRunning\nToday\nThis week\nOlder\nNOTIFICATIONS\nThis build does not include notifications.\nNo devices are registered with this computer yet.\nRADIENT GUARD\nRadient Guard can share guardrail stats from a computer with your Team organization, only after you agree. Local Operator on that computer carries out your answer; this phone only relays it.\nThis computer: Example Mac\nGuard: sharing with Example Org\nShared with Example Org from this computer:\nguardrail results and task time\nStop sharing\nStopping sharing applies to all your computers. You can review them in Console.\nDIAGNOSTICS\nRoute\nDirect relay\nStream\nlive\nReason\nNone\nLast error\nNone\nCopy diagnostics\nThese lines never include a token, a password, or a session's content.\nABOUT\nVersion\n0.0."
+ },
+ {
+  "frame": "settings__guard-mixed__dark",
+  "bytes": 127911,
+  "guardSectionPresent": true,
+  "text": "Settings\nLO\nNot signed in with Radient\nConnected directly to http://127.0.0.1:58648\nSign in with Radient\nCONNECTION\nStatus\nConnected\nRefresh\nSwitch computer\nAdd a computer\nYOUR OWN TUNNEL\nSet up your own tunnel\nACCOUNT ROUTING\nChanges apply only to this computer.\nAccount routing settings are unavailable on this relay. Update Local Operator on this computer.\nTry again\nAPPEARANCE\nTheme mode\nSystem\nLight\nDark\nTheme\nLocal Operator Dark\nText size\nSystem\n100%\n150%\n200%\nThis phone's own text size is 100%. Following it.\nSIDEBAR\nOrder by\nActive first\nMost recent\nGroup by\nTime section\nIn one list\nTime basis\nLast active\nCreated\nDates and ordering follow the selected clock.\nShow ended sessions\nPinned and running conversations always show.\nSections\nPinned\nRunning\nToday\nThis week\nOlder\nNOTIFICATIONS\nThis build does not include notifications.\nNo devices are registered with this computer yet.\nRADIENT GUARD\nRadient Guard can share guardrail stats from a computer with your Team organization, only after you agree. Local Operator on that computer carries out your answer; this phone only relays it.\nThis computer: Example Mac\nGuard: paused, turned off by Example Org Two\nGuard: not sharing with Example Org Three\nShare again\nGuard: paused, you stopped sharing from Console on Nov 15\nShare again\nDIAGNOSTICS\nRoute\nDirect relay\nStream\nlive\nReason\nNone\nLast error\nNone\nCopy diagnostics\nThese lines never include a token, a password, or a session's content.\nABOUT\nVersion\n0.0.0\nLocal Operator is open source "
+ },
+ {
+  "frame": "settings__guard-non-team-owner__dark",
+  "bytes": 130742,
+  "guardSectionPresent": true,
+  "text": "Settings\nLO\nNot signed in with Radient\nConnected directly to http://127.0.0.1:58648\nSign in with Radient\nCONNECTION\nStatus\nConnected\nRefresh\nSwitch computer\nAdd a computer\nYOUR OWN TUNNEL\nSet up your own tunnel\nACCOUNT ROUTING\nChanges apply only to this computer.\nAccount routing settings are unavailable on this relay. Update Local Operator on this computer.\nTry again\nAPPEARANCE\nTheme mode\nSystem\nLight\nDark\nTheme\nLocal Operator Dark\nText size\nSystem\n100%\n150%\n200%\nThis phone's own text size is 100%. Following it.\nSIDEBAR\nOrder by\nActive first\nMost recent\nGroup by\nTime section\nIn one list\nTime basis\nLast active\nCreated\nDates and ordering follow the selected clock.\nShow ended sessions\nPinned and running conversations always show.\nSections\nPinned\nRunning\nToday\nThis week\nOlder\nNOTIFICATIONS\nThis build does not include notifications.\nNo devices are registered with this computer yet.\nRADIENT GUARD\nRadient Guard is part of Radient Team\nRadient Team is for software factories, consulting teams and knowledge work done as a team. Agents share context and hand work between people, and Guard gives admins guardrail stats from members who opt in.\nStart 14-day free trial\nNothing is collected from this account.\nDIAGNOSTICS\nRoute\nDirect relay\nStream\nlive\nReason\nNone\nLast error\nNone\nCopy diagnostics\nThese lines never include a token, a password, or a session's content.\nABOUT\nVersion\n0.0.0\nLocal Operator is open source (MIT). Agent sessions connect to your relay. Team Bridge messages and notifica"
+ },
+ {
+  "frame": "settings__guard-non-team-admin__dark",
+  "bytes": 146724,
+  "guardSectionPresent": true,
+  "text": "Settings\nLO\nNot signed in with Radient\nConnected directly to http://127.0.0.1:58648\nSign in with Radient\nCONNECTION\nStatus\nConnected\nRefresh\nSwitch computer\nAdd a computer\nYOUR OWN TUNNEL\nSet up your own tunnel\nACCOUNT ROUTING\nChanges apply only to this computer.\nAccount routing settings are unavailable on this relay. Update Local Operator on this computer.\nTry again\nAPPEARANCE\nTheme mode\nSystem\nLight\nDark\nTheme\nLocal Operator Dark\nText size\nSystem\n100%\n150%\n200%\nThis phone's own text size is 100%. Following it.\nSIDEBAR\nOrder by\nActive first\nMost recent\nGroup by\nTime section\nIn one list\nTime basis\nLast active\nCreated\nDates and ordering follow the selected clock.\nShow ended sessions\nPinned and running conversations always show.\nSections\nPinned\nRunning\nToday\nThis week\nOlder\nNOTIFICATIONS\nThis build does not include notifications.\nNo devices are registered with this computer yet.\nRADIENT GUARD\nRadient Guard is part of Radient Team\nRadient Team is for software factories, consulting teams and knowledge work done as a team. Agents share context and hand work between people, and Guard gives admins guardrail stats from members who opt in.\nAsk your owner to upgrade\nNothing is collected from this account.\nDIAGNOSTICS\nRoute\nDirect relay\nStream\nlive\nReason\nNone\nLast error\nNone\nCopy diagnostics\nThese lines never include a token, a password, or a session's content.\nABOUT\nVersion\n0.0.0\nLocal Operator is open source (MIT). Agent sessions connect to your relay. Team Bridge messages and notifi"
+ },
+ {
+  "frame": "settings__guard-non-team-member__dark",
+  "bytes": 130377,
+  "guardSectionPresent": false,
+  "text": "Settings\nLO\nNot signed in with Radient\nConnected directly to http://127.0.0.1:58648\nSign in with Radient\nCONNECTION\nStatus\nConnected\nRefresh\nSwitch computer\nAdd a computer\nYOUR OWN TUNNEL\nSet up your own tunnel\nACCOUNT ROUTING\nChanges apply only to this computer.\nAccount routing settings are unavailable on this relay. Update Local Operator on this computer.\nTry again\nAPPEARANCE\nTheme mode\nSystem\nLight\nDark\nTheme\nLocal Operator Dark\nText size\nSystem\n100%\n150%\n200%\nThis phone's own text size is 100%. Following it.\nSIDEBAR\nOrder by\nActive first\nMost recent\nGroup by\nTime section\nIn one list\nTime basis\nLast active\nCreated\nDates and ordering follow the selected clock.\nShow ended sessions\nPinned and running conversations always show.\nSections\nPinned\nRunning\nToday\nThis week\nOlder\nNOTIFICATIONS\nThis build does not include notifications.\nNo devices are registered with this computer yet.\nDIAGNOSTICS\nRoute\nDirect relay\nStream\nlive\nReason\nNone\nLast error\nNone\nCopy diagnostics\nThese lines never include a token, a password, or a session's content.\nABOUT\nVersion\n0.0.0\nLocal Operator is open source (MIT). Agent sessions connect to your relay. Team Bridge messages and notification registration connect directly to Radient.\nSign out\nDelete my Radient account\nDeleting your account happens in the Radient Console, in the browser — this app cannot do it for you. It deletes the account and every tunnel on it. Sessions on your computer are not touched."
+ },
+ {
+  "frame": "settings__idle__dark",
+  "bytes": 125532,
+  "guardSectionPresent": true,
+  "text": "Settings\nLO\nNot signed in with Radient\nConnected directly to http://127.0.0.1:58648\nSign in with Radient\nCONNECTION\nStatus\nConnected\nRefresh\nSwitch computer\nAdd a computer\nYOUR OWN TUNNEL\nSet up your own tunnel\nACCOUNT ROUTING\nChanges apply only to this computer.\nAccount routing settings are unavailable on this relay. Update Local Operator on this computer.\nTry again\nAPPEARANCE\nTheme mode\nSystem\nLight\nDark\nTheme\nLocal Operator Dark\nText size\nSystem\n100%\n150%\n200%\nThis phone's own text size is 100%. Following it.\nSIDEBAR\nOrder by\nActive first\nMost recent\nGroup by\nTime section\nIn one list\nTime basis\nLast active\nCreated\nDates and ordering follow the selected clock.\nShow ended sessions\nPinned and running conversations always show.\nSections\nPinned\nRunning\nToday\nThis week\nOlder\nNOTIFICATIONS\nThis build does not include notifications.\nNo devices are registered with this computer yet.\nRADIENT GUARD\nThis computer’s Local Operator can’t show Radient Guard to your phone yet. Update Local Operator on it to review or stop sharing from here.\nDIAGNOSTICS\nRoute\nDirect relay\nStream\nlive\nReason\nNone\nLast error\nNone\nCopy diagnostics\nThese lines never include a token, a password, or a session's content.\nABOUT\nVersion\n0.0.0\nLocal Operator is open source (MIT). Agent sessions connect to your relay. Team Bridge messages and notification registration connect directly to Radient.\nSign out\nDelete my Radient account\nDeleting your account happens in the Radient Console, in the browser — this app cannot "
+ },
+ {
+  "frame": "inbox__guard-waiting__light",
+  "bytes": 130645,
+  "rowPresent": true,
+  "text": "Notifications\nSelect\nRADIENT GUARD\nShare Guard stats with Example Org?\nExample Org turned on Radient Guard.\nReview\nUnread 4\nAll\nWAITING ON YOU · 1\nHigh\nWhich payment provider should the migration target?\nStripe is the cheaper option at current volume; Adyen already holds the EU merchant account.\nPayments migration · 2 questions\n33d ago\nAnswer\nEARLIER\nNightly audit found 2 broken links\nTwo internal links in docs/relay/contract.md now 404. Links: docs/tunnels.md, docs/mobile.md.\nAida\n33d ago\n×2\nHigh\nFraud attempt blocked on the agent server\nThree signups from one device fingerprint were refused within 90 seconds. Free-credit abuse check held.\nCredit watch\n34d ago\nPR #1188 needs your review\nAn outside contributor opened a fix for the tunnel retry envelope; CI is green and the agent review round is clean.\nAida\n34d ago\nDeploy finished\nadmin-api v0.18.2 is live on the staging cluster; smoke checks passed.\nAida\n36d ago"
+ },
+ {
+  "frame": "consent__new_org__light",
+  "bytes": 138934,
+  "sheetPresent": true,
+  "text": "Notifications\nSelect\nRADIENT GUARD\nShare Guard stats with Example Org?\nExample Org turned on Radient Guard.\nReview\nUnread 4\nAll\nWAITING ON YOU · 1\nHigh\nWhich payment provider should the migration target?\nStripe is the cheaper option at current volume; Adyen already holds the EU merchant account.\nPayments migration · 2 questions\n33d ago\nAnswer\nEARLIER\nNightly audit found 2 broken links\nTwo internal links in docs/relay/contract.md now 404. Links: docs/tunnels.md, docs/mobile.md.\nAida\n33d ago\n×2\nHigh\nFraud attempt blocked on the agent server\nThree signups from one device fingerprint were refused within 90 seconds. Free-credit abuse check held.\nCredit watch\n34d ago\nPR #1188 needs your review\nAn outside contributor opened a fix for the tunnel retry envelope; CI is green and the agent review round is clean.\nAida\n34d ago\nDeploy finished\nadmin-api v0.18.2 is live on the staging cluster; smoke checks passed.\nAida\n36d ago\nShare Guard stats with Example Org?\nExample Org turned on Radient Guard.\nFrom this computer, Guard would send:\n• Guardrail results: whether each check allowed, asked or blocked, and the rule type\n• Setup checks: whether recommended settings are on. Each computer randomises its answers before they leave, so admins see estimates, not anyone's real answer. Admins may be able to tell when one of these settings changes on your computer.\n• Task time, in ranges such as 5–15 min\n• Review rounds per change, and whether it merged or closed\nNever sent: file paths, commands, prom"
+ },
+ {
+  "frame": "inbox__guard-waiting__dark",
+  "bytes": 132227,
+  "rowPresent": true,
+  "text": "Notifications\nSelect\nRADIENT GUARD\nShare Guard stats with Example Org?\nExample Org turned on Radient Guard.\nReview\nUnread 4\nAll\nWAITING ON YOU · 1\nHigh\nWhich payment provider should the migration target?\nStripe is the cheaper option at current volume; Adyen already holds the EU merchant account.\nPayments migration · 2 questions\n33d ago\nAnswer\nEARLIER\nNightly audit found 2 broken links\nTwo internal links in docs/relay/contract.md now 404. Links: docs/tunnels.md, docs/mobile.md.\nAida\n33d ago\n×2\nHigh\nFraud attempt blocked on the agent server\nThree signups from one device fingerprint were refused within 90 seconds. Free-credit abuse check held.\nCredit watch\n34d ago\nPR #1188 needs your review\nAn outside contributor opened a fix for the tunnel retry envelope; CI is green and the agent review round is clean.\nAida\n34d ago\nDeploy finished\nadmin-api v0.18.2 is live on the staging cluster; smoke checks passed.\nAida\n36d ago"
+ },
+ {
+  "frame": "consent__new_org__dark",
+  "bytes": 140865,
+  "sheetPresent": true,
+  "text": "Notifications\nSelect\nRADIENT GUARD\nShare Guard stats with Example Org?\nExample Org turned on Radient Guard.\nReview\nUnread 4\nAll\nWAITING ON YOU · 1\nHigh\nWhich payment provider should the migration target?\nStripe is the cheaper option at current volume; Adyen already holds the EU merchant account.\nPayments migration · 2 questions\n33d ago\nAnswer\nEARLIER\nNightly audit found 2 broken links\nTwo internal links in docs/relay/contract.md now 404. Links: docs/tunnels.md, docs/mobile.md.\nAida\n33d ago\n×2\nHigh\nFraud attempt blocked on the agent server\nThree signups from one device fingerprint were refused within 90 seconds. Free-credit abuse check held.\nCredit watch\n34d ago\nPR #1188 needs your review\nAn outside contributor opened a fix for the tunnel retry envelope; CI is green and the agent review round is clean.\nAida\n34d ago\nDeploy finished\nadmin-api v0.18.2 is live on the staging cluster; smoke checks passed.\nAida\n36d ago\nShare Guard stats with Example Org?\nExample Org turned on Radient Guard.\nFrom this computer, Guard would send:\n• Guardrail results: whether each check allowed, asked or blocked, and the rule type\n• Setup checks: whether recommended settings are on. Each computer randomises its answers before they leave, so admins see estimates, not anyone's real answer. Admins may be able to tell when one of these settings changes on your computer.\n• Task time, in ranges such as 5–15 min\n• Review rounds per change, and whether it merged or closed\nNever sent: file paths, commands, prom"
+ },
+ {
+  "check": "answer inside the 500 ms debounce sends nothing",
+  "answerRequests": 0,
+  "before": 3
+ },
+ {
+  "check": "Decide later closes the card, row stays pending, nothing sent",
+  "rowStillPending": true,
+  "answerRequests": 0
+ },
+ {
+  "frame": "inbox__after-decide-later__light",
+  "bytes": 130502,
+  "text": "Notifications\nSelect\nRADIENT GUARD\nShare Guard stats with Example Org?\nExample Org turned on Radient Guard.\nReview\nUnread 4\nAll\nWAITING ON YOU · 1\nHigh\nWhich payment provider should the migration target?\nStripe is the cheaper option at current volume; Adyen already holds the EU merchant account.\nPayments migration · 2 questions\n33d ago\nAnswer\nEARLIER\nNightly audit found 2 broken links\nTwo internal links in docs/relay/contract.md now 404. Links: docs/tunnels.md, docs/mobile.md.\nAida\n33d ago\n×2\nHigh\nFraud attempt blocked on the agent server\nThree signups from one device fingerprint were refused within 90 seconds. Free-credit abuse check held.\nCredit watch\n34d ago\nPR #1188 needs your review\nAn outside contributor opened a fix for the tunnel retry envelope; CI is green and the agent review round is clean.\nAida\n34d ago\nDeploy finished\nadmin-api v0.18.2 is live on the staging cluster; smoke checks passed.\nAida\n36d ago"
+ },
+ {
+  "frame": "inbox__after-share__light",
+  "bytes": 138771,
+  "text": "Notifications\nSelect\nRADIENT GUARD\n✓\nSharing with Example Org from this computer.\nUnread 4\nAll\nWAITING ON YOU · 1\nHigh\nWhich payment provider should the migration target?\nStripe is the cheaper option at current volume; Adyen already holds the EU merchant account.\nPayments migration · 2 questions\n33d ago\nAnswer\nEARLIER\nNightly audit found 2 broken links\nTwo internal links in docs/relay/contract.md now 404. Links: docs/tunnels.md, docs/mobile.md.\nAida\n33d ago\n×2\nHigh\nFraud attempt blocked on the agent server\nThree signups from one device fingerprint were refused within 90 seconds. Free-credit abuse check held.\nCredit watch\n34d ago\nPR #1188 needs your review\nAn outside contributor opened a fix for the tunnel retry envelope; CI is green and the agent review round is clean.\nAida\n34d ago\nDeploy finished\nadmin-api v0.18.2 is live on the staging cluster; smoke checks passed.\nAida\n36d ago"
+ },
+ {
+  "check": "Share: every Guard request the phone made (host-side ledger)",
+  "requests": [
+   {
+    "method": "GET",
+    "path": "/api/guard",
+    "body": null
+   },
+   {
+    "method": "GET",
+    "path": "/api/guard",
+    "body": null
+   },
+   {
+    "method": "GET",
+    "path": "/api/guard/consents/req_EXAMPLE0001",
+    "body": null
+   },
+   {
+    "method": "POST",
+    "path": "/api/guard/consents/req_EXAMPLE0001/accept",
+    "body": {
+     "request_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+     "disclosure_digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    }
+   },
+   {
+    "method": "GET",
+    "path": "/api/guard",
+    "body": null
+   }
+  ],
+  "browserGuardUrls": [
+   "GET /api/guard",
+   "GET /api/guard",
+   "GET /api/guard/consents/req_EXAMPLE0001",
+   "POST /api/guard/consents/req_EXAMPLE0001/accept",
+   "GET /api/guard"
+  ]
+ },
+ {
+  "frame": "inbox__after-dont-share__light",
+  "bytes": 137021,
+  "text": "Notifications\nSelect\nRADIENT GUARD\n·\nNot sharing with Example Org.\nUnread 4\nAll\nWAITING ON YOU · 1\nHigh\nWhich payment provider should the migration target?\nStripe is the cheaper option at current volume; Adyen already holds the EU merchant account.\nPayments migration · 2 questions\n33d ago\nAnswer\nEARLIER\nNightly audit found 2 broken links\nTwo internal links in docs/relay/contract.md now 404. Links: docs/tunnels.md, docs/mobile.md.\nAida\n33d ago\n×2\nHigh\nFraud attempt blocked on the agent server\nThree signups from one device fingerprint were refused within 90 seconds. Free-credit abuse check held.\nCredit watch\n34d ago\nPR #1188 needs your review\nAn outside contributor opened a fix for the tunnel retry envelope; CI is green and the agent review round is clean.\nAida\n34d ago\nDeploy finished\nadmin-api v0.18.2 is live on the staging cluster; smoke checks passed.\nAida\n36d ago"
+ },
+ {
+  "frame": "inbox__guard-widening__light",
+  "bytes": 147592,
+  "text": "Notifications\nSelect\nRADIENT GUARD\nShare Guard stats with Example Org?\nExample Org wants to collect more: admin view of your timing. Until you choose, Guard keeps sharing only what you already agreed to.\nReview\nUnread 4\nAll\nWAITING ON YOU · 1\nHigh\nWhich payment provider should the migration target?\nStripe is the cheaper option at current volume; Adyen already holds the EU merchant account.\nPayments migration · 2 questions\n33d ago\nAnswer\nEARLIER\nNightly audit found 2 broken links\nTwo internal links in docs/relay/contract.md now 404. Links: docs/tunnels.md, docs/mobile.md.\nAida\n33d ago\n×2\nHigh\nFraud attempt blocked on the agent server\nThree signups from one device fingerprint were refused within 90 seconds. Free-credit abuse check held.\nCredit watch\n34d ago\nPR #1188 needs your review\nAn outside contributor opened a fix for the tunnel retry envelope; CI is green and the agent review round is clean.\nAida\n34d ago\nDeploy finished\nadmin-api v0.18.2 is live on the staging cluster; smoke checks passed.\nAida\n36d ago"
+ },
+ {
+  "frame": "consent__widened__light",
+  "bytes": 147280,
+  "text": "Notifications\nSelect\nRADIENT GUARD\nShare Guard stats with Example Org?\nExample Org wants to collect more: admin view of your timing. Until you choose, Guard keeps sharing only what you already agreed to.\nReview\nUnread 4\nAll\nWAITING ON YOU · 1\nHigh\nWhich payment provider should the migration target?\nStripe is the cheaper option at current volume; Adyen already holds the EU merchant account.\nPayments migration · 2 questions\n33d ago\nAnswer\nEARLIER\nNightly audit found 2 broken links\nTwo internal links in docs/relay/contract.md now 404. Links: docs/tunnels.md, docs/mobile.md.\nAida\n33d ago\n×2\nHigh\nFraud attempt blocked on the agent server\nThree signups from one device fingerprint were refused within 90 seconds. Free-credit abuse check held.\nCredit watch\n34d ago\nPR #1188 needs your review\nAn outside contributor opened a fix for the tunnel retry envelope; CI is green and the agent review round is clean.\nAida\n34d ago\nDeploy finished\nadmin-api v0.18.2 is live on the staging cluster; smoke checks passed.\nAida\n36d ago\nShare Guard stats with Example Org?\nExample Org wants to collect more: admin view of your timing. Until you choose, Guard keeps sharing only what you already agreed to.\nFrom this computer, Guard would send:\n• Let Example Org admins see your step-by-step timing\nNever sent: file paths, commands, prompts, code, model output or tool arguments.\nAdmins see totals only when at least 5 people contributed. With step-by-step timing shared, they can also see your own timing, but not w"
+ },
+ {
+  "frame": "inbox__guard-widening__dark",
+  "bytes": 149506,
+  "text": "Notifications\nSelect\nRADIENT GUARD\nShare Guard stats with Example Org?\nExample Org wants to collect more: admin view of your timing. Until you choose, Guard keeps sharing only what you already agreed to.\nReview\nUnread 4\nAll\nWAITING ON YOU · 1\nHigh\nWhich payment provider should the migration target?\nStripe is the cheaper option at current volume; Adyen already holds the EU merchant account.\nPayments migration · 2 questions\n33d ago\nAnswer\nEARLIER\nNightly audit found 2 broken links\nTwo internal links in docs/relay/contract.md now 404. Links: docs/tunnels.md, docs/mobile.md.\nAida\n33d ago\n×2\nHigh\nFraud attempt blocked on the agent server\nThree signups from one device fingerprint were refused within 90 seconds. Free-credit abuse check held.\nCredit watch\n34d ago\nPR #1188 needs your review\nAn outside contributor opened a fix for the tunnel retry envelope; CI is green and the agent review round is clean.\nAida\n34d ago\nDeploy finished\nadmin-api v0.18.2 is live on the staging cluster; smoke checks passed.\nAida\n36d ago"
+ },
+ {
+  "frame": "consent__widened__dark",
+  "bytes": 147435,
+  "text": "Notifications\nSelect\nRADIENT GUARD\nShare Guard stats with Example Org?\nExample Org wants to collect more: admin view of your timing. Until you choose, Guard keeps sharing only what you already agreed to.\nReview\nUnread 4\nAll\nWAITING ON YOU · 1\nHigh\nWhich payment provider should the migration target?\nStripe is the cheaper option at current volume; Adyen already holds the EU merchant account.\nPayments migration · 2 questions\n33d ago\nAnswer\nEARLIER\nNightly audit found 2 broken links\nTwo internal links in docs/relay/contract.md now 404. Links: docs/tunnels.md, docs/mobile.md.\nAida\n33d ago\n×2\nHigh\nFraud attempt blocked on the agent server\nThree signups from one device fingerprint were refused within 90 seconds. Free-credit abuse check held.\nCredit watch\n34d ago\nPR #1188 needs your review\nAn outside contributor opened a fix for the tunnel retry envelope; CI is green and the agent review round is clean.\nAida\n34d ago\nDeploy finished\nadmin-api v0.18.2 is live on the staging cluster; smoke checks passed.\nAida\n36d ago\nShare Guard stats with Example Org?\nExample Org wants to collect more: admin view of your timing. Until you choose, Guard keeps sharing only what you already agreed to.\nFrom this computer, Guard would send:\n• Let Example Org admins see your step-by-step timing\nNever sent: file paths, commands, prompts, code, model output or tool arguments.\nAdmins see totals only when at least 5 people contributed. With step-by-step timing shared, they can also see your own timing, but not w"
+ },
+ {
+  "frame": "revoke__confirm__light",
+  "bytes": 140479,
+  "text": "Settings\nLO\nNot signed in with Radient\nConnected directly to http://127.0.0.1:58648\nSign in with Radient\nCONNECTION\nStatus\nConnected\nRefresh\nSwitch computer\nAdd a computer\nYOUR OWN TUNNEL\nSet up your own tunnel\nACCOUNT ROUTING\nChanges apply only to this computer.\nAccount routing settings are unavailable on this relay. Update Local Operator on this computer.\nTry again\nAPPEARANCE\nTheme mode\nSystem\nLight\nDark\nTheme\nLocal Operator Light\nText size\nSystem\n100%\n150%\n200%\nThis phone's own text size is 100%. Following it.\nSIDEBAR\nOrder by\nActive first\nMost recent\nGroup by\nTime section\nIn one list\nTime basis\nLast active\nCreated\nDates and ordering follow the selected clock.\nShow ended sessions\nPinned and running conversations always show.\nSections\nPinned\nRunning\nToday\nThis week\nOlder\nNOTIFICATIONS\nThis build does not include notifications.\nNo devices are registered with this computer yet.\nRADIENT GUARD\nRadient Guard can share guardrail stats from a computer with your Team organization, only after you agree. Local Operator on that computer carries out your answer; this phone only relays it.\nThis computer: Example Mac\nGuard: sharing with Example Org\nShared with Example Org from this computer:\nguardrail results and task time\nStop sharing\nStopping sharing applies to all your computers. You can review them in Console.\nDIAGNOSTICS\nRoute\nDirect relay\nStream\nlive\nReason\nNone\nLast error\nNone\nCopy diagnostics\nThese lines never include a token, a password, or a session's content.\nABOUT\nVersion\n0.0"
+ },
+ {
+  "frame": "revoke__after__light",
+  "bytes": 120949,
+  "text": "Settings\nLO\nNot signed in with Radient\nConnected directly to http://127.0.0.1:58648\nSign in with Radient\nCONNECTION\nStatus\nConnected\nRefresh\nSwitch computer\nAdd a computer\nYOUR OWN TUNNEL\nSet up your own tunnel\nACCOUNT ROUTING\nChanges apply only to this computer.\nAccount routing settings are unavailable on this relay. Update Local Operator on this computer.\nTry again\nAPPEARANCE\nTheme mode\nSystem\nLight\nDark\nTheme\nLocal Operator Light\nText size\nSystem\n100%\n150%\n200%\nThis phone's own text size is 100%. Following it.\nSIDEBAR\nOrder by\nActive first\nMost recent\nGroup by\nTime section\nIn one list\nTime basis\nLast active\nCreated\nDates and ordering follow the selected clock.\nShow ended sessions\nPinned and running conversations always show.\nSections\nPinned\nRunning\nToday\nThis week\nOlder\nNOTIFICATIONS\nThis build does not include notifications.\nNo devices are registered with this computer yet.\nRADIENT GUARD\nRadient Guard can share guardrail stats from a computer with your Team organization, only after you agree. Local Operator on that computer carries out your answer; this phone only relays it.\nThis computer: Example Mac\nGuard: paused, you stopped sharing\nShare again\n✓\nStopped sharing with Example Org.\nDIAGNOSTICS\nRoute\nDirect relay\nStream\nlive\nReason\nNone\nLast error\nNone\nCopy diagnostics\nThese lines never include a token, a password, or a session's content.\nABOUT\nVersion\n0.0.0\nLocal Operator is open source (MIT). Agent sessions connect to your relay. Team Bridge messages and notification re"
+ },
+ {
+  "check": "non-Team owner: every Guard request the phone made",
+  "hostLedger": [
+   {
+    "method": "GET",
+    "path": "/api/guard",
+    "body": null
+   },
+   {
+    "method": "GET",
+    "path": "/api/guard/non-team-card",
+    "body": null
+   }
+  ],
+  "browserGuardUrls": [
+   "GET /api/guard",
+   "GET /api/guard/non-team-card"
+  ]
+ },
+ {
+  "check": "older relay (no features.guard): Guard requests (browser network)",
+  "browserGuardUrls": [],
+  "hostLedger": [
+   {
+    "method": "GET",
+    "path": "/api/guard",
+    "body": null
+   },
+   {
+    "method": "GET",
+    "path": "/api/guard/non-team-card",
+    "body": null
+   }
+  ]
+ }
+]

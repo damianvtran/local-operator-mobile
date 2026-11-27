@@ -1,0 +1,358 @@
+{
+	"mobile.guard.screen_title": {
+		"role": "heading",
+		"note": "Mirrors the core TUI key tui.guard.screen_title (same words on every surface; audited there)."
+	},
+	"mobile.guard.screen_none": {
+		"role": "status",
+		"note": "Mirrors the core TUI key tui.guard.screen_none (same words on every surface; audited there)."
+	},
+	"mobile.guard.screen_unavailable": {
+		"role": "status",
+		"note": "No placeholders. Says only what this screen did not do; a local stop may already have been saved. Mirrors the core TUI key tui.guard.screen_unavailable (same words on every surface; audited there)."
+	},
+	"mobile.guard.screen_working": {
+		"role": "status",
+		"note": "Mirrors the core TUI key tui.guard.screen_working (same words on every surface; audited there)."
+	},
+	"mobile.guard.screen_failed": {
+		"role": "status",
+		"note": "No placeholders. Mirrors the core TUI key tui.guard.screen_failed (same words on every surface; audited there)."
+	},
+	"mobile.guard.screen_shared": {
+		"role": "status",
+		"note": "{org} is the organization's display name, verbatim. Mirrors the core TUI key tui.guard.screen_shared (same words on every surface; audited there)."
+	},
+	"mobile.guard.screen_declined": {
+		"role": "status",
+		"note": "{org} is the organization's display name, verbatim. Mirrors the core TUI key tui.guard.screen_declined (same words on every surface; audited there)."
+	},
+	"mobile.guard.screen_revoked": {
+		"role": "status",
+		"note": "{org} is the organization's display name, verbatim. Mirrors the core TUI key tui.guard.screen_revoked (same words on every surface; audited there)."
+	},
+	"mobile.guard.screen_prompt_changed": {
+		"role": "status",
+		"note": "{org} is the organization's display name. The new request is rendered directly below this line. Mirrors the core TUI key tui.guard.screen_prompt_changed (same words on every surface; audited there)."
+	},
+	"mobile.guard.indicator_sharing": {
+		"role": "status",
+		"note": "{org} is the organization's display name, verbatim. Mirrors the core TUI key tui.guard.indicator_sharing (same words on every surface; audited there)."
+	},
+	"mobile.guard.indicator_sharing_pending": {
+		"role": "status",
+		"note": "{org} is the organization's display name, verbatim. Mirrors the core TUI key tui.guard.indicator_sharing_pending (same words on every surface; audited there)."
+	},
+	"mobile.guard.indicator_paused": {
+		"role": "status",
+		"note": "{reason} is one of the reason_* strings (already localized), lower-case continuation. Mirrors the core TUI key tui.guard.indicator_paused (same words on every surface; audited there)."
+	},
+	"mobile.guard.indicator_paused_plain": {
+		"role": "status",
+		"note": "No placeholders; never name a cause. Mirrors the core TUI key tui.guard.indicator_paused_plain (same words on every surface; audited there)."
+	},
+	"mobile.guard.indicator_not_sharing": {
+		"role": "status",
+		"note": "{org} is the organization's display name, verbatim. Mirrors the core TUI key tui.guard.indicator_not_sharing (same words on every surface; audited there)."
+	},
+	"mobile.guard.indicator_will_ask": {
+		"role": "status",
+		"note": "{org} is the organization's display name, verbatim. Mirrors the core TUI key tui.guard.indicator_will_ask (same words on every surface; audited there)."
+	},
+	"mobile.guard.reason_entitlement_lapsed": {
+		"role": "status",
+		"note": "Continues 'Guard: paused, …' so starts lower-case. Mirrors the core TUI key tui.guard.reason_entitlement_lapsed (same words on every surface; audited there)."
+	},
+	"mobile.guard.reason_org_off": {
+		"role": "status",
+		"note": "{org} is the organization's display name, verbatim. Continues 'Guard: paused, …' so starts lower-case. Mirrors the core TUI key tui.guard.reason_org_off (same words on every surface; audited there)."
+	},
+	"mobile.guard.reason_membership_ended": {
+		"role": "status",
+		"note": "{org} is the organization's display name, verbatim. Continues 'Guard: paused, …' so starts lower-case. Mirrors the core TUI key tui.guard.reason_membership_ended (same words on every surface; audited there)."
+	},
+	"mobile.guard.reason_scope_revoked": {
+		"role": "status",
+		"note": "Continues 'Guard: paused, …' so starts lower-case. Mirrors the core TUI key tui.guard.reason_scope_revoked (same words on every surface; audited there)."
+	},
+	"mobile.guard.reason_revoke_pending": {
+		"role": "status",
+		"note": "Continues 'Guard: paused, …' so starts lower-case. Mirrors the core TUI key tui.guard.reason_revoke_pending (same words on every surface; audited there)."
+	},
+	"mobile.guard.reason_console_revoked": {
+		"role": "status",
+		"note": "{date} is an ISO date (YYYY-MM-DD). Lower-case continuation. Mirrors the core TUI key tui.guard.reason_console_revoked (same words on every surface; audited there)."
+	},
+	"mobile.guard.prompt_title": {
+		"role": "heading",
+		"note": "{org} is the organization's display name, verbatim. Mirrors the core TUI key tui.guard.prompt_title (same words on every surface; audited there)."
+	},
+	"mobile.guard.prompt_reason_new_org": {
+		"role": "help",
+		"note": "{org} is the organization's display name, verbatim. Mirrors the core TUI key tui.guard.prompt_reason_new_org (same words on every surface; audited there)."
+	},
+	"mobile.guard.prompt_reason_widened": {
+		"role": "help",
+		"note": "{org} is the organization's display name, verbatim. {scopes} is a comma-separated list of already-localized scope names. Mirrors the core TUI key tui.guard.prompt_reason_widened (same words on every surface; audited there)."
+	},
+	"mobile.guard.prompt_reason_reactivated": {
+		"role": "help",
+		"note": "{org} is the organization's display name, verbatim. Mirrors the core TUI key tui.guard.prompt_reason_reactivated (same words on every surface; audited there)."
+	},
+	"mobile.guard.prompt_reason_plan_gap": {
+		"role": "help",
+		"note": "{org} is the organization's display name, verbatim. Mirrors the core TUI key tui.guard.prompt_reason_plan_gap (same words on every surface; audited there)."
+	},
+	"mobile.guard.prompt_reason_new_device": {
+		"role": "help",
+		"note": "Mirrors the core TUI key tui.guard.prompt_reason_new_device (same words on every surface; audited there)."
+	},
+	"mobile.guard.prompt_reason_rejoined": {
+		"role": "help",
+		"note": "{org} is the organization's display name, verbatim. Mirrors the core TUI key tui.guard.prompt_reason_rejoined (same words on every surface; audited there)."
+	},
+	"mobile.guard.prompt_would_send": {
+		"role": "help",
+		"note": "Mirrors the core TUI key tui.guard.prompt_would_send (same words on every surface; audited there)."
+	},
+	"mobile.guard.scope_decisions": {
+		"role": "help",
+		"note": "Mirrors the core TUI key tui.guard.scope_decisions (same words on every surface; audited there)."
+	},
+	"mobile.guard.scope_posture": {
+		"role": "help",
+		"note": "Mirrors the core TUI key tui.guard.scope_posture (same words on every surface; audited there)."
+	},
+	"mobile.guard.scope_task_time": {
+		"role": "help",
+		"note": "Mirrors the core TUI key tui.guard.scope_task_time (same words on every surface; audited there)."
+	},
+	"mobile.guard.scope_review_cycles": {
+		"role": "help",
+		"note": "Mirrors the core TUI key tui.guard.scope_review_cycles (same words on every surface; audited there)."
+	},
+	"mobile.guard.scope_reports": {
+		"role": "help",
+		"note": "{org} is the organization's display name, verbatim. Mirrors the core TUI key tui.guard.scope_reports (same words on every surface; audited there)."
+	},
+	"mobile.guard.scope_trace_detail": {
+		"role": "help",
+		"note": "Mirrors the core TUI key tui.guard.scope_trace_detail (same words on every surface; audited there)."
+	},
+	"mobile.guard.scope_admin_share": {
+		"role": "help",
+		"note": "{org} is the organization's display name, verbatim. Mirrors the core TUI key tui.guard.scope_admin_share (same words on every surface; audited there)."
+	},
+	"mobile.guard.prompt_never_sent": {
+		"role": "help",
+		"note": "Mirrors the core TUI key tui.guard.prompt_never_sent (same words on every surface; audited there)."
+	},
+	"mobile.guard.prompt_visibility": {
+		"role": "help",
+		"note": "Mirrors the core TUI key tui.guard.prompt_visibility (same words on every surface; audited there)."
+	},
+	"mobile.guard.prompt_visibility_posture": {
+		"role": "help",
+		"note": "Mirrors the core TUI key tui.guard.prompt_visibility_posture (same words on every surface; audited there)."
+	},
+	"mobile.guard.prompt_visibility_admin_share": {
+		"role": "help",
+		"note": "Mirrors the core TUI key tui.guard.prompt_visibility_admin_share (same words on every surface; audited there)."
+	},
+	"mobile.guard.prompt_visibility_admin_share_posture": {
+		"role": "help",
+		"note": "Mirrors the core TUI key tui.guard.prompt_visibility_admin_share_posture (same words on every surface; audited there)."
+	},
+	"mobile.guard.button_dont_share": {
+		"role": "button",
+		"note": "Mirrors the core TUI key tui.guard.button_dont_share (same words on every surface; audited there)."
+	},
+	"mobile.guard.button_decide_later": {
+		"role": "button",
+		"note": "Mirrors the core TUI key tui.guard.button_decide_later (same words on every surface; audited there)."
+	},
+	"mobile.guard.button_share": {
+		"role": "button",
+		"note": "Mirrors the core TUI key tui.guard.button_share (same words on every surface; audited there)."
+	},
+	"mobile.guard.button_keep_current": {
+		"role": "button",
+		"note": "Mirrors the core TUI key tui.guard.button_keep_current (same words on every surface; audited there)."
+	},
+	"mobile.guard.button_share_new": {
+		"role": "button",
+		"note": "Mirrors the core TUI key tui.guard.button_share_new (same words on every surface; audited there)."
+	},
+	"mobile.guard.button_stop_sharing": {
+		"role": "button",
+		"note": "Mirrors the core TUI key tui.guard.button_stop_sharing (same words on every surface; audited there)."
+	},
+	"mobile.guard.button_share_again": {
+		"role": "button",
+		"note": "Mirrors the core TUI key tui.guard.button_share_again (same words on every surface; audited there)."
+	},
+	"mobile.guard.button_keep_sharing": {
+		"role": "button",
+		"note": "Mirrors the core TUI key tui.guard.button_keep_sharing (same words on every surface; audited there)."
+	},
+	"mobile.guard.revoke_title": {
+		"role": "heading",
+		"note": "{org} is the organization's display name, verbatim. Mirrors the core TUI key tui.guard.revoke_title (same words on every surface; audited there)."
+	},
+	"mobile.guard.revoke_body": {
+		"role": "help",
+		"note": "Mirrors the core TUI key tui.guard.revoke_body (same words on every surface; audited there)."
+	},
+	"mobile.guard.revoke_body_trace": {
+		"role": "help",
+		"note": "{backup_days} is a whole number of days (RFC §5.4 X). Not rendered until X is measured. Mirrors the core TUI key tui.guard.revoke_body_trace (same words on every surface; audited there)."
+	},
+	"mobile.guard.revoke_retained": {
+		"role": "help",
+		"note": "Mirrors the core TUI key tui.guard.revoke_retained (same words on every surface; audited there)."
+	},
+	"mobile.guard.revoke_totals": {
+		"role": "help",
+		"note": "Mirrors the core TUI key tui.guard.revoke_totals (same words on every surface; audited there)."
+	},
+	"mobile.guard.answered_on": {
+		"role": "status",
+		"note": "{surface} is one of the surface_* strings (already localized), e.g. 'the desktop app'. Mirrors the core TUI key tui.guard.answered_on (same words on every surface; audited there)."
+	},
+	"mobile.guard.surface_desktop": {
+		"role": "status",
+		"note": "Completes 'Answered on {surface}'. Mirrors the core TUI key tui.guard.surface_desktop (same words on every surface; audited there)."
+	},
+	"mobile.guard.surface_mobile": {
+		"role": "status",
+		"note": "Completes 'Answered on {surface}'. Mirrors the core TUI key tui.guard.surface_mobile (same words on every surface; audited there)."
+	},
+	"mobile.guard.card_title": {
+		"role": "heading",
+		"note": "Mirrors the core TUI key tui.guard.card_title (same words on every surface; audited there)."
+	},
+	"mobile.guard.card_body": {
+		"role": "help",
+		"note": "Mirrors the core TUI key tui.guard.card_body (same words on every surface; audited there)."
+	},
+	"mobile.guard.card_cta_trial": {
+		"role": "button",
+		"note": "{trial_days} is a whole number of days from the server (e.g. 30); never a literal. Mirrors the core TUI key tui.guard.card_cta_trial (same words on every surface; audited there)."
+	},
+	"mobile.guard.card_cta_see": {
+		"role": "button",
+		"note": "Mirrors the core TUI key tui.guard.card_cta_see (same words on every surface; audited there)."
+	},
+	"mobile.guard.card_footer": {
+		"role": "help",
+		"note": "{org} is the display name of the organization this card is about (one that is not on Radient Team). The line is scoped to that org on purpose: the same account may share with a different Team org from this computer. Mirrors the core TUI key tui.guard.card_footer (same words on every surface; audited there)."
+	},
+	"mobile.guard.scope_label_decisions": {
+		"role": "help",
+		"note": "Lower-case list item inside a sentence. Mirrors the core TUI key tui.guard.scope_label_decisions (same words on every surface; audited there)."
+	},
+	"mobile.guard.scope_label_posture": {
+		"role": "help",
+		"note": "Lower-case list item inside a sentence. Mirrors the core TUI key tui.guard.scope_label_posture (same words on every surface; audited there)."
+	},
+	"mobile.guard.scope_label_task_time": {
+		"role": "help",
+		"note": "Lower-case list item inside a sentence. Mirrors the core TUI key tui.guard.scope_label_task_time (same words on every surface; audited there)."
+	},
+	"mobile.guard.scope_label_review_cycles": {
+		"role": "help",
+		"note": "Lower-case list item inside a sentence. Mirrors the core TUI key tui.guard.scope_label_review_cycles (same words on every surface; audited there)."
+	},
+	"mobile.guard.scope_label_reports": {
+		"role": "help",
+		"note": "Lower-case list item inside a sentence. Mirrors the core TUI key tui.guard.scope_label_reports (same words on every surface; audited there)."
+	},
+	"mobile.guard.scope_label_trace_detail": {
+		"role": "help",
+		"note": "Lower-case list item inside a sentence. Mirrors the core TUI key tui.guard.scope_label_trace_detail (same words on every surface; audited there)."
+	},
+	"mobile.guard.scope_label_admin_share": {
+		"role": "help",
+		"note": "Lower-case list item inside a sentence. Mirrors the core TUI key tui.guard.scope_label_admin_share (same words on every surface; audited there)."
+	},
+	"mobile.guard.loading": {
+		"role": "status",
+		"note": "Read in flight. Asserts nothing about whether the member is sharing."
+	},
+	"mobile.guard.load_error": {
+		"role": "status",
+		"note": "Read failed (network or relay error). Must not imply anything is shared or not shared."
+	},
+	"mobile.guard.host_old": {
+		"role": "help",
+		"note": "Shown when the computer does not advertise Guard to the phone (older Local Operator). Calm, not an error; nothing is implied about sharing state."
+	},
+	"mobile.guard.intro": {
+		"role": "help",
+		"note": "Settings section intro. Must say plainly that consent is given per computer and that the phone cannot grant by itself. 'Team' is the Radient Team plan name; 'Local Operator' is a product name."
+	},
+	"mobile.guard.review": {
+		"role": "button",
+		"note": "Opens the consent card from the inbox row. Does not answer anything."
+	},
+	"mobile.guard.consent_not_signable": {
+		"role": "status",
+		"note": "The host did not offer a signable card for the phone (no operator key on that computer, or already answered). The member answers on the computer. Nothing is shared."
+	},
+	"mobile.guard.consent_needs_update": {
+		"role": "status",
+		"note": "The card asks for a data scope this app version has no description for. The phone must never let a member agree to something it cannot show, so it refuses to offer an answer. Nothing is shared."
+	},
+	"mobile.guard.prompt_background": {
+		"role": "help",
+		"note": "Phone variant of the core prompt line that points at the /guard command; the phone says Settings. 'Console' is the web product name."
+	},
+	"mobile.guard.indicator_waiting": {
+		"role": "status",
+		"note": "First grant pending: nothing is shared yet. {org} is the organization's display name. Phone variant: the core line names the /guard command."
+	},
+	"mobile.guard.indicator_unknown": {
+		"role": "status",
+		"note": "The host sent an organization state this app version does not know. Say nothing about sharing."
+	},
+	"mobile.guard.share_again_result": {
+		"role": "status",
+		"note": "After 'Share again': the request is not a push; it appears as a row in the in-app Notifications inbox. 'Notifications' is that screen's name."
+	},
+	"mobile.guard.card_ask_owner": {
+		"role": "meta",
+		"note": "Admin variant of the non-Team card: replaces the call to action. Plain text, not a button; an admin cannot buy for the org."
+	},
+	"mobile.guard.card_footer_account": {
+		"role": "help",
+		"note": "Non-Team card footer when the organization's name is not known (RFC copy). When it is known the org-scoped core line is used instead."
+	},
+	"mobile.guard.shared_heading": {
+		"role": "meta",
+		"note": "Heading above the short labels of the scopes currently shared. {org} is the organization's display name."
+	},
+	"mobile.guard.computer_line": {
+		"role": "meta",
+		"note": "{computer} is the host's own short name for the computer the phone is connected to, passed through unchanged."
+	},
+	"mobile.guard.computers_note": {
+		"role": "help",
+		"note": "Matches the revoke semantics: a stop is per account and organization, not per computer. 'Console' is the web product name."
+	},
+	"mobile.guard.revoke_pending_result": {
+		"role": "status",
+		"note": "Local stop committed but Radient was not reached (host status revoke_pending). Truthful: this install is no longer sharing; the server-side confirmation is pending."
+	},
+	"mobile.guard.surface_terminal": {
+		"role": "status",
+		"note": "Fills {surface} in 'Answered on {surface}' when the answer was given in the Local Operator terminal app. Not 'this terminal': the reader is on a phone."
+	},
+	"mobile.guard.answered_elsewhere": {
+		"role": "status",
+		"note": "Used when the host says another surface answered the request but names none this build knows. Mirrors the shape of 'Answered on {surface}'."
+	},
+	"mobile.guard.disconnected": {
+		"role": "status",
+		"note": "Shown when the phone has no live connection to a computer. Says nothing about whether anything is shared."
+	}
+}

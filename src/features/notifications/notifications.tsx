@@ -26,6 +26,7 @@ import {
 	dismissAllActionLabel,
 } from "@/features/notifications/conversation-dismiss";
 import { DismissReceipt } from "@/features/notifications/dismiss-receipt";
+import { GuardInboxItem } from "@/features/notifications/guard-inbox";
 import { onInboxWrite } from "@/features/notifications/inbox-writes";
 import type { InboxEntry } from "@/features/notifications/notifications-model";
 import {
@@ -644,28 +645,34 @@ export default function Notifications() {
 							)
 						}
 						ListHeaderComponent={
-							<View className="gap-2 px-4 pb-1 pt-3">
-								<SegmentedFilter
-									value={inbox.filter}
-									onChange={inbox.setFilter}
-									unreadCount={response?.unread_count ?? 0}
-								/>
-								{/* NO SEPARATE COUNT LINE. The pile's size rides the filter's
-								 *  own label ("Unread 4"), the way the desktop words it, so the
-								 *  number is stated once instead of twice — the second line cost
-								 *  28 pt of the height the reel needs for its rows (design
-								 *  review ND11: 4 rows above the fold on iPhone 15). */}
-								{inbox.writeError !== null ? (
-									<View testID={SURFACE.inboxSkipped}>
-										<Alert severity="error">{inbox.writeError}</Alert>
-									</View>
-								) : null}
-								{skipped !== null ? (
-									<View testID={SURFACE.inboxSkipped}>
-										<Alert severity="warning">{skipped}</Alert>
-									</View>
-								) : null}
-							</View>
+							<>
+								{/* Radient Guard's pinned request (RFC v0.9 §5.2.3): drawn from the
+								 *  host's Guard status, not the notification store, so it is not an
+								 *  inbox item, adds no unread count and sends no push. */}
+								<GuardInboxItem />
+								<View className="gap-2 px-4 pb-1 pt-3">
+									<SegmentedFilter
+										value={inbox.filter}
+										onChange={inbox.setFilter}
+										unreadCount={response?.unread_count ?? 0}
+									/>
+									{/* NO SEPARATE COUNT LINE. The pile's size rides the filter's
+									 *  own label ("Unread 4"), the way the desktop words it, so the
+									 *  number is stated once instead of twice — the second line cost
+									 *  28 pt of the height the reel needs for its rows (design
+									 *  review ND11: 4 rows above the fold on iPhone 15). */}
+									{inbox.writeError !== null ? (
+										<View testID={SURFACE.inboxSkipped}>
+											<Alert severity="error">{inbox.writeError}</Alert>
+										</View>
+									) : null}
+									{skipped !== null ? (
+										<View testID={SURFACE.inboxSkipped}>
+											<Alert severity="warning">{skipped}</Alert>
+										</View>
+									) : null}
+								</View>
+							</>
 						}
 						ListFooterComponent={
 							<View className="gap-2 px-4 pt-2">
@@ -726,8 +733,12 @@ export default function Notifications() {
 				) : (
 					/* Every other state — loading, refused, unreachable, empty — draws
 					 * its own view, so an unreadable inbox can never look like an
-					 * empty one. */
-					body
+					 * empty one. A waiting Guard request is shown above ALL of them: an
+					 * "all caught up" screen over a pending request would be false. */
+					<View className="flex-1">
+						<GuardInboxItem />
+						{body}
+					</View>
 				)}
 
 				{/* Receipts live in the pinned footer, never in the scrolled-away

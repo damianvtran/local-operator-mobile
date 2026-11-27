@@ -57,6 +57,7 @@ import type { FaultSet } from "./faults.ts";
 import { FAULT_NAMES, parseFaults, summariseFaults } from "./faults.ts";
 import type { FixtureResponseOverride } from "./fixtures.ts";
 import { defaultFixturesDir, loadFixtures, textOf } from "./fixtures.ts";
+import { createGuardStore, type GuardStore } from "./guard.ts";
 import { createLibraryStore } from "./library.ts";
 import {
 	createNotificationsStore,
@@ -758,6 +759,19 @@ export function createRelay(options: RelayOptions = {}) {
 			},
 		});
 	let notificationsStore = notifications({});
+	/* Radient Guard's host-twin store, rebuilt whenever the scenario world changes
+	 * (like the inbox store above), so a "Share" taken in one capture never leaks
+	 * into the next scenario. */
+	let guardScanned: ScenarioWorld | null = null;
+	let guardStore: GuardStore | null = null;
+	const guardStoreFor = (world: ScenarioWorld): GuardStore | null => {
+		if (world !== guardScanned) {
+			guardScanned = world;
+			guardStore =
+				world.guard === undefined ? null : createGuardStore(world.guard);
+		}
+		return guardStore;
+	};
 	/** The world the store above was built for. A scenario change rebuilds it so a
 	 *  dismiss taken in one cell cannot be read back in the next (the projects
 	 *  store's rule, which has the same failure mode). */
@@ -1319,6 +1333,15 @@ export function createRelay(options: RelayOptions = {}) {
 				);
 				if (world.sessionTags !== undefined) {
 					capabilities.session_tags = { available: true };
+				}
+				/* Radient Guard's twin: advertised ONLY when the scenario serves it, so
+				 *  every other scenario stays an older relay and the phone's calm
+				 *  "unavailable" state is photographed against a real absence. */
+				if (world.guard !== undefined) {
+					capabilities.features = {
+						...(capabilities.features ?? {}),
+						guard: 1,
+					};
 				}
 				/* The `$skill` licence, a TOP-LEVEL key (never `remote_sessions.
 				 *  skill_invocation`, which stays false). Present only when the
@@ -3268,6 +3291,20 @@ export function createRelay(options: RelayOptions = {}) {
 			return;
 		}
 
+		/* ---------------------------------------------------------------- guard -- */
+
+		if (pathname === "/api/guard" || pathname.startsWith("/api/guard/")) {
+			/* A scenario without `guard` is an older relay: the route does not exist. */
+			const guard = guardStoreFor(world);
+			const reply = guard?.handle(method, pathname, body as Json | undefined);
+			if (reply === null || reply === undefined) {
+				sendJson(res, 404, errorBody("not found"));
+				return;
+			}
+			sendJson(res, reply.status, reply.body);
+			return;
+		}
+
 		/* ------------------------------------------------------- notifications -- */
 
 		if (pathname === "/api/notifications" && method === "GET") {
@@ -4339,6 +4376,15 @@ export function createRelay(options: RelayOptions = {}) {
 						),
 						faults: FAULT_NAMES,
 					});
+				}
+				/* Radient Guard's own request ledger (the twin store logs every call it
+				 * serves), so a capture can say what the phone sent without turning the
+				 * whole relay's `--record` on. */
+				if (pathname === "/__mock/guard-log" && method === "GET") {
+					sendJson(res, 200, {
+						requests: guardStoreFor(state.world)?.log ?? [],
+					});
+					return;
 				}
 				if (pathname === "/__mock/record" && method === "GET") {
 					sendJson(res, 200, { requests: state.recorded });
