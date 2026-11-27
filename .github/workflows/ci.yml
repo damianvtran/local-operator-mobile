@@ -855,6 +855,26 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
+      - name: TEMPORARY - render every capture with the pinned renderer and upload it
+        # Removed again in the next commit. The committed frames must come from
+        # THIS renderer on a runner (see capture-chrome.pin), so render them
+        # without --check and keep them even though the gate above is red.
+        if: ${{ !cancelled() && steps.freeze.outcome == 'success' }}
+        run: node design/preview/capture.mjs --target all
+
+      - name: TEMPORARY - upload the pinned renderer's renders
+        if: ${{ !cancelled() && steps.freeze.outcome == 'success' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: pinned-renders
+          path: |
+            docs/design/preview/*.png
+            design/app-icon/store/play-feature-graphic-1024x500.png
+            design/store-screenshots/appstore-iphone-6.9/*.png
+            design/store-screenshots/appstore-ipad-13/*.png
+            design/store-screenshots/play-phone/*.png
+          retention-days: 3
+
       - name: Render the preview sheet for the review rounds
         # These are the frames a designer or UX round looks at. They are written
         # into the tree by the generator and uploaded as an artefact, never
