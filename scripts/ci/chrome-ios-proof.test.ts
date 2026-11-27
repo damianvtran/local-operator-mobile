@@ -370,7 +370,8 @@ describe("dragVerdict: what the finger-driven keyboard frames prove", () => {
 	it("ignores frames after the finger lifts: a composer that drops once the keyboard is gone is not 'following'", () => {
 		// Main's behaviour: composer static during the drag, then it drops after release.
 		const frames = [
-			...drag(0),
+			frame(240, 300),
+			...Array.from({ length: 41 }, (_, i) => frame(240, 300 + i * 2)),
 			frame(330, 400),
 			frame(330, 400),
 			frame(330, 400),
@@ -447,16 +448,12 @@ describe("dragVerdict: continuous attachment (U1)", () => {
 
 describe("dragVerdict: fail-closed rules each have a test (R2-2)", () => {
 	it("rising-keyboard split: the run ends where the keyboard rises, so a spring-back is not the drag", () => {
-		// 300 -> 390 (composer riding), then it springs BACK 380, 370, 360, 350.
-		// Unsplit, first-vs-last would be 300 -> 350: Δkeyboard 50 against the
-		// 90 pt the drag travelled. The drag is long enough that the spring-back
-		// is a minority of the motion window (R3-1: >= 70 % must be the segment).
+		// Sample the descent densely enough that the returning frames occupy less
+		// than 10 % of the motion window, while still testing the split.
 		const frames = [
 			frame(240, 300),
 			frame(240, 300),
-			...[0, 10, 20, 30, 40, 50, 60, 70, 80, 90].map((s) =>
-				frame(240 + s, 300 + s),
-			),
+			...Array.from({ length: 46 }, (_, i) => frame(240 + i * 2, 300 + i * 2)),
 			...[80, 70, 60, 50].map((s) => frame(240 + s, 300 + s)),
 			frame(290, 350),
 		];
@@ -500,9 +497,9 @@ describe("dragVerdict: fail-closed rules each have a test (R2-2)", () => {
 			// the drag (keyboard 300 -> 380, composer riding) and a static run (the
 			// keyboard stays put while the composer moves INSIDE the motion band, the
 			// bottom 40 % of the frame, so the window covers it).
-			// The drag is long enough to be >= 70 % of the motion window (R3-1).
-			const dragRun = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90].map((s) =>
-				frame(240 + s, 300 + s),
+			// Dense drag samples keep the competing run below 10 % of the window.
+			const dragRun = Array.from({ length: 46 }, (_, i) =>
+				frame(240 + i * 2, 300 + i * 2),
 			);
 			const staticRun = (from: number, kb: number) =>
 				[from, from + 10, from + 20].map((c) => frame(c, kb));
@@ -1003,18 +1000,18 @@ describe("R3-1: the measured segment must hold most of the motion window", () =>
 		return out;
 	};
 
-	it("7 of 10 passes (>= 70 %), 6 of 10 is inconclusive with the share", () => {
-		const ok = dragVerdict("after", run(7, 2), 1);
-		expect(ok.segmentSamples).toBe(7);
+	it("9 of 10 passes (>= 90 %), 8 of 10 is inconclusive with the share", () => {
+		const ok = dragVerdict("after", run(9, 0), 1);
+		expect(ok.segmentSamples).toBe(9);
 		expect(ok.windowSamples).toBe(10);
 		expect(ok.status).toBe("ok");
-		const thin = dragVerdict("after", run(6, 3), 1);
+		const thin = dragVerdict("after", run(8, 1), 1);
 		expect(thin).toMatchObject({
 			status: "inconclusive",
-			segmentSamples: 6,
+			segmentSamples: 8,
 			windowSamples: 10,
 		});
-		expect(thin.reason).toMatch(/6 of 10 motion-window samples \(60 %\)/);
+		expect(thin.reason).toMatch(/8 of 10 motion-window samples \(80 %\)/);
 	});
 
 	it("the same frames are inconclusive for the baseline too", () => {
@@ -1023,6 +1020,20 @@ describe("R3-1: the measured segment must hold most of the motion window", () =>
 });
 
 describe("R3-2: the short pull must be read at the run's last sampled frame", () => {
+	it("an unreadable first sampled frame is inconclusive even if later frames return", () => {
+		const verdict = shortpullVerdict(
+			[
+				frame(null, 300),
+				frame(260, 320),
+				frame(240, 300),
+				frame(240, 300),
+				frame(260, 320),
+			],
+			1,
+		);
+		expect(verdict.status).toBe("inconclusive");
+		expect(verdict.reason).toMatch(/first sampled frame has no readable edges/);
+	});
 	it("a last frame with no readable edges is inconclusive, even though earlier ones recovered", () => {
 		const frames = [
 			frame(240, 300),

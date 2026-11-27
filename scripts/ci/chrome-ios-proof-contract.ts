@@ -238,7 +238,7 @@ export const MONOTONE_NOISE_PT = 2;
  *  in the motion window, else too many bad frames were dropped to say the run
  *  is "the drag". An ESTIMATE, not a measurement; it only ever adds
  *  inconclusive results. */
-export const SEGMENT_COVERAGE_MIN = 0.7;
+export const SEGMENT_COVERAGE_MIN = 0.9;
 /** Edges are searched in the lower part of the frame (composer + keyboard); the
  *  motion energy is read from the bottom part. Both are fractions of height. */
 const EDGE_REGION_FROM = 0.55;
@@ -600,6 +600,12 @@ export function shortpullVerdict(
 			`${usable.length} usable sample(s); need at least ${MIN_WINDOW_SAMPLES}${why ? ` (${why})` : ""}`,
 		);
 	}
+	// Recovery needs the observed starting position, not a later usable frame.
+	const initial = read.frames[0] as FrameMeasure;
+	if (!initial.edges)
+		return inconclusive(
+			`the first sampled frame has no readable edges, so the run's start is unobserved${initial.reason ? ` (${initial.reason})` : ""}`,
+		);
 	// R3-2: the last USABLE frame is not necessarily the last SAMPLED one, and
 	// "it came back" must be read from where the run ended, so a final frame
 	// that cannot be read leaves the run's end unobserved.

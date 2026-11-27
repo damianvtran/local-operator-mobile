@@ -962,8 +962,9 @@ over the whole of an invocation and any motion inside it would be compared:
    finger moving down drags the content toward OLDER messages); tap the composer
    again (a known keyboard-up state after any partial dismissal). Focusing the
    composer does not scroll the list (only `sendMark` does), so the top reached
-   survives the second tap. The prepare swipes end 40 pt above the keyboard's
-   top, so a dismissal cannot stand in for the gesture.
+   survives the second tap. The prepare swipes end 40 pt above the key row,
+   so a dismissal cannot stand in for the gesture. The predictive bar, if shown,
+   sits above it and only makes the prepare end safer.
 2. **Measured, sampled** (`flowSampled`): the single gesture, nothing else.
 
 **Where the finger starts is read from the hierarchy, not a constant.** With the
@@ -1026,9 +1027,11 @@ clearance).
   exceeds a fixed floor, and it needs >= 3 samples. The compared samples are the
   run inside it whose keyboard edge only descends (the finger is down), taking
   the run the keyboard travelled furthest in, so the frames after release, where
-  both builds look alike, are never the "last" sample. That run must hold >= 70 %
+  both builds look alike, are never the "last" sample. That run must hold >= 90 %
   of the frames inside the motion window (`SEGMENT_COVERAGE_MIN`), else too many
   bad frames were dropped to call it "the drag" -> **INCONCLUSIVE** with the share.
+  In the read-out, compare `segmentSamples` against `windowSamples`: treat a
+  large gap as **INCONCLUSIVE** regardless of the reported status.
 - **What the tracked upper edge is.** The edge search floor is 55 % of the frame
   height, and with the long draft the composer card's top is at ~27-32 %, ABOVE
   it. The tracked `composerEdge` is therefore NOT the card's top: it is an
