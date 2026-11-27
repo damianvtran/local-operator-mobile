@@ -66,17 +66,75 @@ conversations pane in both shells.
 - **Nested modals**: a sheet raised inside the drawer paints its own dim, because
   the full-width drawer never claims the page's dim.
 
-## Swipe (not in this build)
+## Swipe
 
-The drawer opens by its button today. The swipe half of the model — a page pan
-that opens the drawer from top-level screens, a close drag on the panel, the
-16/12 pt axis thresholds, the 50 %-or-fling release rule, and the claim that
-keeps sideways scrollers and the composer owning their touch — lands as a
-follow-up change, and is documented with its own thresholds when it ships.
+A rightward swipe starting on a top-level screen's CONTENT opens the drawer; a
+leftward drag starting on the open panel closes it. Both drive the same
+`progress` shared value the button opens settle on, so the panel tracks the
+finger 1:1 and a release resumes the curve from the position the finger left it.
 
-The destinations' release rule, which the follow-up will use, is already
-implemented and tested: commit past 50 % of the width, or at a fling of at least
-1000 pt/s past 20 % of it; a cancelled gesture never commits.
+- **Thresholds** (`src/features/sessions/drawer-pan.ts`, `DRAWER_PAN`): activate
+  after **16 pt rightward**; fail after **16 pt leftward** (that direction is
+  "back", not "open") or **12 pt vertical** (the transcript's scroll owns that
+  axis). The panel's close drag mirrors them: 16 pt leftward activates.
+- **Release**: commit past **50 % of the width**, or at a fling of at least
+  **1000 pt/s** once the finger has travelled **20 %**. `decideRelease` in
+  `src/ui/drawer-motion.ts` is the one rule for opening and closing (a close
+  passes its travel and speed as positives). A cancelled touch never commits.
+- **Where it is live** (`panEnabled`): top-level routes only, never while the
+  drawer is visible, never while a message selection is live (`E5`, read through
+  `useSyncExternalStore` like `selectable-message.tsx`), never on web. Nested
+  routes keep the native stack (iOS full-width pop — see below) and Android has
+  no in-content version of it.
+- **Host**: `PageSwipeHost` is mounted per screen through the stack's
+  `screenLayout` (`app/(app)/_layout.tsx`), which also publishes the screen's pan
+  ref to the claims inside it. The panel mounts at touch-down (`prime`), not at
+  activation, so its first frame is not late; a touch that turns out to be a tap
+  or a scroll abandons it (`onFinalize`).
+- **Keyboard**: dismissed when the gesture ACTIVATES, not at touch-down.
+- **Android**: the pan's start region is shrunk by 24 dp on both edges
+  (`hitSlop` with negative insets), so the system back strips stay the system's.
+
+### What owns a horizontal touch, and how it is proven
+
+The page pan is an ancestor recogniser, so a sideways scroller under the finger
+is not something a threshold can beat. Two mechanisms, one per kind of surface:
+
+- **`HORIZONTAL_SCROLL_PROPS`** (`src/ui/horizontal-scroll.ts`) on every
+  horizontal `ScrollView` — tables and code blocks in `markdown.tsx`, diagram
+  blocks, inline-UI previews, the library's kind row, the attachment strip and
+  the image pager. On iOS it adds `directionalLockEnabled`, so a diagonal drag
+  cannot change axis halfway. A scroller that overflows keeps scrolling even at
+  its left end (the operator's P4, no handoff in v1); a table that FITS opens the
+  drawer on Android and bounces on iOS, which is the platform gap the memo
+  accepts and records.
+- **`DrawerSwipeClaim`** (`src/ui/drawer-swipe-claim.tsx`) around the surfaces
+  that are not scrollers: the inline chart's scrub `PanResponder`, and the
+  composer at its two call sites (`src/features/home/home.tsx`,
+  `app/(app)/session/[id].tsx` — `composer.tsx` belongs to another change). The
+  claim is `Gesture.Native().blocksExternalGesture(pageRef)`, so the page pan
+  waits for it to fail and a touch that starts there never opens the drawer.
+
+Proven in vitest, not on a device: the pan's configured numbers and its
+`enabled` gate (`drawer-pan.test.ts`, `page-swipe-host.test.tsx`), the claim
+blocking THAT screen's pan ref, and a source ledger
+(`drawer-swipe-ledger.test.ts`) that fails any horizontal `ScrollView` under
+`src/` without the props or a named exemption, and any exemption whose witness
+disappeared. What only a device can settle: whether a plain RN scroller really
+wins the touch on iOS 26 (the memo's E4 race), whether the claim blocks for the
+whole touch on a plain `View` (the memo's unverified item, fallback: a JS
+touch-start flag read by a `manualActivation` pan), and the prime's lead on a
+fast flick (E3).
+
+### Nested back on iOS 26 (E2)
+
+Nested `(app)` screens now accept UIKit's own rule: no `gestureResponseDistance`,
+so the native pop is full width, and screens' arbitration makes a sideways
+scroller win (`RNSScreenStack.mm` asks the screen's scroll pans to fail, and a
+scroll view wider than its frame answers NO at its left end). The root stack and
+`(auth)` keep #373's 44 pt edge limit: they are outside this model, have no
+sideways scrollers, and nothing measured them full width. The full option set is
+in `src/ui/stack-options.ts`, and `stack-options.test.ts` pins all three cases.
 
 ## RTL
 

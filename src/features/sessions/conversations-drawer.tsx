@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useRef } from "react";
+import { type ReactNode, useCallback, useEffect, useMemo, useRef } from "react";
 import {
 	AccessibilityInfo,
 	BackHandler,
@@ -10,9 +10,12 @@ import {
 	useWindowDimensions,
 	View,
 } from "react-native";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
+	runOnJS,
 	type SharedValue,
 	useAnimatedStyle,
+	useSharedValue,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -25,6 +28,8 @@ import {
 	finishDrawerDismiss,
 	requestDrawerNewChat,
 } from "@/features/sessions/drawer-focus";
+import { applyClosePanConfig } from "@/features/sessions/drawer-pan";
+import { useOptionalWorkspaceDrawer } from "@/features/sessions/workspace-drawer-context";
 import { t } from "@/i18n";
 import { CONTROL, ROLE, SURFACE } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
@@ -32,6 +37,7 @@ import {
 	ModalScopeContext,
 	useModalStackEntry,
 } from "@/ui/components/modal-stack-entry";
+import { decideRelease } from "@/ui/drawer-motion";
 import { useShadow } from "@/ui/elevation";
 import { exitPointerEvents } from "@/ui/modal-exit";
 import {
@@ -175,6 +181,60 @@ export const ConversationsDrawer = ({
 	}));
 	const scrimStyle = useAnimatedStyle(() => ({ opacity: progress.value }));
 
+	/* The panel's own close drag. A leftward pull follows the finger 1:1 down to
+	 *  closed, on the same shared value the open settles on, and the release
+	 *  rule is the open rule mirrored (50 % of the width, or a 1000 pt/s fling
+	 *  past 20 %): `decideRelease` measures both in the commit direction.
+	 *
+	 * The gesture is rebuilt when its width, its enablement or the value it
+	 * drives changes, never mid-drag: worklets capture their numbers, and a
+	 * re-created gesture cancels an active one. The release runs on the JS
+	 * thread through a ref because `close` is this render's callback. */
+	const drawer = useOptionalWorkspaceDrawer();
+	const settleTo = drawer?.settle;
+	/* Touch-down on the panel takes it over from a settle still running (a
+	 *  tap-open that has not finished), so the finger's first frame is the
+	 *  panel's position rather than a value the clock overwrites. */
+	const primePanel = drawer?.prime;
+	const holdPanel = useCallback(() => primePanel?.(), [primePanel]);
+	const closeBase = useSharedValue(0);
+	const releaseRef = useRef<(open: boolean) => void>(() => {});
+	releaseRef.current = (open) => {
+		if (!open) {
+			close();
+			return;
+		}
+		settleTo?.(true);
+	};
+	const release = useCallback((open: boolean) => releaseRef.current(open), []);
+	const closePan = useMemo(() => {
+		const gesture = Gesture.Pan()
+			.onBegin(() => {
+				"worklet";
+				runOnJS(holdPanel)();
+			})
+			.onStart(() => {
+				"worklet";
+				closeBase.value = progress.value;
+			})
+			.onUpdate((event) => {
+				"worklet";
+				const next = closeBase.value + event.translationX / width;
+				progress.value = next < 0 ? 0 : next > 1 ? 1 : next;
+			})
+			.onEnd((event, success) => {
+				"worklet";
+				const commitClose = decideRelease({
+					amount: -event.translationX,
+					width,
+					velocity: -event.velocityX,
+					cancelled: !success,
+				});
+				runOnJS(release)(!commitClose);
+			});
+		return applyClosePanConfig(gesture).enabled(visible);
+	}, [width, visible, progress, closeBase, release, holdPanel]);
+
 	/* Web only: react-native-web's modal trap focuses the first node that
 	 *  ACCEPTS focus — on open, and whenever Tab wraps — and the scrim is first
 	 *  in DOM order. `tabIndex={-1}` keeps it out of the tab sequence but not
@@ -228,67 +288,69 @@ export const ConversationsDrawer = ({
 	}, [visible]);
 
 	const panel = (
-		<Animated.View
-			className="absolute inset-y-0 left-0"
-			testID={SURFACE.sidebar}
-			style={[{ width }, shadow, panelStyle]}
-		>
-			<View
-				ref={panelRef}
-				/* BORDERLESS (operator, TestFlight 578: "Make the conversation
-				 *  sidebar borderless, I don't like the right border"). The
-				 *  `panel-edge` hairline on the facing edge is gone; the panel's
-				 *  edge is now drawn by the overlay shadow (`useShadow("overlay")`
-				 *  on the sliding view above) and the scrim's dim on the page. */
-				className={`flex-1 ${PANEL_SURFACE}`}
-				style={{
-					paddingTop: insets.top,
-					paddingBottom: insets.bottom,
-					/* The panel spans the whole viewport, but its CONTENT still has
-					 *  to stay out of the horizontal safe area: the panel is anchored
-					 *  to the physical left edge, so `insets.left` is the band that
-					 *  applies to its first column (a landscape notch). LEFT ONLY,
-					 *  because the panel never ends at the right edge. */
-					paddingLeft: insets.left,
-					paddingRight: insets.right,
-				}}
+		<GestureDetector gesture={closePan}>
+			<Animated.View
+				className="absolute inset-y-0 left-0"
+				testID={SURFACE.sidebar}
+				style={[{ width }, shadow, panelStyle]}
 			>
-				{/* The type scale is re-published INSIDE the shell because the web
-				 *  Modal is a PORTAL: react-native-web appends its node to
-				 *  `document.body`, OUTSIDE the `ScopedVariables` div the app's
-				 *  provider renders, so the pane's `var(--text-*)` fell back to the
-				 *  stylesheet's fixed px values and the drawer was the one surface
-				 *  that ignored the reader's text size (PR #34 review round 2, F1).
-				 *  On native the provider is context-only, so this re-declares the
-				 *  same values rather than computing a second scale. */}
-				<TextScaleProvider>
-					{header}
-					{content ? (
-						<View className="min-h-0 flex-1">
-							{content}
-							<WorkspaceSidebarFooter
+				<View
+					ref={panelRef}
+					/* BORDERLESS (operator, TestFlight 578: "Make the conversation
+					 *  sidebar borderless, I don't like the right border"). The
+					 *  `panel-edge` hairline on the facing edge is gone; the panel's
+					 *  edge is now drawn by the overlay shadow (`useShadow("overlay")`
+					 *  on the sliding view above) and the scrim's dim on the page. */
+					className={`flex-1 ${PANEL_SURFACE}`}
+					style={{
+						paddingTop: insets.top,
+						paddingBottom: insets.bottom,
+						/* The panel spans the whole viewport, but its CONTENT still has
+						 *  to stay out of the horizontal safe area: the panel is anchored
+						 *  to the physical left edge, so `insets.left` is the band that
+						 *  applies to its first column (a landscape notch). LEFT ONLY,
+						 *  because the panel never ends at the right edge. */
+						paddingLeft: insets.left,
+						paddingRight: insets.right,
+					}}
+				>
+					{/* The type scale is re-published INSIDE the shell because the web
+					 *  Modal is a PORTAL: react-native-web appends its node to
+					 *  `document.body`, OUTSIDE the `ScopedVariables` div the app's
+					 *  provider renders, so the pane's `var(--text-*)` fell back to the
+					 *  stylesheet's fixed px values and the drawer was the one surface
+					 *  that ignored the reader's text size (PR #34 review round 2, F1).
+					 *  On native the provider is context-only, so this re-declares the
+					 *  same values rather than computing a second scale. */}
+					<TextScaleProvider>
+						{header}
+						{content ? (
+							<View className="min-h-0 flex-1">
+								{content}
+								<WorkspaceSidebarFooter
+									onNavigate={onNavigate ?? close}
+									hasModeHeader={Boolean(header)}
+								/>
+							</View>
+						) : (
+							<ConversationsPane
+								onClose={close}
+								hideCloseButton={Boolean(header)}
 								onNavigate={onNavigate ?? close}
-								hasModeHeader={Boolean(header)}
+								currentSessionId={currentSessionId}
+								onNewChat={onNewChat ? newChat : undefined}
+								notice={notice}
+								homeDirectory={homeDirectory}
+								/* The rows are painted on THIS panel's fill, not on the
+								 *  screen's canvas: the corner badge's ring must be the same
+								 *  colour or it reads as a halo (agent review round 2, R2-2). */
+								surfaceClassName={PANEL_SURFACE}
 							/>
-						</View>
-					) : (
-						<ConversationsPane
-							onClose={close}
-							hideCloseButton={Boolean(header)}
-							onNavigate={onNavigate ?? close}
-							currentSessionId={currentSessionId}
-							onNewChat={onNewChat ? newChat : undefined}
-							notice={notice}
-							homeDirectory={homeDirectory}
-							/* The rows are painted on THIS panel's fill, not on the
-							 *  screen's canvas: the corner badge's ring must be the same
-							 *  colour or it reads as a halo (agent review round 2, R2-2). */
-							surfaceClassName={PANEL_SURFACE}
-						/>
-					)}
-				</TextScaleProvider>
-			</View>
-		</Animated.View>
+						)}
+					</TextScaleProvider>
+				</View>
+			</Animated.View>
+		</GestureDetector>
 	);
 
 	if (Platform.OS === "web") {

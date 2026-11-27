@@ -340,7 +340,14 @@ describe("session banner-only relocation structure", () => {
 		expect(secondary && text(secondary)).toContain("regionItems.map");
 		const composer = all.find((node) => tag(node) === "Composer");
 		if (!composer) throw new Error("Missing pinned composer");
-		expect(parent.get(composer)).toBe(column);
+		/* The composer's slot is now its swipe claim (commit 2: the page pan
+		 *  must not take a drag that starts in the field), so the claim is the
+		 *  column's direct child and the composer is the claim's. Nothing else
+		 *  may sit between them: a reparent would break the pinned `limit`. */
+		const claim = parent.get(composer) as Ast;
+		expect(tag(claim)).toBe("DrawerSwipeClaim");
+		expect(parent.get(claim)).toBe(column);
+		expect(children.indexOf(claim)).toBe(8);
 		expect(children[6] && jsx(children[6]) ? tag(children[6]) : null).toBe(
 			"View",
 		);

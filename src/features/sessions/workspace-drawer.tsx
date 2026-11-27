@@ -50,6 +50,8 @@ export const WorkspaceDrawerProvider = ({
 		presented,
 		open: openProgress,
 		close: closeProgress,
+		prime: primeProgress,
+		unprime: unprimeProgress,
 	} = useDrawerProgress({ reduceMotion });
 	const [mode, setMode] = useState<WorkspaceDrawerMode>("agents");
 	const [newChatRequest, setNewChatRequest] = useState(0);
@@ -64,18 +66,30 @@ export const WorkspaceDrawerProvider = ({
 		return true;
 	}, []);
 	const returnFocus = useRef<(() => void) | undefined>(undefined);
+	/* The gesture hooks below run from worklets through `runOnJS`, so they cannot
+	 *  read this render's `visible`: a settle at release and the `onFinalize` that
+	 *  follows it are the same JS batch. The ref is the synchronous truth the
+	 *  abandon path needs, and it is written everywhere the state is. */
+	const visibleRef = useRef(false);
+	const setDrawerVisible = useCallback((next: boolean) => {
+		visibleRef.current = next;
+		setVisible(next);
+	}, []);
+	/* Whether the touch that primed the panel ever travelled far enough to
+	 *  commit: `abandon` must not undo a release's settle. */
+	const dragSettled = useRef(false);
 	const finishClose = useCallback(() => {
 		const restore = returnFocus.current;
 		returnFocus.current = undefined;
 		restore?.();
 	}, []);
 	const close = useCallback(() => {
-		setVisible(false);
+		setDrawerVisible(false);
 		closeProgress();
 		// RN web restores focus after its modal trap is removed. Android has no
 		// onDismiss event, so its trigger restoration belongs to the close path.
 		if (Platform.OS !== "web") finishClose();
-	}, [closeProgress, finishClose]);
+	}, [closeProgress, finishClose, setDrawerVisible]);
 	const navigate = useCallback(() => {
 		returnFocus.current = undefined;
 		close();
@@ -90,10 +104,34 @@ export const WorkspaceDrawerProvider = ({
 			Keyboard.dismiss();
 			returnFocus.current = options?.returnFocus;
 			if (options?.mode) setMode(options.mode);
-			setVisible(true);
+			setDrawerVisible(true);
 			openProgress();
 		},
-		[openProgress],
+		[openProgress, setDrawerVisible],
+	);
+	/* --- the page swipe's three hooks (commit 2) ---------------------------- */
+	const prime = useCallback(() => {
+		dragSettled.current = false;
+		primeProgress();
+	}, [primeProgress]);
+	const abandon = useCallback(() => {
+		if (visibleRef.current || dragSettled.current) return;
+		unprimeProgress();
+	}, [unprimeProgress]);
+	const settle = useCallback(
+		(nextOpen: boolean) => {
+			dragSettled.current = true;
+			if (!nextOpen) {
+				close();
+				return;
+			}
+			/* Spring-back and a committed open share the panel's own curve from
+			 *  the finger's position; no `returnFocus` is touched, because a drag
+			 *  did not come from a trigger. */
+			setDrawerVisible(true);
+			openProgress();
+		},
+		[close, openProgress, setDrawerVisible],
 	);
 	const selectMode = useCallback(
 		(next: WorkspaceDrawerMode) => {
@@ -126,6 +164,10 @@ export const WorkspaceDrawerProvider = ({
 				open,
 				close,
 				progress,
+				visible,
+				prime,
+				abandon,
+				settle,
 				selectMode,
 				newChatRequest,
 				consumeNewChatRequest,

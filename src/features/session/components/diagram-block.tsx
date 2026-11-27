@@ -40,6 +40,7 @@ import { CONTROL, ROLE } from "@/ui/a11y";
 import { useTheme } from "@/ui/appearance";
 import { estimatedColumnWidth } from "@/ui/column";
 import { LTR_TEXT } from "@/ui/direction";
+import { HORIZONTAL_SCROLL_PROPS } from "@/ui/horizontal-scroll";
 import { TOUCH_FLOOR } from "@/ui/layout";
 import { ScrollSafePressable } from "@/ui/scroll-safe-pressable";
 import { DiagramSvgView } from "./diagram-svg-view";
@@ -274,6 +275,7 @@ function DiagramBlockView({
 						// indicator is the cue that the figure continues past the edge.
 						showsHorizontalScrollIndicator
 						nestedScrollEnabled
+						{...HORIZONTAL_SCROLL_PROPS}
 					>
 						<View style={{ padding: DIAGRAM_FRAME_PAD }}>{drawing}</View>
 					</ScrollView>

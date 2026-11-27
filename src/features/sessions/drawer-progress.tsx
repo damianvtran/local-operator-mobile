@@ -41,7 +41,18 @@ export type DrawerProgress = {
 	presented: boolean;
 	open: () => void;
 	close: () => void;
+	/** Mount the panel off-screen without settling it: the page swipe's
+	 *  touch-down prime. Idempotent, and it does not move `progress`, so a
+	 *  drag that interrupts a close picks the panel up where it is. */
+	prime: () => void;
+	/** Drop a primed panel that never became a drag (a tap, a vertical
+	 *  scroll), without animating it out. */
+	unprime: () => void;
 };
+
+/** What a page swipe's `onEnd` or the panel's close drag calls: settle the
+ *  drawer to open or closed from wherever the finger left it. */
+export type DrawerSettle = (open: boolean) => void;
 
 export const useDrawerProgress = ({
 	reduceMotion,
@@ -72,6 +83,24 @@ export const useDrawerProgress = ({
 		progress.value = 0;
 		setPresented(false);
 	}, [progress]);
+
+	const prime = useCallback(() => {
+		/* A settle still running would fight the finger for `progress`; the
+		 *  drag then continues from the value it stopped at, which is what
+		 *  makes an interrupted close look continuous. Cancelled even when the
+		 *  panel is already mounted: a touch on a settling panel takes it over. */
+		cancelAnimation(clock);
+		if (presentedRef.current) return;
+		presentedRef.current = true;
+		progress.value = 0;
+		setPresented(true);
+	}, [clock, progress]);
+
+	const unprime = useCallback(() => {
+		if (!presentedRef.current) return;
+		cancelAnimation(clock);
+		unmount();
+	}, [clock, unmount]);
 
 	const settle = useCallback(
 		(target: 0 | 1) => {
@@ -114,5 +143,5 @@ export const useDrawerProgress = ({
 		settle(0);
 	}, [settle]);
 
-	return { progress, presented, open, close };
+	return { progress, presented, open, close, prime, unprime };
 };

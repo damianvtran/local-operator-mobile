@@ -142,4 +142,28 @@ describe("useDrawerProgress", () => {
 		expect(host.timings).toEqual([]);
 		expect(controller.presented).toBe(false);
 	});
+
+	it("primes the panel with no settle, and drops it when the touch was a tap", async () => {
+		await mount();
+		await act(async () => controller.prime());
+		expect(controller.presented).toBe(true);
+		expect(controller.progress.value).toBe(0);
+		expect(host.timings).toEqual([]);
+		await act(async () => controller.unprime());
+		expect(controller.presented).toBe(false);
+	});
+
+	it("a touch on a settling panel takes it over from where it is", async () => {
+		await mount();
+		await act(async () => controller.open());
+		controller.progress.value = 0.6;
+		await act(async () => controller.close());
+		controller.progress.value = 0.35;
+		const timings = host.timings.length;
+		await act(async () => controller.prime());
+		// Hold, not settle: the panel keeps the position the touch found it at.
+		expect(host.timings.length).toBe(timings);
+		expect(controller.progress.value).toBe(0.35);
+		expect(controller.presented).toBe(true);
+	});
 });

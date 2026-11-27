@@ -14,6 +14,14 @@ const host = vi.hoisted(() => ({
 	announced: [] as string[],
 }));
 
+/* The chart's plot is wrapped in `DrawerSwipeClaim`, which imports
+ *  gesture-handler at module scope; its Node reduction is the shared one. */
+vi.mock("react-native-gesture-handler", async () => {
+	const { gestureHandlerModuleMock } = await import(
+		"@/testing/native-gesture-mocks"
+	);
+	return gestureHandlerModuleMock();
+});
 vi.mock("react-native-svg", async () => {
 	const { createElement } = await import("react");
 	const shape =

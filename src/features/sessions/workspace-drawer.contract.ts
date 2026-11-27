@@ -8,12 +8,21 @@ export type WorkspaceDrawerController = {
 	 *  thread. Lives here so a future gesture (`commit B`) can drive the same
 	 *  value the shell reads, without a second owner. */
 	progress: SharedValue<number>;
+	/** The reader's intent: open. False from the instant a close starts; the
+	 *  page swipe is disabled while it is true. */
+	visible: boolean;
 	open: (options?: {
 		mode?: WorkspaceDrawerMode;
 		returnFocus?: () => void;
 	}) => void;
 	close: () => void;
 	selectMode: (mode: WorkspaceDrawerMode) => void;
+	/** Mount the panel off-screen at touch-down, without settling it. */
+	prime: () => void;
+	/** Drop a primed panel a touch never dragged (a tap, a scroll). */
+	abandon: () => void;
+	/** Settle to open or closed from wherever a finger left the panel. */
+	settle: (open: boolean) => void;
 };
 
 /** The Bridge owner supplies its live projection, never a mirrored drawer store.

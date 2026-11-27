@@ -43,27 +43,52 @@ export const reanimatedModuleMock = () => ({
 });
 
 /** A chainable pan builder: every configuration call returns the same object, so
- *  `Gesture.Pan().minDistance(8).onEnd(…)` builds without a gesture runtime. */
-const panBuilder = () => {
+ *  `Gesture.Pan().minDistance(8).onEnd(…)` builds without a gesture runtime.
+ *
+ *  Every call is RECORDED, because the page swipe's thresholds and the claim's
+ *  `blocksExternalGesture` are the two facts a Node test can prove about
+ *  arbitration (the recognisers themselves only exist on a device): the test
+ *  reads back what the component actually configured. */
+export type RecordedGestureCall = { name: string; args: unknown[] };
+
+export const panCalls: RecordedGestureCall[] = [];
+export const nativeCalls: RecordedGestureCall[] = [];
+
+const recordingBuilder = (calls: RecordedGestureCall[]) => {
 	const builder: Record<string, unknown> = {};
 	for (const name of [
 		"minDistance",
+		"activeOffsetX",
 		"failOffsetX",
 		"activeOffsetY",
+		"failOffsetY",
+		"hitSlop",
+		"enabled",
+		"withRef",
+		"manualActivation",
+		"blocksExternalGesture",
+		"simultaneousWithExternalGesture",
+		"requireExternalGestureToFail",
 		"onBegin",
 		"onStart",
 		"onUpdate",
 		"onEnd",
 		"onFinalize",
 	]) {
-		builder[name] = () => builder;
+		builder[name] = (...args: unknown[]) => {
+			calls.push({ name, args });
+			return builder;
+		};
 	}
 	return builder;
 };
 
+const panBuilder = () => recordingBuilder(panCalls);
+const nativeBuilder = () => recordingBuilder(nativeCalls);
+
 export const gestureHandlerModuleMock = () => ({
 	__esModule: true,
-	Gesture: { Pan: panBuilder },
+	Gesture: { Pan: panBuilder, Native: nativeBuilder },
 	/* The detector is a wrapper, not a view: the sheet's header keeps the exact
 	 *  host a test looks for. */
 	GestureDetector: ({ children }: { children?: ReactNode }) => children ?? null,

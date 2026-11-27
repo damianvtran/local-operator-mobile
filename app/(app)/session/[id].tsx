@@ -149,6 +149,7 @@ import {
 } from "@/ui/components";
 import { useChromeGlass } from "@/ui/components/chrome-surface";
 import { Sheet } from "@/ui/components/sheet";
+import { DrawerSwipeClaim } from "@/ui/drawer-swipe-claim";
 import { TOUCH_FLOOR, useCompactChrome } from "@/ui/layout";
 import {
 	COMPACT_COMPOSER_SHARE,
@@ -2005,133 +2006,135 @@ function Session() {
 						/>
 					</View>
 
-					<Composer
-						compaction={composerCompaction}
-						glass={chromeGlass}
-						onLayout={(event) =>
-							measureRecovery("composer", event.nativeEvent.layout.height)
-						}
-						limit={heldComposerLimit(composerBox, {
-							width: viewportWidth,
-							height: viewportHeight,
-							keyboardOverlap,
-							transcriptSlack: liftSlack ?? transcriptSlack,
-						})}
-						onMeasure={setComposerBox}
-						onLift={onComposerLift}
-						/* The measured heights above the composer close the key
-						 *  (`composerChromeKey`): the activity band, a header that
-						 *  stacks (seen as the column's height) or a panel row can
-						 *  settle after a resize without the composer's own size
-						 *  changing, and a composer that is only pushed must still
-						 *  re-read its top (QA #211 round 3 Q5, code round 4 m1).
-						 *  Named field by field so `recoveryFacts.composer`, the
-						 *  composer's own height, can never ride along. */
-						measureKey={`${find.barVisible}|${openPanel}|${statusSheetOpen}|${pendingViewProps ? "pending" : ""}|${compact ? "compact" : "tall"}|${composerChromeKey({ column: recoveryFacts.column, before: recoveryFacts.before, after: recoveryFacts.after, regions: regionContent })}`}
-						compact={
-							compact
-								? {
-										maxHeight: Math.round(
-											viewportHeight * COMPACT_COMPOSER_SHARE,
-										),
-									}
-								: null
-						}
-						testID={SURFACE.sessionComposer}
-						controls={composerControls}
-						draft={composer.draft}
-						onDraftChange={skills.onChangeText}
-						skills={{
-							rows: skills.rows,
-							onPick: skills.pick,
-							onHold: skills.hold,
-							onRelease: skills.release,
-							onSelectionChange: skills.onSelectionChange,
-							selection: skills.selection,
-							onFocus: skills.onFocus,
-							onBlur: skills.onBlur,
-						}}
-						images={composer.images}
-						onRemoveImage={composer.removeImage}
-						onAttach={composer.attach}
-						onPasteFile={composer.pasteFile}
-						onPasteImages={composer.pasteImages}
-						attaching={composer.attaching}
-						onAttachOpen={composer.abandonAttach}
-						voice={composer.voice}
-						onSend={composer.send}
-						onClearDraft={() => {
-							composer.clearUnsentDraft();
-							storedModel.clearSettingsError();
-						}}
-						onDismissError={() => {
-							composer.dismissError();
-							storedModel.clearSettingsError();
-						}}
-						onStop={composer.stop}
-						stopInert={stopInert}
-						stopping={composer.stopping}
-						retainedMessage={
-							composer.retained !== null
-								? t("mobile.session.composer.retained_instruction")
-								: null
-						}
-						notice={composer.notice}
-						onRetry={composer.retry}
-						showResume={runtime.turnActionsReady && aborted}
-						onResume={composer.send}
-						ended={ended}
-						error={pending === null ? (composer.error ?? chipError) : null}
-						queuedCount={queuedCount}
-						queueOnCard={!activityLineHost}
-						/* The context % and spend ride the meta line on a phone (D-S3);
-						 *  a tablet keeps its inline status strip, which already shows them. */
-						contextLabel={tray && !compact ? trayFacts.context : null}
-						costLabel={
-							tray && !compact && projection?.cumulative_parent_cost != null
-								? `$${projection.cumulative_parent_cost.toFixed(2)}`
-								: null
-						}
-						bottomInset={insets.bottom}
-						modelChip={chipLabels.model}
-						effortChip={chipLabels.effort}
-						onOpenRunSettings={() => setRunSettingsOpen(true)}
-						/* The folder a running conversation is in, read-only: the
-						 *  relay takes a folder only at start (issue #325). The
-						 *  row's cwd backs a durable fold's empty one, as above. */
-						folder={
-							sessionFolder === null
-								? null
-								: {
-										...sessionFolder,
-										onPress: () => setFolderOpen(true),
-										testID: CONTROL.composerFolder,
-									}
-						}
-						/* Any ask, waiting or timed out: a lapsed-only queue paints no
-						 *  ask bar (build 753), so this row is its door to Dismiss. */
-						questions={(() => {
-							if (!asksAnswerable) return null;
-							const label = askBarLabel(projection?.asks);
-							return label === null
-								? null
-								: { value: label.text, onOpen: asksSheet.open };
-						})()}
-						fieldRef={composerFieldRef}
-						slashQuery={slash}
-						slashSheet={
-							<SlashSheet
-								visible={slash !== null}
-								onClose={() => undefined}
-								commands={runtime.commands}
-								query={slash ?? ""}
-								loading={runtime.commandsLoading}
-								failed={runtime.commandsFailed}
-								busy={composer.sending}
-								onPick={composer.slash}
-							/>
-						}
-					/>
+					<DrawerSwipeClaim>
+						<Composer
+							compaction={composerCompaction}
+							glass={chromeGlass}
+							onLayout={(event) =>
+								measureRecovery("composer", event.nativeEvent.layout.height)
+							}
+							limit={heldComposerLimit(composerBox, {
+								width: viewportWidth,
+								height: viewportHeight,
+								keyboardOverlap,
+								transcriptSlack: liftSlack ?? transcriptSlack,
+							})}
+							onMeasure={setComposerBox}
+							onLift={onComposerLift}
+							/* The measured heights above the composer close the key
+							 *  (`composerChromeKey`): the activity band, a header that
+							 *  stacks (seen as the column's height) or a panel row can
+							 *  settle after a resize without the composer's own size
+							 *  changing, and a composer that is only pushed must still
+							 *  re-read its top (QA #211 round 3 Q5, code round 4 m1).
+							 *  Named field by field so `recoveryFacts.composer`, the
+							 *  composer's own height, can never ride along. */
+							measureKey={`${find.barVisible}|${openPanel}|${statusSheetOpen}|${pendingViewProps ? "pending" : ""}|${compact ? "compact" : "tall"}|${composerChromeKey({ column: recoveryFacts.column, before: recoveryFacts.before, after: recoveryFacts.after, regions: regionContent })}`}
+							compact={
+								compact
+									? {
+											maxHeight: Math.round(
+												viewportHeight * COMPACT_COMPOSER_SHARE,
+											),
+										}
+									: null
+							}
+							testID={SURFACE.sessionComposer}
+							controls={composerControls}
+							draft={composer.draft}
+							onDraftChange={skills.onChangeText}
+							skills={{
+								rows: skills.rows,
+								onPick: skills.pick,
+								onHold: skills.hold,
+								onRelease: skills.release,
+								onSelectionChange: skills.onSelectionChange,
+								selection: skills.selection,
+								onFocus: skills.onFocus,
+								onBlur: skills.onBlur,
+							}}
+							images={composer.images}
+							onRemoveImage={composer.removeImage}
+							onAttach={composer.attach}
+							onPasteFile={composer.pasteFile}
+							onPasteImages={composer.pasteImages}
+							attaching={composer.attaching}
+							onAttachOpen={composer.abandonAttach}
+							voice={composer.voice}
+							onSend={composer.send}
+							onClearDraft={() => {
+								composer.clearUnsentDraft();
+								storedModel.clearSettingsError();
+							}}
+							onDismissError={() => {
+								composer.dismissError();
+								storedModel.clearSettingsError();
+							}}
+							onStop={composer.stop}
+							stopInert={stopInert}
+							stopping={composer.stopping}
+							retainedMessage={
+								composer.retained !== null
+									? t("mobile.session.composer.retained_instruction")
+									: null
+							}
+							notice={composer.notice}
+							onRetry={composer.retry}
+							showResume={runtime.turnActionsReady && aborted}
+							onResume={composer.send}
+							ended={ended}
+							error={pending === null ? (composer.error ?? chipError) : null}
+							queuedCount={queuedCount}
+							queueOnCard={!activityLineHost}
+							/* The context % and spend ride the meta line on a phone (D-S3);
+							 *  a tablet keeps its inline status strip, which already shows them. */
+							contextLabel={tray && !compact ? trayFacts.context : null}
+							costLabel={
+								tray && !compact && projection?.cumulative_parent_cost != null
+									? `$${projection.cumulative_parent_cost.toFixed(2)}`
+									: null
+							}
+							bottomInset={insets.bottom}
+							modelChip={chipLabels.model}
+							effortChip={chipLabels.effort}
+							onOpenRunSettings={() => setRunSettingsOpen(true)}
+							/* The folder a running conversation is in, read-only: the
+							 *  relay takes a folder only at start (issue #325). The
+							 *  row's cwd backs a durable fold's empty one, as above. */
+							folder={
+								sessionFolder === null
+									? null
+									: {
+											...sessionFolder,
+											onPress: () => setFolderOpen(true),
+											testID: CONTROL.composerFolder,
+										}
+							}
+							/* Any ask, waiting or timed out: a lapsed-only queue paints no
+							 *  ask bar (build 753), so this row is its door to Dismiss. */
+							questions={(() => {
+								if (!asksAnswerable) return null;
+								const label = askBarLabel(projection?.asks);
+								return label === null
+									? null
+									: { value: label.text, onOpen: asksSheet.open };
+							})()}
+							fieldRef={composerFieldRef}
+							slashQuery={slash}
+							slashSheet={
+								<SlashSheet
+									visible={slash !== null}
+									onClose={() => undefined}
+									commands={runtime.commands}
+									query={slash ?? ""}
+									loading={runtime.commandsLoading}
+									failed={runtime.commandsFailed}
+									busy={composer.sending}
+									onPick={composer.slash}
+								/>
+							}
+						/>
+					</DrawerSwipeClaim>
 				</View>
 			</View>
 

@@ -20,6 +20,7 @@ import {
 	ModalScopeContext,
 	useModalStackEntry,
 } from "@/ui/components/modal-stack-entry";
+import { HORIZONTAL_SCROLL_PROPS } from "@/ui/horizontal-scroll";
 import { TOUCH_FLOOR } from "@/ui/layout";
 
 /**
@@ -92,6 +93,7 @@ export function DiagramViewer({
 								justifyContent: "center",
 								paddingHorizontal: DIAGRAM_FRAME_PAD,
 							}}
+							{...HORIZONTAL_SCROLL_PROPS}
 						>
 							<View
 								// The picture is out of the reading order; the figure's own

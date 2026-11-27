@@ -100,6 +100,7 @@ import { Input } from "@/ui/components/input";
 import { Screen } from "@/ui/components/screen";
 import { Sheet } from "@/ui/components/sheet";
 import { Skeleton } from "@/ui/components/skeleton";
+import { HORIZONTAL_SCROLL_PROPS } from "@/ui/horizontal-scroll";
 import { TOUCH_FLOOR } from "@/ui/layout";
 
 const KIND_ICON: Record<
@@ -263,6 +264,7 @@ export default function Library() {
 							 *  up, rather than only dismissing it. */
 							keyboardShouldPersistTaps="handled"
 							testID={CONTROL.libraryMore}
+							{...HORIZONTAL_SCROLL_PROPS}
 						>
 							{segments.map((segment) => (
 								<Chip

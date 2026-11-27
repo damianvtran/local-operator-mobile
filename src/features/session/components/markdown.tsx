@@ -71,6 +71,7 @@ import { CONTROL, ROLE, SURFACE } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
 import { estimatedColumnWidth } from "@/ui/column";
 import { LTR_TEXT, useIsRTL } from "@/ui/direction";
+import { HORIZONTAL_SCROLL_PROPS } from "@/ui/horizontal-scroll";
 import { TOUCH_FLOOR } from "@/ui/layout";
 import { ScrollSafePressable } from "@/ui/scroll-safe-pressable";
 import { useTextScale } from "@/ui/text-scale-provider";
@@ -772,10 +773,11 @@ function TableView({ header, rows }: { header: string[]; rows: string[][] }) {
 						showsHorizontalScrollIndicator={false}
 						overScrollMode="never"
 						// Android: the outer container is a FlatList, and without this the
-						// table does not pan. iOS: a vertical drag must not become a table
-						// drag — the pair is what keeps both axes behaving.
+						// table does not pan. `HORIZONTAL_SCROLL_PROPS` keeps an iOS drag on
+						// one axis; the table's start also sits under a `DrawerSwipeClaim`
+						// higher up (the transcript row), so the drawer never takes it.
 						nestedScrollEnabled
-						directionalLockEnabled
+						{...HORIZONTAL_SCROLL_PROPS}
 						onScroll={onScroll}
 						scrollEventThrottle={16}
 						contentContainerStyle={{ minWidth: "100%" }}
@@ -873,7 +875,11 @@ function CodeBlockView({
 				{/* Horizontally scrollable, and NOT wrapped: a code line broken mid-token
 				    reads as different code. The block itself is what scrolls, so the
 				    column never widens (the transcript's own overflow guard). */}
-				<ScrollView horizontal showsHorizontalScrollIndicator={false}>
+				<ScrollView
+					horizontal
+					showsHorizontalScrollIndicator={false}
+					{...HORIZONTAL_SCROLL_PROPS}
+				>
 					<Text
 						selectable={leafSelectable}
 						selectionColor={selectionColor}
