@@ -458,10 +458,8 @@ const frameJson = (
 
 /** What `useSessionRuntime` derives for the transcript, from the same store. */
 function Host({ store }: { store: ReturnType<typeof createProjectionStore> }) {
-	const entry = useSyncExternalStore(
-		store.subscribe,
-		() => store.getState().entries["bench-session"],
-	);
+	const read = () => store.getState().entries["bench-session"];
+	const entry = useSyncExternalStore(store.subscribe, read, read);
 	const projection = entry?.projection;
 	const entries = (projection?.transcript ?? []) as TranscriptEntry[];
 	const tail = entries[entries.length - 1];
@@ -628,15 +626,16 @@ describe("streaming render benchmark", () => {
 		await act(async () => {
 			await vi.advanceTimersByTimeAsync(1000);
 		});
-		const drawn = textOf(dom?.container as TextNode).replace(/\s+/g, "");
+		const drawn = textOf(dom?.container as TextNode);
 		/* Invariant the benchmark itself relies on: nothing was dropped on the way
-		 * to the screen. Words are compared with markdown syntax stripped, so
-		 * the list markers/pipes of the source do not have to match. */
-		const lastWords = answer
-			.slice(-200)
-			.replace(/[*`|#]/g, "")
-			.replace(/\s+/g, "");
-		expect(drawn.includes(lastWords.slice(-60))).toBe(true);
+		 * to the screen. The WHOLE answer is compared (a tail check would pass a
+		 * reveal that lost a middle chunk), by its letters only: markdown syntax
+		 * (list markers, table pipes, rules) and whitespace are drawn differently
+		 * from how they are written, the words are not. */
+		const letters = (value: string) => value.replace(/[^\p{L}]+/gu, "");
+		// The container also holds the 59 older rows, which come first; the
+		// streaming answer is the tail of what is drawn.
+		expect(letters(drawn).endsWith(letters(answer))).toBe(true);
 
 		// Frame 0 is the mount (every row renders once to exist, and the first
 		// frame pays lazy module init): excluded from every figure below, so the

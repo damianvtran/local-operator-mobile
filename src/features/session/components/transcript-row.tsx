@@ -219,9 +219,12 @@ function AssistantMarkdown({
 	streaming: boolean;
 }) {
 	const slot = useContext(StreamArrivalContext);
-	useSyncExternalStore(slot?.subscribe ?? NO_SUBSCRIBE, () =>
-		streaming ? (slot?.read().motion ?? null) : null,
-	);
+	const motion = () => (streaming ? (slot?.read().motion ?? null) : null);
+	// The third argument is REQUIRED by React's server renderer: the row's
+	// blank-row tests render with `react-dom/server` and a missing
+	// `getServerSnapshot` throws there. The server value is the client's own
+	// (the slot is a per-list store with no separate server state).
+	useSyncExternalStore(slot?.subscribe ?? NO_SUBSCRIBE, motion, motion);
 	const live = streaming ? slot?.read() : undefined;
 	return (
 		<Markdown

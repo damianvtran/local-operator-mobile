@@ -22,6 +22,7 @@
  */
 import { spawnSync } from "node:child_process";
 import {
+	existsSync,
 	mkdirSync,
 	mkdtempSync,
 	rmSync,
@@ -50,6 +51,13 @@ try {
 		{ cwd: repo, stdio: "inherit" },
 	);
 	if (archive.status !== 0) throw new Error(`git archive ${base} failed`);
+	// The baseline must be the tree BEFORE the paced reveal. If `--base` names a
+	// ref that already has it (or this branch's own head), both arms would run
+	// the same code and the table would report "no difference" as if measured.
+	if (existsSync(join(work, "src/features/session/paced-reveal.ts")))
+		throw new Error(
+			`--base ${base} already contains paced-reveal.ts: it is not a baseline`,
+		);
 	symlinkSync(join(repo, "node_modules"), join(work, "node_modules"));
 	const config = join(work, "vitest.base.config.ts");
 	writeFileSync(
@@ -100,8 +108,19 @@ export default defineConfig({
 				...(arm === "baseline" ? { STREAM_BENCH_REPORT_ONLY: "1" } : {}),
 			},
 		});
-		const line = `${out.stdout}${out.stderr}`
+		// A failed run (a crash, a failed gate in the variant) must not be
+		// summarised as if it had measured something.
+		if (out.error || out.status !== 0)
+			throw new Error(
+				`${arm}: vitest exited ${out.status ?? out.error?.message}\n${out.stdout}\n${out.stderr}`,
+			);
+		// vitest colours its output when it believes it is on a terminal or under
+		// CI, which puts escape codes in front of the marker; strip them first.
+		// biome-ignore lint/suspicious/noControlCharactersInRegex: the ESC byte is the point
+		const plain = `${out.stdout}${out.stderr}`.replace(/\u001b\[[0-9;]*m/g, "");
+		const line = plain
 			.split("\n")
+			.map((text) => text.trim())
 			.find((text) => text.startsWith("[stream-bench] "));
 		if (!line)
 			throw new Error(

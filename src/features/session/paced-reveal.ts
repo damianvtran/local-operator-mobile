@@ -33,9 +33,9 @@
  * only while there is something to reveal or fade) in `use-paced-text.ts`.
  */
 
-/** Tick period: ≤30 Hz. The cursor, and so the paragraph's render, moves no
- *  faster than this. */
-export const TICK_MS = 33;
+/** Tick period: 34 ms (≤30 Hz; 33 ms would be 30.3 Hz). The cursor, and so the
+ *  paragraph's render, moves no faster than this. */
+export const TICK_MS = 34;
 /** The backlog is drained exponentially on this time constant, which spreads a
  *  burst over a few ticks instead of dropping it in one. */
 const DRAIN_MS = 200;

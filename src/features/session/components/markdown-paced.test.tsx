@@ -5,6 +5,7 @@ import {
 	AskChipDrawnContext,
 	AskChipHostContext,
 } from "@/features/session/ask-chip-host";
+import { TICK_MS } from "@/features/session/paced-reveal";
 import {
 	enterTextSelection,
 	exitTextSelection,
@@ -186,10 +187,15 @@ const draw = async (
 			),
 		),
 	);
-const advance = (ms: number) =>
-	act(async () => {
-		await vi.advanceTimersByTimeAsync(ms);
-	});
+/* One `act` per tick period, never one for the whole span: React defers the
+ * updates a timer schedules until `act` exits, so a single long `act` folds
+ * every tick into ONE render and a render-rate assertion would measure nothing. */
+const advance = async (ms: number) => {
+	for (let left = ms; left > 0; left -= TICK_MS)
+		await act(async () => {
+			await vi.advanceTimersByTimeAsync(Math.min(TICK_MS, left));
+		});
+};
 
 beforeEach(() => {
 	vi.useFakeTimers();
@@ -236,7 +242,7 @@ describe("native paced reveal in Markdown", () => {
 		expect(textOf(container())).toBe("one ");
 		const seen: string[] = [];
 		for (let at = 0; at < 12; at += 1) {
-			await advance(33);
+			await advance(34);
 			seen.push(textOf(container()));
 		}
 		// Monotonic, never a drop, and complete inside the lag bound.
@@ -250,7 +256,7 @@ describe("native paced reveal in Markdown", () => {
 
 	it("draws the newest words dimmer, then at full ink once they have faded", async () => {
 		await draw(SENTENCE);
-		await advance(33);
+		await advance(34);
 		const early = fadedColours();
 		expect(early.length).toBeGreaterThan(0);
 		expect(early[0]).toMatch(FADED_INK);
