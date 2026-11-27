@@ -104,9 +104,13 @@ Play 68 px beyond fuzz, up to 101/255). To change the pin:
    `design/preview/fetch-capture-chrome.sh design/preview/capture-chrome.pin <dir>`,
    then `CHROME=<printed binary> node design/preview/capture.mjs --target all`), or,
    when that cannot run on your machine, take the renders the design-kit job makes
-   with it: push the pin, read the failing "committed listing frames" step, and copy
-   the frames from the run's uploaded `listing-frames` artefact over the committed
-   PNGs at the same paths.
+   with it: push the pin, add a TEMPORARY step to the job that runs
+   `node design/preview/capture.mjs --target frames` (no `--check`) with
+   `if: ${{ !cancelled() && steps.freeze.outcome == 'success' }}` and uploads
+   `design/store-screenshots/*/*.png`, download that artefact, copy the frames over the
+   committed PNGs at the same paths, and delete the step again. Do not commit the
+   preview sheets from such a run: without the sibling checkout that holds their
+   shipped typefaces they render in the fallback face.
 
 ### The committed preview frames are the resting frames
 

@@ -6,8 +6,8 @@
 #
 # 158.0.8127.37 is the build the 26 committed listing frames and the preview
 # sheets were rendered with — BY THE design-kit JOB ITSELF, on a macos-26 runner,
-# from this very Chrome for Testing archive (the frames are the job's
-# `design-previews` / `listing-frames` render, copied into the tree). They cannot
+# from this very Chrome for Testing archive (a temporary artefact step, since
+# removed; see design/README.md, "Bumping the capture renderer"). They cannot
 # be produced locally: the branded Google Chrome of the same version rasterizes
 # the caption SVG mark's stroke edge differently from Chrome for Testing (the
 # 157.0.8103.79 CfT run read 79-80 px beyond fuzz, max 89/255, against frames
