@@ -953,26 +953,60 @@ verdict compares the run's first and last samples, so it must start from
 `session-keyboard.yaml`'s keyboard-up state, and it leaves the keyboard up for
 the drag.
 
-Both flows share one shape: tap the composer; ten prepare swipes DOWN
-(`30 % -> 65 %` of the height for the drag; `30 % -> 58 %` for the short pull) to
-reach the transcript's top (the interactive dismissal only engages at the top of
-the content, and a finger moving down drags the content toward OLDER messages);
-tap the composer again (a known keyboard-up state after any partial dismissal);
-then the measured gesture, which **starts inside the transcript** (45 %, above
-the composer at ~48-61.6 %), because a swipe only moves the keyboard once it
-touches it. Focusing the composer does not scroll the list (only `sendMark`
-does), so the top reached by the prepare swipes survives the second tap. The
-short pull's prepare swipes stop above the keyboard (58 % < ~60.6 %): its verdict
-reads the keyboard's displacement across the whole sampled run, so a prepare
-swipe that dismissed the keyboard would stand in for the pull.
+Each gesture is TWO Maestro invocations, because the driver samples screenshots
+over the whole of an invocation and any motion inside it would be compared:
 
-- `e2e/maestro/chrome-proof/session-keyboard-shortpull.yaml` — recovery: a 1.8 s
-  swipe from 45 % to 70 % (~77 pt into the keyboard, ~118 pt/s, the pace of the
-  earlier 62 % -> 72 % / 0.7 s pull), below the OS dismissal threshold, then
-  `waitForAnimationToEnd` so the last sample is the resting one.
+1. **Prepare, unsampled** (`session-keyboard-ready.yaml`, run with plain `flow`,
+   no screenshots): tap the composer; ten swipes DOWN to reach the transcript's
+   top (the interactive dismissal only engages at the top of the content, and a
+   finger moving down drags the content toward OLDER messages); tap the composer
+   again (a known keyboard-up state after any partial dismissal). Focusing the
+   composer does not scroll the list (only `sendMark` does), so the top reached
+   survives the second tap. The prepare swipes end 40 pt above the keyboard's
+   top, so a dismissal cannot stand in for the gesture.
+2. **Measured, sampled** (`flowSampled`): the single gesture, nothing else.
+
+**Where the finger starts is read from the hierarchy, not a constant.** With the
+long draft `session-keyboard.yaml` types (10 lines; the field caps at 8) the
+composer card is ~260 pt tall on an 874 pt screen, so its top is at ~27-32 %,
+NOT 48 %: a swipe starting at 45 % starts inside the card, is a pan on the
+Textarea, and cannot move the keyboard. The driver reads the card's top from the
+`session-keyboard` hierarchy (`composer-shell-ring`, else `composer-input`; the
+topmost wins) and starts every swipe 40 pt above it (`gestureGeometry`, rounded
+DOWN to an integer percentage of the screen height, so rounding only adds
+clearance).
+
+- **Why rendered files:** Maestro 2.11.0 parses a relative swipe's coordinates
+  with `.toInt()` when it READS the flow, before any `${...}` is evaluated, so
+  `start: "50%, ${DRAG_START_PCT}%"` throws a NumberFormatException (and
+  percentages must be integers 0-100). The three flows are templates with
+  `__DRAG_START_PCT__`, `__PREPARE_END_PCT__` and `__SHORTPULL_END_PCT__`
+  placeholders; the driver renders them (`renderFlow`) into
+  `flows/<lane>/<n>-<file>` in the run root and runs THAT, so the artifact shows
+  the exact numbers. A placeholder left over, or one the driver does not supply,
+  fails the render; `scripts/maestro-flow-contract.ts` pins the allowed set.
+- **Geometry guard, fail-closed:** an unreadable hierarchy, no composer bounds,
+  no readable keyboard, a hierarchy screen whose aspect ratio disagrees with the
+  screenshot's (> 1 %), a start under 100 pt (no transcript room above the
+  composer) or under 40 pt above the card after rounding, means NO gesture is sent
+  and that build's verdict is **INCONCLUSIVE** with the reason (`no gesture was
+  sent: ...`). The receipt records `lanes[].gestureGeometry.<build>` (the numbers
+  or the reason).
+
+- `e2e/maestro/chrome-proof/session-keyboard-ready.yaml` — the unsampled prepare
+  above.
+- `e2e/maestro/chrome-proof/session-keyboard-shortpull.yaml` — recovery: one
+  850 ms swipe from the start to start + 10 percentage points (~87 pt at 874 pt,
+  ~100 pt/s), then `waitForAnimationToEnd` so the last sample is the resting one.
+  It is a pull of the scroll view, which with `keyboardDismissMode="interactive"`
+  moves the keyboard in proportion to the overscroll and springs back under the
+  dismissal threshold; if it moves nothing the engagement rule reports
+  INCONCLUSIVE for this flow, and the length is deliberately not stretched until
+  it engages. The full drag carries the headline claim.
 - `e2e/maestro/chrome-proof/session-keyboard-drag.yaml` — full dismissal: one
-  2.5 s downward swipe from 45 % to 96 % of the screen height across the
-  keyboard's top.
+  3.5 s downward swipe from the start to 96 % of the screen height (~620 pt at
+  ~178 pt/s, the pace of the earlier 45 % -> 96 % / 2.5 s drag, so about as many
+  samples land while the finger is over the keyboard).
 
 - **Sampled frames:** while Maestro runs, the driver takes
   `xcrun simctl io <udid> screenshot` every ~150 ms into
@@ -992,7 +1026,17 @@ swipe that dismissed the keyboard would stand in for the pull.
   exceeds a fixed floor, and it needs >= 3 samples. The compared samples are the
   run inside it whose keyboard edge only descends (the finger is down), taking
   the run the keyboard travelled furthest in, so the frames after release, where
-  both builds look alike, are never the "last" sample.
+  both builds look alike, are never the "last" sample. That run must hold >= 70 %
+  of the frames inside the motion window (`SEGMENT_COVERAGE_MIN`), else too many
+  bad frames were dropped to call it "the drag" -> **INCONCLUSIVE** with the share.
+- **What the tracked upper edge is.** The edge search floor is 55 % of the frame
+  height, and with the long draft the composer card's top is at ~27-32 %, ABOVE
+  it. The tracked `composerEdge` is therefore NOT the card's top: it is an
+  INTERNAL composer line (the strongest luminance step in the lower 45 %), which
+  still moves with the card, so it is what makes follow/lag measurable, but its
+  absolute value is not the card's. The first real run must be read against the
+  hierarchy bounds (`composer-shell-ring` top, `keyboardTop` in the receipt's
+  `gestureGeometry`) and the PNGs, not taken on trust.
 - **Verdict, full drag** (`dragVerdict`; `Δ` positive = descending):
   - `Δkeyboard < 60 pt` -> **INCONCLUSIVE**: the drag did not engage.
   - `after`: the composer followed only if `|Δcomposer − Δkeyboard| <= 8 pt`,
@@ -1009,7 +1053,9 @@ swipe that dismissed the keyboard would stand in for the pull.
   when the LAST usable sample's `composerEdge` and `keyboardEdge` are each within
   ±4 pt of the FIRST usable sample's, with >= 3 usable samples AND the keyboard
   displaced by more than 4 pt in at least two samples (a keyboard the pull never
-  moved would "recover" vacuously -> **INCONCLUSIVE**). No 60 pt floor applies.
+  moved would "recover" vacuously -> **INCONCLUSIVE**). The FINAL sampled frame
+  must itself have readable edges (the last usable frame is not necessarily the
+  last sampled one), else **INCONCLUSIVE**. No 60 pt floor applies.
   Recovery is a property of the AFTER build; the lane verdict (`shortpullPair`) is
   the after's, with the baseline's reported beside it. After the flow the driver
   also dumps the hierarchy and requires the software keyboard (the `space` key)

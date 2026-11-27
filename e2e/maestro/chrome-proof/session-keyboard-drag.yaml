@@ -1,7 +1,6 @@
 # Finger-driven keyboard dismissal (PR C: the composer rides the keyboard DURING
-# a drag, not only after release). Continues from session-keyboard.yaml's end
-# state (session-keyboard-shortpull.yaml runs first and leaves the keyboard up)
-# — no relaunch, no secrets. The driver (chrome-ios-proof.ts) samples
+# a drag, not only after release). Continues from session-keyboard-ready.yaml's
+# end state — no relaunch, no secrets. The driver (chrome-ios-proof.ts) samples
 # screenshots while this flow runs and `dragVerdict` measures the composer's and
 # the keyboard's edges frame by frame.
 #
@@ -9,41 +8,23 @@
 # gone and the composer sits at the bottom in both), so only mid-drag frames can
 # tell the builds apart.
 #
-# PREPARE: scroll to the transcript's top, because the interactive dismissal
-# only engages at the top of the content. The finger moves DOWN, and a finger
-# moving down drags the content down, i.e. toward OLDER content (the top); ten
-# swipes reach the top of any plausible transcript and bounce harmlessly if it
-# is shorter than one screen. The swipes start at 30% and end at 65%: the
-# keyboard's top sits at ~61.6% of an 874 pt screen (~60.6% of 852 pt), so a
-# swipe ending at 65% may graze the keyboard and partly dismiss it — hence the
-# second tap below, which restores a known keyboard-up state. Focusing the
-# composer does NOT scroll the list (only `sendMark` does,
-# transcript-list.tsx:1588-1593), so the position reached here survives it.
+# SAMPLED = THE DRAG ONLY. The scroll to the transcript's top and the re-focus
+# run before, as session-keyboard-ready.yaml, in an unsampled invocation.
 #
-# THE MEASURED DRAG starts INSIDE the transcript (45%, above the composer, which
-# occupies ~48-61.6%) and runs to 96%. It is slow (2.5 s) so ~15 samples land
-# inside it; the finger reaches the keyboard's top at ~61.6% and carries it to
-# near the bottom edge: a full dismissal.
+# TEMPLATE, rendered by the driver into the run root (see
+# session-keyboard-ready.yaml for why an env variable cannot carry this):
+#   __DRAG_START_PCT__  40 pt above the composer card's top (hierarchy-derived).
+#                       With the long draft the card is ~260 pt tall and its top
+#                       is at ~27-32 %, so a start at 45 % would be inside it.
+# The drag runs to 96 %, near the bottom edge: a full dismissal. 3.5 s keeps the
+# pace of the earlier 45 % -> 96 % / 2.5 s drag (~178 pt/s) over the longer
+# distance from the higher start (~620 pt), so about the same number of samples
+# land while the finger is over the keyboard.
 appId: ${APP_ID}
 ---
-- tapOn:
-    id: "composer-input"
-- waitForAnimationToEnd:
-    timeout: 3000
-- repeat:
-    times: 10
-    commands:
-      - swipe:
-          start: "50%, 30%"
-          end: "50%, 65%"
-          duration: 150
-- tapOn:
-    id: "composer-input"
-- waitForAnimationToEnd:
-    timeout: 2000
 - swipe:
-    start: "50%, 45%"
+    start: "50%, __DRAG_START_PCT__%"
     end: "50%, 96%"
-    duration: 2500
+    duration: 3500
 - assertVisible:
     id: "composer-input"

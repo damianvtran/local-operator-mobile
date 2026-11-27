@@ -13,6 +13,12 @@ import { dirname, join, resolve } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 import { isKnownIdentifier } from "../src/ui/a11y.ts";
+import {
+	DRAG_FLOWS,
+	type GestureGeometry,
+	gestureFlowValues,
+	KEYBOARD_READY_FLOW,
+} from "./ci/chrome-ios-proof-contract.ts";
 
 type Value = string | number | boolean | null | Value[] | Mapping;
 type Mapping = { [key: string]: Value };
@@ -1256,6 +1262,76 @@ export const maestroChecks: [string, () => void][] = [
 						"the drag flow must not relaunch the app",
 					),
 				/must not relaunch/,
+			);
+		},
+	],
+	[
+		"the chrome-proof gesture flows are templates: every swipe percentage is a documented placeholder or the fixed 96 % end, and nothing else interpolates",
+		() => {
+			/* Maestro 2.11 `.toInt()`s a relative swipe's coordinates when it READS
+			 * the flow, so the hierarchy-derived percentages cannot be `${...}`
+			 * variables: the chrome-ios-proof driver renders these `__NAME__`
+			 * placeholders into the run root (`renderFlow`) and runs the result.
+			 * Run as is, a template fails loudly in Maestro, and the driver's
+			 * render fails on any placeholder left over. This check pins what the
+			 * placeholders may be, so a new one is a deliberate edit here and in
+			 * `gestureFlowValues`, not a silent exemption. */
+			const geometry: GestureGeometry = {
+				screenWidth: 402,
+				screenHeight: 874,
+				composerTop: 250,
+				composerSource: "composer-shell-ring",
+				keyboardTop: 538,
+				dragStartPct: 24,
+				prepareEndPct: 57,
+				shortpullEndPct: 34,
+				marginPt: 40,
+			};
+			const swipeCoordinate = /^50%, (?:(\d{1,3})|__([A-Z_]+)__)%$/;
+			for (const file of [
+				KEYBOARD_READY_FLOW,
+				...DRAG_FLOWS.map((flow) => flow.file),
+			]) {
+				const path = join(workspace, "chrome-proof", file);
+				const documents = read(path);
+				const steps = commands(documents);
+				documents.forEach(checkIdentifiers);
+				assert(
+					steps.every((step) => step.launchApp === undefined),
+					`${file} must not relaunch the app`,
+				);
+				const used = new Set<string>();
+				const visit = (value: Value): void => {
+					if (Array.isArray(value)) {
+						value.forEach(visit);
+						return;
+					}
+					if (value === null || typeof value !== "object") return;
+					for (const [key, child] of Object.entries(value)) {
+						if (key === "start" || key === "end") {
+							const match = swipeCoordinate.exec(String(child));
+							assert(match, `${file}: unsupported swipe ${key}: ${child}`);
+							if (match[2]) used.add(match[2]);
+							else assert.equal(match[1], "96", `${file}: fixed end`);
+						} else visit(child);
+					}
+				};
+				documents.forEach(visit);
+				assert(used.size > 0, `${file} must start from a placeholder`);
+				assert.deepEqual(
+					[...used].sort(),
+					Object.keys(gestureFlowValues(file, geometry)).sort(),
+					`${file}: placeholders the driver does not supply`,
+				);
+				assert(
+					!/\$\{(?!APP_ID\})/.test(readFileSync(path, "utf8")),
+					`${file}: only APP_ID may be interpolated by Maestro`,
+				);
+			}
+			// Discriminating: a placeholder the driver does not supply must fail.
+			assert.throws(
+				() => gestureFlowValues("session-keyboard-unknown.yaml", geometry),
+				/no gesture placeholders/,
 			);
 		},
 	],

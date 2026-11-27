@@ -43,9 +43,15 @@ import {
 	DRAG_FLOWS,
 	type DragVerdict,
 	dragVerdict,
+	type GestureGeometry,
+	gestureFlowValues,
+	gestureGeometry,
+	KEYBOARD_READY_FLOW,
 	keyboardRestored,
 	pairVerdict,
 	parseHierarchy,
+	pngSize,
+	renderFlow,
 	selectLanes,
 	sendAboveKeyboard,
 	shortpullPair,
@@ -102,7 +108,7 @@ const childEnv: NodeJS.ProcessEnv = {
 	HOME: join(ROOT, "home"),
 	TMPDIR: join(ROOT, "tmp"),
 };
-for (const dir of ["home", "tmp", "frames", "hierarchies", "commands"])
+for (const dir of ["home", "tmp", "frames", "hierarchies", "commands", "flows"])
 	mkdirSync(join(ROOT, dir), { recursive: true, mode: 0o700 });
 
 type Record_ = {
@@ -564,6 +570,7 @@ async function runFlow(
 	file: string,
 	cap: number,
 	sampleMs?: number,
+	render?: Record<string, number>,
 ): Promise<DragSample[]> {
 	const flowLog = join(
 		ROOT,
@@ -571,6 +578,25 @@ async function runFlow(
 		`${sequence + 1}-${flat(`maestro-${lane}-${file}`)}.log`,
 	);
 	try {
+		/* A gesture template is rendered into the run root with its integer
+		 *  percentages (Maestro cannot interpolate them: see
+		 *  `gestureGeometry`), and THAT file is run, so the artifact holds the
+		 *  exact numbers the finger used. The ready flow runs twice per build,
+		 *  so the file and output directory carry the command sequence. */
+		let flowPath = `e2e/maestro/chrome-proof/${file}`;
+		let outputName = file;
+		if (render) {
+			outputName = `${sequence + 1}-${file}`;
+			flowPath = join(ROOT, "flows", flat(lane), outputName);
+			mkdirSync(join(ROOT, "flows", flat(lane)), { recursive: true });
+			writeFileSync(
+				flowPath,
+				renderFlow(
+					readFileSync(`e2e/maestro/chrome-proof/${file}`, "utf8"),
+					render,
+				),
+			);
+		}
 		const name = `maestro-${lane}-${file}`;
 		const args = [
 			"--device",
@@ -585,8 +611,8 @@ async function runFlow(
 			"-e",
 			`SESSION_ID=${relay.sessionId}`,
 			"--test-output-dir",
-			join(ROOT, "maestro", lane, file),
-			`e2e/maestro/chrome-proof/${file}`,
+			join(ROOT, "maestro", lane, outputName),
+			flowPath,
 		];
 		if (sampleMs === undefined) {
 			await run(name, "maestro", args, cap);
@@ -624,8 +650,9 @@ const flow = async (
 	relay: Slot,
 	file: string,
 	cap: number,
+	render?: Record<string, number>,
 ): Promise<void> => {
-	await runFlow(udid, lane, bundle, relay, file, cap);
+	await runFlow(udid, lane, bundle, relay, file, cap, undefined, render);
 };
 
 /** `flow`, plus screenshots every ~`sampleMs` while Maestro runs: the finger-
@@ -637,9 +664,10 @@ const flowSampled = (
 	relay: Slot,
 	file: string,
 	cap: number,
+	render?: Record<string, number>,
 	sampleMs = 150,
 ): Promise<DragSample[]> =>
-	runFlow(udid, lane, bundle, relay, file, cap, sampleMs);
+	runFlow(udid, lane, bundle, relay, file, cap, sampleMs, render);
 
 /** One build's verdict from the PNGs its receipt lists. A file that cannot be
  *  read is inconclusive, like any other missing evidence. */
@@ -814,6 +842,8 @@ try {
 		const dragSamples: Record<string, Record<string, DragSample[]>> = {};
 		const keyboardAfterPull: Record<string, { ok: boolean; reason: string }> =
 			{};
+		/** Build tag -> why no gesture was sent (geometry unreadable or unsafe). */
+		const gestureBlocked: Record<string, string> = {};
 		try {
 			for (const build of builds) {
 				const dir = `${lane.id}/${build.tag}`;
@@ -846,9 +876,58 @@ try {
 						if (!verdict.ok)
 							throw new Error(`send above keyboard: ${verdict.reason}`);
 					}
-					if (frame === "session-keyboard" && withDrag)
+					/* WHERE THE FINGER STARTS comes from THIS build's hierarchy and
+					 *  screenshot, never a constant: the long draft makes the
+					 *  composer card ~260 pt tall, so a fixed 45 % start is inside
+					 *  it. Unreadable geometry means no gesture is sent and the run
+					 *  is INCONCLUSIVE with the reason (`gestureBlocked`). */
+					let geometry: GestureGeometry | null = null;
+					if (frame === "session-keyboard" && withDrag) {
+						let planned: ReturnType<typeof gestureGeometry>;
+						try {
+							planned = gestureGeometry(
+								parseHierarchy(tree),
+								pngSize(
+									readFileSync(join(ROOT, "frames", dir, `${frame}.png`)),
+								),
+							);
+						} catch (error) {
+							planned = {
+								ok: false,
+								reason: `gesture geometry unreadable: ${String(error)}`,
+							};
+						}
+						const recorded = (laneReceipt.gestureGeometry ?? {}) as Record<
+							string,
+							unknown
+						>;
+						laneReceipt.gestureGeometry = recorded;
+						recorded[build.tag] = planned;
+						note(
+							`${lane.id}: ${build.tag}: gesture geometry: ${
+								planned.ok
+									? `composer top ${planned.geometry.composerTop} pt (${planned.geometry.composerSource}), keyboard top ${planned.geometry.keyboardTop} pt, display ${planned.geometry.screenWidth}x${planned.geometry.screenHeight} pt; start ${planned.geometry.dragStartPct} % (${planned.geometry.marginPt.toFixed(1)} pt above the composer), prepare end ${planned.geometry.prepareEndPct} %, short pull end ${planned.geometry.shortpullEndPct} %`
+									: `INCONCLUSIVE: ${planned.reason}`
+							}`,
+						);
+						if (planned.ok) geometry = planned.geometry;
+						else gestureBlocked[build.tag] = planned.reason;
+					}
+					if (geometry)
 						for (const { file: dragFile, cap: dragCap, rule } of DRAG_FLOWS) {
 							const perBuild = dragSamples[dragFile] ?? {};
+							/* Prepare in its OWN, unsampled invocation: the samples
+							 *  below are taken over the whole of the measured flow, so
+							 *  prepare motion in it could fake engagement. */
+							await flow(
+								udid,
+								dir,
+								build.bundleId,
+								working,
+								KEYBOARD_READY_FLOW,
+								dragCap,
+								gestureFlowValues(KEYBOARD_READY_FLOW, geometry),
+							);
 							perBuild[build.tag] = await flowSampled(
 								udid,
 								dir,
@@ -856,6 +935,7 @@ try {
 								working,
 								dragFile,
 								dragCap,
+								gestureFlowValues(dragFile, geometry),
 							);
 							dragSamples[dragFile] = perBuild;
 							/* A short pull that dismissed the keyboard is not a short
@@ -890,8 +970,17 @@ try {
 				const drag: Record<string, unknown> = {};
 				for (const { file: dragFile, rule } of DRAG_FLOWS) {
 					const perBuild = dragSamples[dragFile] ?? {};
-					const before = verdictOf(rule, "before", perBuild.before ?? []);
-					const after = verdictOf(rule, "after", perBuild.after ?? []);
+					const verdictFor = (tag: "before" | "after"): DragVerdict => {
+						const blocked = gestureBlocked[tag];
+						return blocked
+							? {
+									status: "inconclusive",
+									reason: `no gesture was sent: ${blocked}`,
+								}
+							: verdictOf(rule, tag, perBuild[tag] ?? []);
+					};
+					const before = verdictFor("before");
+					const after = verdictFor("after");
 					const pair =
 						rule === "recovery"
 							? shortpullPair(before, after)
@@ -908,6 +997,8 @@ try {
 					if (pair.status === "fail") dragFailed.push(dragFile);
 					if (rule === "recovery")
 						for (const tag of ["before", "after"] as const) {
+							// No gesture, no keyboard to restore: already inconclusive.
+							if (gestureBlocked[tag]) continue;
 							const restored = keyboardAfterPull[tag];
 							if (!restored?.ok) {
 								dragFailed.push(

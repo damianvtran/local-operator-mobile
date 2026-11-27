@@ -164,6 +164,17 @@ export const DRAG_FLOWS = [
 	{ file: "session-keyboard-drag.yaml", cap: 300, rule: "follow" },
 ] as const;
 
+/**
+ * The UNSAMPLED prepare step shared by both measured flows: scroll the
+ * transcript to its top, then re-focus the composer. The driver samples
+ * screenshots over the whole of a Maestro invocation, so any motion in the same
+ * invocation as the gesture (ten prepare swipes, the re-tap's keyboard
+ * animation) would sit inside the compared samples and could fake engagement.
+ * It therefore runs as its OWN invocation, through `flow` (no screenshots), and
+ * the sampled flows hold the single measured swipe.
+ */
+export const KEYBOARD_READY_FLOW = "session-keyboard-ready.yaml";
+
 // ---------------------------------------------------------------------------
 // Finger-driven keyboard: measurement and verdict (pure; no I/O).
 //
@@ -223,6 +234,11 @@ export const FOLLOW_TOLERANCE_PT = 8;
 export const STATIC_TOLERANCE_PT = 12;
 export const RECOVERY_TOLERANCE_PT = 4;
 export const MONOTONE_NOISE_PT = 2;
+/** R3-1: the clean, non-rising run must hold at least this share of the frames
+ *  in the motion window, else too many bad frames were dropped to say the run
+ *  is "the drag". An ESTIMATE, not a measurement; it only ever adds
+ *  inconclusive results. */
+export const SEGMENT_COVERAGE_MIN = 0.7;
 /** Edges are searched in the lower part of the frame (composer + keyboard); the
  *  motion energy is read from the bottom part. Both are fractions of height. */
 const EDGE_REGION_FROM = 0.55;
@@ -471,6 +487,13 @@ export function dragVerdict(
 			{ windowSamples, segmentSamples },
 		);
 	}
+	// R3-1 (and U5): a segment that is a minority of the window may have
+	// dropped the very frames that disagree with it.
+	if (segmentSamples / windowSamples < SEGMENT_COVERAGE_MIN)
+		return inconclusive(
+			`the clean drag segment holds ${segmentSamples} of ${windowSamples} motion-window samples (${((100 * segmentSamples) / windowSamples).toFixed(0)} %); need at least ${(100 * SEGMENT_COVERAGE_MIN).toFixed(0)} %`,
+			{ windowSamples, segmentSamples },
+		);
 	const a = (frames[run.from] as FrameMeasure).edges as NonNullable<
 		FrameMeasure["edges"]
 	>;
@@ -577,6 +600,14 @@ export function shortpullVerdict(
 			`${usable.length} usable sample(s); need at least ${MIN_WINDOW_SAMPLES}${why ? ` (${why})` : ""}`,
 		);
 	}
+	// R3-2: the last USABLE frame is not necessarily the last SAMPLED one, and
+	// "it came back" must be read from where the run ended, so a final frame
+	// that cannot be read leaves the run's end unobserved.
+	const final = read.frames[read.frames.length - 1] as FrameMeasure;
+	if (!final.edges)
+		return inconclusive(
+			`the final sampled frame has no readable edges, so the run's end is unobserved${final.reason ? ` (${final.reason})` : ""}`,
+		);
 	const first = usable[0] as NonNullable<FrameMeasure["edges"]>;
 	const last = usable[usable.length - 1] as NonNullable<FrameMeasure["edges"]>;
 	const deltaKeyboard = (last.keyboardEdge - first.keyboardEdge) / pxPerPt;
@@ -802,4 +833,250 @@ export function sendAboveKeyboard(
 				: `send bottom ${send.bottom} is below the keyboard top ${keyboardTop}`
 		}${scoped ? "" : " (flat hierarchy: keys read by label band)"}`,
 	};
+}
+
+// ---------------------------------------------------------------------------
+// Where the finger goes: derived from the hierarchy, never a constant.
+//
+// WHY. With the long draft `session-keyboard.yaml` types (10 lines; the field
+// caps at 8 and `composer.tsx` records a measured long-draft top of 241 pt), the
+// composer card is ~260 pt tall on an 874 pt screen, so its TOP is at ~27-32 %,
+// not 48 %. A swipe that starts inside the card is a pan on the Textarea, the
+// transcript never sees it, and the keyboard cannot follow: an instrument that
+// started there would "measure" a gesture that never happened. So every
+// measured and prepare swipe starts GESTURE_CLEARANCE_PT above the composer
+// card's top, read from the dump taken right after `session-keyboard.yaml`.
+//
+// MAESTRO CANNOT INTERPOLATE THIS. Maestro 2.11.0's `YamlSwipeDeserializer`
+// parses a relative swipe's coordinates with `.toInt()` when the flow is READ,
+// before any `${...}` is evaluated, so `start: "50%, ${DRAG_START_PCT}%"` throws
+// a NumberFormatException; percentages must also be integers 0-100. The flows
+// are therefore templates with `__NAME__` placeholders that the driver renders
+// with literal integers into the run root (`renderFlow`), and a placeholder
+// that is left over or missing fails the render rather than reaching Maestro.
+// ---------------------------------------------------------------------------
+
+/** Clear space between the finger's start and the composer card's top. */
+export const GESTURE_CLEARANCE_PT = 40;
+/** A start nearer the top than this is in the status bar / header, not the
+ *  transcript: an ESTIMATE (status bar ~54-59 pt plus a header row). */
+export const GESTURE_MIN_START_PT = 100;
+/** The short pull's length, in percentage points of the screen height (~87 pt
+ *  at 874 pt): a deliberate pull of the SCROLL VIEW that, on iOS's
+ *  `keyboardDismissMode="interactive"`, moves the keyboard in proportion to the
+ *  overscroll and springs back under the dismissal threshold. If it moves
+ *  nothing the engagement guard reports inconclusive for that flow; the length
+ *  is deliberately not stretched until it engages. */
+export const SHORTPULL_LENGTH_PCT = 10;
+/** The full drag ends here, near the bottom edge (a full dismissal). */
+export const DRAG_END_PCT = 96;
+/** The hierarchy's screen and the screenshot must have the same aspect ratio
+ *  within this fraction, or the points -> percent conversion is not trusted. */
+const SCREEN_ASPECT_TOLERANCE = 0.01;
+
+export type GestureGeometry = {
+	screenWidth: number;
+	screenHeight: number;
+	/** The topmost of `composer-shell-ring` / `composer-input`, in pt. */
+	composerTop: number;
+	composerSource: string;
+	keyboardTop: number;
+	/** Integer percentages of the screen height, as Maestro takes them. */
+	dragStartPct: number;
+	prepareEndPct: number;
+	shortpullEndPct: number;
+	/** composerTop minus the rounded start, in pt: >= GESTURE_CLEARANCE_PT. */
+	marginPt: number;
+};
+
+type Rect = { left: number; top: number; right: number; bottom: number };
+const rectOf = (bounds: string | undefined): Rect | null => {
+	const m = bounds?.match(BOUNDS);
+	return m
+		? {
+				left: Number(m[1]),
+				top: Number(m[2]),
+				right: Number(m[3]),
+				bottom: Number(m[4]),
+			}
+		: null;
+};
+
+/**
+ * The gesture start/end percentages from the `session-keyboard` hierarchy and
+ * the screenshot taken beside it, or the reason they cannot be trusted.
+ *
+ * FAIL-CLOSED: any missing input (no screen frame, no composer bounds, no
+ * keyboard, an aspect ratio that disagrees with the screenshot) or a geometry
+ * with no room for a safe gesture returns `ok: false`, and the driver records
+ * the run INCONCLUSIVE with that reason; a gesture is never sent from a
+ * position the hierarchy did not give.
+ */
+export function gestureGeometry(
+	tree: HierarchyNode,
+	screenshot: { width: number; height: number },
+): { ok: true; geometry: GestureGeometry } | { ok: false; reason: string } {
+	const no = (reason: string) => ({ ok: false as const, reason });
+	// The screen is the largest frame anchored at the origin among the root and
+	// its descendants two levels down: the application (and the keyboard's own
+	// window). Deeper nodes can extend past the screen (scrolled content).
+	const framed: Rect[] = [];
+	const visit = (node: HierarchyNode, depth: number) => {
+		const rect = rectOf(node.attributes?.bounds);
+		if (rect && rect.left === 0 && rect.top === 0) framed.push(rect);
+		if (depth < 2)
+			for (const child of node.children ?? []) visit(child, depth + 1);
+	};
+	visit(tree, 0);
+	const area = (r: Rect) => (r.right - r.left) * (r.bottom - r.top);
+	const frame = framed.sort((a, b) => area(b) - area(a))[0];
+	if (!frame || frame.right <= 0 || frame.bottom <= 0)
+		return no("the hierarchy has no screen frame anchored at [0,0]");
+	const screenWidth = frame.right;
+	const screenHeight = frame.bottom;
+	if (!(screenshot.width > 0 && screenshot.height > 0))
+		return no("the screenshot has no size");
+	const aspect = screenWidth / screenHeight;
+	const shotAspect = screenshot.width / screenshot.height;
+	if (Math.abs(aspect - shotAspect) / shotAspect > SCREEN_ASPECT_TOLERANCE)
+		return no(
+			`the hierarchy's screen ${screenWidth}x${screenHeight} pt disagrees with the ${screenshot.width}x${screenshot.height} px screenshot`,
+		);
+
+	const nodes: HierarchyNode[] = [];
+	const walk = (node: HierarchyNode) => {
+		nodes.push(node);
+		for (const child of node.children ?? []) walk(child);
+	};
+	walk(tree);
+	const composer = ["composer-shell-ring", "composer-input"]
+		.flatMap((id) =>
+			nodes
+				.filter((n) => n.attributes?.["resource-id"] === id)
+				.flatMap((n) => {
+					const rect = rectOf(n.attributes?.bounds);
+					return rect ? [{ id, top: rect.top }] : [];
+				}),
+		)
+		.sort((a, b) => a.top - b.top)[0];
+	if (!composer)
+		return no(
+			"no composer-shell-ring or composer-input bounds in the hierarchy",
+		);
+	if (!(composer.top > 0 && composer.top < screenHeight))
+		return no(
+			`the composer top ${composer.top} pt is outside the ${screenHeight} pt screen`,
+		);
+	const keyboardTop = sendAboveKeyboard(tree).keyboardTop;
+	if (keyboardTop === undefined || !Number.isFinite(keyboardTop))
+		return no("the keyboard's top is not readable from the hierarchy");
+	if (keyboardTop <= composer.top)
+		return no(
+			`the keyboard top ${keyboardTop} pt is not below the composer top ${composer.top} pt`,
+		);
+
+	const pct = (pt: number) => (100 * pt) / screenHeight;
+	// Rounded DOWN so the rounding can only add clearance.
+	const dragStartPct = Math.floor(pct(composer.top - GESTURE_CLEARANCE_PT));
+	const startPt = (dragStartPct * screenHeight) / 100;
+	const marginPt = composer.top - startPt;
+	// The epsilon only absorbs float error in `pct`/`startPt`; flooring already
+	// makes the margin >= the clearance, so this guards the invariant.
+	if (marginPt < GESTURE_CLEARANCE_PT - 1e-6)
+		return no(
+			`the gesture would start ${marginPt.toFixed(1)} pt above the composer top ${composer.top} pt; need ${GESTURE_CLEARANCE_PT} pt`,
+		);
+	if (startPt < GESTURE_MIN_START_PT)
+		return no(
+			`no transcript room above the composer: the start ${startPt.toFixed(0)} pt is under ${GESTURE_MIN_START_PT} pt (composer top ${composer.top} pt)`,
+		);
+	// Prepare swipes stop above the keyboard so a dismissal cannot stand in for
+	// the measured gesture.
+	const prepareEndPct = Math.floor(pct(keyboardTop - GESTURE_CLEARANCE_PT));
+	if (prepareEndPct <= dragStartPct)
+		return no(
+			`no room to scroll between the start (${dragStartPct} %) and the keyboard (${prepareEndPct} %)`,
+		);
+	const shortpullEndPct = dragStartPct + SHORTPULL_LENGTH_PCT;
+	if (shortpullEndPct >= prepareEndPct)
+		return no(
+			`the short pull's end (${shortpullEndPct} %) would reach the prepare limit above the keyboard (${prepareEndPct} %)`,
+		);
+	return {
+		ok: true,
+		geometry: {
+			screenWidth,
+			screenHeight,
+			composerTop: composer.top,
+			composerSource: composer.id,
+			keyboardTop,
+			dragStartPct,
+			prepareEndPct,
+			shortpullEndPct,
+			marginPt,
+		},
+	};
+}
+
+/** A PNG's pixel size from its IHDR (width, height: big-endian u32 at bytes
+ *  16 and 20); throws on anything that is not a PNG. */
+export function pngSize(bytes: Uint8Array): { width: number; height: number } {
+	assert(
+		bytes.length >= 24 &&
+			bytes[1] === 0x50 &&
+			bytes[2] === 0x4e &&
+			bytes[3] === 0x47 &&
+			bytes[12] === 0x49 &&
+			bytes[13] === 0x48 &&
+			bytes[14] === 0x44 &&
+			bytes[15] === 0x52,
+		"not a PNG: no IHDR at byte 12",
+	);
+	const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+	return { width: view.getUint32(16), height: view.getUint32(20) };
+}
+
+/** The placeholders each flow template carries, with their values. The render
+ *  asserts every one is present, so a template that stops using one (or a new
+ *  one nobody supplies) fails loudly. */
+export function gestureFlowValues(
+	file: string,
+	g: GestureGeometry,
+): Record<string, number> {
+	switch (file) {
+		case KEYBOARD_READY_FLOW:
+			return {
+				DRAG_START_PCT: g.dragStartPct,
+				PREPARE_END_PCT: g.prepareEndPct,
+			};
+		case "session-keyboard-shortpull.yaml":
+			return {
+				DRAG_START_PCT: g.dragStartPct,
+				SHORTPULL_END_PCT: g.shortpullEndPct,
+			};
+		case "session-keyboard-drag.yaml":
+			return { DRAG_START_PCT: g.dragStartPct };
+		default:
+			throw new Error(`no gesture placeholders defined for ${file}`);
+	}
+}
+
+/** `template` with each `__NAME__` replaced by its integer percentage. */
+export function renderFlow(
+	template: string,
+	values: Record<string, number>,
+): string {
+	let out = template;
+	for (const [name, value] of Object.entries(values)) {
+		assert(
+			Number.isInteger(value) && value >= 0 && value <= 100,
+			`${name}=${value} is not an integer percentage 0-100`,
+		);
+		const token = `__${name}__`;
+		assert(out.includes(token), `the flow template has no ${token}`);
+		out = out.replaceAll(token, String(value));
+	}
+	const left = out.match(/__[A-Z][A-Z0-9_]*__/g);
+	assert(!left, `unrendered placeholder(s): ${left?.join(", ")}`);
+	return out;
 }
