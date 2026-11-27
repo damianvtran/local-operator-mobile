@@ -1,0 +1,32 @@
+# Finger-driven keyboard RECOVERY: a short pull that stays below the OS
+# dismissal threshold, so the keyboard springs back and the composer must spring
+# back with it (never stranded at the dragged position). Sampled by the driver
+# like session-keyboard-drag.yaml; `shortpullVerdict` demands that both edges end
+# where they started, and the driver checks from a hierarchy taken right after
+# that the software keyboard is up again.
+#
+# SAMPLED = THE PULL ONLY. The driver runs session-keyboard-ready.yaml first (an
+# unsampled invocation: scroll to the transcript's top, re-focus the composer),
+# so no prepare motion is inside this run's samples. Continues from that state.
+#
+# TEMPLATE, rendered by the driver into the run root (see
+# session-keyboard-ready.yaml for why an env variable cannot carry these):
+#   __DRAG_START_PCT__     40 pt above the composer card's top (hierarchy-derived)
+#   __SHORTPULL_END_PCT__  __DRAG_START_PCT__ + 10 percentage points (~87 pt at
+#                          874 pt)
+# 87 pt in 850 ms is ~100 pt/s, a deliberate pull rather than a fling: a pull
+# of the scroll view that, with `keyboardDismissMode="interactive"`, moves the
+# keyboard in proportion to the overscroll and springs back when released under
+# the threshold. If the pull moves nothing, `shortpullVerdict` says so
+# (inconclusive); the length is not stretched until it engages. The wait lets
+# the spring-back settle, so the driver's last sample is the resting one.
+appId: ${APP_ID}
+---
+- swipe:
+    start: "50%, __DRAG_START_PCT__%"
+    end: "50%, __SHORTPULL_END_PCT__%"
+    duration: 850
+- waitForAnimationToEnd:
+    timeout: 1500
+- assertVisible:
+    id: "composer-input"

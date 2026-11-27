@@ -55,13 +55,21 @@ let CellRenderer: (props: {
 	render: (input: { item: TranscriptItemLike; index: number }) => unknown;
 }) => React.ReactNode = () => null;
 
-/* The chart's plot is wrapped in `DrawerSwipeClaim`, which imports
- *  gesture-handler at module scope; its Node reduction is the shared one. */
+/* The list's host is wrapped in `DrawerSwipeClaim` (gesture-handler at module
+ *  scope) and in the keyboard-controller's gesture area on Android 11+; both
+ *  real modules are native source Node cannot load, so both take the shared
+ *  Node reductions. */
 vi.mock("react-native-gesture-handler", async () => {
 	const { gestureHandlerModuleMock } = await import(
 		"@/testing/native-gesture-mocks"
 	);
 	return gestureHandlerModuleMock();
+});
+vi.mock("react-native-keyboard-controller", async () => {
+	const { keyboardControllerModuleMock } = await import(
+		"@/testing/native-gesture-mocks"
+	);
+	return keyboardControllerModuleMock();
 });
 vi.mock("react-native", async () => {
 	const React = await import("react");

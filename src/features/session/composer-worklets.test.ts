@@ -192,6 +192,7 @@ describe("the composer's worklets run on the UI runtime", () => {
 		 *  code, instead of a number that quietly grew. */
 		expect(reachable).toEqual([
 			"composerShellRadius",
+			"dockLift",
 			"dockMotionStyle",
 			"morphHeight",
 			"morphPillRadius",
@@ -250,6 +251,7 @@ describe("the composer's keyboard handlers run on the UI runtime", () => {
 		expect(keyboardHandlers.map((handler) => handler.name)).toEqual([
 			"onStart",
 			"onMove",
+			"onInteractive",
 			"onEnd",
 		]);
 	});
@@ -282,6 +284,9 @@ describe("the composer's keyboard handlers run on the UI runtime", () => {
 		expect(
 			calledIn(handlers.slice(handlers.indexOf("onMove")), "rideOffset"),
 		).toBe(true);
+		expect(
+			calledIn(handlers.slice(handlers.indexOf("onInteractive")), "rideOffset"),
+		).toBe(true);
 	});
 
 	/* WIRING PINS. The handlers' behaviour is tested by driving them in
@@ -291,7 +296,7 @@ describe("the composer's keyboard handlers run on the UI runtime", () => {
 
 	it("registers the handlers the module builds, with the component's own callbacks", () => {
 		expect(componentText).toContain(
-			"useKeyboardHandler( keyboardMotionHandlers({ keyboardOffset, motionActive, cancelAnimation, runOnJS, holdLift, settleLift, }), [], );",
+			"useKeyboardHandler( keyboardMotionHandlers({ keyboardOffset, motionActive, interactive, cancelAnimation, runOnJS, holdLift, settleLift, }), [], );",
 		);
 	});
 
@@ -299,13 +304,19 @@ describe("the composer's keyboard handlers run on the UI runtime", () => {
 		/* Two writers of one shared value: the handlers while the keyboard moves,
 		 *  the store's `withTiming` otherwise. */
 		expect(componentText).toContain(
-			"const action = frameAction(frame.visible, motionActive.value);",
+			"const action = frameAction( frame.visible, motionActive.value, interactive.value, );",
 		);
 		expect(componentText).toContain(
-			'if (action === "hold") { frameSeenDuringMotion.current = true; return; } keyboardOffset.value = withTiming(',
+			'if (action === "hold") { frameSeenDuringMotion.current = true; return; } if (interactive.value) {',
 		);
 		expect(componentText).toContain(
-			'if (action === "snap") { motionActive.value = false; frameSeenDuringMotion.current = false; keyboardOffset.value = 0;',
+			'if (action === "snap") { motionActive.value = false; interactive.value = false; frameSeenDuringMotion.current = false; keyboardOffset.value = 0;',
+		);
+	});
+
+	it("a store frame that ends a finger drag frees both flags before it tweens", () => {
+		expect(componentText).toContain(
+			"if (interactive.value) { interactive.value = false; motionActive.value = false; } keyboardOffset.value = withTiming(",
 		);
 	});
 

@@ -85,6 +85,15 @@ export type FrameAction = "snap" | "hold" | "tween";
  *   a divergence (`settleDecision`).
  * - `snap`: a hidden frame. It always applies, motion or not.
  *
+ * AN INTERACTIVE DRAG NEVER HOLDS (PR C). On iOS a finger-driven dismissal is
+ * reported ONLY as `onInteractive` frames (the library emits no start, and no
+ * end when the keyboard springs back up), so nothing will call `onEnd` for it:
+ * a held frame would strand the lift where the last drag frame left it. The
+ * RELEASE is the store's frame (`keyboardWillChangeFrame`), and it tweens the
+ * lift from the drag's last height to the frame's overlap. When the release is a
+ * dismissal the library's `onStart` follows and takes the offset over
+ * (`cancelAnimation`), so the tween is only ever the first leg of the same move.
+ *
  * WHY A HIDDEN FRAME ALWAYS APPLIES (the stuck-motion rule). The store emits a
  * hidden frame only from `keyboardDidHide` (iOS's hide `willChangeFrame` keeps
  * `visible`, `keyboard-frame.ts`), and a `did` event is the OS saying the
@@ -99,10 +108,11 @@ export type FrameAction = "snap" | "hold" | "tween";
 export const frameAction = (
 	visible: boolean,
 	motionActive: boolean,
+	interactive = false,
 ): FrameAction => {
 	"worklet";
 	if (!visible) return "snap";
-	return motionActive ? "hold" : "tween";
+	return motionActive && !interactive ? "hold" : "tween";
 };
 
 /**
@@ -138,7 +148,7 @@ type SharedNumber = { value: number };
 type SharedFlag = { value: boolean };
 
 /**
- * The three handlers `useKeyboardHandler` is given. Built here, with the shared
+ * The four handlers `useKeyboardHandler` is given. Built here, with the shared
  * values and the reanimated calls INJECTED, so a Node test can drive a keyboard
  * motion against plain objects and read what each handler did (the component
  * cannot mount in Node). Each handler carries its own `"worklet"` directive: the
@@ -149,11 +159,15 @@ type SharedFlag = { value: boolean };
  * - `onStart`: the motion owns the offset: cancel a tween in flight, and report
  *   a lift when the motion will move the offset (`holdLift`, on JS).
  * - `onMove`: ride the frame's height.
+ * - `onInteractive`: the same ride, for a finger-driven drag.
  * - `onEnd`: land on the final height, release the offset, and settle on JS.
  */
 export const keyboardMotionHandlers = <Offset extends SharedNumber>(deps: {
 	keyboardOffset: Offset;
 	motionActive: SharedFlag;
+	/** True from the first `onInteractive` frame until the drag is released (the
+	 *  store's frame, `frameAction`) or a library motion takes over. */
+	interactive: SharedFlag;
 	cancelAnimation: (value: Offset) => void;
 	runOnJS: (fn: () => void) => () => void;
 	holdLift: () => void;
@@ -162,6 +176,7 @@ export const keyboardMotionHandlers = <Offset extends SharedNumber>(deps: {
 	const {
 		keyboardOffset,
 		motionActive,
+		interactive,
 		cancelAnimation,
 		runOnJS,
 		holdLift,
@@ -170,6 +185,9 @@ export const keyboardMotionHandlers = <Offset extends SharedNumber>(deps: {
 	return {
 		onStart: (event: { height: number }) => {
 			"worklet";
+			/* A library motion supersedes a drag (a dismissal's release), and its own
+			 *  `onEnd` now ends the motion. */
+			interactive.value = false;
 			motionActive.value = true;
 			cancelAnimation(keyboardOffset);
 			if (shouldHoldLift(keyboardOffset.value, event.height)) {
@@ -180,9 +198,24 @@ export const keyboardMotionHandlers = <Offset extends SharedNumber>(deps: {
 			"worklet";
 			keyboardOffset.value = rideOffset(event.height);
 		},
+		onInteractive: (event: { height: number }) => {
+			"worklet";
+			/* The first frame of a drag takes the offset from any tween in flight and
+			 *  raises the lift unconditionally: a drag's first frame is within a point
+			 *  of the offset, so `shouldHoldLift` would say "no lift" about a motion
+			 *  that moves the composer for as long as the finger is down. */
+			if (!interactive.value) {
+				interactive.value = true;
+				motionActive.value = true;
+				cancelAnimation(keyboardOffset);
+				runOnJS(holdLift)();
+			}
+			keyboardOffset.value = rideOffset(event.height);
+		},
 		onEnd: (event: { height: number }) => {
 			"worklet";
 			keyboardOffset.value = rideOffset(event.height);
+			interactive.value = false;
 			motionActive.value = false;
 			runOnJS(settleLift)();
 		},

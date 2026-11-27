@@ -306,6 +306,31 @@ export const composerShellRadius = (progress: number, base: number) => {
 };
 
 /**
+ * The dock's animated bottom margin: 8 plus whatever the keyboard lifts the dock
+ * ABOVE the resting safe-area inset the carrier already pays as padding.
+ *
+ * RIGID RIDE (PR C). The painted bottom is `8 + max(keyboardOffset, restInset)`:
+ * the keyboard overlap INCLUDES the home-indicator inset, so the dock rides the
+ * keyboard's top edge 1:1 and never sinks below its rest (offset 0, inset 34 ->
+ * 42; offset 336, inset 34 -> 344, the old `inset + 8` and `offset + 8`). The old
+ * `offset + 8` with the carrier's padding dropped the moment the keyboard showed
+ * parked the dock 8 pt above the screen edge, over the indicator, when a finger
+ * dragged the keyboard to 0, then jumped 34 pt at `keyboardDidHide`.
+ *
+ * DEVIATION FROM THE ARCHITECT'S LITERAL FORM (`8 + max(offset, inset)` as one
+ * margin, carrier padding 0): the inset stays CARRIER PADDING, always, and this
+ * margin carries only the excess. The painted bottom is identical, but a margin
+ * of `inset + 8` at rest is the off-scale step the web audit's U-42 refuses (the
+ * dialog's split, `dialog.tsx`); at rest this margin is exactly 8.
+ *
+ * `"worklet"`: called from `dockMotionStyle`, on the UI runtime.
+ */
+export const dockLift = (keyboardOffset: number, restInset: number): number => {
+	"worklet";
+	return 8 + Math.max(0, keyboardOffset - Math.max(0, restInset));
+};
+
+/**
  * The dock's animated margins (review W2). Left and right, NOT `marginHorizontal`:
  * Reanimated's web driver writes an animated style straight onto the element, and
  * `marginHorizontal` is a React Native shorthand with no CSS property of its own,
@@ -322,11 +347,12 @@ export const dockMotionStyle = (
 	progress: number,
 	keyboardOffset: number,
 	pillMargin: number,
+	restInset = 0,
 ) => {
 	"worklet";
 	const side = morphHeight(progress, pillMargin, COMPOSER_CARD_MARGIN);
 	return {
-		marginBottom: keyboardOffset + 8,
+		marginBottom: dockLift(keyboardOffset, restInset),
 		marginLeft: side,
 		marginRight: side,
 	};

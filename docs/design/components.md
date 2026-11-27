@@ -606,6 +606,50 @@ with a constant `true`, which would switch the compaction off for every web
 visitor, and the web has neither a reliable signal nor a reader drag that could
 shrink the dock, so the seam renders the pill there.
 
+### Keyboard follows the finger (phone)
+
+Dragging the transcript down while the keyboard is up pulls the keyboard with the
+finger and the composer rides its top edge, as in ChatGPT for iOS. The numbers are
+the library's own frames (`react-native-keyboard-controller` 1.21.9); nothing here
+is a tuned value. **What is proven and what is not is stated per row.**
+
+| Rule | Binding |
+|---|---|
+| Ride | the dock's painted bottom is `8 + max(keyboard overlap, resting inset)` on every frame, written by `dockMotionStyle(progress, offset, pillMargin, restInset)` (`dockLift`). Pinned at both rests: offset 0 with a 34 pt inset paints 42, offset 336 paints 344 (the old `inset + 8` and `overlap + 8`). A keyboard dragged to 0 leaves the dock at its rest instead of 34 pt below it and jumping at `keyboardDidHide`. **Unit-proven** (`composer-presentation.test.ts`) |
+| Deviation from the architect's literal form | the plan put the whole `8 + max(offset, inset)` in one margin with carrier padding 0. The inset stays **carrier padding** (always, keyboard up or not) and the margin carries only the excess over it: the painted bottom is identical, but a margin of `inset + 8` at rest is the off-scale step U-42 refuses (the same split `dialog.tsx` makes). At rest the margin is exactly 8 |
+| The drag | `onInteractive` in `keyboardMotionHandlers` writes the frame's height (`rideOffset`) into the lift, raises the screen's lift hold on its first frame and takes the offset from any tween in flight. Unit-driven in Node (`keyboard-motion.test.ts`) |
+| The release | iOS reports a finger drag only as `onInteractive` frames: the library emits no start for it and **no end when the keyboard springs back up**. A held store frame would strand the lift at the last drag height, so a store frame while `interactive` TWEENS the lift to its overlap and frees the flags (`frameAction(visible, motionActive, interactive)`). A dismissal's release is followed by the library's `onStart`, which cancels that tween and rides the hide. **Reasoned from the library source and unit-sequenced; not yet seen on a device** |
+| iOS | the transcript's own `keyboardDismissMode="interactive"`; no gesture area |
+| Android 11+ (API 30) | `<KeyboardGestureArea interpolator="ios">` around the transcript host and `keyboardDismissMode="none"` (`on-drag` closes at drag start and fights the gesture). `ios` means only a swipe that touches the keyboard moves it |
+| Android 10 and older (minSdk 24) | no finger-following: `keyboardDismissMode="on-drag"`, a timed close at the start of the drag (`keyboard-drag.ts`) |
+| Where a drag starts | **v1: at the keyboard's top edge on both platforms**, as UIKit itself does. The spec's composer-top start needs `textInputNativeID` on the field (`Textarea` has no passthrough) and, on iOS, an accessory view that RN would count into the keyboard frame, breaking the single frame source. Not attempted; recorded as the architect's fallback |
+| Compaction | the keyboard pins the card (`composerPinsCard`), so the drag never shrinks the dock and the pin lifting at `didHide`, after the drag ended, does not either. Unit-proven (`composer-compaction.test.ts`) |
+| Focus | the field stays focused through the drag; a release that closes the keyboard blurs it (the system's dismissal), a release that reopens keeps focus |
+| Reduced motion | the ride and the drag are direct manipulation and are unchanged; only the card/pill morph honours Reduce Motion |
+
+**The transcript tail during a held drag: Option 0 (accept the gap, snap on release).**
+The composer is a flex sibling under the list, so each drag frame resizes the
+viewport, and `pinTail` stands down while the reader's finger holds the list
+(`scrollHold.active`). Whether a blank band opens above the composer until the
+release, or the platform clamps the offset and the last row rides down with it, is
+**not measured**: the native run that would have shown it never got past the dev
+client's launch (below). Option 1 (a per-frame `scrollTo` on the UI thread)
+was not built: it cannot be proven in Node, its double-scroll against the
+scroll view's own pan is exactly what a recording must show first, and shipping it
+unseen trades a possible cosmetic gap for a possible jitter. The architect's kill
+criteria stand for whoever records it: a last-row-to-composer gap off by more than
+2 pt or a jump over 4 pt on release means Option 1 or 2 is needed.
+
+**Native evidence status.** `e2e/maestro/keyboard-drag/keyboard-drag.yaml` is the
+flow (cancel, dismiss, raise, three slow 1500 ms swipes from the transcript into
+the keyboard, recorded out of band with `simctl io recordVideo`). It has **not run**:
+Xcode 27.2's only SDK is iOS 27.2, and an app linked against it asserts at launch
+(`___UIApplicationEvaluateRuntimeIssueForNoSceneLifecycleAdoption`, the app has no
+UIScene adoption), which the hosted `macos-26` runners do not hit. Patching the
+binary's recorded SDK to 26.0 launches it; an unsigned simulator build then has no
+keychain entitlement, so the relay connect fails with "secure storage refused".
+That is a host problem, not a product defect.
+
 ### Glass (iOS)
 
 The shell draws `expo-glass-effect` Liquid Glass when the host's `useChromeGlass()` says so (iOS 26, glass API available,
