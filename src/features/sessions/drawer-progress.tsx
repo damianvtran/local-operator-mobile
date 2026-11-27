@@ -103,7 +103,18 @@ export const useDrawerProgress = ({
 	useAnimatedReaction(
 		() => clock.value,
 		(u) => {
-			progress.value = settleAt(plan.value, u);
+			/* `settleAt` answers a POSITION in points; `progress` is the 0..1
+			 *  fraction every consumer reads (the panel's `translateX`, the scrim's
+			 *  opacity, the page pan's `translationX / width`). Dividing by the
+			 *  plan's own span — which IS the width — keeps the two in one unit
+			 *  without a second copy of the measurement to disagree with it.
+			 *  QA round 2 on 3e059cc7 caught the missing division: the settled
+			 *  value was the width itself (402), so the panel was translated
+			 *  `(402 - 1) * 402` pt to the right, off-screen and un-hittable,
+			 *  while the scrim's opacity clamped to a full dim over the page. */
+			const current = plan.value;
+			const span = Math.abs(current.to - current.from);
+			progress.value = span > 0 ? settleAt(current, u) / span : 0;
 		},
 	);
 

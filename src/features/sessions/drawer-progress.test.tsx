@@ -98,6 +98,17 @@ describe("useDrawerProgress", () => {
 		expect(host.timings.at(-1)).toEqual({ to: 1, duration: 320 });
 	});
 
+	it("settles `progress` to the drawer's fraction, not to points", async () => {
+		await mount();
+		await act(async () => controller.open());
+		/* `withTiming` answers its target (1) in this harness, so the render after
+		 *  `open` maps the clock's end through the settle plan. `progress` is the
+		 *  0..1 fraction the panel's `translateX` multiplies by the width; a plan
+		 *  reported in points left it at the width itself (390), which painted the
+		 *  panel 389 widths off-screen under a full-opacity scrim (QA round 2). */
+		expect(controller.progress.value).toBeCloseTo(1, 6);
+	});
+
 	it("resumes a close from the current position: half way is 160 ms", async () => {
 		await mount();
 		await act(async () => controller.open());
