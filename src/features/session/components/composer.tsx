@@ -182,7 +182,11 @@ import {
 /** The outcome lines the status row can rest on, and whether the row is showing a
  *  LIVE dictation (a phase) rather than a settled outcome. Both are read from the
  *  machine's own snapshot; the row is one height either way (design §2.5 D3). */
-const rowIsLive = (phase: DictationState["phase"]): boolean => phase !== "idle";
+const rowIsLive = (phase: DictationState["phase"]): boolean =>
+	phase !== "idle" && phase !== "failed";
+/** A failed take is not recording, but its recovery controls must stay reachable. */
+const rowIsShowing = (voice: DictationState): boolean =>
+	rowIsLive(voice.phase) || voice.phase === "failed" || voice.status !== "";
 
 /** Out of the layout and out of sight, still in the accessibility tree: the
  *  web's `sr-only` box. Used for the recording row's status word (design D3). */
@@ -791,7 +795,9 @@ export const Composer = ({
 	/* Whether the mic renders at all: a working mic, or the set-up mic for a
 	 *  computer with no speech-to-text. The width budget, the row reserve and the
 	 *  row itself all read this one value, so they cannot disagree. */
-	const micShown = voice != null && (voice.micVisible || voice.micSetup);
+	const micShown =
+		voice != null &&
+		(voice.micVisible || voice.micSetup || voice.phase !== "idle");
 	/* The ✓ and the transcribing spinner: full ink, so the confirming control is
 	 *  the strongest thing on the recording row's danger wash. */
 	const dictationInk = useTokenColor("ink");
@@ -984,7 +990,15 @@ export const Composer = ({
 				    conventional opposites, and each control's accessible name still says
 				    exactly what it does. Both are 44 pt targets inside the row's fixed
 				    box, so the composer's geometry does not change. */}
-				{rowIsLive(voice.phase) ? (
+				{voice.phase === "failed" ? (
+					<Button
+						variant="quiet"
+						label={t("mobile.composer_input.notice_retry")}
+						onPress={voice.retry}
+						testID={CONTROL.composerDictationRetry}
+					/>
+				) : null}
+				{rowIsLive(voice.phase) || voice.phase === "failed" ? (
 					<IconButton
 						accessibilityLabel={t("mobile.composer_input.voice.discard")}
 						onPress={voice.cancel}
@@ -1103,7 +1117,7 @@ export const Composer = ({
 		focused,
 		draft,
 		attachments: images.length,
-		dictation: !!voice && (rowIsLive(voice.phase) || voice.status !== ""),
+		dictation: !!voice && rowIsShowing(voice),
 		stop: controls.stopVisible,
 		error: !!error || !!retainedMessage || !!notice,
 		keyboard: keyboardVisible,
@@ -1497,10 +1511,7 @@ export const Composer = ({
 	const COMPOSER_PAD = 8;
 	/* The same condition the row itself renders under, so the reserve and the row cannot
 	 *  disagree. `mb-2` is its bottom margin. */
-	const dictationShowing =
-		voice !== null &&
-		micShown &&
-		(rowIsLive(voice.phase) || voice.status !== "");
+	const dictationShowing = voice !== null && micShown && rowIsShowing(voice);
 	const DICTATION_ROW_MARGIN_PX = 8;
 	/* The vertical padding the root actually paints: `pt-1 pb-1` in the short-landscape
 	 *  form, and `pt-2` plus the inset-paying bottom padding everywhere else. The
@@ -2245,7 +2256,9 @@ export const Composer = ({
 	 *  exactly what ✓ does read as a different action (design D2 / UX U4). It
 	 *  returns, dimmed, while transcribing so the slot does not blink twice. */
 	const mic =
-		voice === null || voice.phase === "recording" ? null : voice.micVisible ? (
+		voice === null ||
+		voice.phase === "recording" ||
+		voice.phase === "failed" ? null : voice.micVisible ? (
 			/* The voice mic: the relay says voice input can run here AND this build
 			 * can record (`voice.micVisible`). */
 			<IconButton
@@ -2450,9 +2463,7 @@ export const Composer = ({
 			    outcome does not shrink the row below the two-line states — the jump the
 			    design round measured (D1). */
 	const dictationRow =
-		voice !== null &&
-		micShown &&
-		(rowIsLive(voice.phase) || voice.status !== "") ? (
+		voice !== null && micShown && rowIsShowing(voice) ? (
 			<View
 				className={cx(
 					"mb-2 rounded-sm border px-3",

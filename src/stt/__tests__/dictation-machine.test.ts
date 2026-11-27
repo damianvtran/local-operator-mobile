@@ -70,6 +70,49 @@ describe("the dictation machine's phases", () => {
 	});
 });
 
+describe("a retained completed take", () => {
+	const failed: DictationSnapshot = { phase: "failed", outcome: null };
+
+	it("does no automatic work on failure, edits, availability or mic presses", () => {
+		expect(step(transcribing, { type: "failed" })).toEqual({
+			state: failed,
+			effects: [],
+		});
+		for (const event of [
+			{ type: "edit" },
+			{ type: "available" },
+			{ type: "press", sending: false },
+		] as DictationEvent[]) {
+			expect(step(failed, event)).toEqual({ state: failed, effects: [] });
+		}
+	});
+
+	it("allows only a manual retry and ignores repeated retries while uploading", () => {
+		expect(step(failed, { type: "retry" })).toEqual({
+			state: transcribing,
+			effects: ["retry-transcription"],
+		});
+		expect(step(transcribing, { type: "retry" })).toEqual({
+			state: transcribing,
+			effects: [],
+		});
+		expect(step(IDLE_DICTATION, { type: "retry" })).toEqual({
+			state: IDLE_DICTATION,
+			effects: [],
+		});
+	});
+
+	it("discards explicitly and never accepts a completion after discard", () => {
+		expect(step(failed, { type: "cancel" })).toEqual({
+			state: IDLE_DICTATION,
+			effects: ["discard-recording"],
+		});
+		expect(
+			step(IDLE_DICTATION, { type: "settle", outcome: "added" }).state,
+		).toEqual(IDLE_DICTATION);
+	});
+});
+
 describe("recording while a message is sending (defect 4)", () => {
 	it("does NOT gate the mic on a send in flight", () => {
 		// The rule this PR exists for. `sending` is an explicit input so the rule has

@@ -27,6 +27,15 @@ const voiceAt = (start: DictationSnapshot) => {
 			return state.phase;
 		},
 		line: () => dictationStatusLine(state),
+		captureForSend: () => {
+			const captured = state;
+			return () => {
+				if (state !== captured) return;
+				const idle = state.phase === "idle";
+				calls.push(idle ? "clearOutcome" : "cancelForSend");
+				state = reduceDictation(state, { type: idle ? "edit" : "send" }).state;
+			};
+		},
 		calls,
 		cancelForSend: () => {
 			calls.push("cancelForSend");
@@ -51,6 +60,17 @@ const coordinator = () => {
 };
 
 const failed: DictationSnapshot = { phase: "idle", outcome: "mic-failed" };
+
+it("keeps a recoverable failed take on refusal and discards only on admission", () => {
+	const voice = voiceAt({ phase: "failed", outcome: null });
+	const start = coordinator();
+	sendFromHome(voice, start.send);
+	expect(voice.phase).toBe("failed");
+	expect(voice.calls).toEqual([]);
+	start.admit();
+	expect(voice.phase).toBe("idle");
+	expect(voice.calls).toEqual(["cancelForSend"]);
+});
 
 describe("the home send and a resting mic line", () => {
 	it("keeps the line while the coordinator has not admitted the message", () => {

@@ -522,6 +522,8 @@ export const CONTROL = {
 	 *  the only way back after a refusal the OS will not re-ask. */
 	attachCameraSettings: "attach-camera-settings",
 	composerMic: "composer-mic",
+	/** Explicit recovery of retained audio, distinct from starting a new take. */
+	composerDictationRetry: "composer-mic-retry",
 	/** The recording bar's own cancel: DISCARDS the take and sends no request,
 	 *  unlike the mic, which stops and transcribes. Two outcomes, two controls. */
 	composerDictationCancel: "composer-dictation-cancel",

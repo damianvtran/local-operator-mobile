@@ -28,13 +28,19 @@
  * No React, no React Native, no network.
  */
 
-/** The mic's four resting/active phases. `starting` exists for the measured start
+/** The mic's resting/active phases. `starting` exists for the measured start
  *  lag: the press is acknowledged in the SAME frame, before the permission prompt
  *  and the native recorder are awaited, so a hold that has not yet opened the
  *  microphone is not silent (see `use-dictation.ts`'s note on the press path). */
 import { t } from "@/i18n";
 
-export type DictationPhase = "idle" | "starting" | "recording" | "transcribing";
+export type DictationPhase =
+	| "idle"
+	| "starting"
+	| "recording"
+	| "transcribing"
+	/** A completed take is retained, with no request or timer running. */
+	| "failed";
 
 /** The one-line outcome the polite status row announces once a dictation has
  *  ended. `null` is "nothing to say" — a TRANSCRIPTION failure carries its own
@@ -77,6 +83,8 @@ export type DictationEffect =
 	| "open-mic"
 	/** Stop the recorder and upload it. */
 	| "stop-and-transcribe"
+	/** Upload the retained take, without opening the microphone again. */
+	| "retry-transcription"
 	/** Stop the recorder and delete the file, sending nothing. */
 	| "discard-recording"
 	/** Abort a transcription already on the wire; its result is dropped. */
@@ -96,6 +104,10 @@ export type DictationEvent =
 	/** A transcription ended. `outcome` is what the status row should rest on;
 	 *  `null` for a failure, which the error line states in its own words. */
 	| { type: "settle"; outcome: DictationOutcome | null }
+	/** An ordinary failure keeps the completed take until Retry or Discard. */
+	| { type: "failed" }
+	/** Only the reader can retry; edits and capability frames cannot do so. */
+	| { type: "retry" }
 	/** The reader's own discard: no request, and no line (their action, not a loss). */
 	| { type: "cancel" }
 	/** A send/steer took the composer: abort, discard, and SAY SO. At rest it ends
@@ -205,6 +217,19 @@ export function reduceDictation(
 					}
 				: { state, effects: [] };
 
+		case "failed":
+			return phase === "transcribing"
+				? { state: { phase: "failed", outcome: null }, effects: [] }
+				: { state, effects: [] };
+
+		case "retry":
+			return phase === "failed"
+				? {
+						state: { phase: "transcribing", outcome: null },
+						effects: ["retry-transcription"],
+					}
+				: { state, effects: [] };
+
 		case "settle":
 			return phase === "transcribing"
 				? { state: { phase: "idle", outcome: event.outcome }, effects: [] }
@@ -292,6 +317,9 @@ export const dictationStatusLine = (state: DictationSnapshot): string => {
 			return "Recording";
 		case "transcribing":
 			return "Transcribing";
+		case "failed":
+			/* The endpoint's specific failure is already on the error line. */
+			return "";
 		case "idle":
 			if (state.outcome === null) return "";
 			/* The set-up line is catalogue copy (it is new, and new copy ships in
@@ -320,4 +348,5 @@ export const MIC_HINT: Record<DictationPhase, string | undefined> = {
 	starting: "Waiting for the microphone",
 	recording: "Stops the recording and transcribes it",
 	transcribing: undefined,
+	failed: undefined,
 };

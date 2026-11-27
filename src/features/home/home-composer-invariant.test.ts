@@ -18,6 +18,13 @@ const SPLASH = readFileSync(
 	"utf8",
 );
 
+it("fences dictation with the stable startup draft identity, not the relay or render", () => {
+	const call = HOME.slice(HOME.indexOf("const voice = useHomeDictation({"));
+	expect(call.slice(0, call.indexOf("});"))).toContain(
+		"scopeKey: startup.snapshot.scope",
+	);
+});
+
 const composerTag = (source: string) => {
 	const at = source.indexOf("<Composer\n");
 	return source.slice(

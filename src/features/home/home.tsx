@@ -951,6 +951,9 @@ export default function Home({
 	 *  STT, so it needs only the active relay, not a session. */
 	const voice = useHomeDictation({
 		endpoints: client,
+		/* New rotates the startup record while Home and the relay stay mounted.
+		 * The record's scope is the stable editor key, not the account alone. */
+		scopeKey: startup.snapshot.scope,
 		capabilities,
 		draft,
 		setDraft,

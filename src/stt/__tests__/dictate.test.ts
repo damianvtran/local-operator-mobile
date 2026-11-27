@@ -1,12 +1,9 @@
 // biome-ignore-all lint/style/noNonNullAssertion: an assertion after a length or
 // definedness guard is the guard; a longhand local for it would obscure it.
 /**
- * The dictation flow: the upload happens once, and the local recording is
- * DISCARDED after it — on success, on a refusal, and on a re-thrown `401`.
- *
- * The discard is the design's hard requirement (the phone must not become the
- * retention point the daemon is not), so it is asserted on every arm, including
- * the one where the upload never produced an answer.
+ * The dictation flow: each call uploads once. Successful/empty transcriptions
+ * release the file; ordinary failures retain it for a manual retry. A 401 still
+ * deletes before rethrowing — recovery never crosses an authentication boundary.
  */
 
 import { describe, expect, it } from "vitest";
@@ -75,7 +72,7 @@ describe("dictate", () => {
 		expect(h.discarded).toBe(1);
 	});
 
-	it("discards and reports the sentence on a refusal", async () => {
+	it("retains the recording and reports the sentence on a refusal", async () => {
 		const h = harness(async () => ({
 			status: 422,
 			text: JSON.stringify({ error: "Unsupported audio format: text/plain." }),
@@ -84,10 +81,10 @@ describe("dictate", () => {
 			kind: "failed",
 			sentence: "Unsupported audio format: text/plain.",
 		});
-		expect(h.discarded).toBe(1);
+		expect(h.discarded).toBe(0);
 	});
 
-	it("discards and answers the retry sentence on a transport failure", async () => {
+	it("retains the same recording for a manual retry after transport failure", async () => {
 		const h = harness(async () => {
 			throw new Error("network down");
 		});
@@ -95,7 +92,7 @@ describe("dictate", () => {
 			kind: "failed",
 			sentence: STT_COPY.retry,
 		});
-		expect(h.discarded).toBe(1);
+		expect(h.discarded).toBe(0);
 	});
 
 	it("re-throws a 401 (the shared reload rule) but still discards the recording", async () => {
@@ -109,6 +106,39 @@ describe("dictate", () => {
 		await expect(dictate(RECORDING, h.deps)).rejects.toBe(unauthorized);
 		expect(h.discarded).toBe(1);
 		expect(h.order).toEqual(["transcribe", "discard"]);
+	});
+
+	it("retains malformed success audio instead of treating it as a completed take", async () => {
+		const h = harness(async () => ({ status: 200, text: "not json" }));
+		expect(await dictate(RECORDING, h.deps)).toEqual({
+			kind: "failed",
+			sentence: STT_COPY.malformed,
+		});
+		expect(h.discarded).toBe(0);
+	});
+
+	it("uploads exactly the retained recording on an explicit second call", async () => {
+		const seen: MicrophoneRecording[] = [];
+		let calls = 0;
+		const h = harness(async () => ({
+			status: 200,
+			text: JSON.stringify({ text: "recovered" }),
+		}));
+		const deps = {
+			...h.deps,
+			transcribe: async (rec: MicrophoneRecording) => {
+				seen.push(rec);
+				if (++calls === 1) throw new Error("synthetic network failure");
+				return h.deps.transcribe(rec);
+			},
+		};
+		expect((await dictate(RECORDING, deps)).kind).toBe("failed");
+		expect(seen).toEqual([RECORDING]);
+		expect(h.discarded).toBe(0);
+		expect((await dictate(RECORDING, deps)).kind).toBe("transcript");
+		expect(seen).toEqual([RECORDING, RECORDING]);
+		expect(seen[0]).toBe(seen[1]);
+		expect(h.discarded).toBe(1);
 	});
 
 	it("passes the abort signal through to the upload", async () => {
