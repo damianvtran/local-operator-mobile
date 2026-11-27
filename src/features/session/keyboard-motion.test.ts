@@ -454,3 +454,114 @@ describe("a motion with the keyboard store's frames, end to end", () => {
 		});
 	});
 });
+
+describe("a hide from the dictation keyboard's 148 pt", () => {
+	/* The operator's TestFlight report: on dictation's "Write with Siri" keyboard
+	 *  (~148 pt, not the resting 336) the keyboard leaves and the composer stays
+	 *  parked at the resting keyboard's top. `run` above carries the suite's fixed
+	 *  heights; these sequences need 148 and a walking finger, so the same
+	 *  subscriber reduction is built here with the frame's heights as arguments.
+	 *  Both reductions are `frameAction`'s three arms: keep them in step. */
+	const drive = (begin: number) => {
+		const state = rig(begin);
+		let seen = false;
+		let target = begin;
+		const tween = { from: begin, to: begin };
+		/* The component's store subscriber, reduced to the decisions it makes. */
+		const storeFrame = (visible: boolean, overlap: number) => {
+			target = visible ? overlap : 0;
+			const action = frameAction(
+				visible,
+				state.motionActive.value,
+				state.interactive.value,
+			);
+			if (action === "snap") {
+				state.motionActive.value = false;
+				state.interactive.value = false;
+				seen = false;
+				state.keyboardOffset.value = 0;
+				return action;
+			}
+			if (action === "hold") {
+				seen = true;
+				return action;
+			}
+			if (state.interactive.value) {
+				state.interactive.value = false;
+				state.motionActive.value = false;
+			}
+			tween.from = state.keyboardOffset.value;
+			tween.to = target;
+			/* `withTiming` lands on the frame's overlap; `run` reads it the same way. */
+			state.keyboardOffset.value = target;
+			return action;
+		};
+		const settle = () => {
+			state.keyboardOffset.value = settleDecision({
+				current: state.keyboardOffset.value,
+				target,
+				frameSeenDuringMotion: seen,
+			});
+			seen = false;
+		};
+		return { ...state, storeFrame, settle, tween };
+	};
+
+	it("a hide from 148 empties the lift in one store frame", () => {
+		/* `didHide` from the dictation height with no motion to hold it: one frame,
+		 *  straight to 0. */
+		const idle = drive(148);
+		expect(idle.storeFrame(false, 0)).toBe("snap");
+		expect(idle.keyboardOffset.value).toBe(0);
+
+		/* The same hide with the library motion still open (the operator's parked
+		 *  composer: the hide's `onEnd` never arrives). */
+		const s = drive(148);
+		s.handlers.onStart({ height: 0 });
+		s.flush();
+		expect(s.log).toEqual(["cancel@148", "hold"]);
+		s.handlers.onMove({ height: 96 });
+		expect(s.keyboardOffset.value).toBe(96);
+		expect(s.storeFrame(false, 0)).toBe("snap");
+		expect(s.keyboardOffset.value).toBe(0);
+		expect(s.motionActive.value).toBe(false);
+		expect(s.interactive.value).toBe(false);
+		/* The late `onEnd` of the same hide and the settle keep it at 0: no 148 or
+		 *  336 comes back after the frame. */
+		s.handlers.onEnd({ height: 0 });
+		s.flush();
+		const after = [s.keyboardOffset.value];
+		s.settle();
+		after.push(s.keyboardOffset.value);
+		expect(after).toEqual([0, 0]);
+	});
+
+	it("a finger drag from 148 dismisses: the lift rides the finger, never back to 148", () => {
+		const s = drive(148);
+		/* Each `onInteractive` frame writes its height: the offset follows the finger
+		 *  down from the dictation height, it does not stay at 148. */
+		for (const height of [148, 96, 40]) {
+			s.handlers.onInteractive({ height });
+			expect(s.keyboardOffset.value).toBe(height);
+			expect(s.interactive.value).toBe(true);
+			expect(s.motionActive.value).toBe(true);
+		}
+		/* iOS reports the release as the store's `keyboardWillChangeFrame`: the
+		 *  keyboard still visible (a `will` event) and its overlap now 0, so the
+		 *  tween runs from the finger's last height to 0 rather than holding. */
+		expect(s.storeFrame(true, 0)).toBe("tween");
+		expect(s.tween).toEqual({ from: 40, to: 0 });
+		expect(s.keyboardOffset.value).toBe(0);
+		expect(s.interactive.value).toBe(false);
+		expect(s.motionActive.value).toBe(false);
+		/* The library's own hide motion follows the release; `didHide` closes it. */
+		s.handlers.onStart({ height: 0 });
+		expect(s.motionActive.value).toBe(true);
+		expect(s.storeFrame(false, 0)).toBe("snap");
+		expect({
+			offset: s.keyboardOffset.value,
+			active: s.motionActive.value,
+			interactive: s.interactive.value,
+		}).toEqual({ offset: 0, active: false, interactive: false });
+	});
+});
