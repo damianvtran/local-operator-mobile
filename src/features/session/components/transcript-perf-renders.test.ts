@@ -55,6 +55,14 @@ let CellRenderer: (props: {
 	render: (input: { item: TranscriptItemLike; index: number }) => unknown;
 }) => React.ReactNode = () => null;
 
+/* `TranscriptList` wraps the host in the keyboard-controller's gesture area on
+ *  Android 11+; the real module is native source Node cannot load. */
+vi.mock("react-native-keyboard-controller", async () => {
+	const { keyboardControllerModuleMock } = await import(
+		"@/testing/native-gesture-mocks"
+	);
+	return keyboardControllerModuleMock();
+});
 vi.mock("react-native", async () => {
 	const React = await import("react");
 	const passthrough = ({ children }: { children?: React.ReactNode }) =>

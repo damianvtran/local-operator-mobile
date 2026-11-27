@@ -1,0 +1,30 @@
+# Finger-driven keyboard dismissal (PR C: the composer rides the keyboard DURING
+# a drag, not only after release). Continues from session-keyboard-ready.yaml's
+# end state — no relaunch, no secrets. The driver (chrome-ios-proof.ts) samples
+# screenshots while this flow runs and `dragVerdict` measures the composer's and
+# the keyboard's edges frame by frame.
+#
+# Post-release geometry is identical on main and on this branch (the keyboard is
+# gone and the composer sits at the bottom in both), so only mid-drag frames can
+# tell the builds apart.
+#
+# SAMPLED = THE DRAG ONLY. The scroll to the transcript's top and the re-focus
+# run before, as session-keyboard-ready.yaml, in an unsampled invocation.
+#
+# TEMPLATE, rendered by the driver into the run root (see
+# session-keyboard-ready.yaml for why an env variable cannot carry this):
+#   __DRAG_START_PCT__  40 pt above the composer card's top (hierarchy-derived).
+#                       With the long draft the card is ~260 pt tall and its top
+#                       is at ~27-32 %, so a start at 45 % would be inside it.
+# The drag runs to 96 %, near the bottom edge: a full dismissal. 3.5 s keeps the
+# pace of the earlier 45 % -> 96 % / 2.5 s drag (~178 pt/s) over the longer
+# distance from the higher start (~620 pt), so about the same number of samples
+# land while the finger is over the keyboard.
+appId: ${APP_ID}
+---
+- swipe:
+    start: "50%, __DRAG_START_PCT__%"
+    end: "50%, 96%"
+    duration: 3500
+- assertVisible:
+    id: "composer-input"

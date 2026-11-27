@@ -173,9 +173,10 @@ const find = (
 const px = (value: string | undefined) =>
 	value === undefined ? 0 : Number.parseFloat(value);
 
-/** The agent dock's painted bottom offset for a keyboard frame, written from
- *  `composer.tsx`'s two halves: the carrier's `dockInset` (`keyboardVisible ? 0
- *  : max(0, bottomInset)`) plus the dock's `marginBottom: keyboardOffset + 8`. */
+/** The agent dock's painted bottom offset for a keyboard frame: `8 + max(overlap,
+ *  inset)` (`composer.tsx`, `dockLift`: the carrier pays the inset and the dock's
+ *  margin the excess over it). Written here per case rather than as that max so
+ *  the Bridge's own two halves are compared against the agent's two numbers. */
 const agentBottom = (inset: number, frame: KeyboardFrame) =>
 	(frame.visible ? 0 : Math.max(0, inset)) +
 	(frame.visible ? frame.overlap : 0) +

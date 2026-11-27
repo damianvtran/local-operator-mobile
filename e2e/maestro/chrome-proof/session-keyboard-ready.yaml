@@ -1,0 +1,45 @@
+# UNSAMPLED prepare for the finger-driven keyboard flows
+# (session-keyboard-shortpull.yaml, session-keyboard-drag.yaml). The driver
+# runs this as its OWN Maestro invocation WITHOUT screenshots, then runs the
+# measured flow as another invocation WITH them: the samples are taken over a
+# whole invocation, so the ten swipes and the re-tap's keyboard animation would
+# otherwise sit inside the compared run and could fake engagement.
+#
+# Continues from session-keyboard.yaml's end state — no relaunch, no secrets.
+#
+# TEMPLATE. Maestro 2.11 parses a relative swipe's coordinates with `.toInt()`
+# when it READS the flow, before any variable is substituted, so the two numbers below
+# cannot be env variables. The driver renders each double-underscore placeholder to an
+# integer percentage into the run root and runs THAT file (the artifact shows
+# the exact numbers); this template is never run as is. The values come from the
+# `session-keyboard` hierarchy (`gestureGeometry` in chrome-ios-proof-contract.ts):
+#   __DRAG_START_PCT__   40 pt above the composer card's top, rounded down.
+#                        With the long draft the card's top is at ~27-32 % of
+#                        the screen, so a start at the old 30 % / 45 % would be
+#                        INSIDE the card, i.e. a pan on the Textarea.
+#   __PREPARE_END_PCT__  40 pt above the keyboard's top, rounded down: a prepare
+#                        swipe that touched the keyboard could dismiss it.
+#
+# The finger moves DOWN, which drags the content down, i.e. toward OLDER content
+# (the top); ten swipes reach the top of any plausible transcript and bounce
+# harmlessly if it is shorter than one screen. The interactive dismissal only
+# engages at the top of the content. The second tap restores a known keyboard-up
+# state. Focusing the composer does NOT scroll the list (only `sendMark` does,
+# transcript-list.tsx:1588-1593), so the position reached here survives it.
+appId: ${APP_ID}
+---
+- tapOn:
+    id: "composer-input"
+- waitForAnimationToEnd:
+    timeout: 3000
+- repeat:
+    times: 10
+    commands:
+      - swipe:
+          start: "50%, __DRAG_START_PCT__%"
+          end: "50%, __PREPARE_END_PCT__%"
+          duration: 150
+- tapOn:
+    id: "composer-input"
+- waitForAnimationToEnd:
+    timeout: 2000

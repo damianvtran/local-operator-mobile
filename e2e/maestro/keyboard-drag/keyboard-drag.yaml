@@ -1,0 +1,60 @@
+# The keyboard follows the finger (PR C): a drag from the transcript down into
+# the open keyboard, on the one surface that can show it (a real iOS keyboard).
+#
+# NO launchApp, AND THAT IS THE DESIGN (the `rail-paint` pattern). The app is
+# already on a long conversation, settled at its tail, connected to the mock
+# relay; this is a second `maestro test` invocation against that live app. The
+# capture is OUT OF BAND: the driver records the simulator
+# (`xcrun simctl io <udid> recordVideo`) around this flow and measures
+# composer-top minus keyboard-top frame by frame; Maestro's own screenshots are
+# one frame per step and cannot show a drag. NOT YET RUN: PR C's native budget
+# (3 attempts) was spent on the dev client's launch and signing before this
+# flow ran once (`docs/design/components.md`, "Keyboard follows the finger"), so
+# the swipe coordinates below are estimates for a 402 x 874 pt screen with the
+# keyboard's top near 60 %, to be re-read from the first recording.
+#
+# THE GESTURES. A swipe is linear and ends in a release, so the three phases the
+# design cares about are three swipes, each from the transcript (35 % down the
+# screen, above the composer) into or toward the keyboard (its top edge sits near
+# 60 %):
+#   1. SLOW DRAG, CANCEL: ends a few points inside the keyboard. iOS releases a
+#      shallow, slow pull by springing the keyboard back up: the composer must
+#      come back with it and keep its focus.
+#   2. LONG DRAG, DISMISS: ends at the bottom of the screen. The release closes
+#      the keyboard; the composer must land at its resting inset, not 34 pt
+#      below it.
+#   3. The keyboard is raised again by tapping the field, so the flow ends where
+#      it began.
+# 1500 ms is slow enough for ~90 frames at the recorder's 60 fps, which is what
+# a per-frame measurement needs; the rail's own 130 ms flings are the opposite
+# regime.
+appId: ${APP_ID}
+name: "Keyboard follows the finger — cancel, dismiss, raise"
+---
+- tapOn:
+    id: "composer-input"
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: "kd-01-keyboard-up"
+- swipe:
+    start: "50%, 35%"
+    end: "50%, 68%"
+    duration: 1500
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: "kd-02-after-cancel"
+# The cancel kept the keyboard and the focus: the send control is still there.
+- assertVisible:
+    id: "composer-send"
+- swipe:
+    start: "50%, 35%"
+    end: "50%, 98%"
+    duration: 1500
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: "kd-03-after-dismiss"
+- tapOn:
+    id: "composer-input"
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: "kd-04-keyboard-up-again"

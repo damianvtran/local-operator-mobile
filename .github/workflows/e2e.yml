@@ -96,6 +96,13 @@ on:
         description: "chrome-ios-proof: full commit SHA the base_run_id build was built for (required with base_run_id)"
         type: string
         default: ""
+      # chrome-ios-proof ONLY, and a budget cap on the first real run of a shared
+      # wallet, not a coverage decision: it picks which lanes run, so a narrowed
+      # run is a gesture proof of those lanes and never a full-proof claim.
+      proof_lanes:
+        description: "chrome-ios-proof only: comma-separated lane ids to run (narrowed coverage; empty = every lane)"
+        type: string
+        default: ""
   schedule:
     # Nightly, off-peak: the emulator job is the slowest thing here and the least
     # useful on a branch nobody is waiting for.
@@ -1887,6 +1894,7 @@ jobs:
       actions: read
     env:
       PROOF_MODE: chrome-ios-proof
+      PROOF_LANES: ${{ inputs.proof_lanes }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -1952,6 +1960,7 @@ jobs:
             ${{ runner.temp }}/chrome-ios-proof/relay-*-requests.json
             ${{ runner.temp }}/chrome-ios-proof/commands/*.log
             ${{ runner.temp }}/chrome-ios-proof/frames/**/*.png
+            ${{ runner.temp }}/chrome-ios-proof/flows/**/*.yaml
             ${{ runner.temp }}/chrome-ios-proof/hierarchies/*.json
           retention-days: 14
           if-no-files-found: warn

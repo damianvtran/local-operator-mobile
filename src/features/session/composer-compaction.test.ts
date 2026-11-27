@@ -11,6 +11,7 @@ import {
 	TOWARD_RESET_PT,
 	TOWARD_TAIL_MIN_PT,
 } from "./composer-compaction";
+import { composerPinsCard } from "./composer-presentation";
 
 /* The clock and the timers are vitest's fake pair: `Date.now` is the policy's
  *  default clock, and `setTimeout` is what the dwell arms. */
@@ -736,6 +737,55 @@ describe("pins", () => {
 		vi.advanceTimersByTime(HOLD_MS);
 		drag(c, { to: 1040 });
 		expect(c.readShrunk()).toBe(true);
+	});
+});
+
+describe("a keyboard drag over a pinned card (PR C)", () => {
+	const facts = (keyboard: boolean) => ({
+		focused: true,
+		keyboard,
+		attachments: 0,
+		dictation: false,
+		error: false,
+		skillTray: false,
+		slashSheet: false,
+	});
+
+	it("the keyboard being up pins the card by itself, focus or not", () => {
+		/* Release that closes the keyboard blurs the field, but the keyboard fact
+		 *  alone must hold the card for every frame of the drag before it. */
+		expect(composerPinsCard({ ...facts(true), focused: false })).toBe(true);
+		expect(composerPinsCard({ ...facts(false), focused: false })).toBe(false);
+	});
+
+	it("scrolling the transcript while the keyboard is up never shrinks the dock, and the pin lifting at didHide does not either", () => {
+		const c = createComposerCompaction();
+		const seen = flips(c);
+		c.setPinned(composerPinsCard(facts(true)));
+		/* The reader drags the transcript down, past the shrink distance and at a
+		 *  fling's speed: the same finger that is pulling the keyboard away. */
+		drag(c, { to: 1000 - 3 * SHRINK_DISTANCE_PT, velocity: 4000 });
+		expect(c.readShrunk()).toBe(false);
+		/* Release: the keyboard lands hidden and the facts lose `keyboard`. */
+		c.setPinned(composerPinsCard({ ...facts(false), focused: false }));
+		expect(c.readShrunk()).toBe(false);
+		vi.advanceTimersByTime(HOLD_MS + TAIL_DWELL_MS + 1);
+		expect(c.readShrunk()).toBe(false);
+		expect(seen).toEqual([]);
+	});
+
+	it("a drag that cancels (keyboard stays up) stays pinned and never shrinks", () => {
+		const c = createComposerCompaction();
+		c.setPinned(composerPinsCard(facts(true)));
+		drag(c, { to: 1000 - 2 * SHRINK_DISTANCE_PT });
+		drag(c, { from: 900, to: 1000 });
+		expect(c.readShrunk()).toBe(false);
+	});
+
+	it("the pin comes from the store's `keyboardVisible`, wired into the compaction", () => {
+		const component = read("src/features/session/components/composer.tsx");
+		expect(component).toContain("keyboard: keyboardVisible,");
+		expect(component).toContain("compaction?.setPinned(pinsCard);");
 	});
 });
 

@@ -18,6 +18,14 @@ const host = vi.hoisted(() => ({
 }));
 /* The null host has no accessibility or theme engine. Answer only the motion
  * preference so the real list can still exercise its footer/tail policies. */
+/* `TranscriptList` wraps the host in the keyboard-controller's gesture area on
+ *  Android 11+; the real module is native source Node cannot load. */
+vi.mock("react-native-keyboard-controller", async () => {
+	const { keyboardControllerModuleMock } = await import(
+		"@/testing/native-gesture-mocks"
+	);
+	return keyboardControllerModuleMock();
+});
 vi.mock("@/ui/appearance", () => ({ useReducedMotion: () => true }));
 /* The list renders the "Jump to latest" chip, whose label ladder reads the app's
  * resolved text scale. This suite exercises tail policy, not type size, so the
