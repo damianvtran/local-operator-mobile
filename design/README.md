@@ -79,6 +79,24 @@ ImageMagick); `design/preview/capture.mjs` needs the installed Google Chrome,
 headless. Both generators' outputs are committed, so building the app needs
 neither.
 
+### Bumping the capture renderer
+
+The committed listing frames and preview sheets are compared pixel-for-pixel
+against a re-render, and a different Chrome rasterizes the caption SVG mark's
+stroke edge differently (158.0.8127.37 vs 157.0.8103.79: iPad +19 px, Play +9 px,
+iPhone +4 px at 30/255). So the design-kit job does not use the runner image's
+Chrome (the macos-26 pool is mixed); it downloads the exact Chrome for Testing
+build in `design/preview/capture-chrome.pin`, verifies its sha256 and fails closed
+on a mismatch (`design/preview/fetch-capture-chrome.sh`). To change it:
+
+1. Pick the build and compute its checksum by streaming, never storing the zip:
+   `curl -fsSL https://storage.googleapis.com/chrome-for-testing-public/<VERSION>/mac-arm64/chrome-mac-arm64.zip | shasum -a 256`
+2. Put `<VERSION>` and that sha256 in `capture-chrome.pin` (and in the committed-pin
+   assertions of `fetch-capture-chrome.test.mjs`).
+3. Regenerate the frames with that build (`CHROME=<its binary> node design/preview/capture.mjs`)
+   and commit them in the same change: the pin and the frames are one unit, and a
+   bump without regenerated frames fails the gate.
+
 ### The committed preview frames are the resting frames
 
 `capture.mjs` injects `animation: none; transition: none` into every capture. An

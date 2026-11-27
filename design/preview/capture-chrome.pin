@@ -1,0 +1,16 @@
+# The capture renderer the design-kit job renders the committed frames with.
+# Read by fetch-capture-chrome.sh (the job's "Freeze the capture renderer" step).
+# Exactly two `key=value` lines below; anything else is rejected. To change the
+# pin, follow "Bumping the capture renderer" in design/README.md — the frames
+# must be regenerated with the NEW build in the same change.
+#
+# 157.0.8103.79 is the build the 26 committed listing frames and preview sheets
+# were rendered with (21/21 design-kit jobs on runner image 20261117.0516.1
+# passed with it). Chrome for Testing, mac-arm64:
+# https://storage.googleapis.com/chrome-for-testing-public/157.0.8103.79/mac-arm64/chrome-mac-arm64.zip
+# sha256 and size (196632905 bytes) taken from that URL by streaming:
+#   curl -fsSL "<url>" | shasum -a 256
+# and the stream's md5 (aeb0d2b8944607383ef097d9c39070bc) agrees with the
+# x-goog-hash header Google serves for the object.
+version=157.0.8103.79
+sha256=3d72e157bd2678d4010dfc424ad1bf1acdb7e3727b546b3446b9e0eb4426c821

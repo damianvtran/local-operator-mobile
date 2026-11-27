@@ -555,55 +555,52 @@ jobs:
 
       - name: Freeze the capture renderer for the whole job
         id: freeze
-        # The runner's /Applications/Google Chrome.app is NOT stable for the length
-        # of a job: GoogleUpdater replaces it while the job runs. The listing
-        # diagnostics showed the `all` and `frames` capture passes on different
-        # builds in 11 of 12 runs on main (e.g. 156.0.8078.80, then 157.0.8103.80;
-        # one failing run printed 157.0.8103.79 at the tools step and 158.0.8127.36
-        # two minutes later), and the listing gate failed in 13 of 78 recent runs
-        # with one signature on the caption mark's stroke edge. Rather than widen
-        # a pixel tolerance to absorb a renderer swap, every Chrome launch in this
-        # job runs ONE copy taken here, before anything uses Chrome. `capture.mjs`
-        # and the stale probe (which inherits this environment) honour `CHROME`.
+        # PINNED, NOT COPIED. The job used to copy the runner image's own
+        # /Applications/Google Chrome.app, so the gate's verdict depended on which
+        # image the runner landed on. The macos-26 pool is MIXED: image
+        # 20261117.0516.1 ships Chrome 157.0.8103.79 (21/21 jobs passed with the
+        # committed frames) and image 20261123.0526.1 ships 158.0.8127.37 (4/4
+        # failed: iPad +19 px, Play +9 px, iPhone +4 px at 30/255, on the caption
+        # SVG mark's stroke edge). Regenerating the frames would only flip which
+        # image fails. So the renderer is now the EXACT Chrome for Testing build
+        # named in design/preview/capture-chrome.pin, downloaded from Google's
+        # versioned bucket and verified against the sha256 committed next to it
+        # (design/preview/fetch-capture-chrome.sh; mismatch = job failure, and
+        # there is NO fallback to the image's Chrome). Bumping it is a deliberate
+        # change that regenerates the frames: design/README.md, "Bumping the
+        # capture renderer".
         #
-        # A COPY ALONE IS NOT FROZEN (PR #355, run 44855933617): the copy reported
-        # 157.0.8103.79 here, the `all` pass rendered with .79 from it, and the
-        # `frames` pass three minutes later rendered with .80 from the SAME path.
-        # Chrome registers the bundle it is launched from with Google's updater,
-        # so the first headless launch of the copy handed the copy to the updater,
-        # which updated it in place. Two independent locks, belt and braces,
-        # because either alone has a gap:
+        # Every Chrome launch in this job runs ONE unpacked copy taken here, before
+        # anything uses Chrome. `capture.mjs` and the stale probe (which inherits
+        # this environment) honour `CHROME`.
+        #
+        # THE LOCKS BELOW STAY. They were built for the image's Chrome, whose
+        # GoogleUpdater replaced it MID-JOB (the `all` and `frames` capture passes
+        # on different builds in 11 of 12 runs on main; run 44855933617: the copy
+        # reported 157.0.8103.79 and, three minutes later from the SAME path,
+        # .80). Chrome for Testing carries no updater, so they are now defence in
+        # depth, but they are cheap and the drift step still proves them:
         #   (a) the updater is stopped for the job — its launchd jobs booted out
         #       (user and system domains) and any running process killed by exact
         #       pid. Labels vary across updater generations (Keystone,
         #       GoogleUpdater, *.wake, *.system), so they are matched by name and
         #       logged; "none found" is fine (an image without it cannot update).
-        #       A launchd job we did not see, or one respawned later, is (b)'s job.
-        #   (b) the copy and its parent directory are made immutable (`chflags -R
-        #       uchg`): no file in it can be written, replaced, renamed or
-        #       unlinked, so an updater that does run cannot change it. Chrome
-        #       writes nothing into its own bundle (the profile is
-        #       --user-data-dir), which the smoke launch below proves on the
+        #   (b) the unpacked copy and its parent directory are made immutable
+        #       (`chflags -R uchg`): no file in it can be written, replaced, renamed
+        #       or unlinked. Chrome writes nothing into its own bundle (the profile
+        #       is --user-data-dir), which the smoke launch below proves on the
         #       locked copy. The flag is cleared again at job end (always()).
         # The drift step re-reads the copy's on-disk version at the end of the job,
         # independently of what CDP reported, so a lock that did not hold fails.
         #
-        # Fails closed: no bundle, an original that will not report a version, a
-        # swap DURING the copy (before != after), a copy that differs from the
-        # original, a copy that will not launch headless, or a copy whose version
-        # moved across the lock all stop the job here, by name.
+        # Fails closed: a download that does not match the pinned checksum, an
+        # archive without the expected binary, a binary that does not report the
+        # pinned version, a copy that will not launch headless, or a copy whose
+        # version moved across the lock all stop the job here, by name.
         run: |
           set -euo pipefail
-          source="/Applications/Google Chrome.app"
           frozen_dir="$RUNNER_TEMP/chrome-frozen"
-          frozen="$frozen_dir/Google Chrome.app"
-          original_bin="$source/Contents/MacOS/Google Chrome"
-          frozen_bin="$frozen/Contents/MacOS/Google Chrome"
           chrome_version() { "$1" --version 2>&1 | head -1; }
-          if [ ! -x "$original_bin" ]; then
-            echo "::error::no Chrome at $source — the capture gates cannot run without it"
-            exit 1
-          fi
 
           # (a) Stop the updater before the copy exists, so nothing can register
           # or touch it. Logged either way; never fatal.
@@ -629,30 +626,15 @@ jobs:
           done < <(pgrep -fl -i "$updater" || true) # macOS pgrep: ERE by default, no -E
           [ "$found" = 1 ] || echo "no Google updater job or process found on this runner"
 
-          before="$(chrome_version "$original_bin")" || {
-            echo "::error::the runner's Chrome at $source does not run (--version before the copy: '$before')"
-            exit 1
-          }
-          mkdir -p "$frozen_dir"
-          ditto "$source" "$frozen"
-          after="$(chrome_version "$original_bin")" || {
-            echo "::error::the runner's Chrome at $source does not run (--version after the copy: '$after')"
-            exit 1
-          }
+          # Download, checksum-verify and unpack the pinned build. The script exits
+          # non-zero (and names why) on a checksum mismatch or a wrong version.
+          frozen_bin="$(bash design/preview/fetch-capture-chrome.sh design/preview/capture-chrome.pin "$frozen_dir")"
           version="$(chrome_version "$frozen_bin")" || {
-            echo "::error::the frozen Chrome copy does not run: $version"
+            echo "::error::the pinned Chrome for Testing does not run: $version"
             exit 1
           }
           if ! [[ "$version" =~ [0-9]+\.[0-9]+\.[0-9]+\.[0-9]+ ]]; then
-            echo "::error::the frozen Chrome copy reported no version: '$version'"
-            exit 1
-          fi
-          if [ "$before" != "$after" ]; then
-            echo "::error::Chrome was replaced while it was being frozen (before: '$before', after: '$after', copy: '$version'); re-run the job"
-            exit 1
-          fi
-          if [ "$version" != "$before" ]; then
-            echo "::error::the frozen copy differs from the original it was copied from (original: '$before', copy: '$version'); the copy is not that build"
+            echo "::error::the pinned Chrome for Testing reported no version: '$version'"
             exit 1
           fi
 
@@ -680,7 +662,7 @@ jobs:
             echo "::error::the frozen copy changed while it was being locked (copied: '$version', now: '$locked')"
             exit 1
           fi
-          echo "frozen capture renderer: $version at $frozen (locked; headless smoke launch ok)"
+          echo "frozen capture renderer: $version at $frozen_bin (pinned, checksum-verified, locked; headless smoke launch ok)"
           echo "CHROME=$frozen_bin" >> "$GITHUB_ENV"
           echo "CAPTURE_CHROME_VERSION=$version" >> "$GITHUB_ENV"
 
@@ -714,7 +696,7 @@ jobs:
           echo "chrome: $("$CHROME" --version 2>&1 | head -1) (frozen copy: $CHROME)"
 
       - name: Diagnostic retention and metadata allowlists (no browser)
-        run: node --test --test-concurrency=1 design/preview/capture-diagnostics.test.mjs design/preview/renderer-drift.test.mjs
+        run: node --test --test-concurrency=1 design/preview/capture-diagnostics.test.mjs design/preview/renderer-drift.test.mjs design/preview/fetch-capture-chrome.test.mjs
 
       - name: Styling layer is current with the tokens
         # Through the package script, not a path: the file was `.mjs` when this
