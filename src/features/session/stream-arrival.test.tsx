@@ -2,7 +2,10 @@ import { act, createElement } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, it } from "vitest";
 import type { TranscriptEntry } from "@/contracts";
-import { useStreamArrival } from "@/features/session/stream-arrival";
+import {
+	createStreamArrivalSlot,
+	useStreamArrival,
+} from "@/features/session/stream-arrival";
 import { installDomShim } from "@/testing/dom-shim";
 
 const row = (id: string, text: string, final = false) =>
@@ -99,4 +102,28 @@ it("uses only new live content from the same connection; seals the cue at commit
 		await act(async () => root.unmount());
 		dom.dispose();
 	}
+});
+
+it("delivers arrival through a slot: writes are silent, and only notify() reaches a subscriber", () => {
+	/* The point of the slot (streaming-perf audit hotspot #1): the list writes a
+	 * per-frame value every render without waking anyone, and announces only the
+	 * motion token's change. A write that notified would re-render the streaming
+	 * row for a value it already reads at render. */
+	const slot = createStreamArrivalSlot();
+	const heard: number[] = [];
+	const stop = slot.subscribe(() => heard.push(heard.length));
+	const motion = {};
+	slot.write({ arrival: { previousText: "a", sealed: false }, motion });
+	slot.write({ arrival: { previousText: "ab", sealed: false }, motion });
+	expect(heard).toEqual([]);
+	expect(slot.read().arrival?.previousText).toBe("ab");
+	slot.notify();
+	expect(heard).toEqual([0]);
+	stop();
+	slot.notify();
+	expect(heard).toEqual([0]);
+	expect(createStreamArrivalSlot().read()).toEqual({
+		arrival: null,
+		motion: null,
+	});
 });

@@ -1,4 +1,10 @@
-import { memo, type RefObject, useRef } from "react";
+import {
+	memo,
+	type RefObject,
+	useContext,
+	useRef,
+	useSyncExternalStore,
+} from "react";
 import { Pressable, Text, View } from "react-native";
 import { AskResponseRow } from "@/features/session/components/ask-response-row";
 import {
@@ -42,7 +48,7 @@ import {
 	peerLabel,
 	transcriptRowTestID,
 } from "@/features/session/projection";
-import type { StreamArrival } from "@/features/session/stream-arrival";
+import { StreamArrivalContext } from "@/features/session/stream-arrival";
 import {
 	USER_BUBBLE_FRAME_CLASS,
 	userBubbleFill,
@@ -97,8 +103,6 @@ export type TranscriptRowProps = {
 	entry: DisplayTranscriptEntry;
 	/** The anchor `transcript-streaming` belongs on this row. */
 	streaming?: boolean;
-	streamArrival?: StreamArrival | null;
-	streamMotion?: object | null;
 	/** Resolves an attachment's bytes; threaded from the screen. */
 	loadImage?: (entryId: string, index: number) => Promise<string | null>;
 	loadFile?: (
@@ -196,11 +200,44 @@ const UserBox = ({
 	);
 };
 
+/**
+ * The answer body, and the ONLY reader of the list's stream-arrival slot.
+ *
+ * Arrival and motion used to be props of every row (and so of `renderItem`'s
+ * dependency list); see `StreamArrivalSlot` for why they are read here instead.
+ * A row that is not the streaming one never looks at the slot, so a frame costs
+ * it nothing. The subscription is for `motion` alone (reduce-motion toggled, the
+ * stream settling); arrival itself changes only with this row's own text.
+ */
+function AssistantMarkdown({
+	text,
+	assistantParts,
+	streaming,
+}: {
+	text: string;
+	assistantParts: React.ComponentProps<typeof Markdown>["assistantParts"];
+	streaming: boolean;
+}) {
+	const slot = useContext(StreamArrivalContext);
+	useSyncExternalStore(slot?.subscribe ?? NO_SUBSCRIBE, () =>
+		streaming ? (slot?.read().motion ?? null) : null,
+	);
+	const live = streaming ? slot?.read() : undefined;
+	return (
+		<Markdown
+			text={text}
+			assistantParts={assistantParts}
+			streaming={streaming}
+			arrival={live?.arrival ?? null}
+			motion={live?.motion ?? null}
+		/>
+	);
+}
+const NO_SUBSCRIBE = () => () => {};
+
 const TranscriptRowBody = ({
 	entry,
 	streaming = false,
-	streamArrival = null,
-	streamMotion = null,
 	loadImage,
 	onOpenAgent,
 	onOpenVideo,
@@ -344,12 +381,10 @@ const TranscriptRowBody = ({
 		 *  the bug the fold exists to fix. Same rule as an `ask` below. */
 		return (
 			<View className="px-4 py-1" testID={testID}>
-				<Markdown
+				<AssistantMarkdown
 					text={entry.text}
 					assistantParts={entry[LIVE_INLINE_UI]}
 					streaming={streaming}
-					arrival={streamArrival}
-					motion={streamMotion}
 				/>
 				{/* An answer can carry inline images (a pasted chart, a returned
 				 *  screenshot) exactly as a prompt can; without this strip they were

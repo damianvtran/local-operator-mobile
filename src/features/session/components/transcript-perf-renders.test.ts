@@ -41,6 +41,7 @@ import { type DomShim, installDomShim } from "@/testing/dom-shim";
 
 const counts = vi.hoisted(() => ({
 	rows: 0,
+	cells: 0,
 	parses: 0,
 	inlineParses: 0,
 	parsedUnits: 0,
@@ -138,6 +139,11 @@ CellRenderer = React.memo(
 		index: number;
 		render: (input: { item: TranscriptItemLike; index: number }) => unknown;
 	}) {
+		/* A CELL RE-RUN, counted where `renderItem` is called. This is what the
+		 * streaming-perf audit found: a fresh per-frame `arrival` in `renderItem`'s
+		 * dependencies, and fresh plan items, re-ran all ~60 mounted cells per
+		 * frame even though `memo(TranscriptRow)` then bailed on each. */
+		counts.cells += 1;
 		return render({ item, index }) as React.ReactNode;
 	},
 	(prev, next) =>
@@ -348,14 +354,19 @@ describe("streamed frames do not re-render the transcript", () => {
 		// The mount is not the measurement: every row must render once to exist.
 		expect(counts.rows).toBeGreaterThanOrEqual(300);
 
-		const frames: { rows: number; parses: number }[] = [];
+		const frames: { rows: number; parses: number; cells: number }[] = [];
 		const drawn: boolean[] = [];
 		for (let frame = 1; frame <= 10; frame += 1) {
 			entries = nextFrame(entries, frame);
 			counts.rows = 0;
 			counts.parses = 0;
+			counts.cells = 0;
 			await render(entries);
-			frames.push({ rows: counts.rows, parses: counts.parses });
+			frames.push({
+				rows: counts.rows,
+				parses: counts.parses,
+				cells: counts.cells,
+			});
 			/* The streaming row's text as this frame delivered it. Whitespace is
 			 *  normalised on both sides because markdown owns line breaking; the
 			 *  tail is what a stale row (wrongly reused, or memo'd shut) lacks. */
@@ -370,6 +381,11 @@ describe("streamed frames do not re-render the transcript", () => {
 		);
 		// EXACTLY one: zero would mean the streaming row itself did not render.
 		expect(rows).toEqual(Array(10).fill(1));
+		/* ONE CELL, not 300: `reuseItems` keeps an unchanged row's plan item, and
+		 * `renderItem` no longer lists the per-frame arrival, so the PureComponent
+		 * cell bails for every row but the streaming one. Before this change the
+		 * count was 300 per frame (the `[transcript-perf]` line in the PR body). */
+		expect(frames.map((frame) => frame.cells)).toEqual(Array(10).fill(1));
 		expect(Math.max(...parses)).toBeLessThanOrEqual(1);
 		expect(drawn).toEqual(Array(10).fill(true));
 	});

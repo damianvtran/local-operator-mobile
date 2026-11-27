@@ -153,3 +153,63 @@ export function reuseRows<
 	}
 	return previous;
 }
+
+/* ------------------------------------------------- list items and derived maps */
+
+const sameFields = (a: object, b: object): boolean => {
+	const left = Object.keys(a);
+	if (left.length !== Object.keys(b).length) return false;
+	for (const key of left) {
+		if (!Object.is((a as never)[key], (b as never)[key])) return false;
+	}
+	return true;
+};
+
+/**
+ * `next`, with each item that is field-for-field identical to the item at the
+ * same id in `previous` replaced by that very object (and `previous` itself when
+ * nothing changed).
+ *
+ * WHY (streaming-perf audit): the condense/group/fold plans build a FRESH item
+ * object for every row on every plan, and the plan re-runs on every streamed
+ * frame because the streaming row changed. React Native's `CellRenderer` is a
+ * `PureComponent` over `item`, so a fresh object for an UNCHANGED row made every
+ * mounted cell (up to ~60) re-run `renderItem` ten times a second. The INVARIANT
+ * is "an item is reused only when every field is `Object.is`-equal": an entry
+ * item compares its `entry` by identity (which `reuseRows` already keeps for an
+ * unchanged row), so a changed row, or any nested object the plan rebuilt, is
+ * never reused. Positions are matched by id, so a row inserted or dropped
+ * elsewhere cannot hand a cell the wrong item.
+ */
+export function reuseItems<T extends { id: string }>(
+	previous: readonly T[] | null | undefined,
+	next: readonly T[],
+): readonly T[] {
+	if (!previous || previous === next) return next;
+	const before = new Map<string, T>();
+	for (const item of previous) before.set(item.id, item);
+	let changed = previous.length !== next.length;
+	const out = next.map((item, at) => {
+		const old = before.get(item.id);
+		const reuse = old !== undefined && sameFields(old, item) ? old : item;
+		if (reuse !== previous[at]) changed = true;
+		return reuse;
+	});
+	return changed ? out : previous;
+}
+
+/** `next`, or `previous` itself when both maps hold the same entries. Derived
+ *  per-row lookups (`spacingTiers`, `containment`) are rebuilt per plan but are
+ *  usually unchanged; a fresh identity would invalidate `renderItem` (it lists
+ *  them as dependencies) and, with it, every mounted cell. */
+export function reuseMap<K, V>(
+	previous: ReadonlyMap<K, V> | null | undefined,
+	next: ReadonlyMap<K, V>,
+): ReadonlyMap<K, V> {
+	if (!previous || previous === next) return next;
+	if (previous.size !== next.size) return next;
+	for (const [key, value] of next) {
+		if (!previous.has(key) || !Object.is(previous.get(key), value)) return next;
+	}
+	return previous;
+}
