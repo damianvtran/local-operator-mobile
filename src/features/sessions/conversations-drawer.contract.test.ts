@@ -19,14 +19,28 @@ const source = readFileSync(
 	"utf8",
 );
 const NO_DIM_CLAIM =
-	/useModalStackEntry\(\s*presented\s*&&\s*revealed\s*,\s*\{\s*scrim:\s*false,?\s*\}\s*\)/;
+	/useModalStackEntry\(\s*presented\s*&&\s*contentUp\s*,\s*\{\s*scrim:\s*false,?\s*\}\s*,?\s*\)/;
+/** The content gate itself: a reveal OR the reader's open, never the shell. */
+const CONTENT_GATE = /const contentUp = revealed \|\| visible;/;
 const DIM_CLAIM = /scrim:\s*true/;
 const WEB_SHELL = /Platform\.OS === "web"/;
 
 describe("the conversations drawer shell", () => {
 	it("claims no dim for its host, and only while its content is up", () => {
 		expect(source).toMatch(NO_DIM_CLAIM);
+		expect(source).toMatch(CONTENT_GATE);
 		expect(source).not.toMatch(DIM_CLAIM);
+	});
+
+	it("paints the panel OVER the scrim: the dim never covers the panel", () => {
+		/* A full-width drawer has no page beside it to dim; the scrim is only a
+		 *  dismiss target while the panel travels. Painting it after the panel
+		 *  would put the dim on top of an opaque panel (QA round 2: the screen
+		 *  dimmed and nothing else was on screen). The native branch is the LAST
+		 *  render of both, so the last occurrences are the ones that matter. */
+		expect(source.lastIndexOf("{panel}")).toBeGreaterThan(
+			source.lastIndexOf("scrimStyle"),
+		);
 	});
 
 	it("keeps the web Modal and its scope provider", () => {

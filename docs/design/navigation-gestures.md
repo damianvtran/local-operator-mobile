@@ -118,6 +118,12 @@ is not something a threshold can beat. Two mechanisms, one per kind of surface:
   `app/(app)/session/[id].tsx` — `composer.tsx` belongs to another change). The
   claim is `Gesture.Native().blocksExternalGesture(pageRef)`, so the page pan
   waits for it to fail and a touch that starts there never opens the drawer.
+  Its children sit inside a plain `View collapsable={false}` because that is
+  what the recogniser attaches to: a custom child (the composer) swallowed the
+  cloned `collapsable` and its host node was flattened on Fabric, so the page
+  pan took a composer drag (QA round 2, Q2; `drawer-swipe-claim.test.tsx` pins
+  the shape). The drawer panel's close drag uses the same plain-host-view shape
+  for the same reason.
 
 Proven in vitest, not on a device: the pan's configured numbers and its
 `enabled` gate (`drawer-pan.test.ts`, `page-swipe-host.test.tsx`), that a claim

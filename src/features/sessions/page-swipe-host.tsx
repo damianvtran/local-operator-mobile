@@ -138,6 +138,11 @@ export const PageSwipeHost = ({
 			})
 			.onStart(() => {
 				"worklet";
+				/* The backstop reveal: activation must never slide an empty fill,
+				 *  even if a device delivers it without the move event the 6 pt
+				 *  threshold watches. `reveal` is idempotent and a no-op without a
+				 *  shell, so this costs one `runOnJS` per drag. */
+				runOnJS(reveal)();
 				runOnJS(dismissKeyboard)();
 			})
 			.onUpdate((event) => {

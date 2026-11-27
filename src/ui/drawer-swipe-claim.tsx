@@ -30,6 +30,7 @@ import {
 	useContext,
 	useMemo,
 } from "react";
+import { View } from "react-native";
 import {
 	Gesture,
 	GestureDetector,
@@ -48,6 +49,16 @@ export const DrawerPageGestureContext = createContext<MutableRefObject<
  * drag that begins here never opens the drawer — at any travel, in any
  * direction (the operator's P4: a table at its left end keeps scrolling rather
  * than handing off).
+ *
+ * WHY THE CHILDREN SIT BEHIND A PLAIN HOST VIEW. `GestureDetector` attaches its
+ * recogniser to the first HOST view under it and clones its child with
+ * `collapsable: false` for that reason. The composer is a custom component, so
+ * on Fabric the cloned prop never reached a host node, the node was flattened
+ * away, and the recogniser had nothing to attach to — a drag that started on
+ * the composer field reached the page pan and opened the drawer (QA round 2,
+ * Q2), with RNGH's view-flattened warning pointing here. A plain View is a
+ * host node by construction (the remedy RNGH's own warning names) and it is
+ * layout-neutral: one `alignSelf: stretch` block around the child, no own size.
  */
 export const DrawerSwipeClaim = ({ children }: { children: ReactNode }) => {
 	const pageRef = useContext(DrawerPageGestureContext);
@@ -56,5 +67,9 @@ export const DrawerSwipeClaim = ({ children }: { children: ReactNode }) => {
 		[pageRef],
 	);
 	if (!claim) return <>{children}</>;
-	return <GestureDetector gesture={claim}>{children}</GestureDetector>;
+	return (
+		<GestureDetector gesture={claim}>
+			<View collapsable={false}>{children}</View>
+		</GestureDetector>
+	);
 };

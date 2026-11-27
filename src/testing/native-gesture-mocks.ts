@@ -103,12 +103,27 @@ const recordingBuilder = (calls: RecordedGestureCall[]) => {
 const panBuilder = () => recordingBuilder(panCalls);
 const nativeBuilder = () => recordingBuilder(nativeCalls);
 
+/**
+ * Every child handed to a `GestureDetector`, in render order.
+ *
+ * WHY RECORDED. RNGH clones this element with `collapsable: false` to give the
+ *  recogniser a host node; a child that is a custom component swallows the
+ *  prop, and on Fabric its host view is flattened away, so the detector has
+ *  nothing to attach to (the drawer-swipe claim's real failure, QA round 2).
+ *  The wrapper is a passthrough, so the element is the only place a Node test
+ *  can see which shape the detector was given.
+ */
+export const detectorChildren: ReactNode[] = [];
+
 export const gestureHandlerModuleMock = () => ({
 	__esModule: true,
 	Gesture: { Pan: panBuilder, Native: nativeBuilder },
 	/* The detector is a wrapper, not a view: the sheet's header keeps the exact
 	 *  host a test looks for. */
-	GestureDetector: ({ children }: { children?: ReactNode }) => children ?? null,
+	GestureDetector: ({ children }: { children?: ReactNode }) => {
+		detectorChildren.push(children);
+		return children ?? null;
+	},
 	GestureHandlerRootView: View,
 });
 

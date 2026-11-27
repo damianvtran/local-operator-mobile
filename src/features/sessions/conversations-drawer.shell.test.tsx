@@ -1,5 +1,12 @@
-import { act, createElement, type ReactNode, useEffect } from "react";
+import {
+	act,
+	createElement,
+	isValidElement,
+	type ReactNode,
+	useEffect,
+} from "react";
 import { createRoot } from "react-dom/client";
+import { View } from "react-native";
 import type { SharedValue } from "react-native-reanimated";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -108,7 +115,7 @@ const { ConversationsDrawer } = await import(
 const { WorkspaceDrawerContext } = await import(
 	"@/features/sessions/workspace-drawer-context"
 );
-const { nativeCalls, panCalls } = await import(
+const { nativeCalls, panCalls, detectorChildren } = await import(
 	"@/testing/native-gesture-mocks"
 );
 
@@ -181,6 +188,7 @@ beforeEach(() => {
 	host.entryVisible = [];
 	panCalls.length = 0;
 	nativeCalls.length = 0;
+	detectorChildren.length = 0;
 	dom = installDomShim();
 	root = createRoot(dom.container as Element);
 });
@@ -203,6 +211,28 @@ describe("the drawer shell without its content", () => {
 		expect(host.paneMounts).toBe(1);
 		expect(host.paneTimers).toBe(1);
 		expect(host.entryVisible.at(-1)).toBe(true);
+	});
+
+	it("mounts the pane for the reader's open even if no reveal arrived", async () => {
+		/* `open()` reveals as well, but the content must not depend on that one
+		 *  path: an open is the reader's intent, and a panel that slides in as an
+		 *  empty fill is the round-2 blocker (QA: dim, no rows, no ✕). */
+		await mount({ presented: true, revealed: false, visible: true });
+		expect(host.paneMounts).toBe(1);
+		expect(host.paneTimers).toBe(1);
+		expect(host.entryVisible.at(-1)).toBe(true);
+	});
+
+	it("hands the close drag a plain host View to attach to", async () => {
+		await mount({ presented: true, revealed: true, visible: true });
+		const child = detectorChildren.at(-1);
+		expect(isValidElement(child)).toBe(true);
+		if (!isValidElement(child)) return;
+		const element = child as { type: unknown; props: Record<string, unknown> };
+		/* RNGH clones this child with `collapsable: false`; an animated component
+		 *  did not give the recogniser a host node (QA round 2). */
+		expect(element.type).toBe(View);
+		expect(element.props.collapsable).toBe(false);
 	});
 });
 

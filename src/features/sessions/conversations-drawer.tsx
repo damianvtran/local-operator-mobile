@@ -174,14 +174,23 @@ export const ConversationsDrawer = ({
 	 *  rather than painting two full-viewport surfaces over each other
 	 *  (`@/ui/modal-stack`). The native overlay is not a `Modal`, but it still
 	 *  PUBLISHES its scope, because the pane's long-press `Sheet` can be raised
-	 *  inside it. */
-	/* The modal entry follows the CONTENT, not the shell: a touch-down that
-	 *  never drags must not register a root modal (it would read as
-	 *  `othersOpen` to a dismissing sheet in `modal-exit.ts`), while the shell
-	 *  is on screen for at most that one touch. */
-	const { covered, nested, scope } = useModalStackEntry(presented && revealed, {
-		scrim: false,
-	});
+	 *  inside it. Its entry follows the CONTENT, not the shell: a touch-down that
+	 *  never drags must not register a root modal (it would read as `othersOpen`
+	 *  to a dismissing sheet in `modal-exit.ts`), while the shell is on screen
+	 *  for at most that one touch. */
+	/* WHAT "UP" MEANS: revealed by the drag, OR the reader's own open. `open()`
+	 *  sets both, so the union is the idempotent backstop for any path that
+	 *  reaches `visible` without a reveal (a settle, a restored open): the pane
+	 *  can never slide in as an empty fill while the drawer is intended open.
+	 *  A prime alone sets neither, so a tap or a scroll start still mounts
+	 *  nothing (M2). */
+	const contentUp = revealed || visible;
+	const { covered, nested, scope } = useModalStackEntry(
+		presented && contentUp,
+		{
+			scrim: false,
+		},
+	);
 
 	/* The panel translates from one full width off-screen to 0, driven by the
 	 *  provider's shared value. One path for the finger, tap-open, spring-back
@@ -322,72 +331,86 @@ export const ConversationsDrawer = ({
 	}, [visible]);
 
 	const panel = (
-		<GestureDetector gesture={closePan}>
-			<Animated.View
-				className="absolute inset-y-0 left-0"
-				testID={SURFACE.sidebar}
-				style={[{ width }, shadow, panelStyle]}
-			>
-				<View
-					ref={panelRef}
-					/* BORDERLESS (operator, TestFlight 578: "Make the conversation
-					 *  sidebar borderless, I don't like the right border"). The
-					 *  `panel-edge` hairline on the facing edge is gone; the panel's
-					 *  edge is now drawn by the overlay shadow (`useShadow("overlay")`
-					 *  on the sliding view above) and the scrim's dim on the page. */
-					className={`flex-1 ${PANEL_SURFACE}`}
-					style={{
-						paddingTop: insets.top,
-						paddingBottom: insets.bottom,
-						/* The panel spans the whole viewport, but its CONTENT still has
-						 *  to stay out of the horizontal safe area: a landscape notch sits
-						 *  on whichever physical edge, so both insets apply. They stay
-						 *  PHYSICAL with the anchor and the slide (holdout, docs/i18n.md). */
-						paddingLeft: insets.left,
-						paddingRight: insets.right,
-					}}
-				>
-					{/* The type scale is re-published INSIDE the shell because the web
-					 *  Modal is a PORTAL: react-native-web appends its node to
-					 *  `document.body`, OUTSIDE the `ScopedVariables` div the app's
-					 *  provider renders, so the pane's `var(--text-*)` fell back to the
-					 *  stylesheet's fixed px values and the drawer was the one surface
-					 *  that ignored the reader's text size (PR #34 review round 2, F1).
-					 *  On native the provider is context-only, so this re-declares the
-					 *  same values rather than computing a second scale. */}
-					<TextScaleProvider>
-						{revealed ? (
-							<>
-								{header}
-								{content ? (
-									<View className="min-h-0 flex-1">
-										{content}
-										<WorkspaceSidebarFooter
+		<Animated.View
+			className="absolute inset-y-0 left-0"
+			testID={SURFACE.sidebar}
+			/* The animated style comes FIRST, as the scrim's does: one shape for
+			 *  both layers of the overlay. */
+			style={[panelStyle, { width }, shadow]}
+		>
+			<GestureDetector gesture={closePan}>
+				{/* WHY A PLAIN HOST VIEW BETWEEN THE DETECTOR AND THE FILL. RNGH
+				 *  attaches its recogniser to the first HOST node under the detector and
+				 *  clones that child with `collapsable: false` so the node survives
+				 *  Fabric's view flattening. An `Animated.View` is an animated component,
+				 *  not a host node; as the detector's direct child it was the node the
+				 *  recogniser resolved, and on the device the panel painted nothing while
+				 *  its sibling scrim — not under a detector — painted normally (QA round
+				 *  2: dim, no rows, no ✕). A plain View is a host node by construction —
+				 *  the shape RNGH's own warning prescribes — and it is layout-neutral:
+				 *  one flex-1 box with the panel's own bounds. */}
+				<View collapsable={false} className="flex-1">
+					<View
+						ref={panelRef}
+						/* BORDERLESS (operator, TestFlight 578: "Make the conversation
+						 *  sidebar borderless, I don't like the right border"). The
+						 *  `panel-edge` hairline on the facing edge is gone; the panel's
+						 *  edge is now drawn by the overlay shadow (`useShadow("overlay")`
+						 *  on the sliding view above) and the scrim's dim on the page. */
+						className={`flex-1 ${PANEL_SURFACE}`}
+						style={{
+							paddingTop: insets.top,
+							paddingBottom: insets.bottom,
+							/* The panel spans the whole viewport, but its CONTENT still has
+							 *  to stay out of the horizontal safe area: a landscape notch sits
+							 *  on whichever physical edge, so both insets apply. They stay
+							 *  PHYSICAL with the anchor and the slide (holdout, docs/i18n.md). */
+							paddingLeft: insets.left,
+							paddingRight: insets.right,
+						}}
+					>
+						{/* The type scale is re-published INSIDE the shell because the web
+						 *  Modal is a PORTAL: react-native-web appends its node to
+						 *  `document.body`, OUTSIDE the `ScopedVariables` div the app's
+						 *  provider renders, so the pane's `var(--text-*)` fell back to the
+						 *  stylesheet's fixed px values and the drawer was the one surface
+						 *  that ignored the reader's text size (PR #34 review round 2, F1).
+						 *  On native the provider is context-only, so this re-declares the
+						 *  same values rather than computing a second scale. */}
+						<TextScaleProvider>
+							{contentUp ? (
+								<>
+									{header}
+									{content ? (
+										<View className="min-h-0 flex-1">
+											{content}
+											<WorkspaceSidebarFooter
+												onNavigate={onNavigate ?? close}
+												hasModeHeader={Boolean(header)}
+											/>
+										</View>
+									) : (
+										<ConversationsPane
+											onClose={close}
+											hideCloseButton={Boolean(header)}
 											onNavigate={onNavigate ?? close}
-											hasModeHeader={Boolean(header)}
+											currentSessionId={currentSessionId}
+											onNewChat={onNewChat ? newChat : undefined}
+											notice={notice}
+											homeDirectory={homeDirectory}
+											/* The rows are painted on THIS panel's fill, not on the
+											 *  screen's canvas: the corner badge's ring must be the same
+											 *  colour or it reads as a halo (agent review round 2, R2-2). */
+											surfaceClassName={PANEL_SURFACE}
 										/>
-									</View>
-								) : (
-									<ConversationsPane
-										onClose={close}
-										hideCloseButton={Boolean(header)}
-										onNavigate={onNavigate ?? close}
-										currentSessionId={currentSessionId}
-										onNewChat={onNewChat ? newChat : undefined}
-										notice={notice}
-										homeDirectory={homeDirectory}
-										/* The rows are painted on THIS panel's fill, not on the
-										 *  screen's canvas: the corner badge's ring must be the same
-										 *  colour or it reads as a halo (agent review round 2, R2-2). */
-										surfaceClassName={PANEL_SURFACE}
-									/>
-								)}
-							</>
-						) : null}
-					</TextScaleProvider>
+									)}
+								</>
+							) : null}
+						</TextScaleProvider>
+					</View>
 				</View>
-			</Animated.View>
-		</GestureDetector>
+			</GestureDetector>
+		</Animated.View>
 	);
 
 	if (Platform.OS === "web") {
@@ -454,10 +477,10 @@ export const ConversationsDrawer = ({
 			<View
 				className="absolute inset-0"
 				pointerEvents={visible ? "auto" : "none"}
-				accessibilityViewIsModal={revealed}
+				accessibilityViewIsModal={contentUp}
 				onAccessibilityEscape={close}
 			>
-				{revealed ? (
+				{contentUp ? (
 					<Animated.View
 						style={[scrimStyle, { backgroundColor: scrimColour }]}
 						className="absolute inset-0"

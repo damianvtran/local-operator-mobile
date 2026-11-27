@@ -31,7 +31,11 @@ import {
 } from "@/features/session/text-selection";
 import { PageSwipeHost } from "@/features/sessions/page-swipe-host";
 import { WorkspaceDrawerContext } from "@/features/sessions/workspace-drawer-context";
-import { nativeCalls, panCalls } from "@/testing/native-gesture-mocks";
+import {
+	detectorChildren,
+	nativeCalls,
+	panCalls,
+} from "@/testing/native-gesture-mocks";
 import { DrawerSwipeClaim } from "@/ui/drawer-swipe-claim";
 
 const drawer = () => ({
@@ -96,6 +100,7 @@ const touchEvent = (x: number, y: number) => ({
 beforeEach(() => {
 	panCalls.length = 0;
 	nativeCalls.length = 0;
+	detectorChildren.length = 0;
 	dom = installDomShim();
 	root = createRoot(dom.container as Element);
 });
@@ -144,6 +149,18 @@ describe("the page swipe host", () => {
 });
 
 describe("the page pan's touch-down prime", () => {
+	it("reveals on activation even when the move threshold never reported (backstop)", async () => {
+		const { value, rendered } = mount("library");
+		await rendered;
+		drive("onBegin", {});
+		expect(value.reveal).not.toHaveBeenCalled();
+		/* Activation is a real drag by definition; the 6 pt move event is the
+		 *  normal reveal, and this is the backstop when a device delivers
+		 *  activation without it. Idempotent in the provider. */
+		drive("onStart", {});
+		expect(value.reveal).toHaveBeenCalledOnce();
+	});
+
 	it("does not mount the pane's content until the touch is a rightward drag (M2)", async () => {
 		const { value, rendered } = mount("library");
 		await rendered;
