@@ -15,6 +15,7 @@
 import assert from "node:assert/strict";
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
+import { decodePng } from "./rail-paint-proof.ts";
 
 export type Lane = {
 	id: string;
@@ -84,21 +85,421 @@ export const LANE_FRAMES = [
 	"sidebar",
 ] as const;
 
-/** Assert a lane's frame set is complete for every build it ran, and list it. */
+/** Assert a lane's frame set is complete for every build it ran, and list it.
+ *  Sampled drag frames live in `<build>/drag/`; they are listed, never required:
+ *  only lanes with a baseline sample, and the required set above is unchanged. */
 export function collectChromeFrames(laneDir: string): string[] {
 	const found: string[] = [];
 	for (const build of readdirSync(laneDir, { withFileTypes: true })) {
 		if (!build.isDirectory()) continue;
-		const names = readdirSync(join(laneDir, build.name));
+		const entries = readdirSync(join(laneDir, build.name), {
+			withFileTypes: true,
+		});
+		const names = entries.map((entry) => entry.name);
 		for (const frame of LANE_FRAMES)
 			assert(
 				names.includes(`${frame}.png`),
 				`missing ${build.name}/${frame}.png`,
 			);
-		for (const name of names) found.push(`${build.name}/${name}`);
+		for (const entry of entries) {
+			if (!entry.isDirectory()) {
+				found.push(`${build.name}/${entry.name}`);
+				continue;
+			}
+			for (const inner of readdirSync(join(laneDir, build.name, entry.name)))
+				found.push(`${build.name}/${entry.name}/${inner}`);
+		}
 	}
 	assert(found.length > 0, "no frames collected");
 	return found.sort();
+}
+
+/**
+ * `PROOF_LANES` (comma-separated lane ids): run only those lanes.
+ *
+ * INVARIANT: the knob can only REDUCE coverage. It never turns a narrowed run
+ * into a full-proof claim — `narrowed` is true whenever fewer lanes ran than the
+ * plan holds, and the driver leads its verdict with `NARROWED to <ids>` — and
+ * `collectChromeFrames` still asserts every lane that DID run produced its
+ * required frames. An unknown id throws rather than running nothing: a typo
+ * that silently selected zero lanes would read as a clean (empty) proof.
+ */
+export function selectLanes(
+	raw: string | undefined,
+	lanes: readonly Lane[] = LANES,
+): { lanes: readonly Lane[]; requested: string[]; narrowed: boolean } {
+	const requested = (raw ?? "")
+		.split(",")
+		.map((id) => id.trim())
+		.filter((id) => id.length > 0);
+	if (requested.length === 0) return { lanes, requested: [], narrowed: false };
+	const unknown = requested.filter((id) => !lanes.some((l) => l.id === id));
+	assert(
+		unknown.length === 0,
+		`PROOF_LANES names unknown lane(s): ${unknown.join(",")}`,
+	);
+	const picked = lanes.filter((lane) => requested.includes(lane.id));
+	return {
+		lanes: picked,
+		requested,
+		narrowed: picked.length < lanes.length,
+	};
+}
+
+/**
+ * The finger-driven keyboard flows, run (sampled) only on lanes that have a
+ * baseline. `cap` is the Maestro budget in seconds.
+ */
+export const DRAG_FLOWS = [
+	{ file: "session-keyboard-drag.yaml", cap: 300 },
+	{ file: "session-keyboard-shortpull.yaml", cap: 300 },
+] as const;
+
+// ---------------------------------------------------------------------------
+// Finger-driven keyboard: measurement and verdict (pure; no I/O).
+//
+// WHAT IS CLAIMED. The composer rides the keyboard DURING a drag. Once the
+// finger lifts, the keyboard is gone and the composer sits at the bottom in
+// BOTH builds, so only frames sampled while the finger is down can tell them
+// apart. The instrument therefore needs a BEFORE measurement showing the
+// composer stay put (main) before an AFTER measurement showing it follow means
+// anything.
+//
+// UNITS. Screenshots are 3x on every lane that has a baseline (iPhone 16 is
+// 1179 px for 393 pt, iPhone 17 Pro 1206 px for 402 pt); distances below are in
+// points so the thresholds read against the device's own geometry.
+//
+// DERIVATION OF THE THRESHOLDS (none is tuned to a result):
+//  - The composer's lift equals the keyboard's height (~336 pt on the 402 pt
+//    class), so a full drag moves the composer by the same amount as the
+//    keyboard. FOLLOW_TOLERANCE_PT = 8 is ~2.4 % of that travel and well above
+//    the 3-6 px (1-2 pt) noise of a 3x screenshot.
+//  - KEYBOARD_MIN_TRAVEL_PT = 60 is ~18 % of the travel: the smallest motion
+//    that cannot be a bounce. Less means the drag did not engage and the
+//    instrument can say nothing.
+//  - STATIC_TOLERANCE_PT = 12: with the keyboard having moved >= 60 pt, a
+//    follower's composer has moved >= 52 pt, so 12 pt separates "stayed put"
+//    from "followed" by a wide margin while absorbing measurement noise.
+//  - MONOTONE_NOISE_PT = 2 is the 1-2 pt screenshot noise above: a dragged
+//    keyboard only descends, so a rise larger than noise is not the drag.
+// The remaining constants are ESTIMATES, not measurements of a real frame
+// (none existed when written); they only ever make the verdict MORE
+// inconclusive, never turn a miss into a pass:
+//  - EDGE_FLOOR: a row-mean luminance step under 2/255 is anti-aliasing, not a
+//    panel boundary; a flat image yields no edge at all.
+//  - AMBIGUITY_RATIO: a third edge as strong as 80 % of the second makes "which
+//    two are the composer and the keyboard" a guess, so the frame is dropped.
+//  - MOTION_FLOOR: a blinking caret (~3 x 60 px at contrast ~200 over a
+//    1.2 Mpx band) moves the band's mean by ~0.03; 0.1 sits above it, while a
+//    keyboard edge shifting even 10 px at contrast >= 10 moves it by ~0.1.
+// ---------------------------------------------------------------------------
+
+export const DEFAULT_PX_PER_PT = 3;
+export const EDGE_MIN_SEPARATION_PT = 20;
+export const EDGE_FLOOR = 2;
+export const AMBIGUITY_RATIO = 0.8;
+export const MOTION_FLOOR = 0.1;
+export const MIN_WINDOW_SAMPLES = 3;
+export const KEYBOARD_MIN_TRAVEL_PT = 60;
+export const FOLLOW_TOLERANCE_PT = 8;
+export const STATIC_TOLERANCE_PT = 12;
+export const MONOTONE_NOISE_PT = 2;
+/** Edges are searched in the lower part of the frame (composer + keyboard); the
+ *  motion energy is read from the bottom part. Both are fractions of height. */
+const EDGE_REGION_FROM = 0.55;
+const MOTION_REGION_FROM = 0.6;
+
+export type FrameMeasure = {
+	width: number;
+	height: number;
+	/** Row indices (px), upper = the composer's edge, lower = the keyboard's;
+	 *  null with a `reason` when the pair cannot be read unambiguously. */
+	edges: { composerEdge: number; keyboardEdge: number } | null;
+	reason?: string;
+	/** Luminance of the bottom 40 % (row-major, width wide), for motion. */
+	bottom: Uint8Array;
+};
+
+/** One frame: its luminance row profile -> the two edges, and its bottom band. */
+export function measureFrame(
+	bytes: Uint8Array,
+	label: string,
+	pxPerPt = DEFAULT_PX_PER_PT,
+): FrameMeasure {
+	const png = decodePng(bytes, label);
+	const { width, height, channels, pixels } = png;
+	const bandTop = Math.floor(height * MOTION_REGION_FROM);
+	const bottom = new Uint8Array(width * (height - bandTop));
+	const profile = new Float64Array(height);
+	for (let y = 0; y < height; y += 1) {
+		let sum = 0;
+		let index = y * width * channels;
+		for (let x = 0; x < width; x += 1) {
+			const lum =
+				channels === 1
+					? (pixels[index] ?? 0)
+					: 0.299 * (pixels[index] ?? 0) +
+						0.587 * (pixels[index + 1] ?? 0) +
+						0.114 * (pixels[index + 2] ?? 0);
+			index += channels;
+			sum += lum;
+			if (y >= bandTop) bottom[(y - bandTop) * width + x] = Math.round(lum);
+		}
+		profile[y] = sum / width;
+	}
+	// |delta row| at y is the step between row y and y + 1; peaks are its local
+	// maxima, so a boundary smeared over two rows counts once.
+	const from = Math.floor(height * EDGE_REGION_FROM);
+	const peaks: { y: number; strength: number }[] = [];
+	const step = (y: number) =>
+		Math.abs((profile[y + 1] ?? 0) - (profile[y] ?? 0));
+	for (let y = from; y < height - 1; y += 1) {
+		const here = step(y);
+		if (
+			here >= EDGE_FLOOR &&
+			(y === from || here > step(y - 1)) &&
+			(y === height - 2 || here >= step(y + 1))
+		)
+			peaks.push({ y, strength: here });
+	}
+	peaks.sort((a, b) => b.strength - a.strength);
+	const minSeparation = EDGE_MIN_SEPARATION_PT * pxPerPt;
+	const first = peaks[0];
+	const second = first
+		? peaks.find((p) => Math.abs(p.y - first.y) >= minSeparation)
+		: undefined;
+	if (!first || !second)
+		return {
+			width,
+			height,
+			edges: null,
+			reason: `${label}: fewer than two edges >= ${EDGE_MIN_SEPARATION_PT} pt apart`,
+			bottom,
+		};
+	const third = peaks.find(
+		(p) =>
+			Math.abs(p.y - first.y) >= minSeparation &&
+			Math.abs(p.y - second.y) >= minSeparation &&
+			p !== first &&
+			p !== second,
+	);
+	if (third && third.strength >= AMBIGUITY_RATIO * second.strength)
+		return {
+			width,
+			height,
+			edges: null,
+			reason: `${label}: ambiguous edges (a third edge is ${((100 * third.strength) / second.strength).toFixed(0)} % as strong as the second)`,
+			bottom,
+		};
+	return {
+		width,
+		height,
+		edges: {
+			composerEdge: Math.min(first.y, second.y),
+			keyboardEdge: Math.max(first.y, second.y),
+		},
+		bottom,
+	};
+}
+
+/** Mean |difference| of two same-size luminance bands. */
+const bandMotion = (a: Uint8Array, b: Uint8Array): number => {
+	let sum = 0;
+	for (let i = 0; i < a.length; i += 1)
+		sum += Math.abs((a[i] ?? 0) - (b[i] ?? 0));
+	return sum / a.length;
+};
+
+export type DragBuild = "before" | "after";
+export type DragStatus = "ok" | "fail" | "inconclusive";
+export type DragVerdict = {
+	status: DragStatus;
+	reason: string;
+	/** pt, positive = descending; present once a drag segment was measured. */
+	deltaKeyboard?: number;
+	deltaComposer?: number;
+	/** Frames inside the motion window / frames in the measured drag segment. */
+	windowSamples?: number;
+	segmentSamples?: number;
+};
+
+/**
+ * The verdict for ONE build's sampled drag, from its PNGs in capture order.
+ *
+ * FAIL-CLOSED: `ok` is returned on exactly two paths — `after` where the
+ * composer followed, `before` where it did not. An unreadable PNG, mixed frame
+ * sizes, no motion, too few samples, a missing or ambiguous edge pair, a drag
+ * that did not engage, or a BEFORE that also follows is `inconclusive` with a
+ * reason, never `ok`. `fail` is reserved for an AFTER that was measured well
+ * and did not follow.
+ *
+ * The measured segment is the run of consecutive frames inside the motion
+ * window, whose edge pair reads cleanly and whose keyboard edge never rises (a
+ * drag only descends), that the keyboard travelled furthest in. That keeps the frames after the finger lifts —
+ * the keyboard gone, or springing back, the composer dropping in main — out of
+ * the first-vs-last comparison, where main and the branch look the same.
+ */
+export function dragVerdict(
+	build: DragBuild,
+	pngs: readonly Uint8Array[],
+	pxPerPt = DEFAULT_PX_PER_PT,
+): DragVerdict {
+	const inconclusive = (
+		reason: string,
+		extra: Partial<DragVerdict> = {},
+	): DragVerdict => ({ status: "inconclusive", reason, ...extra });
+	if (pngs.length < MIN_WINDOW_SAMPLES)
+		return inconclusive(
+			`${pngs.length} sample(s); need at least ${MIN_WINDOW_SAMPLES}`,
+		);
+	let frames: FrameMeasure[];
+	try {
+		frames = pngs.map((bytes, i) =>
+			measureFrame(bytes, `sample ${i}`, pxPerPt),
+		);
+	} catch (error) {
+		return inconclusive(`unreadable PNG: ${String(error)}`);
+	}
+	const size = `${frames[0]?.width}x${frames[0]?.height}`;
+	if (frames.some((f) => `${f.width}x${f.height}` !== size))
+		return inconclusive("samples differ in size");
+
+	// The motion window: first to last frame touched by above-floor motion.
+	let start = -1;
+	let end = -1;
+	for (let i = 1; i < frames.length; i += 1) {
+		const motion = bandMotion(
+			(frames[i - 1] as FrameMeasure).bottom,
+			(frames[i] as FrameMeasure).bottom,
+		);
+		if (motion > MOTION_FLOOR) {
+			if (start < 0) start = i - 1;
+			end = i;
+		}
+	}
+	if (start < 0)
+		return inconclusive(
+			`no motion above the floor (${MOTION_FLOOR}) in the bottom 40 %`,
+		);
+	const windowSamples = end - start + 1;
+	if (windowSamples < MIN_WINDOW_SAMPLES)
+		return inconclusive(
+			`${windowSamples} sample(s) inside the motion window; need at least ${MIN_WINDOW_SAMPLES}`,
+			{ windowSamples },
+		);
+
+	// Clean, non-rising runs inside the window; the drag is the run the keyboard
+	// travelled furthest in (scrolling the transcript to the top before the drag
+	// can split the run with frames whose edges read ambiguously, and a run of
+	// frames with a static keyboard must not outvote the drag).
+	const noise = MONOTONE_NOISE_PT * pxPerPt;
+	type Run = { from: number; to: number };
+	const edgesAt = (i: number) =>
+		(frames[i] as FrameMeasure).edges as NonNullable<FrameMeasure["edges"]>;
+	const travel = (r: Run) =>
+		edgesAt(r.to).keyboardEdge - edgesAt(r.from).keyboardEdge;
+	let best: Run | null = null;
+	let current: Run | null = null;
+	const close = () => {
+		if (!current) return;
+		const closed: Run = current;
+		current = null;
+		if (
+			closed.to - closed.from + 1 >= MIN_WINDOW_SAMPLES &&
+			(!best || travel(closed) > travel(best))
+		)
+			best = closed;
+	};
+	for (let i = start; i <= end; i += 1) {
+		if (!(frames[i] as FrameMeasure).edges) {
+			close();
+			continue;
+		}
+		if (current) {
+			const tail: Run = current;
+			if (edgesAt(i).keyboardEdge < edgesAt(tail.to).keyboardEdge - noise)
+				close();
+		}
+		if (current) (current as Run).to = i;
+		else current = { from: i, to: i };
+	}
+	close();
+	const run = best as Run | null;
+	const segmentSamples = run ? run.to - run.from + 1 : 0;
+	if (!run || segmentSamples < MIN_WINDOW_SAMPLES) {
+		const firstReason = frames
+			.slice(start, end + 1)
+			.find((f) => f.reason)?.reason;
+		return inconclusive(
+			`${segmentSamples} clean sample(s) in the drag segment; need at least ${MIN_WINDOW_SAMPLES}${firstReason ? ` (${firstReason})` : ""}`,
+			{ windowSamples, segmentSamples },
+		);
+	}
+	const a = (frames[run.from] as FrameMeasure).edges as NonNullable<
+		FrameMeasure["edges"]
+	>;
+	const b = (frames[run.to] as FrameMeasure).edges as NonNullable<
+		FrameMeasure["edges"]
+	>;
+	const deltaKeyboard = (b.keyboardEdge - a.keyboardEdge) / pxPerPt;
+	const deltaComposer = (b.composerEdge - a.composerEdge) / pxPerPt;
+	const numbers = `Δkeyboard=${deltaKeyboard.toFixed(1)} pt, Δcomposer=${deltaComposer.toFixed(1)} pt over ${segmentSamples} samples`;
+	const measured = {
+		deltaKeyboard,
+		deltaComposer,
+		windowSamples,
+		segmentSamples,
+	};
+	if (deltaKeyboard < KEYBOARD_MIN_TRAVEL_PT)
+		return inconclusive(
+			`the drag did not engage: ${numbers} (need Δkeyboard >= ${KEYBOARD_MIN_TRAVEL_PT} pt)`,
+			measured,
+		);
+	const followed =
+		Math.abs(deltaComposer - deltaKeyboard) <= FOLLOW_TOLERANCE_PT &&
+		deltaComposer > 0;
+	if (build === "after")
+		return followed
+			? {
+					status: "ok",
+					reason: `the composer followed the keyboard: ${numbers}`,
+					...measured,
+				}
+			: {
+					status: "fail",
+					reason: `the composer did not follow the keyboard: ${numbers} (need |Δcomposer − Δkeyboard| <= ${FOLLOW_TOLERANCE_PT} pt and Δcomposer > 0)`,
+					...measured,
+				};
+	if (deltaComposer <= STATIC_TOLERANCE_PT)
+		return {
+			status: "ok",
+			reason: `baseline: the composer did not follow the keyboard: ${numbers}`,
+			...measured,
+		};
+	return inconclusive(
+		followed
+			? `the BEFORE build also shows the composer following: ${numbers}`
+			: `the BEFORE composer moved but not with the keyboard: ${numbers}`,
+		measured,
+	);
+}
+
+/**
+ * One flow's verdict across the pair. `ok` needs a baseline that did not follow
+ * AND an after that did; an after FAIL stays a fail (its numbers are real
+ * whatever the baseline did); everything else is inconclusive.
+ */
+export function pairVerdict(
+	before: DragVerdict,
+	after: DragVerdict,
+): DragVerdict {
+	if (after.status === "fail") return after;
+	if (before.status === "ok" && after.status === "ok")
+		return { ...after, reason: `${before.reason}; ${after.reason}` };
+	return {
+		status: "inconclusive",
+		reason: `before ${before.status}: ${before.reason}; after ${after.status}: ${after.reason}`,
+	};
 }
 
 /**

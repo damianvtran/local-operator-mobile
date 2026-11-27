@@ -1,0 +1,37 @@
+# Finger-driven keyboard dismissal (PR C: the composer rides the keyboard DURING
+# a drag, not only after release). Continues from session-keyboard.yaml's end
+# state — no relaunch, no secrets. The driver (chrome-ios-proof.ts) samples
+# screenshots while this flow runs and `dragVerdict` measures the composer's and
+# the keyboard's edges frame by frame.
+#
+# Post-release geometry is identical on main and on this branch (the keyboard is
+# gone and the composer sits at the bottom in both), so only mid-drag frames can
+# tell the builds apart.
+#
+# The transcript is scrolled to the TOP first: the interactive dismissal only
+# engages when the content is at its top, so a drag that starts anywhere else
+# scrolls the transcript and never moves the keyboard. Six short swipes
+# guarantee the top whatever the length of the draft typed before this flow.
+#
+# The one drag is slow (2.5 s) so ~15 samples land inside it, and runs from
+# just above the keyboard's top across it to near the bottom edge: a full
+# dismissal.
+appId: ${APP_ID}
+---
+- tapOn:
+    id: "composer-input"
+- waitForAnimationToEnd:
+    timeout: 3000
+- repeat:
+    times: 6
+    commands:
+      - swipe:
+          start: "50%, 60%"
+          end: "50%, 30%"
+          duration: 200
+- swipe:
+    start: "50%, 62%"
+    end: "50%, 96%"
+    duration: 2500
+- assertVisible:
+    id: "composer-input"

@@ -40,8 +40,12 @@ import { join } from "node:path";
 import { createRelay } from "../../tools/mock-relay/relay.ts";
 import {
 	collectChromeFrames,
-	LANES,
+	DRAG_FLOWS,
+	type DragVerdict,
+	dragVerdict,
+	pairVerdict,
 	parseHierarchy,
+	selectLanes,
 	sendAboveKeyboard,
 } from "./chrome-ios-proof-contract.ts";
 import type { Provenance } from "./native-artifact-provenance.ts";
@@ -190,18 +194,13 @@ async function stop(child: ChildProcess) {
 const flat = (name: string) => name.replaceAll("/", "--");
 
 let sequence = 0;
-/** One bounded operation in its own process group (see the module comment). */
-async function run(
-	name: string,
-	command: string,
-	args: string[],
-	capSeconds: number,
-	cleanup = false,
-): Promise<string> {
-	const remaining = BUDGET_SECONDS - (Date.now() - started) / 1000;
-	if (!cleanup && remaining <= 0) throw new Error("overall budget exhausted");
-	const cap = cleanup ? capSeconds : Math.min(capSeconds, remaining);
-	const t0 = Date.now();
+type Launched = {
+	child: ChildProcess;
+	result: Promise<{ code: number | null; output: string; timedOut: boolean }>;
+};
+/** Spawn in its own process group under a kill timer; resolves on close. The
+ *  one place a bounded child is created, so `run` and the sampler share it. */
+function launch(command: string, args: string[], capSeconds: number): Launched {
 	const child = spawn(command, args, {
 		env: childEnv,
 		detached: true,
@@ -215,35 +214,74 @@ async function run(
 	child.stderr?.on("data", (c: Buffer) => {
 		output += c.toString("utf8");
 	});
-	const log = join(ROOT, "commands", `${++sequence}-${flat(name)}.log`);
 	let timedOut = false;
 	const timer = setTimeout(() => {
 		timedOut = true;
 		signalGroup(child, "SIGKILL");
-	}, cap * 1000);
-	const code = await new Promise<number | null>((resolve) => {
-		child.once("close", (rc) => {
+	}, capSeconds * 1000);
+	const result = new Promise<{
+		code: number | null;
+		output: string;
+		timedOut: boolean;
+	}>((resolve) => {
+		child.once("close", (code) => {
 			clearTimeout(timer);
-			resolve(rc);
+			resolve({ code, output, timedOut });
 		});
 	});
-	await stop(child);
-	writeFileSync(log, redact(output));
-	records.push({
-		name,
-		rc: code,
-		elapsedMs: Date.now() - t0,
-		...(timedOut ? { deadlineExceeded: true } : {}),
-		capSeconds: cap,
-	});
-	save();
-	if (timedOut) throw new Error(`deadline exceeded (${name}, cap=${cap}s)`);
-	if (code !== 0)
-		throw new Error(
-			`${name} failed rc=${code}: ${redact(output).trim().split("\n").at(-1)?.slice(0, 300)}`,
-		);
-	return output;
+	return { child, result };
 }
+
+/** One bounded operation in its own process group (see the module comment),
+ *  started now; `done` settles with its output (or throws) once it has been
+ *  reaped, logged and recorded. */
+function begin(
+	name: string,
+	command: string,
+	args: string[],
+	capSeconds: number,
+	cleanup = false,
+): { child: ChildProcess; done: Promise<string> } {
+	const remaining = BUDGET_SECONDS - (Date.now() - started) / 1000;
+	if (!cleanup && remaining <= 0) throw new Error("overall budget exhausted");
+	const cap = cleanup ? capSeconds : Math.min(capSeconds, remaining);
+	const t0 = Date.now();
+	const { child, result } = launch(command, args, cap);
+	const log = join(ROOT, "commands", `${++sequence}-${flat(name)}.log`);
+	const done = (async () => {
+		const { code, output, timedOut } = await result;
+		await stop(child);
+		writeFileSync(log, redact(output));
+		records.push({
+			name,
+			rc: code,
+			elapsedMs: Date.now() - t0,
+			...(timedOut ? { deadlineExceeded: true } : {}),
+			capSeconds: cap,
+		});
+		save();
+		if (timedOut) throw new Error(`deadline exceeded (${name}, cap=${cap}s)`);
+		if (code !== 0)
+			throw new Error(
+				`${name} failed rc=${code}: ${redact(output).trim().split("\n").at(-1)?.slice(0, 300)}`,
+			);
+		return output;
+	})();
+	return { child, done };
+}
+const run = (
+	name: string,
+	command: string,
+	args: string[],
+	capSeconds: number,
+	cleanup = false,
+): Promise<string> => {
+	try {
+		return begin(name, command, args, capSeconds, cleanup).done;
+	} catch (error) {
+		return Promise.reject(error);
+	}
+};
 
 /** Switch the simulator's appearance under its own measured cap (see
  *  simctl-appearance.ts), logging the duration even when the call fails or is
@@ -400,6 +438,10 @@ const owned: string[] = [];
 const laneFailures: string[] = [];
 const relays: Slot[] = [];
 let failure: string | undefined;
+/** Set when PROOF_LANES narrowed the run; leads every verdict (see below). */
+let narrowedTo: string | undefined;
+const lead = (verdict: string) =>
+	narrowedTo ? `NARROWED to ${narrowedTo}: ${verdict}` : verdict;
 
 type Listing = {
 	runtimes: { identifier: string; version: string; isAvailable: boolean }[];
@@ -450,40 +492,109 @@ async function hierarchy(udid: string, lane: string, name: string) {
 	return tree;
 }
 
-async function flow(
+type DragSample = { n: number; elapsedMs: number; path: string };
+
+/** Screenshots at ~`sampleMs` while `maestro` runs, until it closes. Each is a
+ *  short child of its own and is reaped without `stop`'s 1.5 s wait, which would
+ *  otherwise be the floor of the sampling interval. A failed or late screenshot
+ *  is skipped, never retried: the verdict treats too few samples as
+ *  inconclusive, so a thin run cannot read as a pass. */
+async function sampleWhile(
+	flowRun: { done: Promise<string> },
+	udid: string,
+	lane: string,
+	file: string,
+	sampleMs: number,
+): Promise<DragSample[]> {
+	const dir = join(ROOT, "frames", lane, "drag");
+	mkdirSync(dir, { recursive: true });
+	const stem = file.replace(".yaml", "");
+	let finished = false;
+	const settled = flowRun.done.then(
+		() => null,
+		(error: unknown) => error,
+	);
+	void settled.then(() => {
+		finished = true;
+	});
+	const samples: DragSample[] = [];
+	const t0 = Date.now();
+	while (!finished) {
+		const tick = Date.now();
+		const path = join(
+			dir,
+			`${stem}-${String(samples.length).padStart(3, "0")}.png`,
+		);
+		const shot_ = launch(
+			"xcrun",
+			["simctl", "io", udid, "screenshot", path],
+			20,
+		);
+		const { code, timedOut } = await shot_.result;
+		signalGroup(shot_.child, "SIGKILL");
+		groups.delete(shot_.child);
+		if (code === 0 && !timedOut && existsSync(path))
+			samples.push({
+				n: samples.length,
+				elapsedMs: tick - t0,
+				path: join(
+					"frames",
+					lane,
+					"drag",
+					`${stem}-${String(samples.length).padStart(3, "0")}.png`,
+				),
+			});
+		const wait = sampleMs - (Date.now() - tick);
+		if (wait > 0 && !finished)
+			await new Promise((resolve) => setTimeout(resolve, wait));
+	}
+	const error = await settled;
+	if (error) throw error;
+	return samples;
+}
+
+async function runFlow(
 	udid: string,
 	lane: string,
 	bundle: string,
 	relay: Slot,
 	file: string,
 	cap: number,
-) {
+	sampleMs?: number,
+): Promise<DragSample[]> {
 	const flowLog = join(
 		ROOT,
 		"commands",
 		`${sequence + 1}-${flat(`maestro-${lane}-${file}`)}.log`,
 	);
 	try {
-		await run(
-			`maestro-${lane}-${file}`,
-			"maestro",
-			[
-				"--device",
-				udid,
-				"test",
-				"-e",
-				`APP_ID=${bundle}`,
-				"-e",
-				`RELAY_URL=${relay.origin}`,
-				"-e",
-				`RELAY_PASSWORD=${password}`,
-				"-e",
-				`SESSION_ID=${relay.sessionId}`,
-				"--test-output-dir",
-				join(ROOT, "maestro", lane, file),
-				`e2e/maestro/chrome-proof/${file}`,
-			],
-			cap,
+		const name = `maestro-${lane}-${file}`;
+		const args = [
+			"--device",
+			udid,
+			"test",
+			"-e",
+			`APP_ID=${bundle}`,
+			"-e",
+			`RELAY_URL=${relay.origin}`,
+			"-e",
+			`RELAY_PASSWORD=${password}`,
+			"-e",
+			`SESSION_ID=${relay.sessionId}`,
+			"--test-output-dir",
+			join(ROOT, "maestro", lane, file),
+			`e2e/maestro/chrome-proof/${file}`,
+		];
+		if (sampleMs === undefined) {
+			await run(name, "maestro", args, cap);
+			return [];
+		}
+		return await sampleWhile(
+			begin(name, "maestro", args, cap),
+			udid,
+			lane,
+			file,
+			sampleMs,
 		);
 	} catch (error) {
 		try {
@@ -500,6 +611,49 @@ async function flow(
 				`native connection prerequisite failed: ${String(error)}`,
 			);
 		throw error;
+	}
+}
+
+const flow = async (
+	udid: string,
+	lane: string,
+	bundle: string,
+	relay: Slot,
+	file: string,
+	cap: number,
+): Promise<void> => {
+	await runFlow(udid, lane, bundle, relay, file, cap);
+};
+
+/** `flow`, plus screenshots every ~`sampleMs` while Maestro runs: the finger-
+ *  driven keyboard flows are judged on frames taken DURING the gesture. */
+const flowSampled = (
+	udid: string,
+	lane: string,
+	bundle: string,
+	relay: Slot,
+	file: string,
+	cap: number,
+	sampleMs = 150,
+): Promise<DragSample[]> =>
+	runFlow(udid, lane, bundle, relay, file, cap, sampleMs);
+
+/** One build's verdict from the PNGs its receipt lists. A file that cannot be
+ *  read is inconclusive, like any other missing evidence. */
+function verdictOf(
+	tag: "before" | "after",
+	samples: DragSample[],
+): DragVerdict {
+	try {
+		return dragVerdict(
+			tag,
+			samples.map((s) => readFileSync(join(ROOT, s.path))),
+		);
+	} catch (error) {
+		return {
+			status: "inconclusive",
+			reason: `unreadable sample: ${String(error)}`,
+		};
 	}
 }
 
@@ -536,7 +690,19 @@ try {
 	relays.push(idle);
 	note(`relays: working=${working.origin} idle=${idle.origin}`);
 
-	for (const lane of LANES) {
+	/* PROOF_LANES can only REDUCE coverage: a narrowed run is a gesture proof for
+	 * the named lanes, never the full chrome proof, so it says so first in its
+	 * verdict (`lead`), and `collectChromeFrames` below still asserts every lane
+	 * that ran produced its required frames. */
+	const selection = selectLanes(env.PROOF_LANES);
+	receipt.lanesRequested = selection.requested;
+	receipt.narrowed = selection.narrowed;
+	if (selection.narrowed) {
+		narrowedTo = selection.lanes.map((l) => l.id).join(",");
+		note(`NARROWED to ${narrowedTo}: not the full chrome proof`);
+	}
+	const dragSummary: string[] = [];
+	for (const lane of selection.lanes) {
 		const runtime = lane.os === 26 ? ios26 : ios18;
 		const deviceType = listing.devicetypes.find(
 			(d) => d.name === lane.device,
@@ -636,6 +802,12 @@ try {
 			...(lane.before && base ? [{ tag: "before", ...base }] : []),
 			{ tag: "after", ...head },
 		];
+		/* The finger-driven keyboard flows need the baseline: without main's own
+		 *  measurement the composer following means nothing (see
+		 *  chrome-ios-proof-contract.ts), so a lane with no `before` build never
+		 *  runs them. */
+		const withDrag = builds.some((b) => b.tag === "before");
+		const dragSamples: Record<string, Record<string, DragSample[]>> = {};
 		try {
 			for (const build of builds) {
 				const dir = `${lane.id}/${build.tag}`;
@@ -668,6 +840,19 @@ try {
 						if (!verdict.ok)
 							throw new Error(`send above keyboard: ${verdict.reason}`);
 					}
+					if (frame === "session-keyboard" && withDrag)
+						for (const { file: dragFile, cap: dragCap } of DRAG_FLOWS) {
+							const perBuild = dragSamples[dragFile] ?? {};
+							perBuild[build.tag] = await flowSampled(
+								udid,
+								dir,
+								build.bundleId,
+								working,
+								dragFile,
+								dragCap,
+							);
+							dragSamples[dragFile] = perBuild;
+						}
 				}
 				await run(
 					`uninstall-${lane.id}-${build.tag}`,
@@ -678,6 +863,28 @@ try {
 			}
 			laneReceipt.frames = collectChromeFrames(join(ROOT, "frames", lane.id));
 			laneReceipt.verdict = "CAPTURED";
+			const dragFailed: string[] = [];
+			if (withDrag) {
+				const drag: Record<string, unknown> = {};
+				for (const { file: dragFile } of DRAG_FLOWS) {
+					const perBuild = dragSamples[dragFile] ?? {};
+					const before = verdictOf("before", perBuild.before ?? []);
+					const after = verdictOf("after", perBuild.after ?? []);
+					const pair = pairVerdict(before, after);
+					drag[dragFile] = {
+						samples: perBuild,
+						before,
+						after,
+						verdict: pair,
+					};
+					note(`${lane.id}: ${dragFile}: ${pair.status}: ${pair.reason}`);
+					dragSummary.push(`${lane.id}/${dragFile}=${pair.status}`);
+					if (pair.status === "fail") dragFailed.push(dragFile);
+				}
+				laneReceipt.drag = drag;
+			}
+			if (dragFailed.length > 0)
+				throw new Error(`keyboard drag FAIL: ${dragFailed.join(",")}`);
 		} catch (error) {
 			// A failed initial session flow is failed connection/setup, NOT a
 			// geometry finding. Stop before fanning the same broken prerequisite
@@ -702,11 +909,12 @@ try {
 	}
 	if (laneFailures.length > 0)
 		throw new Error(`lanes failed: ${laneFailures.join(",")}`);
-	receipt.verdict =
-		"CAPTURED (presence assertions only; geometry is measured from the hierarchies and the PNGs)";
+	receipt.verdict = lead(
+		`CAPTURED (presence assertions only; geometry is measured from the hierarchies and the PNGs)${dragSummary.length ? `; keyboard drag: ${dragSummary.join(", ")}` : ""}`,
+	);
 } catch (error) {
 	failure = error instanceof Error ? error.message : String(error);
-	receipt.verdict = `FAIL: ${failure}`;
+	receipt.verdict = lead(`FAIL: ${failure}`);
 	note(`FAIL ${failure}`);
 } finally {
 	const failures: string[] = [];

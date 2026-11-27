@@ -941,6 +941,69 @@ receipt records `provenance` (intended inputs vs actual run/artifact metadata).
   receipt says `pull_request-merge`, never literal-head provenance.
 - **Dispatch:** `gh workflow run e2e.yml --ref <branch> -f proof_mode=chrome-ios-proof -f native_run_id=<ios run> -f native_artifact_sha256=<sha256> -f native_source_sha=<40-char sha> [-f base_run_id=<main ios run> -f base_artifact_sha256=<sha256> -f base_source_sha=<sha>]`.
 
+## Targeted native chrome proof: the finger-driven keyboard
+
+The composer riding the keyboard DURING a drag cannot be seen in the four fixed
+frames: once the finger lifts, the keyboard is gone and the composer sits at the
+bottom in both main and the branch. `chrome-ios-proof` therefore also runs two
+gesture flows, **only on lanes that have a baseline** (`before: true` with a
+`base_run_id` build), each on main's build first and then on the branch's, after
+`session-keyboard.yaml` and before `home.yaml`:
+
+- `e2e/maestro/chrome-proof/session-keyboard-drag.yaml` — full dismissal: tap the
+  composer, scroll the transcript to the top (six short swipes; the interactive
+  dismissal only engages at the top of the content), then one 2.5 s downward
+  swipe from 62 % to 96 % of the screen height across the keyboard's top.
+- `e2e/maestro/chrome-proof/session-keyboard-shortpull.yaml` — recovery: a 0.7 s
+  swipe from 62 % to 72 %, below the OS dismissal threshold.
+
+- **Sampled frames:** while Maestro runs, the driver takes
+  `xcrun simctl io <udid> screenshot` every ~150 ms into
+  `frames/<lane>/<build>/drag/<flow>-<nnn>.png`; the receipt lists
+  `{n, elapsedMs, path}` per sample under `lanes[].drag`. A failed screenshot is
+  skipped, never retried. The interval is a target: each screenshot has its own
+  latency, so read `elapsedMs`, not `n x 150`.
+- **Measurement** (`dragVerdict`, `scripts/ci/chrome-ios-proof-contract.ts`): per
+  frame, a row-mean luminance profile; the two strongest horizontal edges in the
+  lower 45 % that are >= 20 pt apart are the composer's top (`composerEdge`, the
+  upper) and the keyboard's top (`keyboardEdge`, the lower). The motion window is
+  the span of frames whose consecutive-frame mean |change| in the bottom 40 %
+  exceeds a fixed floor, and it needs >= 3 samples. The compared samples are the
+  run inside it whose keyboard edge only descends (the finger is down), taking
+  the run the keyboard travelled furthest in, so the frames after release, where
+  both builds look alike, are never the "last" sample.
+- **Verdict**, from first vs last compared sample (`Δ` positive = descending):
+  - `Δkeyboard < 60 pt` -> **INCONCLUSIVE**: the drag did not engage.
+  - `after`: `|Δcomposer − Δkeyboard| <= 8 pt` and `Δcomposer > 0` -> the composer
+    followed the keyboard; otherwise **FAIL**, with both numbers.
+  - `before`: `Δcomposer <= 12 pt` -> the composer did not follow (main's
+    behaviour: the baseline that gives the after measurement its meaning). If
+    `before` also follows, the run is **INCONCLUSIVE**, never a pass.
+  - A flow is `ok` only when its baseline did not follow and its after did; an
+    after FAIL fails the lane; everything else is inconclusive. The final verdict
+    string lists every `lane/flow=status`.
+  - **Fail-closed:** an unreadable or mixed-size PNG, too few samples, no motion,
+    a missing or ambiguous edge pair or a baseline that also follows is
+    INCONCLUSIVE with a reason, never ok.
+- **Thresholds, derived:** the composer's lift equals the keyboard's height
+  (~336 pt on the 402 pt class), so a full drag moves the composer by the same
+  amount as the keyboard. 8 pt is ~2.4 % of that travel and well above the 3-6 px
+  (1-2 pt) noise of a 3x screenshot; 60 pt is ~18 % of the travel, the smallest
+  motion that cannot be a bounce; 12 pt keeps a non-follower apart from a follower
+  (>= 52 pt once the keyboard has moved 60). The edge-strength, ambiguity and
+  motion floors are estimates written before any real frame existed; they only
+  ever make the verdict more inconclusive. Re-read them against the first real
+  run's frames.
+- **`PROOF_LANES`** (comma-separated lane ids, e.g. `d3-17pro-dark`): run only
+  those lanes. The receipt records `lanesRequested` and `narrowed`, and a narrowed
+  run's verdict leads with `NARROWED to <ids>`. The knob can only REDUCE
+  coverage: it never turns a narrowed run into a full-proof claim, and
+  `collectChromeFrames` still asserts each lane that ran produced its required
+  frames. An unknown id fails the run instead of selecting nothing.
+  **A narrowed dispatch is a gesture proof only, never a full chrome-proof
+  claim.** The driver reads `PROOF_LANES` from its environment; `e2e.yml` has no
+  dispatch input that sets it yet.
+
 ## Targeted native theme proof
 
 `e2e.yml` offers `proof_mode = theme-ios-proof` (dispatch only, not full E2E),

@@ -1,0 +1,20 @@
+# Finger-driven keyboard RECOVERY: a short pull on the keyboard that stays below
+# the OS dismissal threshold, so the keyboard springs back and the composer must
+# spring back with it (never stranded at the dragged position). Continues from
+# session-keyboard.yaml's end state — no relaunch, no secrets. Sampled by the
+# driver like session-keyboard-drag.yaml; the verdict reads the same edges.
+#
+# 10% of the screen over 0.7 s is a slow, short pull, well under the distance
+# and velocity at which iOS commits to dismissing.
+appId: ${APP_ID}
+---
+- tapOn:
+    id: "composer-input"
+- waitForAnimationToEnd:
+    timeout: 3000
+- swipe:
+    start: "50%, 62%"
+    end: "50%, 72%"
+    duration: 700
+- assertVisible:
+    id: "composer-input"
