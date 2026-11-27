@@ -1001,8 +1001,11 @@ gesture flows, **only on lanes that have a baseline** (`before: true` with a
   `collectChromeFrames` still asserts each lane that ran produced its required
   frames. An unknown id fails the run instead of selecting nothing.
   **A narrowed dispatch is a gesture proof only, never a full chrome-proof
-  claim.** The driver reads `PROOF_LANES` from its environment; `e2e.yml` has no
-  dispatch input that sets it yet.
+  claim.** Set it from a dispatch with `-f proof_lanes=<ids>`: `e2e.yml`'s
+  `proof_lanes` input reaches the `chrome-ios-proof` job's environment as
+  `PROOF_LANES`, and no other job gets it. Empty (the default) runs every lane;
+  the invariant stands — it can only reduce coverage, a narrowed run is never a
+  full-proof claim, and an unknown id throws before anything runs.
 
 ## Targeted native theme proof
 
