@@ -17,12 +17,18 @@ export type WorkspaceDrawerController = {
 	}) => void;
 	close: () => void;
 	selectMode: (mode: WorkspaceDrawerMode) => void;
-	/** Mount the panel off-screen at touch-down, without settling it. */
+	/** Mount the panel off-screen at touch-down, without settling it. Mounts the
+	 *  SHELL only: the pane's content waits for `reveal`. */
 	prime: () => void;
+	/** Mount the pane's content inside a primed shell (a touch crossed the
+	 *  reveal threshold). No-op without a shell. */
+	reveal: () => void;
 	/** Drop a primed panel a touch never dragged (a tap, a scroll). */
 	abandon: () => void;
 	/** Settle to open or closed from wherever a finger left the panel. */
 	settle: (open: boolean) => void;
+	/** Give back a settle `prime` interrupted if the touch never dragged. */
+	resume: () => void;
 };
 
 /** The Bridge owner supplies its live projection, never a mirrored drawer store.

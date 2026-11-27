@@ -8,6 +8,10 @@ const host = vi.hoisted(() => ({
 	width: 390,
 	timings: [] as Array<{ to: number; duration: number }>,
 	completions: [] as Array<(finished?: boolean) => void>,
+	/* `runOnJS` QUEUES here instead of running: the drawer's close completion
+	 *  reaches the JS thread a tick after the clock finishes, and the race that
+	 *  wedges `presented` (m3) lives exactly in that gap. */
+	jsCalls: [] as Array<() => void>,
 }));
 
 vi.mock("react-native", () => ({
@@ -41,7 +45,11 @@ vi.mock("react-native-reanimated", async () => {
 			return toValue;
 		},
 		cancelAnimation: () => {},
-		runOnJS: <A extends unknown[]>(fn: (...args: A) => void) => fn,
+		runOnJS:
+			<A extends unknown[]>(fn: (...args: A) => void) =>
+			(...args: A) => {
+				host.jsCalls.push(() => fn(...args));
+			},
 		Easing: { linear: (value: number) => value },
 	};
 });
@@ -61,10 +69,18 @@ let dom: DomShim;
 let root: ReturnType<typeof createRoot>;
 const mount = (reduceMotion = false) =>
 	act(async () => root.render(createElement(Probe, { reduceMotion })));
+/** Deliver the `runOnJS` calls queued since the last flush, in order. */
+const flushJs = async () => {
+	const calls = host.jsCalls.splice(0);
+	await act(async () => {
+		for (const call of calls) call();
+	});
+};
 
 beforeEach(() => {
 	host.timings = [];
 	host.completions = [];
+	host.jsCalls = [];
 	host.width = 390;
 	dom = installDomShim();
 	root = createRoot(dom.container as Element);
@@ -107,7 +123,11 @@ describe("useDrawerProgress", () => {
 		await act(async () => controller.close());
 		expect(controller.presented).toBe(true);
 		await act(async () => host.completions.at(-1)?.(true));
+		// The unmount crosses to the JS thread; nothing is visible until it does.
+		expect(controller.presented).toBe(true);
+		await flushJs();
 		expect(controller.presented).toBe(false);
+		expect(controller.revealed).toBe(false);
 	});
 
 	it("reverses mid-close from where the panel is, not from closed", async () => {
@@ -165,5 +185,70 @@ describe("useDrawerProgress", () => {
 		expect(host.timings.length).toBe(timings);
 		expect(controller.progress.value).toBe(0.35);
 		expect(controller.presented).toBe(true);
+	});
+
+	it("a touch that never drags gives the interrupted settle back (M1)", async () => {
+		await mount();
+		await act(async () => controller.open());
+		controller.progress.value = 0.45;
+		await act(async () => controller.prime());
+		const timings = host.timings.length;
+		await act(async () => {
+			expect(controller.resume()).toBe(true);
+		});
+		/* The settle restarts from where the touch froze it, toward the target
+		 *  it was already heading for — an opening panel finishes opening. */
+		expect(host.timings.length).toBe(timings + 1);
+		const plan = settlePlan({
+			position: 0.45 * host.width,
+			width: host.width,
+			target: 1,
+		});
+		expect(host.timings.at(-1)).toEqual({
+			to: 1,
+			duration: effectiveMs(plan.ms, false),
+		});
+	});
+
+	it("a touch on a settled panel resumes nothing", async () => {
+		await mount();
+		await act(async () => controller.open());
+		await act(async () => host.completions.at(-1)?.(true));
+		await flushJs();
+		const timings = host.timings.length;
+		await act(async () => controller.prime());
+		await act(async () => {
+			expect(controller.resume()).toBe(false);
+		});
+		expect(host.timings.length).toBe(timings);
+	});
+
+	it("primes the shell only; `reveal` mounts the content (M2)", async () => {
+		await mount();
+		await act(async () => controller.prime());
+		expect(controller.presented).toBe(true);
+		expect(controller.revealed).toBe(false);
+		await act(async () => controller.reveal());
+		expect(controller.revealed).toBe(true);
+		await act(async () => controller.open());
+		expect(controller.revealed).toBe(true);
+		await act(async () => controller.close());
+		await act(async () => host.completions.at(-1)?.(true));
+		await flushJs();
+		expect(controller.presented).toBe(false);
+		expect(controller.revealed).toBe(false);
+	});
+
+	it("a close's queued unmount never drops a panel reopened first (m3)", async () => {
+		await mount();
+		await act(async () => controller.open());
+		await act(async () => controller.close());
+		/* The close clock finished and queued its unmount; the reader reopens
+		 *  before the JS thread runs it. */
+		await act(async () => host.completions.at(-1)?.(true));
+		await act(async () => controller.open());
+		await flushJs();
+		expect(controller.presented).toBe(true);
+		expect(controller.revealed).toBe(true);
 	});
 });

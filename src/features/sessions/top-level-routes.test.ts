@@ -1,4 +1,4 @@
-import { readdirSync, statSync } from "node:fs";
+import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
@@ -19,6 +19,12 @@ import {
  */
 
 const appGroup = fileURLToPath(new URL("../../../app/(app)", import.meta.url));
+
+/** The layout's wiring, as source: under vitest the platform records are equal,
+ *  so only the names it uses can tell a wrong Stack default from a right one. */
+const NESTED_DEFAULT = /screenOptions=\{NESTED_STACK_SCREEN_OPTIONS\}/;
+const DECLARED_TOP_LEVEL = /TOP_LEVEL_ROUTE_NAMES\.map/;
+const TOP_LEVEL_OVERRIDE = /options=\{TOP_LEVEL_SCREEN_OPTIONS\}/;
 
 const routeFiles = (dir: string): string[] =>
 	readdirSync(dir).flatMap((name) => {
@@ -85,5 +91,25 @@ describe("the class derives the stack options", () => {
 	it("an undeclared route has no class and no options", () => {
 		expect(routeClassOf("synthetic/unknown")).toBeNull();
 		expect(screenOptionsForRoute("synthetic/unknown")).toBeUndefined();
+	});
+});
+
+describe("the (app) layout consumes the table", () => {
+	it("takes the nested default on the Stack and the top-level options per declared route", () => {
+		/* Under vitest `Platform.OS` is web, where the root and nested option
+		 *  records are equal — so stack-options.test.ts cannot tell a layout that
+		 *  uses the wrong one. The WIRING is what this pins. */
+		const layout = readFileSync(
+			new URL("../../../app/(app)/_layout.tsx", import.meta.url),
+			"utf8",
+		);
+		expect(layout).toContain(
+			'import { NESTED_STACK_SCREEN_OPTIONS } from "@/ui/stack-options";',
+		);
+		expect(layout).toMatch(NESTED_DEFAULT);
+		/* Top-level options come from the DECLARED list, never from a literal:
+		 *  a route added to the table without its class would lose the override. */
+		expect(layout).toMatch(DECLARED_TOP_LEVEL);
+		expect(layout).toMatch(TOP_LEVEL_OVERRIDE);
 	});
 });

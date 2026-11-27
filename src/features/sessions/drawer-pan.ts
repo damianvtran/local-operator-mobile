@@ -5,18 +5,22 @@
  * THE MODEL (docs/design/navigation-gestures.md): on a TOP-LEVEL route a
  * rightward swipe opens the drawer; on a nested one the native stack owns the
  * gesture, and Android's in-content swipe does not exist at all. A drag that
- * starts inside a sideways scroller, the composer, or a text selection belongs
- * to that surface.
+ * starts inside the composer or the inline chart belongs to that surface, which
+ * wraps itself in `DrawerSwipeClaim`; a horizontal `ScrollView` keeps its own
+ * sideways drag through the platform's own recogniser competition and
+ * `HORIZONTAL_SCROLL_PROPS`.
  *
  * WHY `activeOffsetX` ALONE DOES NOT ARBITRATE. A recognition threshold only
  * says when THIS recogniser may start; it says nothing about the RN
- * `ScrollView` under the finger, which is not an RNGH handler at all. The
- * arbitration is a RELATION: every surface that owns a horizontal touch wraps
- * itself in `DrawerSwipeClaim` (`@/ui/drawer-swipe-claim`), and that claim
- * `blocksExternalGesture`s this page pan — RNGH makes the pan wait for the
- * claim to fail, so a touch that begins in the scroller never reaches the pan
- * however far it travels. `drawer-swipe-ledger.test.ts` is what keeps a new
- * scroller from shipping without one of the two.
+ * `ScrollView` under the finger, which is not an RNGH handler at all. For a
+ * scroller the competition is native: RNGH makes a pan attached through a
+ * `GestureDetector` wait for the RN scroller's own pan when the touch began
+ * inside it, and `directionalLockEnabled` keeps a diagonal drag on the axis it
+ * started on. `drawer-swipe-ledger.test.ts` proves every horizontal scroller
+ * DECLARES that pairing; it cannot drag one, so the arbitration itself is a
+ * device row (QA). `DrawerSwipeClaim` covers the surfaces that are not
+ * scrollers at all (the composer's field, the chart's scrub), and is what
+ * `blocksExternalGesture`s this pan so it waits for the claim to fail.
  *
  * WHY 16 / 12 pt. 16 pt of rightward travel is a deliberate gesture rather than
  * the first wobble of a tap, and it clears the ~10 pt a UIScrollView needs
@@ -30,6 +34,11 @@ import type { RouteClass } from "@/features/sessions/top-level-routes";
 export const DRAWER_PAN = {
 	/** Rightward travel (pt) that activates the page pan. */
 	activateRightPt: 16,
+	/** Rightward travel (pt) that mounts the pane's CONTENT on the primed shell.
+	 *  Must stay below `activateRightPt` (a test pins it) and small enough that
+	 *  a tap or a vertical scroll never reaches it; it exists because mounting
+	 *  the whole pane at touch-down mounted it on taps too (M2). */
+	contentRevealPt: 6,
 	/** Leftward travel (pt) that fails it: that direction is "back", not "open". */
 	failLeftPt: -16,
 	/** Vertical travel (pt) that fails it: the transcript's scroll owns that axis. */

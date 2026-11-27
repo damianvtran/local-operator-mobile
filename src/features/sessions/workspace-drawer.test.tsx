@@ -4,6 +4,7 @@ import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useHomeDrawer } from "@/features/home/use-home-drawer";
 import { type DomShim, installDomShim } from "@/testing/dom-shim";
+import { timingCompletions } from "@/testing/native-gesture-mocks";
 import { CONTROL } from "@/ui/a11y";
 import { layoutFor, sidebarWidthFor } from "@/ui/size-class";
 import { TOUCH_TARGET } from "@/ui/tokens.gen";
@@ -191,6 +192,7 @@ const mount = (adapter?: WorkspaceDrawerBridgeAdapter) =>
 	);
 beforeEach(() => {
 	vi.clearAllMocks();
+	timingCompletions.length = 0;
 	host.presses.clear();
 	host.labels.clear();
 	host.badges = [];
@@ -236,18 +238,33 @@ describe("one workspace drawer above the mounted chat", () => {
 		expect(draft).toBe("edited draft and caret owner");
 	});
 	it.each(["ios", "android"])(
-		"restores the %s trigger without requiring a web dismissal event",
+		"restores the %s trigger when the close settles, not when it starts",
 		async (platform) => {
 			host.platform = platform;
 			await mount();
 			const restore = vi.fn();
 			await act(async () => controller.open({ returnFocus: restore }));
 			await act(async () => host.drawer?.onClose());
+			/* The overlay still holds `accessibilityViewIsModal` while the panel
+			 *  slides out, so focus must not be moved yet (m2). */
+			expect(restore).not.toHaveBeenCalled();
+			await act(async () => timingCompletions.at(-1)?.(true));
 			expect(restore).toHaveBeenCalledOnce();
 			await act(async () => host.drawer?.onDismiss?.());
 			expect(restore).toHaveBeenCalledOnce();
 		},
 	);
+	it("primes only the shell, reveals the content on the drag, and drops both (M2)", async () => {
+		await mount();
+		await act(async () => controller.prime());
+		expect(host.drawer?.presented).toBe(true);
+		expect(host.drawer?.revealed).toBe(false);
+		await act(async () => controller.reveal());
+		expect(host.drawer?.revealed).toBe(true);
+		await act(async () => controller.abandon());
+		expect(host.drawer?.presented).toBe(false);
+		expect(host.drawer?.revealed).toBe(false);
+	});
 	it("does not restore the old chat's focus on navigation and consumes New chat once across route remounts", async () => {
 		await mount();
 		const restore = vi.fn();

@@ -5,6 +5,7 @@ import type { ConversationsDrawerProps } from "@/features/sessions/conversations
 import { t } from "@/i18n";
 import type { TeamBridgeState } from "@/team-bridge/store";
 import { type DomShim, installDomShim } from "@/testing/dom-shim";
+import { timingCompletions } from "@/testing/native-gesture-mocks";
 import { CONTROL } from "@/ui/a11y";
 
 /**
@@ -270,6 +271,7 @@ const press = (id: string) => act(async () => host.presses.get(id)?.());
 
 beforeEach(() => {
 	vi.clearAllMocks();
+	timingCompletions.length = 0;
 	host.platform = "web";
 	host.pathname = "/session/synthetic-chat";
 	host.log = [];
@@ -446,6 +448,10 @@ describe("the adapter in the shared workspace drawer", () => {
 		await press(CONTROL.workspaceDrawerTeamBridge);
 		await press(CONTROL.sidebarClose);
 		expect(host.drawer?.visible).toBe(false);
+		/* Focus comes back when the close settle ends and the overlay is gone,
+		 *  not while it is still modal (m2). */
+		expect(restore).not.toHaveBeenCalled();
+		await act(async () => timingCompletions.at(-1)?.(true));
 		expect(restore).toHaveBeenCalledTimes(1);
 		expect(host.push).not.toHaveBeenCalled();
 	});

@@ -774,8 +774,9 @@ function TableView({ header, rows }: { header: string[]; rows: string[][] }) {
 						overScrollMode="never"
 						// Android: the outer container is a FlatList, and without this the
 						// table does not pan. `HORIZONTAL_SCROLL_PROPS` keeps an iOS drag on
-						// one axis; the table's start also sits under a `DrawerSwipeClaim`
-						// higher up (the transcript row), so the drawer never takes it.
+						// one axis; the scroller's own pan is what keeps the drawer's page
+						// swipe off a table that starts at its left end (a device row —
+						// nothing in Node can arbitrate two native recognisers).
 						nestedScrollEnabled
 						{...HORIZONTAL_SCROLL_PROPS}
 						onScroll={onScroll}

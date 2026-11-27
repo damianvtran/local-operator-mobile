@@ -36,11 +36,24 @@ export const reanimatedModuleMock = () => ({
 		react(prepare());
 	},
 	withSpring: <T>(toValue: T) => toValue,
-	withTiming: <T>(toValue: T) => toValue,
+	/** The timing never runs here, so its COMPLETION is what a test can drive:
+	 *  the callbacks are recorded in order and the last one fired is the settle
+	 *  a test wants to finish (the drawer's close, usually). */
+	withTiming: <T>(
+		toValue: T,
+		_config?: unknown,
+		callback?: (finished?: boolean) => void,
+	) => {
+		if (callback) timingCompletions.push(callback);
+		return toValue;
+	},
 	cancelAnimation: () => {},
 	runOnJS: <A extends unknown[]>(fn: (...args: A) => void) => fn,
 	Easing: { linear: (value: number) => value },
 });
+
+/** Every `withTiming` completion, in call order (`reanimatedModuleMock`). */
+export const timingCompletions: Array<(finished?: boolean) => void> = [];
 
 /** A chainable pan builder: every configuration call returns the same object, so
  *  `Gesture.Pan().minDistance(8).onEnd(…)` builds without a gesture runtime.
@@ -74,6 +87,10 @@ const recordingBuilder = (calls: RecordedGestureCall[]) => {
 		"onUpdate",
 		"onEnd",
 		"onFinalize",
+		"onTouchesDown",
+		"onTouchesMove",
+		"onTouchesUp",
+		"onTouchesCancelled",
 	]) {
 		builder[name] = (...args: unknown[]) => {
 			calls.push({ name, args });

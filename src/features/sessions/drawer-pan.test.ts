@@ -60,6 +60,15 @@ describe("the page pan's thresholds", () => {
 		}
 	});
 
+	it("reveals the pane's content below the activation threshold (M2)", () => {
+		/* The content mount is a JS state update; it must land while the pan is
+		 *  still BEGAN, so the panel's first visible frame (at activation) never
+		 *  waits for a render. */
+		expect(DRAWER_PAN.contentRevealPt).toBeLessThanOrEqual(8);
+		expect(DRAWER_PAN.contentRevealPt).toBeGreaterThan(0);
+		expect(DRAWER_PAN.contentRevealPt).toBeLessThan(DRAWER_PAN.activateRightPt);
+	});
+
 	it("mirrors for the panel's close drag: leftward activates, rightward fails", () => {
 		const { pan, calls } = recorder();
 		applyClosePanConfig(pan);

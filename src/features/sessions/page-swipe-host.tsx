@@ -9,16 +9,21 @@
  *
  * THE DRAG IS THE UITHREAD'S. `progress` is the drawer's own shared value
  * (`drawer-progress.tsx`), so the panel follows the finger 1:1 with no JS
- * round trip per frame; the JS thread is touched twice, at touch-down (`prime`,
- * which mounts the panel off-screen) and at release (`settle`, which runs the
- * same ease-in-out curve from wherever the finger left the panel).
+ * round trip per frame; the JS thread is touched at touch-down (`prime`, which
+ * mounts the panel's empty SHELL off-screen), once when the touch proves to be
+ * a rightward drag (`reveal`, which mounts the pane's content) and at release
+ * (`settle`, which runs the same ease-in-out curve from wherever the finger
+ * left the panel).
  *
- * THE TOUCH-DOWN PRIME IS A BET. The 16 pt activation costs a few frames, so
- * the panel starts mounting at `onBegin` rather than at `onStart`; a touch that
- * turns out to be a tap or a vertical scroll abandons it (`onFinalize` without
- * an `onStart`). If a device shows the panel's first frame arriving after the
- * finger's, this bet is done and the alternative is priming at `onStart` with a
- * visible lag at activation — the trade-off E3 records.
+ * WHY THE MOUNT IS SPLIT. Priming the whole pane at every touch-down mounted
+ * `ConversationsPane` on taps and vertical scrolls too, and with it a 60 s
+ * timer, the tag catalogue read and a root modal entry (M2). The shell is the
+ * panel's own fill, cheap enough to prime at touch-down; the content waits for
+ * `DRAWER_PAN.contentRevealPt` of rightward travel. The 16 pt activation costs
+ * a few frames, so the order is: fill at touch-down, content at 6 pt (about two
+ * frames into a normal drag), panel visible at activation — nothing has to be
+ * painted after the panel has already started moving. If a device shows the
+ * content arriving late, the knob is that threshold, not a knob on activation.
  */
 
 import { type ReactNode, useMemo, useRef, useSyncExternalStore } from "react";
@@ -33,7 +38,11 @@ import {
 	activeTextSelection,
 	subscribeTextSelection,
 } from "@/features/session/text-selection";
-import { applyPagePanConfig, panEnabled } from "@/features/sessions/drawer-pan";
+import {
+	applyPagePanConfig,
+	DRAWER_PAN,
+	panEnabled,
+} from "@/features/sessions/drawer-pan";
 import { routeClassOf } from "@/features/sessions/top-level-routes";
 import { useWorkspaceDrawer } from "@/features/sessions/workspace-drawer-context";
 import { decideRelease } from "@/ui/drawer-motion";
@@ -60,7 +69,8 @@ export const PageSwipeHost = ({
 	routeName: string;
 	children?: ReactNode;
 }) => {
-	const { progress, visible, prime, abandon, settle } = useWorkspaceDrawer();
+	const { progress, visible, prime, reveal, abandon, settle } =
+		useWorkspaceDrawer();
 	const { width } = useWindowDimensions();
 	/* E5: the selection store is a JS store, so it is read through
 	 *  `useSyncExternalStore` — the same shape `selectable-message.tsx` uses.
@@ -84,13 +94,47 @@ export const PageSwipeHost = ({
 	 *  close picks the panel up where it is instead of snapping it shut first. */
 	const base = useSharedValue(0);
 
+	/* The finger's origin and whether this touch already asked for the pane's
+	 *  content: both are only written before activation, so they are shared
+	 *  values rather than state (no JS round trip until the threshold). */
+	const touchStartX = useSharedValue(0);
+	const touchStartY = useSharedValue(0);
+	const contentRequested = useSharedValue(0);
+
 	const pan = useMemo(() => {
 		const gesture = Gesture.Pan()
 			.withRef(pageRef)
 			.onBegin(() => {
 				"worklet";
 				base.value = progress.value;
+				contentRequested.value = 0;
 				runOnJS(prime)();
+			})
+			.onTouchesDown((event) => {
+				"worklet";
+				/* The FIRST finger sets the origin; a second one must not move
+				 *  the reveal threshold under the drag. */
+				if (event.numberOfTouches !== 1) return;
+				const touch = event.allTouches[0];
+				if (touch === undefined) return;
+				touchStartX.value = touch.absoluteX;
+				touchStartY.value = touch.absoluteY;
+			})
+			.onTouchesMove((event) => {
+				"worklet";
+				/* Content mounts only once the touch is a RIGHTWARD drag — the
+				 *  axis this gesture commits on — so a tap or a vertical scroll
+				 *  never mounts the pane, its timer or its modal entry (M2).
+				 *  `contentRevealPt` sits below the 16 pt activation, which buys
+				 *  the pane a few frames before the panel first moves. */
+				if (contentRequested.value === 1) return;
+				const touch = event.allTouches[0];
+				if (touch === undefined) return;
+				const travelX = touch.absoluteX - touchStartX.value;
+				const travelY = Math.abs(touch.absoluteY - touchStartY.value);
+				if (travelX < DRAWER_PAN.contentRevealPt || travelX <= travelY) return;
+				contentRequested.value = 1;
+				runOnJS(reveal)();
 			})
 			.onStart(() => {
 				"worklet";
@@ -124,7 +168,19 @@ export const PageSwipeHost = ({
 		 *  rather than by mutating a memoised gesture: a route change or a
 		 *  selection flip rebuilds the pan, and neither can happen mid-drag. */
 		return applyPagePanConfig(gesture, Platform.OS).enabled(enabled);
-	}, [width, enabled, progress, base, prime, settle, abandon]);
+	}, [
+		width,
+		enabled,
+		progress,
+		base,
+		touchStartX,
+		touchStartY,
+		contentRequested,
+		prime,
+		reveal,
+		settle,
+		abandon,
+	]);
 
 	return (
 		<DrawerPageGestureContext.Provider value={pageRef}>

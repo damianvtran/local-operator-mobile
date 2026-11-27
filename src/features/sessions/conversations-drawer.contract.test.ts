@@ -19,12 +19,12 @@ const source = readFileSync(
 	"utf8",
 );
 const NO_DIM_CLAIM =
-	/useModalStackEntry\(presented,\s*\{\s*scrim:\s*false,?\s*\}\)/;
+	/useModalStackEntry\(\s*presented\s*&&\s*revealed\s*,\s*\{\s*scrim:\s*false,?\s*\}\s*\)/;
 const DIM_CLAIM = /scrim:\s*true/;
 const WEB_SHELL = /Platform\.OS === "web"/;
 
 describe("the conversations drawer shell", () => {
-	it("claims no dim for its host", () => {
+	it("claims no dim for its host, and only while its content is up", () => {
 		expect(source).toMatch(NO_DIM_CLAIM);
 		expect(source).not.toMatch(DIM_CLAIM);
 	});

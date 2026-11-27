@@ -97,9 +97,14 @@ export type ConversationsDrawerProps = {
 	/** The reader's intent: open. False from the instant a close starts, which
 	 *  is what makes the panel inert while it exits. */
 	visible: boolean;
-	/** Whether the shell is on screen. True from open until the close settle
-	 *  ends, so the exit animation is visible rather than cut off at its start. */
+	/** Whether the shell is on screen. True from touch-down (the page swipe's
+	 *  prime) or `open()` until the close settle ends, so the exit animation is
+	 *  visible rather than cut off at its start. */
 	presented: boolean;
+	/** Whether the pane's CONTENT is mounted. False on a primed shell: the fill
+	 *  slides, but the pane (`ConversationsPane`'s timers, catalogue read and
+	 *  modal entry) waits for a real drag (M2). */
+	revealed: boolean;
 	/** 0 (closed) … 1 (full width) on the UI thread; `open()`/`close()` in the
 	 *  provider settle it. The shell only reads it. */
 	progress: SharedValue<number>;
@@ -121,6 +126,7 @@ export type ConversationsDrawerProps = {
 export const ConversationsDrawer = ({
 	visible,
 	presented,
+	revealed,
 	progress,
 	onClose,
 	onNavigate,
@@ -169,7 +175,11 @@ export const ConversationsDrawer = ({
 	 *  (`@/ui/modal-stack`). The native overlay is not a `Modal`, but it still
 	 *  PUBLISHES its scope, because the pane's long-press `Sheet` can be raised
 	 *  inside it. */
-	const { covered, nested, scope } = useModalStackEntry(presented, {
+	/* The modal entry follows the CONTENT, not the shell: a touch-down that
+	 *  never drags must not register a root modal (it would read as
+	 *  `othersOpen` to a dismissing sheet in `modal-exit.ts`), while the shell
+	 *  is on screen for at most that one touch. */
+	const { covered, nested, scope } = useModalStackEntry(presented && revealed, {
 		scrim: false,
 	});
 
@@ -197,7 +207,10 @@ export const ConversationsDrawer = ({
 	 *  panel's position rather than a value the clock overwrites. */
 	const primePanel = drawer?.prime;
 	const holdPanel = useCallback(() => primePanel?.(), [primePanel]);
+	const resumePanel = drawer?.resume;
+	const resumeSettle = useCallback(() => resumePanel?.(), [resumePanel]);
 	const closeBase = useSharedValue(0);
+	const closeActivated = useSharedValue(false);
 	const releaseRef = useRef<(open: boolean) => void>(() => {});
 	releaseRef.current = (open) => {
 		if (!open) {
@@ -211,10 +224,12 @@ export const ConversationsDrawer = ({
 		const gesture = Gesture.Pan()
 			.onBegin(() => {
 				"worklet";
+				closeActivated.value = false;
 				runOnJS(holdPanel)();
 			})
 			.onStart(() => {
 				"worklet";
+				closeActivated.value = true;
 				closeBase.value = progress.value;
 			})
 			.onUpdate((event) => {
@@ -231,9 +246,28 @@ export const ConversationsDrawer = ({
 					cancelled: !success,
 				});
 				runOnJS(release)(!commitClose);
+			})
+			.onFinalize(() => {
+				"worklet";
+				/* A touch that never ACTIVATED (a tap on the list, a vertical
+				 *  scroll) only took the panel over from a running settle in
+				 *  `onBegin`; it made no choice of its own, so the settle is handed
+				 *  back — otherwise the panel stays frozen at the position the touch
+				 *  found it (M1). An activated drag has already settled in `onEnd`. */
+				if (closeActivated.value) return;
+				runOnJS(resumeSettle)();
 			});
 		return applyClosePanConfig(gesture).enabled(visible);
-	}, [width, visible, progress, closeBase, release, holdPanel]);
+	}, [
+		width,
+		visible,
+		progress,
+		closeBase,
+		closeActivated,
+		release,
+		holdPanel,
+		resumeSettle,
+	]);
 
 	/* Web only: react-native-web's modal trap focuses the first node that
 	 *  ACCEPTS focus — on open, and whenever Tab wraps — and the scrim is first
@@ -306,10 +340,9 @@ export const ConversationsDrawer = ({
 						paddingTop: insets.top,
 						paddingBottom: insets.bottom,
 						/* The panel spans the whole viewport, but its CONTENT still has
-						 *  to stay out of the horizontal safe area: the panel is anchored
-						 *  to the physical left edge, so `insets.left` is the band that
-						 *  applies to its first column (a landscape notch). LEFT ONLY,
-						 *  because the panel never ends at the right edge. */
+						 *  to stay out of the horizontal safe area: a landscape notch sits
+						 *  on whichever physical edge, so both insets apply. They stay
+						 *  PHYSICAL with the anchor and the slide (holdout, docs/i18n.md). */
 						paddingLeft: insets.left,
 						paddingRight: insets.right,
 					}}
@@ -323,30 +356,34 @@ export const ConversationsDrawer = ({
 					 *  On native the provider is context-only, so this re-declares the
 					 *  same values rather than computing a second scale. */}
 					<TextScaleProvider>
-						{header}
-						{content ? (
-							<View className="min-h-0 flex-1">
-								{content}
-								<WorkspaceSidebarFooter
-									onNavigate={onNavigate ?? close}
-									hasModeHeader={Boolean(header)}
-								/>
-							</View>
-						) : (
-							<ConversationsPane
-								onClose={close}
-								hideCloseButton={Boolean(header)}
-								onNavigate={onNavigate ?? close}
-								currentSessionId={currentSessionId}
-								onNewChat={onNewChat ? newChat : undefined}
-								notice={notice}
-								homeDirectory={homeDirectory}
-								/* The rows are painted on THIS panel's fill, not on the
-								 *  screen's canvas: the corner badge's ring must be the same
-								 *  colour or it reads as a halo (agent review round 2, R2-2). */
-								surfaceClassName={PANEL_SURFACE}
-							/>
-						)}
+						{revealed ? (
+							<>
+								{header}
+								{content ? (
+									<View className="min-h-0 flex-1">
+										{content}
+										<WorkspaceSidebarFooter
+											onNavigate={onNavigate ?? close}
+											hasModeHeader={Boolean(header)}
+										/>
+									</View>
+								) : (
+									<ConversationsPane
+										onClose={close}
+										hideCloseButton={Boolean(header)}
+										onNavigate={onNavigate ?? close}
+										currentSessionId={currentSessionId}
+										onNewChat={onNewChat ? newChat : undefined}
+										notice={notice}
+										homeDirectory={homeDirectory}
+										/* The rows are painted on THIS panel's fill, not on the
+										 *  screen's canvas: the corner badge's ring must be the same
+										 *  colour or it reads as a halo (agent review round 2, R2-2). */
+										surfaceClassName={PANEL_SURFACE}
+									/>
+								)}
+							</>
+						) : null}
 					</TextScaleProvider>
 				</View>
 			</Animated.View>
@@ -409,26 +446,30 @@ export const ConversationsDrawer = ({
 	/* The native overlay root: the panel plus the scrim that receives a tap while
 	 *  the panel is still travelling. It is `accessibilityViewIsModal` so
 	 *  VoiceOver treats the page behind it as inert, and the two-finger escape
-	 *  closes it. */
+	 *  closes it — but only once the CONTENT is up: a primed shell is an
+	 *  off-screen fill, and flagging it modal would let a synthetic touch from a
+	 *  VoiceOver double-tap move VO focus on every tap of the page (M2 lead). */
 	return (
 		<ModalScopeContext.Provider value={scope}>
 			<View
 				className="absolute inset-0"
 				pointerEvents={visible ? "auto" : "none"}
-				accessibilityViewIsModal
+				accessibilityViewIsModal={revealed}
 				onAccessibilityEscape={close}
 			>
-				<Animated.View
-					style={[scrimStyle, { backgroundColor: scrimColour }]}
-					className="absolute inset-0"
-				>
-					<Pressable
-						className="flex-1"
-						accessibilityRole={ROLE.button}
-						accessibilityLabel={t("mobile.chrome.close_conversations")}
-						onPress={close}
-					/>
-				</Animated.View>
+				{revealed ? (
+					<Animated.View
+						style={[scrimStyle, { backgroundColor: scrimColour }]}
+						className="absolute inset-0"
+					>
+						<Pressable
+							className="flex-1"
+							accessibilityRole={ROLE.button}
+							accessibilityLabel={t("mobile.chrome.close_conversations")}
+							onPress={close}
+						/>
+					</Animated.View>
+				) : null}
 				{panel}
 			</View>
 		</ModalScopeContext.Provider>

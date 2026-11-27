@@ -253,7 +253,9 @@ const NAMESPACES = [
 		// ADR 0010 S2/S4 (Android push parity): +5 the Team Bridge channel name
 		// and description, the conversation "me" name, and the Settings line and
 		// button for a channel switched off in Android settings (79 + 5 = 84).
-		expected: 84,
+		// feat/nav-rework: −1 `back` — the inbox's ‹ became the shared ☰ drawer
+		// button, and no code reads the label any more (84 − 1 = 83).
+		expected: 83,
 	},
 	{
 		name: "mobile.session",

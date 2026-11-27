@@ -41,8 +41,10 @@ const drawer = () => ({
 	open: vi.fn(),
 	close: vi.fn(),
 	prime: vi.fn(),
+	reveal: vi.fn(),
 	abandon: vi.fn(),
 	settle: vi.fn(),
+	resume: vi.fn(),
 	selectMode: vi.fn(),
 	newChatRequest: 0,
 	consumeNewChatRequest: () => false,
@@ -61,7 +63,7 @@ const mount = (
 	),
 ) => {
 	const value = drawer();
-	return act(async () =>
+	const rendered = act(async () =>
 		root.render(
 			createElement(
 				WorkspaceDrawerContext.Provider,
@@ -70,10 +72,26 @@ const mount = (
 			),
 		),
 	);
+	return { value, rendered };
 };
 
 const callsTo = (name: string) =>
 	panCalls.filter((call) => call.name === name).map((call) => call.args);
+
+/** The last recorded callback of a pan method, invoked with `event`. */
+const drive = (name: string, event: unknown) => {
+	const args = callsTo(name).at(-1) as [(event: unknown) => void] | undefined;
+	args?.[0](event);
+};
+
+/** A `GestureTouchEvent` as the pan's raw-touch callbacks receive it. */
+const touchEvent = (x: number, y: number) => ({
+	handlerTag: 1,
+	numberOfTouches: 1,
+	eventType: 1,
+	allTouches: [{ id: 1, x, y, absoluteX: x, absoluteY: y }],
+	changedTouches: [{ id: 1, x, y, absoluteX: x, absoluteY: y }],
+});
 
 beforeEach(() => {
 	panCalls.length = 0;
@@ -89,7 +107,7 @@ afterEach(async () => {
 
 describe("the page swipe host", () => {
 	it("configures the drawer thresholds on a top-level screen", async () => {
-		await mount("session/[id]");
+		await mount("session/[id]").rendered;
 		expect(callsTo("activeOffsetX")).toEqual([[16]]);
 		expect(callsTo("failOffsetX")).toEqual([[-16]]);
 		expect(callsTo("failOffsetY")).toEqual([[[-12, 12]]]);
@@ -97,7 +115,7 @@ describe("the page swipe host", () => {
 	});
 
 	it("never runs on a nested screen: the native stack owns that swipe", async () => {
-		await mount("theme");
+		await mount("theme").rendered;
 		expect(callsTo("enabled").at(-1)).toEqual([false]);
 	});
 
@@ -116,7 +134,7 @@ describe("the page swipe host", () => {
 	});
 
 	it("stands down while a message selection is live (E5)", async () => {
-		await mount("past");
+		await mount("past").rendered;
 		expect(callsTo("enabled").at(-1)).toEqual([true]);
 		await act(async () => enterTextSelection("message-1"));
 		expect(callsTo("enabled").at(-1)).toEqual([false]);
@@ -125,9 +143,47 @@ describe("the page swipe host", () => {
 	});
 });
 
-describe("the scroller claim against the page pan", () => {
+describe("the page pan's touch-down prime", () => {
+	it("does not mount the pane's content until the touch is a rightward drag (M2)", async () => {
+		const { value, rendered } = mount("library");
+		await rendered;
+		drive("onBegin", {});
+		drive("onTouchesDown", touchEvent(100, 200));
+		expect(value.prime).toHaveBeenCalledOnce();
+		expect(value.reveal).not.toHaveBeenCalled();
+		/* A 4 pt drift is under the threshold; a vertical scroll that drifts
+		 *  right stays out too, because the page gesture is the horizontal one. */
+		drive("onTouchesMove", touchEvent(104, 201));
+		drive("onTouchesMove", touchEvent(110, 218));
+		expect(value.reveal).not.toHaveBeenCalled();
+		drive("onTouchesMove", touchEvent(106, 202));
+		expect(value.reveal).toHaveBeenCalledOnce();
+		/* Once per touch, however far it travels. */
+		drive("onTouchesMove", touchEvent(160, 202));
+		expect(value.reveal).toHaveBeenCalledOnce();
+	});
+
+	it("resets the reveal for the next touch", async () => {
+		const { value, rendered } = mount("library");
+		await rendered;
+		drive("onBegin", {});
+		drive("onTouchesDown", touchEvent(100, 200));
+		drive("onTouchesMove", touchEvent(108, 200));
+		expect(value.reveal).toHaveBeenCalledOnce();
+		drive("onFinalize", {});
+		drive("onBegin", {});
+		drive("onTouchesDown", touchEvent(100, 200));
+		drive("onTouchesMove", touchEvent(108, 200));
+		expect(value.reveal).toHaveBeenCalledTimes(2);
+	});
+});
+
+describe("a claimed surface against the page pan", () => {
 	it("blocks the page pan by the ref the pan was built with", async () => {
-		await mount("library");
+		/* A plain `View` in a claim, not a scroller: this pins the WIRING (the
+		 *  claim blocks THIS screen's pan), not that a native recogniser wins
+		 *  the touch — only a device can show that (QA row). */
+		await mount("library").rendered;
 		const withRef = panCalls.find((call) => call.name === "withRef");
 		const blocked = nativeCalls.find(
 			(call) => call.name === "blocksExternalGesture",
@@ -140,7 +196,7 @@ describe("the scroller claim against the page pan", () => {
 	});
 
 	it("adds no simultaneous relation that could let the pan share a scroller's touch", async () => {
-		await mount("library");
+		await mount("library").rendered;
 		expect(callsTo("simultaneousWithExternalGesture")).toEqual([]);
 		expect(callsTo("requireExternalGestureToFail")).toEqual([]);
 	});

@@ -1,6 +1,12 @@
 import { usePathname, useRouter } from "expo-router";
 import { Menu } from "lucide-react-native";
-import { type ReactNode, useCallback, useRef, useState } from "react";
+import {
+	type ReactNode,
+	useCallback,
+	useEffect,
+	useRef,
+	useState,
+} from "react";
 import { Keyboard, Platform, Pressable, View } from "react-native";
 import {
 	useListState,
@@ -48,10 +54,13 @@ export const WorkspaceDrawerProvider = ({
 	const {
 		progress,
 		presented,
+		revealed,
 		open: openProgress,
 		close: closeProgress,
 		prime: primeProgress,
+		reveal: revealProgress,
 		unprime: unprimeProgress,
+		resume: resumeProgress,
 	} = useDrawerProgress({ reduceMotion });
 	const [mode, setMode] = useState<WorkspaceDrawerMode>("agents");
 	const [newChatRequest, setNewChatRequest] = useState(0);
@@ -86,10 +95,16 @@ export const WorkspaceDrawerProvider = ({
 	const close = useCallback(() => {
 		setDrawerVisible(false);
 		closeProgress();
-		// RN web restores focus after its modal trap is removed. Android has no
-		// onDismiss event, so its trigger restoration belongs to the close path.
-		if (Platform.OS !== "web") finishClose();
-	}, [closeProgress, finishClose, setDrawerVisible]);
+	}, [closeProgress, setDrawerVisible]);
+	/* The trigger takes focus back when the panel is GONE, not when the close
+	 *  starts: the native overlay keeps `accessibilityViewIsModal` for the whole
+	 *  settle, and focusing into a page it still hides is ignored by iOS (m2).
+	 *  Web is unchanged: react-native-web restores focus after the `Modal` trap
+	 *  is removed (`onDismiss`). */
+	useEffect(() => {
+		if (Platform.OS === "web" || presented) return;
+		finishClose();
+	}, [presented, finishClose]);
 	const navigate = useCallback(() => {
 		returnFocus.current = undefined;
 		close();
@@ -114,10 +129,18 @@ export const WorkspaceDrawerProvider = ({
 		dragSettled.current = false;
 		primeProgress();
 	}, [primeProgress]);
+	const reveal = useCallback(() => {
+		revealProgress();
+	}, [revealProgress]);
 	const abandon = useCallback(() => {
+		/* A touch that took a running settle over gives it back untouched: no
+		 *  activation is not a choice, and dropping the panel would cut the
+		 *  settle off mid-flight. Nothing held means the touch was only ever a
+		 *  prime, so the shell goes. */
+		if (resumeProgress()) return;
 		if (visibleRef.current || dragSettled.current) return;
 		unprimeProgress();
-	}, [unprimeProgress]);
+	}, [resumeProgress, unprimeProgress]);
 	const settle = useCallback(
 		(nextOpen: boolean) => {
 			dragSettled.current = true;
@@ -166,8 +189,10 @@ export const WorkspaceDrawerProvider = ({
 				progress,
 				visible,
 				prime,
+				reveal,
 				abandon,
 				settle,
+				resume: resumeProgress,
 				selectMode,
 				newChatRequest,
 				consumeNewChatRequest,
@@ -178,6 +203,7 @@ export const WorkspaceDrawerProvider = ({
 			<ConversationsDrawer
 				visible={visible}
 				presented={presented}
+				revealed={revealed}
 				progress={progress}
 				onClose={close}
 				onNavigate={navigate}

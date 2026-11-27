@@ -88,9 +88,13 @@ finger 1:1 and a release resumes the curve from the position the finger left it.
   no in-content version of it.
 - **Host**: `PageSwipeHost` is mounted per screen through the stack's
   `screenLayout` (`app/(app)/_layout.tsx`), which also publishes the screen's pan
-  ref to the claims inside it. The panel mounts at touch-down (`prime`), not at
-  activation, so its first frame is not late; a touch that turns out to be a tap
-  or a scroll abandons it (`onFinalize`).
+  ref to the claims inside it. The panel's SHELL mounts at touch-down (`prime`),
+  so its fill is not late; the pane's CONTENT — its 60 s timer, the tag
+  catalogue read and its modal entry — mounts only once the touch is a rightward
+  drag past `DRAWER_PAN.contentRevealPt` (6 pt, `reveal`), so a tap or a
+  vertical scroll never pays for it. A touch that turns out to be either drops
+  the shell (`onFinalize` → `abandon`); one that took a running settle over
+  hands it back (`resume`).
 - **Keyboard**: dismissed when the gesture ACTIVATES, not at touch-down.
 - **Android**: the pan's start region is shrunk by 24 dp on both edges
   (`hitSlop` with negative insets), so the system back strips stay the system's.
@@ -116,15 +120,18 @@ is not something a threshold can beat. Two mechanisms, one per kind of surface:
   waits for it to fail and a touch that starts there never opens the drawer.
 
 Proven in vitest, not on a device: the pan's configured numbers and its
-`enabled` gate (`drawer-pan.test.ts`, `page-swipe-host.test.tsx`), the claim
-blocking THAT screen's pan ref, and a source ledger
+`enabled` gate (`drawer-pan.test.ts`, `page-swipe-host.test.tsx`), that a claim
+blocks THAT screen's pan ref (wiring, not arbitration), the content reveal
+threshold and the shell/content mount split, and a source ledger
 (`drawer-swipe-ledger.test.ts`) that fails any horizontal `ScrollView` under
 `src/` without the props or a named exemption, and any exemption whose witness
-disappeared. What only a device can settle: whether a plain RN scroller really
-wins the touch on iOS 26 (the memo's E4 race), whether the claim blocks for the
-whole touch on a plain `View` (the memo's unverified item, fallback: a JS
-touch-start flag read by a `manualActivation` pan), and the prime's lead on a
-fast flick (E3).
+disappeared. No Node test proves WHO WINS a real touch: the scrollers' evidence
+is config plus the platform's own recogniser rule, and the claim's is wiring
+plus RNGH's documented relation. What only a device can settle: whether a plain
+RN scroller really wins the touch on iOS 26 at a table's left end (the memo's
+E4 race), whether the claim blocks for the whole touch on a plain `View` (the
+memo's unverified item, fallback: a JS touch-start flag read by a
+`manualActivation` pan), and the prime's lead on a fast flick (E3).
 
 ### Nested back on iOS 26 (E2)
 

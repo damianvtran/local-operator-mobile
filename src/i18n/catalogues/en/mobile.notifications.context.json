@@ -3,10 +3,6 @@
 		"role": "button",
 		"note": "Button on an ask in the inbox list that opens it to be answered. One word, imperative."
 	},
-	"mobile.notifications.back": {
-		"role": "button",
-		"note": "Accessibility label of the icon-only back button in the inbox header."
-	},
 	"mobile.notifications.category.completion_placeholder": {
 		"role": "meta",
 		"note": "Generic placeholder iOS shows INSTEAD of a agent (finished-work) notification's text when the reader has hidden notification previews. Must stay generic: it never names a session, a person or message content. A short noun phrase, sentence case, no final full stop."
