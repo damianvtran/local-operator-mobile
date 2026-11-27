@@ -1,0 +1,139 @@
+{
+  "schema": 1,
+  "record_kind": "i18n-audit",
+  "audit_id": "guard-m1-auditor-1-f484e90279c6",
+  "kind": "Independent i18n audit 1 of 2 (high-visibility consent and privacy)",
+  "locale": "zh-CN",
+  "namespace": "mobile.guard",
+  "audit_date": "2026-11-27",
+  "round": 1,
+  "project": "damianvtran/local-operator-mobile",
+  "pull_request": 402,
+  "base_commit": "13c007b987e236037c4f463337f03d3d00260e86",
+  "source_commit": "c4bf96ead28d1077f2267d241ecdf1895143d04c",
+  "core_reference_commit": "498066e8c8270ad5c02bbb053186252ed6981212",
+  "key_count": 90,
+  "phone_authored_keys_audited": [
+    "mobile.guard.answered_elsewhere",
+    "mobile.guard.card_ask_owner",
+    "mobile.guard.card_footer_account",
+    "mobile.guard.computer_line",
+    "mobile.guard.computers_note",
+    "mobile.guard.consent_needs_update",
+    "mobile.guard.consent_not_signable",
+    "mobile.guard.disconnected",
+    "mobile.guard.host_old",
+    "mobile.guard.indicator_unknown",
+    "mobile.guard.indicator_waiting",
+    "mobile.guard.intro",
+    "mobile.guard.load_error",
+    "mobile.guard.loading",
+    "mobile.guard.prompt_background",
+    "mobile.guard.reconnecting",
+    "mobile.guard.review",
+    "mobile.guard.revoke_pending_result",
+    "mobile.guard.share_again_result",
+    "mobile.guard.shared_heading",
+    "mobile.guard.surface_terminal"
+  ],
+  "mirrored_key_count": 69,
+  "mirrored_verdict": "69/69 UTF-8 values byte-identical to the corresponding audited tui.guard keys",
+  "translator": {
+    "agent": "coder (radientdev team; guard M1 remediation r1)",
+    "session": "6581613c7f27",
+    "model": "anthropic/claude-sonnet-5-5",
+    "fallback": "none",
+    "date": "2026-11-27",
+    "provenance": "PR translator receipt"
+  },
+  "auditor": {
+    "agent": "copy-reviewer (radientdev; independent i18n auditor 1)",
+    "session": "f484e90279c6",
+    "model": "openai/gpt-6.2-sol",
+    "actual_model_source": "Running session model header",
+    "fallback_used": false,
+    "independent_from_translator_session": true
+  },
+  "input_hashes": {
+    "target": {
+      "path": "src/i18n/catalogues/zh-CN/mobile.guard.json",
+      "sha256": "2f81fafb307064a3b06a3ba214057955bf483e1ce6af133077384cb570fa7e3a"
+    },
+    "target_before": {
+      "path": "src/i18n/catalogues/zh-CN/mobile.guard.json",
+      "sha256": "8bbccec68784c454ab708ea35bce04940aa0f3e306eff19978fbfb63411fbccb"
+    },
+    "en": {
+      "path": "src/i18n/catalogues/en/mobile.guard.json",
+      "sha256": "4bd08d4670d429d5f87d8f63d5636b9408f350ae8a97718a84659951fdfa20b5"
+    },
+    "context": {
+      "path": "src/i18n/catalogues/en/mobile.guard.context.json",
+      "sha256": "0111504447375d32bcf80d4e5b60744b6c7cb2933ebf7cbc14157be4a73d9f1c"
+    },
+    "translator_receipt": {
+      "path": "i18n/receipts/guard-m1-r1-translator-zh-CN-6581613c7f27.json",
+      "sha256": "687361c17a797957a19fbb5c4240a3176b36dd89635b77c80c2f22345bd8fdbb"
+    },
+    "core_reference": {
+      "path": "local_operator/i18n/catalogues/zh-CN/tui.guard.json",
+      "sha256": "04253a9fa0d65932f21003410a16aba1b077a68d587d943a11c136940bfc0b53"
+    },
+    "glossary": {
+      "path": "i18n/glossary.md",
+      "sha256": "5de3929198c3f603ce14bf75fb992c0f5c7a1952c440b496386977f8c636fcc7"
+    },
+    "style": {
+      "path": "i18n/style-guides/zh-CN.md",
+      "sha256": "6d9b370681d5d7fa19659240c4286a0617b303c44965b5804f4a763a2df17b52"
+    }
+  },
+  "checks": {
+    "copy_scan": "8 catalogue files, 672 candidate strings, 0 findings before and after corrections",
+    "catalogue_and_guard_vitest": "8 files, 285 tests passed (maxWorkers=2)",
+    "i18n_check": "Generated projection current; 56 baseline findings, 0 new",
+    "runtime": "Actual consentView and outcomeLine evaluated with locale source, plus shared-heading interpolation and active direction (ur RTL; others LTR).",
+    "typography": "Exact placeholder multiplicities for authored values; all values NFC; Urdu no manual bidi controls; French U+202F before :;!?; zh-CN no inserted CJK/Latin spaces. Guard’s existing mobile and core short name Console is retained, not translated.",
+    "receipt_dry_run": "Seven staged receipts parsed and matched their target, pre-audit and translator receipt SHA-256 values, independence and fix inventory; swapping each target for its stale SHA-256 was rejected in seven negative controls. Mobile has no Guard receipt writer/test command."
+  },
+  "findings": [
+    {
+      "id": "C1",
+      "severity": "MAJOR",
+      "key": "mobile.guard.prompt_background",
+      "current": "作答后，它会在后台运行。你可以随时在设置或Console中停止。",
+      "replacement": "如果你选择共享数据，Guard会在后台发送数据。你可以随时在设置或Console中停止共享。",
+      "why": "The consent disclosure needs to name sharing as the background activity and the thing Settings can stop. An unspecified “it” or “everything” after any answer can make declining sound as if it starts sharing. The wording applies to both first consent and a widening card without suggesting previously accepted scopes stop.",
+      "disposition": "fixed"
+    },
+    {
+      "id": "C2",
+      "severity": "MAJOR",
+      "key": "mobile.guard.revoke_pending_result",
+      "current": "已在这台电脑上停止。Radient尚未确认，Guard会继续尝试。",
+      "replacement": "这台电脑已停止共享。Radient尚未确认，Guard会继续请求确认。",
+      "why": "The operator needs to distinguish an effective local stop from pending Radient confirmation, and know what Guard will retry. The old fragments leave one or more of these objects implicit.",
+      "disposition": "fixed"
+    },
+    {
+      "id": "C4",
+      "severity": "MINOR",
+      "key": "mobile.guard.shared_heading",
+      "current": "已从这台电脑与{org}共享：",
+      "replacement": "正从这台电脑向{org}共享：",
+      "why": "The list shows scopes currently shared, not merely a completed share event or a historical record.",
+      "disposition": "fixed"
+    }
+  ],
+  "current_report_verdict": {
+    "status": "passed",
+    "unresolved_blocker_major_count": 0,
+    "finding_ids": [
+      "C1",
+      "C2",
+      "C4"
+    ],
+    "scope": "First independent language audit after listed edits; second independent audit remains required."
+  },
+  "limitations": "Localized catalogue and runtime output checked. Smallest-phone width and native visual fit remain unverified; this language audit does not approve layout or replace the second independent audit."
+}
