@@ -191,7 +191,9 @@ export const GuardSection = () => {
 				{t(
 					availability.kind === "offline"
 						? "mobile.guard.disconnected"
-						: "mobile.guard.host_old",
+						: availability.kind === "degraded"
+							? "mobile.guard.reconnecting"
+							: "mobile.guard.host_old",
 				)}
 			</Text>
 		</Frame>

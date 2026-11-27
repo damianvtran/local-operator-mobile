@@ -354,5 +354,9 @@
 	"mobile.guard.disconnected": {
 		"role": "status",
 		"note": "Shown when the phone has no live connection to a computer. Says nothing about whether anything is shared."
+	},
+	"mobile.guard.reconnecting": {
+		"role": "status",
+		"note": "Settings section while the phone's live connection to the computer is degraded (it still has a route, so this is not 'connect to a computer'). Asserts nothing about whether anything is shared."
 	}
 }

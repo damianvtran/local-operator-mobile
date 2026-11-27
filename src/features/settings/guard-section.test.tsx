@@ -36,8 +36,25 @@ const host = vi.hoisted(() => ({
 	client: null as unknown,
 	handlers: {} as Record<string, () => void>,
 	opened: [] as string[],
+	/** `useIsFocused` (the live refresh only runs on a focused screen). */
+	focused: true,
+	/** An AppState double: the refresh subscribes to foreground changes. */
+	app: {
+		currentState: "active",
+		listeners: new Set<(state: string) => void>(),
+		addEventListener(_type: "change", listener: (state: string) => void) {
+			host.app.listeners.add(listener);
+			return { remove: () => void host.app.listeners.delete(listener) };
+		},
+		set(state: string) {
+			host.app.currentState = state;
+			for (const listener of [...host.app.listeners]) listener(state);
+		},
+	},
 }));
+vi.mock("expo-router", () => ({ useIsFocused: () => host.focused }));
 vi.mock("react-native", () => ({
+	AppState: host.app,
 	View: ({ children, testID }: { children?: ReactNode; testID?: string }) => (
 		<>
 			{testID ? `⟦id:${testID}⟧` : null}
@@ -178,7 +195,11 @@ beforeEach(() => {
 	host.stream = "live";
 	host.list = { capabilities: { features: { guard: 1 } }, frameCount: 1 };
 	host.opened = [];
-	vi.useFakeTimers({ toFake: ["Date"] });
+	host.focused = true;
+	host.app.currentState = "active";
+	// setInterval is faked too: the live refresh is an interval, and a test that
+	// never advances it must never see it fire.
+	vi.useFakeTimers({ toFake: ["Date", "setInterval", "clearInterval"] });
 	vi.setSystemTime(new Date("2026-11-27T12:00:00Z"));
 });
 afterEach(async () => {
@@ -217,6 +238,16 @@ describe("availability gate", () => {
 		expect(snapshot().texts).toContain(
 			"Connect to a computer to see Radient Guard.",
 		);
+		expect(calls).toEqual([]);
+	});
+
+	it("a degraded stream says it is reconnecting (R1-8), not 'connect a computer', and requests nothing", async () => {
+		host.stream = "degraded";
+		const calls = install({});
+		await mount();
+		const text = snapshot().texts.join(" ");
+		expect(text).toContain("Reconnecting to your computer…");
+		expect(text).not.toContain("Connect to a computer");
 		expect(calls).toEqual([]);
 	});
 
@@ -568,5 +599,60 @@ describe("stop sharing", () => {
 		await press("guard-stop");
 		await act(async () => root.render(<GuardSection />));
 		expect(snapshot().texts.join(" ")).not.toContain("Copies in backups");
+	});
+});
+
+/** R1-5: the section re-reads while open (no push exists), and only where Guard
+ *  is advertised. A non-Team account re-reads the status but not the trial card. */
+describe("the section stays live while it is open", () => {
+	const REFRESH = 20_000;
+	const tick = async (ms: number) => {
+		await act(async () => {
+			vi.advanceTimersByTime(ms);
+		});
+		await settle();
+	};
+
+	it("a request that lands while Settings is open appears on the next interval", async () => {
+		let body = status({ orgs: [org()] });
+		const calls = install({ guardStatus: () => body });
+		await mount();
+		expect(snapshot().buttons.map((b) => b.testID)).not.toContain(
+			"guard-review",
+		);
+		body = status({ orgs: [waitingOrg()] });
+		await tick(REFRESH);
+		expect(snapshot().buttons.map((b) => b.testID)).toContain("guard-review");
+		expect(calls.map((c) => c.name)).toEqual(["guardStatus", "guardStatus"]);
+	});
+
+	it("a non-Team account re-reads the status on the timer but not the trial card", async () => {
+		const calls = install({
+			guardStatus: () => nonTeamStatus(),
+			guardNonTeamCard: () => ({
+				trial_days: 14,
+				org: null,
+				url: "https://console.radienthq.com/dashboard/team",
+			}),
+		});
+		await mount();
+		await tick(2 * REFRESH);
+		const names = calls.map((c) => c.name);
+		expect(names.filter((n) => n === "guardNonTeamCard")).toHaveLength(1);
+		expect(names.filter((n) => n === "guardStatus")).toHaveLength(3);
+	});
+
+	it("an older host or an unknown capability: zero requests and zero timers", async () => {
+		for (const list of [
+			{ capabilities: { features: {} }, frameCount: 3 },
+			{ capabilities: {}, frameCount: 0 },
+		]) {
+			host.list = list;
+			const calls = install({});
+			await mount();
+			await tick(10 * REFRESH);
+			expect(calls).toEqual([]);
+			expect(vi.getTimerCount()).toBe(0);
+		}
 	});
 });

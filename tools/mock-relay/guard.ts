@@ -109,10 +109,23 @@ export function createGuardStore(seed: GuardSeed): GuardStore {
 				const waiting = orgs().find(
 					(o) => (o.prompt as Record<string, Json> | null)?.approval_id === id,
 				);
-				if (!card || card.approval_id !== id || !waiting)
+				// The card is KEPT after it is answered (host parity, L2d
+				// `guard-relay-twin.md` §1): only an id the host never filed is a 404.
+				if (!card || card.approval_id !== id)
 					return refuse(404, "approval_not_found", "no such request");
+				const settled = card.state !== "requested";
 				if (!verb && method === "GET")
 					return { status: 200, body: card as Json };
+				// A repeat answer to a settled card is the host's 409, not a 404: the
+				// phone must read "someone answered first", not "no such request".
+				if (verb && method === "POST" && settled)
+					return refuse(
+						409,
+						"approval_decision_conflict",
+						"this request was already answered",
+					);
+				if (!waiting)
+					return refuse(404, "approval_not_found", "no such request");
 				if (verb === "accept" && method === "POST") {
 					const keys = Object.keys((body ?? {}) as object).sort();
 					if (keys.join() !== "disclosure_digest,request_digest")
@@ -135,6 +148,7 @@ export function createGuardStore(seed: GuardSeed): GuardStore {
 						answered_via: "mobile",
 						can_revoke: true,
 					});
+					Object.assign(card, { state: "granted", signable: false });
 					return {
 						status: state.dropAnswerResponse ? 503 : 200,
 						body: { approval_id: id, state: "granted", tenant: waiting.tenant },
@@ -147,6 +161,7 @@ export function createGuardStore(seed: GuardSeed): GuardStore {
 						answered_via: "mobile",
 						can_share_again: true,
 					});
+					Object.assign(card, { state: "denied", signable: false });
 					return {
 						status: state.dropAnswerResponse ? 503 : 200,
 						body: { approval_id: id, state: "denied", tenant: waiting.tenant },

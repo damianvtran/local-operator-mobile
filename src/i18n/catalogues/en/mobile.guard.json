@@ -53,6 +53,7 @@
 	"mobile.guard.reason_org_off": "turned off by {org}",
 	"mobile.guard.reason_revoke_pending": "will stop once Radient confirms",
 	"mobile.guard.reason_scope_revoked": "you stopped sharing",
+	"mobile.guard.reconnecting": "Reconnecting to your computer…",
 	"mobile.guard.review": "Review",
 	"mobile.guard.revoke_body": "Guard stops sending from all your computers now.",
 	"mobile.guard.revoke_body_trace": "Guard stops sending from all your computers now and deletes your step-by-step timing. Copies in backups are gone within {backup_days} days.",

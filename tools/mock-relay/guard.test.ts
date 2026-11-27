@@ -27,9 +27,21 @@ describe("the mock Guard twin keeps the host's rules", () => {
 			prompt: null,
 			answered_via: "mobile",
 		});
-		// Consumed: a second answer finds nothing.
+		// Host parity: the answered card is KEPT (settled, no longer signable) and
+		// a repeat answer is the host's 409, not a 404 "no such request".
+		const kept = s.handle("GET", `/api/guard/consents/${ID}`, undefined);
+		expect(kept?.status).toBe(200);
+		expect(kept?.body).toMatchObject({ state: "granted", signable: false });
+		const repeat = s.handle(
+			"POST",
+			`/api/guard/consents/${ID}/decline`,
+			undefined,
+		);
+		expect(repeat?.status).toBe(409);
+		expect(repeat?.body).toMatchObject({ code: "approval_decision_conflict" });
+		// An id the host never filed is still a 404.
 		expect(
-			s.handle("POST", `/api/guard/consents/${ID}/decline`, undefined)?.status,
+			s.handle("GET", "/api/guard/consents/req_NEVER", undefined)?.status,
 		).toBe(404);
 	});
 

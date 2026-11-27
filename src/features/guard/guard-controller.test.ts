@@ -421,6 +421,142 @@ describe("a failed answer is reconciled with the host, not assumed", () => {
 	});
 });
 
+describe("what a refusal means (R1-2, R1-6)", () => {
+	it.each(["approval_decision_conflict", "approval_expired"])(
+		"409 %s (the host kept a settled card) is 'changed', even while the status still lists a prompt",
+		async (code) => {
+			const { controller, clock: c } = await opened({
+				acceptGuardConsent: () => {
+					throw rejected(409, code);
+				},
+			});
+			c.advance(600);
+			await controller.share();
+			// The status still shows the prompt (a lagging read): the member must read
+			// the info-toned "changed", not "Your choice wasn't saved… try again".
+			expect(controller.getState().outcome?.kind).toBe("changed");
+		},
+	);
+
+	it("404 guard_unavailable on the answer is NOT 'the request changed'", async () => {
+		const { controller, clock: c } = await opened({
+			acceptGuardConsent: () => {
+				throw rejected(404, "guard_unavailable");
+			},
+		});
+		c.advance(600);
+		await controller.share();
+		expect(controller.getState().outcome?.kind).toBe("failed");
+	});
+
+	it("404 guard_unavailable on opening the card is 'unreadable' and re-reads the status", async () => {
+		let reads = 0;
+		const c = clock();
+		const fake = fakeClient({
+			guardStatus: () => {
+				reads += 1;
+				return status({ orgs: [waitingOrg()] });
+			},
+			guardConsentCard: () => {
+				throw rejected(404, "guard_unavailable");
+			},
+		});
+		const controller = createGuardController(fake.client, c.now);
+		await controller.activate();
+		await controller.openConsent(TENANT);
+		expect(controller.getState().outcome?.kind).toBe("card_unreadable");
+		expect(reads).toBe(2);
+	});
+
+	it.each([
+		[404, "approval_not_found"],
+		[404, undefined],
+		[410, undefined],
+	])(
+		"%s %s still reads as 'changed' when opening the card",
+		async (status_, code) => {
+			const c = clock();
+			const fake = fakeClient({
+				guardStatus: () => status({ orgs: [waitingOrg()] }),
+				guardConsentCard: () => {
+					throw rejected(status_, code);
+				},
+			});
+			const controller = createGuardController(fake.client, c.now);
+			await controller.activate();
+			await controller.openConsent(TENANT);
+			expect(controller.getState().outcome?.kind).toBe("changed");
+		},
+	);
+});
+
+describe("refresh (R1-5)", () => {
+	it("re-reads the status silently and paints a request that arrived meanwhile", async () => {
+		let body = status({ orgs: [org()] });
+		const fake = fakeClient({ guardStatus: () => body });
+		const controller = createGuardController(fake.client);
+		await controller.activate();
+		body = status({ orgs: [waitingOrg()] });
+		await controller.refresh();
+		const read = controller.getState().read;
+		expect(read.kind === "ready" && read.status.orgs[0]?.prompt).not.toBeNull();
+		expect(fake.names()).toEqual(["guardStatus", "guardStatus"]);
+	});
+
+	it("never fights an open card, and is a no-op before activation", async () => {
+		const fake = fakeClient({
+			guardStatus: () => status({ orgs: [waitingOrg()] }),
+			guardConsentCard: () => card(),
+		});
+		const controller = createGuardController(fake.client, clock().now);
+		await controller.refresh(); // not activated: no live controller, no read
+		expect(fake.names()).toEqual([]);
+		await controller.activate();
+		await controller.openConsent(TENANT);
+		expect(controller.getState().consent.phase).toBe("open");
+		const before = fake.names().length;
+		await controller.refresh();
+		expect(fake.names().length).toBe(before);
+		controller.closeConsent();
+		await controller.refresh(); // closed again: it reads
+		expect(fake.names().length).toBe(before + 1);
+	});
+
+	it("a refresh failure keeps the last good view", async () => {
+		let fail = false;
+		const fake = fakeClient({
+			guardStatus: () => {
+				if (fail) throw transport();
+				return status();
+			},
+		});
+		const controller = createGuardController(fake.client);
+		await controller.activate();
+		fail = true;
+		await controller.refresh();
+		expect(controller.getState().read.kind).toBe("ready");
+	});
+
+	it("a non-Team refresh does not re-fetch the trial card", async () => {
+		const fake = fakeClient({
+			guardStatus: () => nonTeamStatus(),
+			guardNonTeamCard: () => ({
+				trial_days: 14,
+				org: null,
+				url: "https://console.radienthq.com/dashboard/team",
+			}),
+		});
+		const controller = createGuardController(fake.client);
+		await controller.activate();
+		await controller.refresh();
+		await controller.refresh();
+		expect(fake.names().filter((n) => n === "guardNonTeamCard")).toHaveLength(
+			1,
+		);
+		expect(fake.names().filter((n) => n === "guardStatus")).toHaveLength(3);
+	});
+});
+
 describe("stop sharing and share again", () => {
 	it("revoke calls the host once and reports what the host confirmed", async () => {
 		const fake = fakeClient({

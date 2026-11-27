@@ -87,10 +87,11 @@ const NAMESPACES = [
 		name: "mobile.guard",
 		messages: guard,
 		context: guardContext,
-		// Radient Guard on the phone (RFC v0.9, slice M1): 89 keys, counted over the
+		// Radient Guard on the phone (RFC v0.9, slice M1): 90 keys, counted over the
 		// en JSON. 69 mirror the core TUI catalogue's audited tui.guard.* wording and
-		// the rest are phone-specific.
-		expected: 89,
+		// the other 21 are phone-authored (2 adapted from core, 19 phone-only) and
+		// carry translator receipts under i18n/receipts/ pending independent audit.
+		expected: 90,
 	},
 	{
 		name: "mobile.community",

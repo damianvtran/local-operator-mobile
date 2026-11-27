@@ -36,8 +36,25 @@ const host = vi.hoisted(() => ({
 	client: null as unknown,
 	handlers: {} as Record<string, () => void>,
 	opened: [] as string[],
+	/** `useIsFocused` (the live refresh only runs on a focused screen). */
+	focused: true,
+	/** An AppState double: the refresh subscribes to foreground changes. */
+	app: {
+		currentState: "active",
+		listeners: new Set<(state: string) => void>(),
+		addEventListener(_type: "change", listener: (state: string) => void) {
+			host.app.listeners.add(listener);
+			return { remove: () => void host.app.listeners.delete(listener) };
+		},
+		set(state: string) {
+			host.app.currentState = state;
+			for (const listener of [...host.app.listeners]) listener(state);
+		},
+	},
 }));
+vi.mock("expo-router", () => ({ useIsFocused: () => host.focused }));
 vi.mock("react-native", () => ({
+	AppState: host.app,
 	View: ({ children, testID }: { children?: ReactNode; testID?: string }) => (
 		<>
 			{testID ? `⟦id:${testID}⟧` : null}
@@ -178,7 +195,11 @@ beforeEach(() => {
 	host.stream = "live";
 	host.list = { capabilities: { features: { guard: 1 } }, frameCount: 1 };
 	host.opened = [];
-	vi.useFakeTimers({ toFake: ["Date"] });
+	host.focused = true;
+	host.app.currentState = "active";
+	// setInterval is faked too: the live refresh is an interval, and a test that
+	// never advances it must never see it fire.
+	vi.useFakeTimers({ toFake: ["Date", "setInterval", "clearInterval"] });
 	vi.setSystemTime(new Date("2026-11-27T12:00:00Z"));
 });
 afterEach(async () => {
@@ -323,5 +344,73 @@ describe("the inbox's Guard item", () => {
 		install({ guardStatus: waiting });
 		await mount();
 		expect(snapshot().ids).not.toContain("guard-consent-sheet");
+	});
+});
+
+/**
+ * R1-5: Guard sends no push, so the row is the only way to learn a request
+ * arrived — it must show up while the inbox is already open, without polling
+ * where Guard does not exist.
+ */
+describe("the inbox row stays live while it is open", () => {
+	const REFRESH = 20_000;
+	const tick = async (ms: number) => {
+		await act(async () => {
+			vi.advanceTimersByTime(ms);
+		});
+		await settle();
+	};
+
+	it("a request that lands while the inbox is open appears on the next interval", async () => {
+		let body = status({ orgs: [org()] });
+		const calls = install({ guardStatus: () => body });
+		await mount();
+		expect(snapshot().ids).not.toContain("guard-inbox-row");
+		body = waiting();
+		await tick(REFRESH);
+		expect(snapshot().ids).toContain("guard-inbox-row");
+		expect(calls.map((c) => c.name)).toEqual(["guardStatus", "guardStatus"]);
+	});
+
+	it("returning to the foreground re-reads once; the background does not poll", async () => {
+		const calls = install({ guardStatus: waiting });
+		await mount();
+		await act(async () => host.app.set("background"));
+		await tick(5 * REFRESH);
+		expect(calls).toHaveLength(1);
+		await act(async () => host.app.set("active"));
+		await settle();
+		expect(calls).toHaveLength(2);
+	});
+
+	it("an unfocused screen does not poll, and refocusing re-reads once", async () => {
+		const calls = install({ guardStatus: waiting });
+		await mount();
+		host.focused = false;
+		await mount();
+		await tick(5 * REFRESH);
+		expect(calls).toHaveLength(1);
+		host.focused = true;
+		await mount();
+		expect(calls).toHaveLength(2);
+	});
+
+	it("a host without features.guard: zero requests and zero timers, however long it is open", async () => {
+		host.list = { capabilities: { features: {} }, frameCount: 3 };
+		const calls = install({});
+		await mount();
+		await tick(10 * REFRESH);
+		expect(calls).toEqual([]);
+		expect(vi.getTimerCount()).toBe(0);
+	});
+
+	it("leaving the screen stops the refresh", async () => {
+		const calls = install({ guardStatus: waiting });
+		await mount();
+		await act(async () => root.unmount());
+		await act(async () => vi.advanceTimersByTime(10 * REFRESH));
+		expect(calls).toHaveLength(1);
+		expect(vi.getTimerCount()).toBe(0);
+		root = createRoot(dom.container as Element);
 	});
 });

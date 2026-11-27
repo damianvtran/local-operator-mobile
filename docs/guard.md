@@ -6,12 +6,16 @@ per-organization switch is a backend setting the host applies; a member's
 consent is the host's own signed act. This page is what the phone does about it
 and the relay contract it needs from the host.
 
-**Status: the relay routes below do not exist on any host yet.** The phone ships
-against this proposal and a mock (`tools/mock-relay/guard.ts`), shows a calm
-"unavailable" line on any computer that does not advertise `features.guard`, and
-makes **zero Guard requests** there. It cannot work end to end until a host
-slice adds the relay twin of the desktop plane's routes
-(`local_operator/server/models/desktop_guard.py`, slice L2c).
+**Status: the routes live in the Local Operator host, not here.** The host's relay
+twin is slice L2d (local-operator PR #4662); its design note,
+`docs/design/guard-relay-twin.md` in that repository, is the source of truth for
+every route, body and error code, and this page only records what the phone does
+with them (the relay contract is never changed from this repository). Until a host
+ships that twin the phone works against a mock (`tools/mock-relay/guard.ts`),
+shows a calm "unavailable" line on any computer that does not advertise
+`features.guard`, and makes **zero Guard requests** there. The twin is the relay
+twin of the desktop plane's routes (`local_operator/server/models/desktop_guard.py`,
+slice L2c).
 
 ## What the phone is, and is not
 
@@ -35,6 +39,22 @@ slice adds the relay twin of the desktop plane's routes
 - It never appears in `session/[id]`: a consent request is about a computer, not
   a turn, and it never interrupts one.
 
+## Connection states and live refresh
+
+`useGuardAvailability` (`src/features/guard/use-guard.ts`) gates every Guard
+request: `unknown` (no list frame yet), `offline`, `unsupported` (no
+`features.guard`) and `degraded` make **zero** requests. `degraded` is a route
+with an unhealthy live stream; Settings says "Reconnecting to your computer…"
+there, not "Connect to a computer", because a route exists.
+
+Guard sends no push, so while the inbox or Settings is open the phone re-reads
+the host's status silently: when the app returns to the foreground and every 20 s
+while it is in the foreground and the screen is focused
+(`src/features/guard/guard-refresh.ts`). The read is skipped while a first read, a
+write or an open consent card is in flight, a failed refresh keeps the last good
+view, and a non-Team account does not re-fetch the trial card. Nothing polls
+without `features.guard`.
+
 ## Surfaces
 
 | Surface | File | Shows |
@@ -49,7 +69,7 @@ first and nothing is pre-selected; closing the card is "Decide later" and sends
 nothing; input in the first 500 ms after the card renders is ignored; a card
 whose scopes the app cannot describe withholds every answer button.
 
-## The relay twin (proposed contract)
+## The relay twin (the host's contract, as the phone reads it)
 
 Same bodies and models as the desktop plane, cookie-gated like every `/api/*`
 route (a request without the relay cookie answers `401`). Capability:
@@ -75,12 +95,18 @@ GuardConsentCard {
 }
 ```
 
-Errors the phone understands: `404`/`410` and the codes
-`guard_consent_expected_mismatch`, `guard_consent_payload_invalid`,
-`credential_operation_mismatch` mean "the request changed or was answered" (the
-phone re-reads and says so); `409 guard_not_sharing` on revoke means it already
-stopped; anything else on an answer is reconciled against a fresh
-`GET /api/guard` before the phone says whether the choice was saved.
+Errors the phone acts on (the host's full table is in `guard-relay-twin.md` §1):
+
+| Answer | Meaning to the phone |
+| --- | --- |
+| `404 approval_not_found`, any `410`, a code-less `404` | The request is gone: "changed", re-read. |
+| `409 approval_decision_conflict`, `409 approval_expired` | The host KEPT the card but it is already settled (another device answered, or it expired): "changed", re-read. |
+| `409 guard_consent_expected_mismatch`, `guard_consent_payload_invalid`, `credential_operation_mismatch` | A digest is not the card's: "changed", re-read. |
+| `404 guard_unavailable` (also `guard_not_applicable`, `guard_org_unknown`) | Guard is not available here / the org is unknown. **Not** "the request changed": the phone says it could not read or save, and re-reads the status. |
+| `409 guard_not_sharing` on revoke | It already stopped; the phone re-reads and says so through the indicator. |
+| `409 guard_answer_not_admitted` (share-again) | Not retryable from the phone: the host withholds it (`can_answer: false`) and the phone already hides "Share again". |
+| `409 guard_consent_not_granted` | Signed but the grant did not land. The answer is reconciled against a fresh `GET /api/guard`; "Share" re-sends the same card's two digests. |
+| anything else on an answer | Reconciled against a fresh `GET /api/guard` before the phone says whether the choice was saved. |
 
 ### Differences from the L2c desktop contract
 
@@ -117,11 +143,14 @@ stopped; anything else on an answer is reconciled against a fresh
 All strings are the `mobile.guard.*` catalogue
 (`src/i18n/catalogues/*/mobile.guard.json`). The RFC section 15.4' wording is
 mirrored key for key from the core TUI catalogue (`tui.guard.*`), whose
-translations were audited there; those values are copied byte for byte. The 20
-phone-specific strings are new and were translated by the coder agent only:
-**they need an independent audit pass** before the strings are treated as final
-in `fr`, `es`, `zh-CN`, `ru`, `vi`, `hi` and `ur` (the key list is in the pull
-request).
+translations were audited there; 69 values are copied byte for byte. The other 21
+strings are phone-authored (19 phone-only, 2 adapted from core: `indicator_waiting`
+and `prompt_background`, which say Settings where core says `/guard`). Their
+non-English values were written by the translator agent against the core
+glossary, the per-locale style guides and the core's own words for the same
+concepts (computer, guardrail, share, answer), and carry translator receipts
+under `i18n/receipts/`; **they still need an independent audit pass** before
+they are treated as final in `fr`, `es`, `zh-CN`, `ru`, `vi`, `hi` and `ur`.
 
 The revoke confirm names the backup window from the host's `backup_days` (never
 a literal) and omits the trace-detail sentence when the host did not measure it.

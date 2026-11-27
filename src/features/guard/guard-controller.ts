@@ -88,21 +88,55 @@ export interface GuardState {
 }
 
 /** Codes the host answers when the card on disk is no longer the card the member
- *  read (newer revision, already answered, digest mismatch): the request changed
- *  or was answered, so the right move is re-reading, not "try again". */
+ *  read (newer revision, already answered, expired, digest mismatch): the request
+ *  changed or was answered, so the right move is re-reading, not "try again".
+ *  `approval_decision_conflict` / `approval_expired` are the host's own answers
+ *  for a card that was already settled (L2d `docs/design/guard-relay-twin.md`
+ *  §1: the card is kept with a non-`requested` state and a repeat answer is a
+ *  409), so a second device answering first reads as "changed", not "failed". */
 const CHANGED_CODES: ReadonlySet<string> = new Set([
 	"guard_consent_expected_mismatch",
 	"guard_consent_payload_invalid",
 	"credential_operation_mismatch",
 	"approval_not_pending",
 	"approval_already_settled",
+	"approval_decision_conflict",
+	"approval_expired",
+	"approval_not_found",
 ]);
 
+/** The host's "Guard is not available here" (non-Team account, or no org has
+ *  turned it on): a 404 on every write and consent route that is NOT about the
+ *  card. It must never be read as "the request changed". */
+const UNAVAILABLE_CODES: ReadonlySet<string> = new Set([
+	"guard_unavailable",
+	"guard_not_applicable",
+	"guard_org_unknown",
+]);
+
+const isUnavailable = (error: unknown): boolean =>
+	isRelayError(error) &&
+	error.status === 404 &&
+	error.code !== undefined &&
+	UNAVAILABLE_CODES.has(error.code);
+
+/** A 404/410 with no code (an older host or a plain route miss) still means the
+ *  card is gone; a 404 that NAMES a Guard-unavailable code does not. */
 const isChanged = (error: unknown): boolean =>
 	isRelayError(error) &&
+	!isUnavailable(error) &&
 	(error.status === 404 ||
 		error.status === 410 ||
 		(error.code !== undefined && CHANGED_CODES.has(error.code)));
+
+/** Re-read cadence while a Guard surface is open and focused. The status read is
+ *  a LOCAL host read (the host's own account of Guard; no Radient call), so the
+ *  cost is one small relay GET per period, and only while the app is in the
+ *  foreground, the screen is focused and the host advertises `features.guard`.
+ *  20 s matches the other relay-served screens that cannot be pushed to (the
+ *  reply thread's `POLL_MS`); it is a latency trade for "a request that lands
+ *  while the screen is open shows up", not a cap on a measured quantity. */
+export const GUARD_REFRESH_MS = 20_000;
 
 export function createGuardController(
 	client: Client,
@@ -144,7 +178,15 @@ export function createGuardController(
 			// `readCard: false` is the inbox: it has no use for the trial length and
 			// must not cost a non-Team account a network read it never shows.
 			if (readCard && status.mode === "non_team") {
-				card = await client.guardNonTeamCard().catch(() => null);
+				// A silent re-read (the foreground/interval refresh) reuses the card
+				// it already has: the trial length does not change under a member and
+				// re-fetching it every period would put a Radient round trip on a
+				// timer for a non-Team account.
+				const before = store.getState().read;
+				card =
+					silent && before.kind === "ready" && before.card !== null
+						? before.card
+						: await client.guardNonTeamCard().catch(() => null);
 			}
 			if (!owns(ticket)) return null;
 			store.setState({ read: { kind: "ready", status, card } });
@@ -159,6 +201,17 @@ export function createGuardController(
 			});
 			return null;
 		}
+	};
+
+	/** The foreground/interval refresh: a silent re-read, skipped whenever it
+	 *  could only fight something already in flight — the first read, a write, or
+	 *  an open consent card (re-painting under a member who is reading the card
+	 *  buys nothing; the answer re-reads when it settles). */
+	const refresh = async (): Promise<void> => {
+		const state = store.getState();
+		if (!active || state.read.kind === "loading") return;
+		if (state.busy !== null || state.consent.phase !== "closed") return;
+		await reload({ silent: true });
 	};
 
 	/** After a failed write: ask the host what is true now and say THAT. */
@@ -222,7 +275,10 @@ export function createGuardController(
 					? { kind: "changed", org: org.org }
 					: { kind: "card_unreadable", org: org.org },
 			});
-			if (isChanged(error)) void reload({ silent: true });
+			// Changed or unavailable: either way the status is stale, so re-read it
+			// (an unavailable host then reads as `unavailable`, not as a card error).
+			if (isChanged(error) || isUnavailable(error))
+				void reload({ silent: true });
 		}
 	};
 
@@ -346,6 +402,7 @@ export function createGuardController(
 			generation += 1;
 		},
 		reload,
+		refresh,
 		openConsent,
 		closeConsent,
 		share: () => answer("share"),
