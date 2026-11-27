@@ -87,15 +87,26 @@ stroke edge differently (158.0.8127.37 vs 157.0.8103.79: iPad +19 px, Play +9 px
 iPhone +4 px at 30/255). So the design-kit job does not use the runner image's
 Chrome (the macos-26 pool is mixed); it downloads the exact Chrome for Testing
 build in `design/preview/capture-chrome.pin`, verifies its sha256 and fails closed
-on a mismatch (`design/preview/fetch-capture-chrome.sh`). To change it:
+on a mismatch (`design/preview/fetch-capture-chrome.sh`).
+
+The frames must be rendered BY that pinned Chrome for Testing, not by the branded
+Google Chrome on a developer machine: the two builds of the same version differ
+too (CfT 157.0.8103.79 re-rendering frames made by branded 157: iPhone 79-80 px,
+Play 68 px beyond fuzz, up to 101/255). To change the pin:
 
 1. Pick the build and compute its checksum by streaming, never storing the zip:
    `curl -fsSL https://storage.googleapis.com/chrome-for-testing-public/<VERSION>/mac-arm64/chrome-mac-arm64.zip | shasum -a 256`
 2. Put `<VERSION>` and that sha256 in `capture-chrome.pin` (and in the committed-pin
-   assertions of `fetch-capture-chrome.test.mjs`).
-3. Regenerate the frames with that build (`CHROME=<its binary> node design/preview/capture.mjs`)
-   and commit them in the same change: the pin and the frames are one unit, and a
-   bump without regenerated frames fails the gate.
+   assertions and fixture version of `fetch-capture-chrome.test.mjs`).
+3. Regenerate the frames with that build and commit them in the same change: the
+   pin and the frames are one unit, and a bump without regenerated frames fails the
+   gate. Render them with the pinned binary itself (unpack it with
+   `design/preview/fetch-capture-chrome.sh design/preview/capture-chrome.pin <dir>`,
+   then `CHROME=<printed binary> node design/preview/capture.mjs --target all`), or,
+   when that cannot run on your machine, take the renders the design-kit job makes
+   with it: push the pin, read the failing "committed listing frames" step, and copy
+   the frames from the run's uploaded `listing-frames` artefact over the committed
+   PNGs at the same paths.
 
 ### The committed preview frames are the resting frames
 

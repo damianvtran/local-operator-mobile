@@ -14,7 +14,7 @@ import test from "node:test";
 const script = new URL("./fetch-capture-chrome.sh", import.meta.url).pathname;
 const committedPin = new URL("./capture-chrome.pin", import.meta.url).pathname;
 const darwin = { skip: process.platform !== "darwin" && "fetch-capture-chrome.sh unpacks with macOS ditto" };
-const VERSION = "157.0.8103.79";
+const VERSION = "158.0.8127.37";
 
 /** Serve a fixture archive whose "browser" prints `reported`, and run the script
  * against a pin made from `pin(sha256OfTheArchive)`. */
@@ -70,10 +70,10 @@ test("FAILS closed on a checksum mismatch: no unpack, no fallback to another Chr
 }));
 
 test("FAILS when the verified archive's binary reports another version than the pin", darwin, () => run({
-	reported: "Google Chrome for Testing 158.0.8127.37 ",
+	reported: "Google Chrome for Testing 157.0.8103.79 ",
 }, ({ child }) => {
 	assert.equal(child.status, 1);
-	assert.match(child.stderr, /reports 'Google Chrome for Testing 158\.0\.8127\.37 ', not the pinned 157\.0\.8103\.79/);
+	assert.match(child.stderr, /reports 'Google Chrome for Testing 157\.0\.8103\.79 ', not the pinned 158\.0\.8127\.37/);
 	assert.equal(child.stdout, "");
 }));
 
@@ -108,6 +108,6 @@ test("the committed pin is well formed and names the build the committed frames 
 	const text = readFileSync(committedPin, "utf8");
 	assert.match(text, /^version=\d+\.\d+\.\d+\.\d+$/m);
 	assert.match(text, /^sha256=[0-9a-f]{64}$/m);
-	assert.equal(text.match(/^version=(.*)$/m)[1], "157.0.8103.79");
-	assert.equal(text.match(/^sha256=(.*)$/m)[1], "3d72e157bd2678d4010dfc424ad1bf1acdb7e3727b546b3446b9e0eb4426c821");
+	assert.equal(text.match(/^version=(.*)$/m)[1], "158.0.8127.37");
+	assert.equal(text.match(/^sha256=(.*)$/m)[1], "45925b7ea18e09bf0d5acdae4e36b57cb7ed08ada8dfc0e0c6422f86a3384c9d");
 });
