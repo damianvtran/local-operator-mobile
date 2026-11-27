@@ -948,21 +948,42 @@ frames: once the finger lifts, the keyboard is gone and the composer sits at the
 bottom in both main and the branch. `chrome-ios-proof` therefore also runs two
 gesture flows, **only on lanes that have a baseline** (`before: true` with a
 `base_run_id` build), each on main's build first and then on the branch's, after
-`session-keyboard.yaml` and before `home.yaml`:
+`session-keyboard.yaml` and before `home.yaml`. The short pull runs FIRST: its
+verdict compares the run's first and last samples, so it must start from
+`session-keyboard.yaml`'s keyboard-up state, and it leaves the keyboard up for
+the drag.
 
-- `e2e/maestro/chrome-proof/session-keyboard-drag.yaml` — full dismissal: tap the
-  composer, scroll the transcript to the top (six short swipes; the interactive
-  dismissal only engages at the top of the content), then one 2.5 s downward
-  swipe from 62 % to 96 % of the screen height across the keyboard's top.
-- `e2e/maestro/chrome-proof/session-keyboard-shortpull.yaml` — recovery: a 0.7 s
-  swipe from 62 % to 72 %, below the OS dismissal threshold.
+Both flows share one shape: tap the composer; ten prepare swipes DOWN
+(`30 % -> 65 %` of the height for the drag; `30 % -> 58 %` for the short pull) to
+reach the transcript's top (the interactive dismissal only engages at the top of
+the content, and a finger moving down drags the content toward OLDER messages);
+tap the composer again (a known keyboard-up state after any partial dismissal);
+then the measured gesture, which **starts inside the transcript** (45 %, above
+the composer at ~48-61.6 %), because a swipe only moves the keyboard once it
+touches it. Focusing the composer does not scroll the list (only `sendMark`
+does), so the top reached by the prepare swipes survives the second tap. The
+short pull's prepare swipes stop above the keyboard (58 % < ~60.6 %): its verdict
+reads the keyboard's displacement across the whole sampled run, so a prepare
+swipe that dismissed the keyboard would stand in for the pull.
+
+- `e2e/maestro/chrome-proof/session-keyboard-shortpull.yaml` — recovery: a 1.8 s
+  swipe from 45 % to 70 % (~77 pt into the keyboard, ~118 pt/s, the pace of the
+  earlier 62 % -> 72 % / 0.7 s pull), below the OS dismissal threshold, then
+  `waitForAnimationToEnd` so the last sample is the resting one.
+- `e2e/maestro/chrome-proof/session-keyboard-drag.yaml` — full dismissal: one
+  2.5 s downward swipe from 45 % to 96 % of the screen height across the
+  keyboard's top.
 
 - **Sampled frames:** while Maestro runs, the driver takes
   `xcrun simctl io <udid> screenshot` every ~150 ms into
   `frames/<lane>/<build>/drag/<flow>-<nnn>.png`; the receipt lists
   `{n, elapsedMs, path}` per sample under `lanes[].drag`. A failed screenshot is
   skipped, never retried. The interval is a target: each screenshot has its own
-  latency, so read `elapsedMs`, not `n x 150`.
+  latency, so read `elapsedMs`, not `n x 150`. A lane with no baseline build has
+  `drag: "not run (no baseline build)"` in its receipt, `CAPTURED (keyboard drag:
+  not run, no baseline build)` as its lane verdict and `<lane>/drag=not run (no
+  baseline build)` in the final verdict, so a CAPTURED lane is never read as a
+  drag result.
 - **Measurement** (`dragVerdict`, `scripts/ci/chrome-ios-proof-contract.ts`): per
   frame, a row-mean luminance profile; the two strongest horizontal edges in the
   lower 45 % that are >= 20 pt apart are the composer's top (`composerEdge`, the
@@ -972,28 +993,43 @@ gesture flows, **only on lanes that have a baseline** (`before: true` with a
   run inside it whose keyboard edge only descends (the finger is down), taking
   the run the keyboard travelled furthest in, so the frames after release, where
   both builds look alike, are never the "last" sample.
-- **Verdict**, from first vs last compared sample (`Δ` positive = descending):
+- **Verdict, full drag** (`dragVerdict`; `Δ` positive = descending):
   - `Δkeyboard < 60 pt` -> **INCONCLUSIVE**: the drag did not engage.
-  - `after`: `|Δcomposer − Δkeyboard| <= 8 pt` and `Δcomposer > 0` -> the composer
-    followed the keyboard; otherwise **FAIL**, with both numbers.
+  - `after`: the composer followed only if `|Δcomposer − Δkeyboard| <= 8 pt`,
+    `Δcomposer > 0` AND the **separation** `keyboardEdge − composerEdge` stayed
+    within an 8 pt spread (`max − min`) across EVERY compared frame — endpoints
+    alone would pass a composer that lags mid-drag and catches up. Otherwise
+    **FAIL**, with all three numbers.
   - `before`: `Δcomposer <= 12 pt` -> the composer did not follow (main's
     behaviour: the baseline that gives the after measurement its meaning). If
     `before` also follows, the run is **INCONCLUSIVE**, never a pass.
   - A flow is `ok` only when its baseline did not follow and its after did; an
-    after FAIL fails the lane; everything else is inconclusive. The final verdict
-    string lists every `lane/flow=status`.
-  - **Fail-closed:** an unreadable or mixed-size PNG, too few samples, no motion,
-    a missing or ambiguous edge pair or a baseline that also follows is
-    INCONCLUSIVE with a reason, never ok.
+    after FAIL fails the lane; everything else is inconclusive.
+- **Verdict, short pull** (`shortpullVerdict`): recovery, not following. `ok` only
+  when the LAST usable sample's `composerEdge` and `keyboardEdge` are each within
+  ±4 pt of the FIRST usable sample's, with >= 3 usable samples AND the keyboard
+  displaced by more than 4 pt in at least two samples (a keyboard the pull never
+  moved would "recover" vacuously -> **INCONCLUSIVE**). No 60 pt floor applies.
+  Recovery is a property of the AFTER build; the lane verdict (`shortpullPair`) is
+  the after's, with the baseline's reported beside it. After the flow the driver
+  also dumps the hierarchy and requires the software keyboard (the `space` key)
+  and `composer-input`: a keyboard that is not back is a **lane FAIL** with that
+  reason (the pull dismissed it, so it was not a short pull), never a skip.
+- The final verdict string lists every `lane/flow=status`.
+- **Fail-closed:** an unreadable or mixed-size PNG, too few samples, no motion,
+  a missing or ambiguous edge pair or a baseline that also follows is
+  INCONCLUSIVE with a reason, never ok.
 - **Thresholds, derived:** the composer's lift equals the keyboard's height
   (~336 pt on the 402 pt class), so a full drag moves the composer by the same
-  amount as the keyboard. 8 pt is ~2.4 % of that travel and well above the 3-6 px
-  (1-2 pt) noise of a 3x screenshot; 60 pt is ~18 % of the travel, the smallest
-  motion that cannot be a bounce; 12 pt keeps a non-follower apart from a follower
-  (>= 52 pt once the keyboard has moved 60). The edge-strength, ambiguity and
-  motion floors are estimates written before any real frame existed; they only
-  ever make the verdict more inconclusive. Re-read them against the first real
-  run's frames.
+  amount as the keyboard. 8 pt is ~2.4 % of that travel (>= 24 px at 3x) and well
+  above the 3-6 px (1-2 pt) noise of a 3x screenshot; it bounds both the endpoint
+  agreement and the whole-segment separation spread. 60 pt is ~18 % of the
+  travel, the smallest motion that cannot be a bounce; 12 pt keeps a non-follower
+  apart from a follower (>= 52 pt once the keyboard has moved 60); 4 pt (~12 px)
+  is the smallest return to the start that is not noise. The edge-strength,
+  ambiguity and motion floors are estimates written before any real frame
+  existed; they only ever make the verdict more inconclusive. Re-read them
+  against the first real run's frames.
 - **`PROOF_LANES`** (comma-separated lane ids, e.g. `d3-17pro-dark`): run only
   those lanes. The receipt records `lanesRequested` and `narrowed`, and a narrowed
   run's verdict leads with `NARROWED to <ids>`. The knob can only REDUCE

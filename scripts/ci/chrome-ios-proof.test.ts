@@ -15,12 +15,16 @@ import {
 	collectChromeFrames,
 	DRAG_FLOWS,
 	dragVerdict,
+	keyboardRestored,
 	LANE_FRAMES,
 	LANES,
+	measureFrame,
 	pairVerdict,
 	parseHierarchy,
 	selectLanes,
 	sendAboveKeyboard,
+	shortpullPair,
+	shortpullVerdict,
 } from "./chrome-ios-proof-contract.ts";
 
 /* A Maestro iOS hierarchy at 390x844: the composer's Send, plus (optionally)
@@ -364,6 +368,261 @@ describe("dragVerdict: what the finger-driven keyboard frames prove", () => {
 	});
 });
 
+/** A frame with an extra strip (a third horizontal edge pair, 25 pt below the
+ *  composer's top so it is >= 20 pt from both real edges) inside the composer panel, `level` bright. 200 against the panel's 120 is a step as
+ *  strong as the composer's and the keyboard's own (80); 160 is half of it. */
+const frameWithStrip = (
+	composer: number,
+	keyboard: number,
+	level: number,
+): Uint8Array => {
+	const rgb = new Uint8Array(W * H * 3);
+	for (let y = 0; y < H; y += 1) {
+		const inStrip = y >= composer + 25 && y < composer + 45;
+		const value =
+			y >= keyboard ? 40 : y >= composer ? (inStrip ? level : 120) : 200;
+		rgb.fill(value, y * W * 3, (y + 1) * W * 3);
+	}
+	return png(rgb);
+};
+
+/** The keyboard descends 300 -> 380 (5 frames, composer riding), bracketed by
+ *  still frames; `compose` places each frame so a test can break one rule. */
+const ride = (
+	compose: (step: number, index: number) => Uint8Array,
+): Uint8Array[] => [
+	frame(240, 300),
+	frame(240, 300),
+	...[0, 20, 40, 60, 80].map((step, index) => compose(step, index)),
+	frame(320, 380),
+	frame(320, 380),
+];
+
+describe("dragVerdict: continuous attachment (U1)", () => {
+	// Composer position per step: rides 1:1 except where `lag` pulls it back.
+	const withLag = (lag: readonly number[]) =>
+		ride((step, index) => frame(240 + step - (lag[index] ?? 0), 300 + step));
+
+	it("a composer that lags mid-drag and catches up is NOT attached, though its endpoints match", () => {
+		const frames = withLag([0, 20, 20, 20, 0]);
+		const after = dragVerdict("after", frames, 1);
+		expect(after.status).toBe("fail");
+		expect(after).toMatchObject({ deltaKeyboard: 80, deltaComposer: 80 });
+		expect(after.gapSpread).toBe(20);
+		expect(after.reason).toMatch(/separation spread=20\.0 pt/);
+		// The baseline reads it as "not attached" too, never as a clean baseline.
+		expect(dragVerdict("before", frames, 1).status).toBe("inconclusive");
+	});
+
+	it("the separation bound is 8 pt over the whole segment: 8 passes, 12 does not", () => {
+		const eight = dragVerdict("after", withLag([0, 8, 8, 8, 0]), 1);
+		expect(eight.status).toBe("ok");
+		expect(eight.gapSpread).toBe(8);
+		expect(dragVerdict("after", withLag([0, 12, 12, 12, 0]), 1).status).toBe(
+			"fail",
+		);
+	});
+
+	it("a rigidly attached composer has a zero spread", () => {
+		expect(dragVerdict("after", withLag([]), 1)).toMatchObject({
+			status: "ok",
+			gapSpread: 0,
+		});
+	});
+});
+
+describe("dragVerdict: fail-closed rules each have a test (R2-2)", () => {
+	it("rising-keyboard split: the run ends where the keyboard rises, so a spring-back is not the drag", () => {
+		// 300 -> 380 (composer riding), then it springs BACK 360, 340, 320, 300.
+		// Unsplit, first-vs-last is 300 -> 300: Δkeyboard 0, "did not engage".
+		const frames = [
+			frame(240, 300),
+			frame(240, 300),
+			...[0, 20, 40, 60, 80].map((s) => frame(240 + s, 300 + s)),
+			...[60, 40, 20, 0].map((s) => frame(240 + s, 300 + s)),
+			frame(240, 300),
+		];
+		expect(dragVerdict("after", frames, 1)).toMatchObject({
+			status: "ok",
+			deltaKeyboard: 80,
+		});
+	});
+
+	it("AMBIGUITY_RATIO: a third edge as strong as the pair drops the frame, splitting the drag", () => {
+		// Frame 4 (keyboard 340) carries a strip whose edges are as strong as the
+		// composer's: which two edges are the pair is a guess, so the frame is
+		// dropped and the two halves (2 samples each) are too short.
+		const strong = ride((step, index) =>
+			index === 2
+				? frameWithStrip(240 + step, 300 + step, 200)
+				: frame(240 + step, 300 + step),
+		);
+		const verdict = dragVerdict("after", strong, 1);
+		expect(verdict.status).toBe("inconclusive");
+		expect(verdict.reason).toMatch(/ambiguous edges/);
+		// Under the ratio (a strip half as strong) the same frame is read.
+		const weak = ride((step, index) =>
+			index === 2
+				? frameWithStrip(240 + step, 300 + step, 160)
+				: frame(240 + step, 300 + step),
+		);
+		expect(dragVerdict("after", weak, 1).status).toBe("ok");
+		const measured = measureFrame(frameWithStrip(240, 340, 200), "strip", 1);
+		expect(measured.edges).toBeNull();
+		expect(measured.reason).toMatch(/third edge is 100 % as strong/);
+	});
+
+	it.each([
+		["static run first", true],
+		["static run last", false],
+	])(
+		"furthest-travel run choice (%s): a longer-travelled drag wins over a static run in the window",
+		(_name, staticFirst) => {
+			// Two runs of >= 3 clean samples split by a frame with no composer edge:
+			// the drag (keyboard 300 -> 380, composer riding) and a static run (the
+			// keyboard stays put while the composer moves INSIDE the motion band, the
+			// bottom 40 % of the frame, so the window covers it).
+			const dragRun = [0, 20, 40, 60, 80].map((s) => frame(240 + s, 300 + s));
+			const staticRun = (from: number, kb: number) =>
+				[from, from + 10, from + 20].map((c) => frame(c, kb));
+			const frames = staticFirst
+				? [
+						...staticRun(250, 340),
+						frame(null, 340),
+						...dragRun,
+						frame(320, 380),
+					]
+				: [...dragRun, frame(null, 380), ...staticRun(320, 380)];
+			expect(dragVerdict("after", frames, 1)).toMatchObject({
+				status: "ok",
+				deltaKeyboard: 80,
+			});
+		},
+	);
+});
+
+describe("shortpullVerdict: recovery, not following", () => {
+	/** Still, then the keyboard (and its composer) pulled `pull` pt and back. */
+	const pulled = (
+		pull: number,
+		endKeyboard = 300,
+		endComposer = 240,
+	): Uint8Array[] => [
+		frame(240, 300),
+		frame(240, 300),
+		frame(240 + pull / 2, 300 + pull / 2),
+		frame(240 + pull, 300 + pull),
+		frame(240 + pull / 2, 300 + pull / 2),
+		frame(endComposer, endKeyboard),
+		frame(endComposer, endKeyboard),
+	];
+
+	it("passes when both edges return to where they started", () => {
+		expect(shortpullVerdict(pulled(40), 1)).toMatchObject({
+			status: "ok",
+			deltaKeyboard: 0,
+			deltaComposer: 0,
+		});
+	});
+
+	it("fails with the numbers when the composer is stranded at the dragged position", () => {
+		const verdict = shortpullVerdict(pulled(40, 300, 262), 1);
+		expect(verdict.status).toBe("fail");
+		expect(verdict.reason).toMatch(/Δkeyboard=0\.0 pt, Δcomposer=22\.0 pt/);
+	});
+
+	it("fails when the keyboard does not return", () => {
+		expect(shortpullVerdict(pulled(40, 330, 270), 1).status).toBe("fail");
+	});
+
+	it("the recovery tolerance is 4 pt on each edge: 4 passes, 5 does not", () => {
+		expect(shortpullVerdict(pulled(40, 304, 244), 1).status).toBe("ok");
+		expect(shortpullVerdict(pulled(40, 305, 244), 1).status).toBe("fail");
+		expect(shortpullVerdict(pulled(40, 304, 245), 1).status).toBe("fail");
+		expect(shortpullVerdict(pulled(40, 296, 236), 1).status).toBe("ok");
+		expect(shortpullVerdict(pulled(40, 295, 236), 1).status).toBe("fail");
+	});
+
+	it("is inconclusive, never ok, when the pull never moved the keyboard", () => {
+		const still = Array.from({ length: 7 }, () => frame(240, 300));
+		const verdict = shortpullVerdict(still, 1);
+		expect(verdict.status).toBe("inconclusive");
+		expect(verdict.reason).toMatch(/did not move the keyboard/);
+	});
+
+	it("a single displaced sample is not engagement", () => {
+		const one = [
+			frame(240, 300),
+			frame(240, 300),
+			frame(260, 320),
+			frame(240, 300),
+			frame(240, 300),
+		];
+		expect(shortpullVerdict(one, 1).status).toBe("inconclusive");
+	});
+
+	it("is inconclusive on too few usable samples, an unreadable PNG and no edges", () => {
+		expect(shortpullVerdict(pulled(40).slice(0, 2), 1).status).toBe(
+			"inconclusive",
+		);
+		const bad = pulled(40);
+		bad[3] = new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+		expect(shortpullVerdict(bad, 1).reason).toMatch(/unreadable PNG/);
+		const blank = Array.from({ length: 6 }, () => frame(null, 300));
+		const verdict = shortpullVerdict(blank, 1);
+		expect(verdict.status).toBe("inconclusive");
+		expect(verdict.reason).toMatch(/usable sample/);
+	});
+
+	it("the lane verdict is the AFTER's; the baseline is reported, never required", () => {
+		const ok = { status: "ok" as const, reason: "r" };
+		const inc = { status: "inconclusive" as const, reason: "x" };
+		const fail = { status: "fail" as const, reason: "y" };
+		expect(shortpullPair(inc, ok).status).toBe("ok");
+		expect(shortpullPair(ok, ok).status).toBe("ok");
+		expect(shortpullPair(ok, fail).status).toBe("fail");
+		expect(shortpullPair(ok, inc).status).toBe("inconclusive");
+		expect(shortpullPair(fail, ok).reason).toMatch(/baseline fail/);
+	});
+});
+
+describe("keyboardRestored (after the short pull)", () => {
+	const withInput = (keyboard: boolean) => ({
+		attributes: {},
+		children: [
+			{
+				attributes: {
+					"resource-id": "composer-input",
+					bounds: "[16,500][300,548]",
+				},
+			},
+			...(keyboard
+				? [
+						{
+							attributes: {
+								accessibilityText: "space",
+								bounds: "[100,760][290,802]",
+							},
+						},
+					]
+				: []),
+		],
+	});
+	it("is ok with the software keyboard up and the input in the tree", () => {
+		expect(keyboardRestored(withInput(true)).ok).toBe(true);
+	});
+	it("FAILS, never skips, when the pull dismissed the keyboard", () => {
+		const verdict = keyboardRestored(withInput(false));
+		expect(verdict.ok).toBe(false);
+		expect(verdict.reason).toMatch(/no software keyboard/);
+	});
+	it("FAILS without the composer input", () => {
+		const tree = withInput(true);
+		tree.children.shift();
+		expect(keyboardRestored(tree).ok).toBe(false);
+	});
+});
+
 describe("pairVerdict", () => {
 	const ok = (reason: string) => ({ status: "ok" as const, reason });
 	const inc = { status: "inconclusive" as const, reason: "x" };
@@ -429,9 +688,10 @@ describe("the finger-driven keyboard flows", () => {
 	const read = (file: string) => readFileSync(new URL(file, flowsDir), "utf8");
 
 	it("are the two the driver samples, and only use identifiers the app renders", () => {
+		// The short pull runs FIRST: it must start from the keyboard-up end state.
 		expect(DRAG_FLOWS.map((f) => f.file)).toEqual([
-			"session-keyboard-drag.yaml",
 			"session-keyboard-shortpull.yaml",
+			"session-keyboard-drag.yaml",
 		]);
 		for (const { file } of DRAG_FLOWS) {
 			const text = read(file);
@@ -453,13 +713,43 @@ describe("the finger-driven keyboard flows", () => {
 					/start: "([^"]+)"\n\s+end: "([^"]+)"\n\s+duration: (\d+)/g,
 				),
 			].map((m) => m.slice(1, 4).join(" | "));
+		// Ten prepare swipes DOWN (toward older content), then the measured gesture,
+		// which starts inside the transcript (45%), above the composer.
 		expect(swipes("session-keyboard-drag.yaml")).toEqual([
-			"50%, 60% | 50%, 30% | 200",
-			"50%, 62% | 50%, 96% | 2500",
+			"50%, 30% | 50%, 65% | 150",
+			"50%, 45% | 50%, 96% | 2500",
 		]);
-		expect(read("session-keyboard-drag.yaml")).toMatch(/times: 6/);
 		expect(swipes("session-keyboard-shortpull.yaml")).toEqual([
-			"50%, 62% | 50%, 72% | 700",
+			"50%, 30% | 50%, 58% | 150",
+			"50%, 45% | 50%, 70% | 1800",
+		]);
+		for (const { file } of DRAG_FLOWS)
+			expect(read(file)).toMatch(/times: 10\b/);
+	});
+
+	it("run prepare, re-focus, the measured gesture, then assert the input", () => {
+		const steps = (file: string) =>
+			(read(file).split("\n---\n")[1] ?? "")
+				.split("\n")
+				.flatMap((line) => /^- (\w+)/.exec(line)?.[1] ?? []);
+		expect(steps("session-keyboard-drag.yaml")).toEqual([
+			"tapOn",
+			"waitForAnimationToEnd",
+			"repeat",
+			"tapOn",
+			"waitForAnimationToEnd",
+			"swipe",
+			"assertVisible",
+		]);
+		expect(steps("session-keyboard-shortpull.yaml")).toEqual([
+			"tapOn",
+			"waitForAnimationToEnd",
+			"repeat",
+			"tapOn",
+			"waitForAnimationToEnd",
+			"swipe",
+			"waitForAnimationToEnd",
+			"assertVisible",
 		]);
 	});
 });

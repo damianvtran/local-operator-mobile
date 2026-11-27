@@ -2,19 +2,52 @@
 # the OS dismissal threshold, so the keyboard springs back and the composer must
 # spring back with it (never stranded at the dragged position). Continues from
 # session-keyboard.yaml's end state — no relaunch, no secrets. Sampled by the
-# driver like session-keyboard-drag.yaml; the verdict reads the same edges.
+# driver like session-keyboard-drag.yaml; `shortpullVerdict` demands that both
+# edges end where they started, and the driver checks from a hierarchy taken
+# right after that the software keyboard is up again.
 #
-# 10% of the screen over 0.7 s is a slow, short pull, well under the distance
-# and velocity at which iOS commits to dismissing.
+# PREPARE: scroll to the transcript's top, because the interactive dismissal
+# only engages at the top of the content. The finger moves DOWN, and a finger
+# moving down drags the content down, i.e. toward OLDER content (the top); ten
+# swipes reach the top of any plausible transcript and bounce harmlessly if it
+# is shorter than one screen. Unlike session-keyboard-drag.yaml, these swipes
+# END AT 58%, ABOVE the keyboard's top (~61.6% of 874 pt, ~60.6% of 852 pt):
+# this flow's verdict reads the keyboard's displacement over the WHOLE sampled
+# run, so a prepare swipe that touched the keyboard and dismissed it would
+# satisfy "the pull moved the keyboard" without the pull ever engaging. The
+# second tap still restores a known keyboard-up state. Focusing the composer
+# does NOT scroll the list (only `sendMark` does, transcript-list.tsx:1588-1593),
+# so the position reached here survives it.
+#
+# THE MEASURED PULL starts inside the transcript (45%) and ends at 70%. Only a
+# swipe that touches the keyboard moves it (keyboard-drag.ts), and its top is at
+# ~61.6% (~60.6% of 852 pt), so the finger enters it after ~16% and goes ~9%
+# (~77 pt) in. 25% of ~852 pt over 1.8 s is ~118 pt/s, the pace of the earlier
+# 62%->72% / 0.7 s pull (~121 pt/s): slow and short, below the distance and
+# velocity at which iOS commits to dismissing. The wait lets the spring-back
+# settle before the flow ends, so the driver's last sample is the resting one.
 appId: ${APP_ID}
 ---
 - tapOn:
     id: "composer-input"
 - waitForAnimationToEnd:
     timeout: 3000
+- repeat:
+    times: 10
+    commands:
+      - swipe:
+          start: "50%, 30%"
+          end: "50%, 58%"
+          duration: 150
+- tapOn:
+    id: "composer-input"
+- waitForAnimationToEnd:
+    timeout: 2000
 - swipe:
-    start: "50%, 62%"
-    end: "50%, 72%"
-    duration: 700
+    start: "50%, 45%"
+    end: "50%, 70%"
+    duration: 1800
+- waitForAnimationToEnd:
+    timeout: 1500
 - assertVisible:
     id: "composer-input"

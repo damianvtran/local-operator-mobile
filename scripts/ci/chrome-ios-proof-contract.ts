@@ -148,11 +148,20 @@ export function selectLanes(
 
 /**
  * The finger-driven keyboard flows, run (sampled) only on lanes that have a
- * baseline. `cap` is the Maestro budget in seconds.
+ * baseline. `cap` is the Maestro budget in seconds; `rule` names the verdict
+ * that reads the flow's frames: `follow` is `dragVerdict` + `pairVerdict`,
+ * `recovery` is `shortpullVerdict` + `shortpullPair`.
+ *
+ * ORDER MATTERS: the short pull runs FIRST. Its verdict compares the run's
+ * first and last usable samples, so it must start from `session-keyboard.yaml`'s
+ * keyboard-up end state; run after the full drag it would start with the
+ * keyboard dismissed and its "first" sample would be the wrong resting place.
+ * The pull ends with the keyboard up (the driver asserts it), which is the
+ * state the drag flow's own first tap expects.
  */
 export const DRAG_FLOWS = [
-	{ file: "session-keyboard-drag.yaml", cap: 300 },
-	{ file: "session-keyboard-shortpull.yaml", cap: 300 },
+	{ file: "session-keyboard-shortpull.yaml", cap: 300, rule: "recovery" },
+	{ file: "session-keyboard-drag.yaml", cap: 300, rule: "follow" },
 ] as const;
 
 // ---------------------------------------------------------------------------
@@ -177,6 +186,15 @@ export const DRAG_FLOWS = [
 //  - KEYBOARD_MIN_TRAVEL_PT = 60 is ~18 % of the travel: the smallest motion
 //    that cannot be a bounce. Less means the drag did not engage and the
 //    instrument can say nothing.
+//  - The follow tolerance applies to the SEPARATION (keyboardEdge − composerEdge)
+//    over EVERY compared frame, not only the first and last: a composer that
+//    lags mid-drag and catches up has the right endpoints and the wrong
+//    behaviour. A rigidly attached composer keeps a constant separation, so its
+//    spread (max − min, in pt) must stay within the same 8 pt (≥ 24 px at 3x).
+//  - RECOVERY_TOLERANCE_PT = 4 (short pull): ~12 px at 3x, the smallest return
+//    to the starting position that is not screenshot noise (1-2 pt). The pull
+//    must also have displaced the keyboard by MORE than this in at least two
+//    samples, else "it came back" is true of a keyboard that never moved.
 //  - STATIC_TOLERANCE_PT = 12: with the keyboard having moved >= 60 pt, a
 //    follower's composer has moved >= 52 pt, so 12 pt separates "stayed put"
 //    from "followed" by a wide margin while absorbing measurement noise.
@@ -203,6 +221,7 @@ export const MIN_WINDOW_SAMPLES = 3;
 export const KEYBOARD_MIN_TRAVEL_PT = 60;
 export const FOLLOW_TOLERANCE_PT = 8;
 export const STATIC_TOLERANCE_PT = 12;
+export const RECOVERY_TOLERANCE_PT = 4;
 export const MONOTONE_NOISE_PT = 2;
 /** Edges are searched in the lower part of the frame (composer + keyboard); the
  *  motion energy is read from the bottom part. Both are fractions of height. */
@@ -318,10 +337,35 @@ export type DragVerdict = {
 	/** pt, positive = descending; present once a drag segment was measured. */
 	deltaKeyboard?: number;
 	deltaComposer?: number;
+	/** pt; max − min of (keyboardEdge − composerEdge) over the compared frames. */
+	gapSpread?: number;
 	/** Frames inside the motion window / frames in the measured drag segment. */
 	windowSamples?: number;
 	segmentSamples?: number;
 };
+
+/** Every sample decoded and measured, or the reason none can be trusted. */
+function measureSamples(
+	pngs: readonly Uint8Array[],
+	pxPerPt: number,
+): { frames: FrameMeasure[] } | { reason: string } {
+	if (pngs.length < MIN_WINDOW_SAMPLES)
+		return {
+			reason: `${pngs.length} sample(s); need at least ${MIN_WINDOW_SAMPLES}`,
+		};
+	let frames: FrameMeasure[];
+	try {
+		frames = pngs.map((bytes, i) =>
+			measureFrame(bytes, `sample ${i}`, pxPerPt),
+		);
+	} catch (error) {
+		return { reason: `unreadable PNG: ${String(error)}` };
+	}
+	const size = `${frames[0]?.width}x${frames[0]?.height}`;
+	if (frames.some((f) => `${f.width}x${f.height}` !== size))
+		return { reason: "samples differ in size" };
+	return { frames };
+}
 
 /**
  * The verdict for ONE build's sampled drag, from its PNGs in capture order.
@@ -338,6 +382,10 @@ export type DragVerdict = {
  * drag only descends), that the keyboard travelled furthest in. That keeps the frames after the finger lifts —
  * the keyboard gone, or springing back, the composer dropping in main — out of
  * the first-vs-last comparison, where main and the branch look the same.
+ *
+ * Following needs the endpoints to agree AND the separation to hold across the
+ * whole segment (`gapSpread`): a composer that lags mid-drag and catches up is
+ * not attached to the finger.
  */
 export function dragVerdict(
 	build: DragBuild,
@@ -348,21 +396,9 @@ export function dragVerdict(
 		reason: string,
 		extra: Partial<DragVerdict> = {},
 	): DragVerdict => ({ status: "inconclusive", reason, ...extra });
-	if (pngs.length < MIN_WINDOW_SAMPLES)
-		return inconclusive(
-			`${pngs.length} sample(s); need at least ${MIN_WINDOW_SAMPLES}`,
-		);
-	let frames: FrameMeasure[];
-	try {
-		frames = pngs.map((bytes, i) =>
-			measureFrame(bytes, `sample ${i}`, pxPerPt),
-		);
-	} catch (error) {
-		return inconclusive(`unreadable PNG: ${String(error)}`);
-	}
-	const size = `${frames[0]?.width}x${frames[0]?.height}`;
-	if (frames.some((f) => `${f.width}x${f.height}` !== size))
-		return inconclusive("samples differ in size");
+	const read = measureSamples(pngs, pxPerPt);
+	if ("reason" in read) return inconclusive(read.reason);
+	const { frames } = read;
 
 	// The motion window: first to last frame touched by above-floor motion.
 	let start = -1;
@@ -443,10 +479,17 @@ export function dragVerdict(
 	>;
 	const deltaKeyboard = (b.keyboardEdge - a.keyboardEdge) / pxPerPt;
 	const deltaComposer = (b.composerEdge - a.composerEdge) / pxPerPt;
-	const numbers = `Δkeyboard=${deltaKeyboard.toFixed(1)} pt, Δcomposer=${deltaComposer.toFixed(1)} pt over ${segmentSamples} samples`;
+	// Continuous attachment: the separation must not drift anywhere in the
+	// segment, not just between its endpoints (U1).
+	const gaps: number[] = [];
+	for (let i = run.from; i <= run.to; i += 1)
+		gaps.push(edgesAt(i).keyboardEdge - edgesAt(i).composerEdge);
+	const gapSpread = (Math.max(...gaps) - Math.min(...gaps)) / pxPerPt;
+	const numbers = `Δkeyboard=${deltaKeyboard.toFixed(1)} pt, Δcomposer=${deltaComposer.toFixed(1)} pt, separation spread=${gapSpread.toFixed(1)} pt over ${segmentSamples} samples`;
 	const measured = {
 		deltaKeyboard,
 		deltaComposer,
+		gapSpread,
 		windowSamples,
 		segmentSamples,
 	};
@@ -457,7 +500,8 @@ export function dragVerdict(
 		);
 	const followed =
 		Math.abs(deltaComposer - deltaKeyboard) <= FOLLOW_TOLERANCE_PT &&
-		deltaComposer > 0;
+		deltaComposer > 0 &&
+		gapSpread <= FOLLOW_TOLERANCE_PT;
 	if (build === "after")
 		return followed
 			? {
@@ -467,7 +511,7 @@ export function dragVerdict(
 				}
 			: {
 					status: "fail",
-					reason: `the composer did not follow the keyboard: ${numbers} (need |Δcomposer − Δkeyboard| <= ${FOLLOW_TOLERANCE_PT} pt and Δcomposer > 0)`,
+					reason: `the composer did not follow the keyboard: ${numbers} (need |Δcomposer − Δkeyboard| <= ${FOLLOW_TOLERANCE_PT} pt, Δcomposer > 0 and a separation spread <= ${FOLLOW_TOLERANCE_PT} pt)`,
 					...measured,
 				};
 	if (deltaComposer <= STATIC_TOLERANCE_PT)
@@ -500,6 +544,128 @@ export function pairVerdict(
 		status: "inconclusive",
 		reason: `before ${before.status}: ${before.reason}; after ${after.status}: ${after.reason}`,
 	};
+}
+
+/**
+ * The short pull's verdict: RECOVERY, not following. A pull too short to
+ * dismiss the keyboard must leave both edges where they started: the keyboard
+ * sprang back and the composer with it (never stranded at the dragged position).
+ * No travel floor applies — the keyboard barely moves by design — so the rule
+ * instead demands evidence that the pull DID move it (more than the recovery
+ * tolerance, in at least two samples), else a keyboard that never moved would
+ * "recover" vacuously.
+ *
+ * FAIL-CLOSED: `ok` only for >= 3 readable samples, a keyboard displaced by the
+ * pull, and the LAST sample's two edges each within RECOVERY_TOLERANCE_PT of the
+ * FIRST's. Unreadable/mixed PNGs, too few usable samples and a pull that never
+ * moved the keyboard are `inconclusive`; a measured non-return is `fail`.
+ */
+export function shortpullVerdict(
+	pngs: readonly Uint8Array[],
+	pxPerPt = DEFAULT_PX_PER_PT,
+): DragVerdict {
+	const inconclusive = (reason: string): DragVerdict => ({
+		status: "inconclusive",
+		reason,
+	});
+	const read = measureSamples(pngs, pxPerPt);
+	if ("reason" in read) return inconclusive(read.reason);
+	const usable = read.frames.flatMap((f) => (f.edges ? [f.edges] : []));
+	if (usable.length < MIN_WINDOW_SAMPLES) {
+		const why = read.frames.find((f) => f.reason)?.reason;
+		return inconclusive(
+			`${usable.length} usable sample(s); need at least ${MIN_WINDOW_SAMPLES}${why ? ` (${why})` : ""}`,
+		);
+	}
+	const first = usable[0] as NonNullable<FrameMeasure["edges"]>;
+	const last = usable[usable.length - 1] as NonNullable<FrameMeasure["edges"]>;
+	const deltaKeyboard = (last.keyboardEdge - first.keyboardEdge) / pxPerPt;
+	const deltaComposer = (last.composerEdge - first.composerEdge) / pxPerPt;
+	const displaced = usable.filter(
+		(e) =>
+			Math.abs(e.keyboardEdge - first.keyboardEdge) / pxPerPt >
+			RECOVERY_TOLERANCE_PT,
+	).length;
+	const numbers = `last − first: Δkeyboard=${deltaKeyboard.toFixed(1)} pt, Δcomposer=${deltaComposer.toFixed(1)} pt over ${usable.length} usable samples`;
+	const measured = {
+		deltaKeyboard,
+		deltaComposer,
+		segmentSamples: usable.length,
+	};
+	if (displaced < 2)
+		return {
+			...inconclusive(
+				`the pull did not move the keyboard (${displaced} sample(s) displaced > ${RECOVERY_TOLERANCE_PT} pt): ${numbers}`,
+			),
+			...measured,
+		};
+	const recovered =
+		Math.abs(deltaKeyboard) <= RECOVERY_TOLERANCE_PT &&
+		Math.abs(deltaComposer) <= RECOVERY_TOLERANCE_PT;
+	return recovered
+		? {
+				status: "ok",
+				reason: `both edges returned to their start: ${numbers}`,
+				...measured,
+			}
+		: {
+				status: "fail",
+				reason: `the keyboard and composer did not return to their start: ${numbers} (need each within ${RECOVERY_TOLERANCE_PT} pt)`,
+				...measured,
+			};
+}
+
+/**
+ * The short-pull flow's lane verdict. Recovery is a property of the AFTER
+ * build alone (main's behaviour proves nothing about it), so the after verdict
+ * decides and the baseline's is reported beside it; nothing but an `ok` after
+ * is ok.
+ */
+export function shortpullPair(
+	before: DragVerdict,
+	after: DragVerdict,
+): DragVerdict {
+	return {
+		...after,
+		reason: `after ${after.status}: ${after.reason} (baseline ${before.status}: ${before.reason})`,
+	};
+}
+
+/**
+ * Whether the software keyboard is up again with the composer's input in the
+ * tree, from a `maestro hierarchy` dump taken right after the short pull. A
+ * pull that dismissed the keyboard is not a short pull: the flow is then wrong
+ * and says nothing about recovery, so this FAILS rather than skips. Uses the
+ * same `space` key detector as `sendAboveKeyboard`.
+ */
+export function keyboardRestored(
+	tree: HierarchyNode,
+	inputId = "composer-input",
+): { ok: boolean; reason: string } {
+	const nodes: HierarchyNode[] = [];
+	const walk = (node: HierarchyNode) => {
+		nodes.push(node);
+		for (const child of node.children ?? []) walk(child);
+	};
+	walk(tree);
+	const input = nodes.find(
+		(n) =>
+			n.attributes?.["resource-id"] === inputId &&
+			boxOf(n.attributes?.bounds) !== null,
+	);
+	if (!input) return { ok: false, reason: `no ${inputId} in the hierarchy` };
+	const hasSpace = nodes.some(
+		(n) =>
+			SPACE_KEY.test(
+				(n.attributes?.accessibilityText || n.attributes?.text || "").trim(),
+			) && boxOf(n.attributes?.bounds) !== null,
+	);
+	return hasSpace
+		? { ok: true, reason: `software keyboard up and ${inputId} visible` }
+		: {
+				ok: false,
+				reason: "no software keyboard (no space key) after the short pull",
+			};
 }
 
 /**

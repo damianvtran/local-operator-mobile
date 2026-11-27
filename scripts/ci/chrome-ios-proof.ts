@@ -43,10 +43,13 @@ import {
 	DRAG_FLOWS,
 	type DragVerdict,
 	dragVerdict,
+	keyboardRestored,
 	pairVerdict,
 	parseHierarchy,
 	selectLanes,
 	sendAboveKeyboard,
+	shortpullPair,
+	shortpullVerdict,
 } from "./chrome-ios-proof-contract.ts";
 import type { Provenance } from "./native-artifact-provenance.ts";
 import {
@@ -641,14 +644,15 @@ const flowSampled = (
 /** One build's verdict from the PNGs its receipt lists. A file that cannot be
  *  read is inconclusive, like any other missing evidence. */
 function verdictOf(
+	rule: "follow" | "recovery",
 	tag: "before" | "after",
 	samples: DragSample[],
 ): DragVerdict {
 	try {
-		return dragVerdict(
-			tag,
-			samples.map((s) => readFileSync(join(ROOT, s.path))),
-		);
+		const pngs = samples.map((s) => readFileSync(join(ROOT, s.path)));
+		return rule === "recovery"
+			? shortpullVerdict(pngs)
+			: dragVerdict(tag, pngs);
 	} catch (error) {
 		return {
 			status: "inconclusive",
@@ -808,6 +812,8 @@ try {
 		 *  runs them. */
 		const withDrag = builds.some((b) => b.tag === "before");
 		const dragSamples: Record<string, Record<string, DragSample[]>> = {};
+		const keyboardAfterPull: Record<string, { ok: boolean; reason: string }> =
+			{};
 		try {
 			for (const build of builds) {
 				const dir = `${lane.id}/${build.tag}`;
@@ -841,7 +847,7 @@ try {
 							throw new Error(`send above keyboard: ${verdict.reason}`);
 					}
 					if (frame === "session-keyboard" && withDrag)
-						for (const { file: dragFile, cap: dragCap } of DRAG_FLOWS) {
+						for (const { file: dragFile, cap: dragCap, rule } of DRAG_FLOWS) {
 							const perBuild = dragSamples[dragFile] ?? {};
 							perBuild[build.tag] = await flowSampled(
 								udid,
@@ -852,6 +858,20 @@ try {
 								dragCap,
 							);
 							dragSamples[dragFile] = perBuild;
+							/* A short pull that dismissed the keyboard is not a short
+							 *  pull, and its frames say nothing about recovery: read
+							 *  the hierarchy right after the flow. */
+							if (rule === "recovery") {
+								const restored = keyboardRestored(
+									parseHierarchy(
+										await hierarchy(udid, dir, `shortpull-${build.tag}`),
+									),
+								);
+								keyboardAfterPull[build.tag] = restored;
+								note(
+									`${lane.id}: ${build.tag}: keyboard after short pull: ${restored.reason}`,
+								);
+							}
 						}
 				}
 				await run(
@@ -862,26 +882,45 @@ try {
 				);
 			}
 			laneReceipt.frames = collectChromeFrames(join(ROOT, "frames", lane.id));
-			laneReceipt.verdict = "CAPTURED";
+			laneReceipt.verdict = withDrag
+				? "CAPTURED"
+				: "CAPTURED (keyboard drag: not run, no baseline build)";
 			const dragFailed: string[] = [];
 			if (withDrag) {
 				const drag: Record<string, unknown> = {};
-				for (const { file: dragFile } of DRAG_FLOWS) {
+				for (const { file: dragFile, rule } of DRAG_FLOWS) {
 					const perBuild = dragSamples[dragFile] ?? {};
-					const before = verdictOf("before", perBuild.before ?? []);
-					const after = verdictOf("after", perBuild.after ?? []);
-					const pair = pairVerdict(before, after);
+					const before = verdictOf(rule, "before", perBuild.before ?? []);
+					const after = verdictOf(rule, "after", perBuild.after ?? []);
+					const pair =
+						rule === "recovery"
+							? shortpullPair(before, after)
+							: pairVerdict(before, after);
 					drag[dragFile] = {
 						samples: perBuild,
 						before,
 						after,
 						verdict: pair,
+						...(rule === "recovery" ? { keyboardAfterPull } : {}),
 					};
 					note(`${lane.id}: ${dragFile}: ${pair.status}: ${pair.reason}`);
 					dragSummary.push(`${lane.id}/${dragFile}=${pair.status}`);
 					if (pair.status === "fail") dragFailed.push(dragFile);
+					if (rule === "recovery")
+						for (const tag of ["before", "after"] as const) {
+							const restored = keyboardAfterPull[tag];
+							if (!restored?.ok) {
+								dragFailed.push(
+									`${dragFile} (${tag}: ${restored?.reason ?? "no hierarchy taken after the short pull"})`,
+								);
+							}
+						}
 				}
 				laneReceipt.drag = drag;
+			} else {
+				// A reader must not mistake a CAPTURED lane for a drag result.
+				laneReceipt.drag = "not run (no baseline build)";
+				dragSummary.push(`${lane.id}/drag=not run (no baseline build)`);
 			}
 			if (dragFailed.length > 0)
 				throw new Error(`keyboard drag FAIL: ${dragFailed.join(",")}`);
