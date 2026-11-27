@@ -160,19 +160,35 @@ const SESSION = readFileSync(
 	"utf8",
 );
 
+const SPACE = /\s+/g;
+
 describe("the session screen reads the one control policy", () => {
-	it("gates every Stop on abort", () => {
-		expect(SESSION).toContain(
-			'const stopAllowed = controlPolicy.allows("abort");',
+	it("gates every Stop on abort support and keeps image Cancel off the held slot", () => {
+		const screen = SESSION.replace(SPACE, " ");
+		expect(screen).toContain(
+			'const abortSupported = controlPolicy.allows("abort");',
 		);
-		expect(SESSION).toContain("controls={composerControls}");
-		expect(SESSION).not.toContain("controls={composer.controls}");
-		expect(SESSION).toContain(
-			"onStop={stopAllowed ? composer.stop : undefined}",
+		expect(screen).toContain(
+			"const stopAllowed = runtime.turnActionsReady && abortSupported;",
 		);
-		expect(SESSION).toContain(
-			"composerControls.stopVisible ? composer.stop : undefined",
+		expect(screen).toContain(
+			"const stopInert = runtime.awaitingVisit && runtime.streaming && abortSupported;",
 		);
+		expect(screen).toContain("const stopMounted = stopAllowed || stopInert;");
+		expect(screen).toContain(
+			"stopMounted ? composer.controls : { ...composer.controls, stopVisible: false }",
+		);
+		expect(screen).toContain("controls={composerControls}");
+		expect(screen).not.toContain("controls={composer.controls}");
+		expect(screen).toContain(
+			"onStop={stopMounted ? composer.stop : undefined} stopInert={stopInert}",
+		);
+		expect(screen).toContain("onStop={composer.stop} stopInert={stopInert}");
+		expect(screen).toContain(
+			"stopAllowed && composerControls.stopVisible ? composer.stop : undefined",
+		);
+		// The visual live/idle state must not depend on image Cancel authority.
+		expect(screen).toContain("turnLive={runtime.streaming}");
 	});
 
 	it("gates the slash palette, typed slash, asks, chips, pending answers and Resume", () => {

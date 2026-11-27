@@ -256,7 +256,7 @@ let observedSession: string | null = null;
 let sessionReading: ReturnType<typeof useSessionRuntime>;
 const wire: Array<{ method: string; path: string; status: number }> = [];
 function SessionCapture({ id }: { id: string }) {
-	sessionReading = useSessionRuntime(id);
+	sessionReading = useSessionRuntime(id, true);
 	return null;
 }
 function Capture() {

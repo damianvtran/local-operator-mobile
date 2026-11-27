@@ -179,6 +179,12 @@ export const useComposer = (input: {
 	 *  frame must never be sendable (PR #246 R1/Q1-1). Optional so hosts that
 	 *  never hydrate (the provisional editor) need not pass it. */
 	cached?: boolean;
+	/** Retained rows on Back aren't authority to start a new prompt or steer.
+	 *  The editor and an already admitted, immutable Retry keep their own leases. */
+	awaitingVisit?: boolean;
+	/** A captured press must still belong to this visit. Cold prompt/slash may
+	 *  run without a projection; a steer or turn control cannot. */
+	canActOnVisit?: (requireProjection?: boolean) => boolean;
 	/** Apply a stored conversation's model intent before admitting any message.
 	 * A failure leaves the editor and envelope untouched; this runs inside the
 	 * existing in-flight guard, so double taps cannot duplicate the reopen. */
@@ -215,6 +221,8 @@ export const useComposer = (input: {
 	const slashRefusal = input.slashRefusal ?? null;
 	const expandSkills = input.expandSkills === true;
 	const cached = input.cached === true;
+	const awaitingVisit = input.awaitingVisit === true;
+	const canActOnVisit = input.canActOnVisit;
 	const beforeSend = input.beforeSend;
 	const endpoints = source.endpoints;
 	const authorization = useSyncExternalStore(
@@ -765,11 +773,11 @@ export const useComposer = (input: {
 	);
 
 	const send = useCallback(() => {
-		/* Belt and braces with the disabled primary: a keyboard submit or a stale
-		 * press handler must not reach the relay against a cached frame either. */
-		if (cached) return;
+		/* A keyboard submit must honor the same gate as the primary. In particular
+		 * an old steer handler cannot choose the op for a different focus visit. */
+		if (cached || awaitingVisit || canActOnVisit?.(streaming) === false) return;
 		void runSend(chooseOp(streaming));
-	}, [runSend, streaming, cached]);
+	}, [runSend, streaming, cached, awaitingVisit, canActOnVisit]);
 
 	const retry = useCallback(() => {
 		void (async () => {
@@ -938,38 +946,43 @@ export const useComposer = (input: {
 	 * the returned promise therefore never rejects, and a caller that ignores
 	 * the value is unaffected.
 	 */
-	const stop = useCallback(
-		(): Promise<boolean> =>
-			// One per-session latch for every Stop on the screen (review R1-1/R1-2):
-			// a second tap, on either control, joins the abort already out.
-			stopTurn(sessionId, async (): Promise<boolean> => {
-				if (endpoints === null) return false;
-				/* The attempt clears the line it is about to replace, exactly as `send`
-				 * and `answerApproval` do: a stale "the relay could not be reached." must
-				 * not outlive the retry that worked (QA round 2's NIT). */
-				setError(null);
-				try {
-					await endpoints.command(sessionId, { op: "abort" });
-					return true;
-				} catch (failure) {
-					setError(
-						isRelayError(failure)
-							? (failure.displayableMessage ?? composerCopy().steerError)
-							: composerCopy().steerError,
-					);
-					return false;
-				}
-			}),
-		[endpoints, sessionId],
+	const stop = useCallback((): Promise<boolean> => {
+		// Abort names a session, not a turn. Refuse before touching the latch:
+		// a retained Stop can otherwise interrupt a different desktop turn.
+		if (endpoints === null || canActOnVisit?.() === false)
+			return Promise.resolve(false);
+		// One latch for every Stop surface: repeat taps join the abort already out.
+		return stopTurn(sessionId, async (): Promise<boolean> => {
+			/* The attempt clears the line it is about to replace, exactly as `send`
+			 * and `answerApproval` do: a stale "the relay could not be reached." must
+			 * not outlive the retry that worked (QA round 2's NIT). */
+			setError(null);
+			try {
+				await endpoints.command(sessionId, { op: "abort" });
+				return true;
+			} catch (failure) {
+				setError(
+					isRelayError(failure)
+						? (failure.displayableMessage ?? composerCopy().steerError)
+						: composerCopy().steerError,
+				);
+				return false;
+			}
+		});
+	}, [endpoints, sessionId, canActOnVisit]);
+	// A retained or cached frame cannot tell us that the stopped turn ended.
+	const stopping = useTurnStopping(
+		sessionId,
+		awaitingVisit || cached ? null : streaming,
+		canActOnVisit,
 	);
-	const stopping = useTurnStopping(sessionId, streaming);
 
 	/* ------------------------------------------------------------- the answers */
 
 	const answerApproval = useCallback(
 		(requestId: string, approved: boolean, remember: boolean) => {
 			void (async () => {
-				if (endpoints === null) return;
+				if (endpoints === null || canActOnVisit?.() === false) return;
 				setSending(true);
 				setError(null);
 				try {
@@ -990,13 +1003,13 @@ export const useComposer = (input: {
 				}
 			})();
 		},
-		[endpoints, sessionId],
+		[endpoints, sessionId, canActOnVisit],
 	);
 
 	const answerAsk = useCallback(
 		(requestId: string, value: string, questionIndex: number) => {
 			void (async () => {
-				if (endpoints === null) return;
+				if (endpoints === null || canActOnVisit?.() === false) return;
 				setSending(true);
 				setError(null);
 				try {
@@ -1017,7 +1030,7 @@ export const useComposer = (input: {
 				}
 			})();
 		},
-		[endpoints, sessionId],
+		[endpoints, sessionId, canActOnVisit],
 	);
 
 	const attach = useCallback(
@@ -1106,7 +1119,14 @@ export const useComposer = (input: {
 			// draft the successful first tap is about to clear.
 			if (inFlight.current) return;
 			setDraft(tap.fill);
-			if (!tap.submit || endpoints === null || cached) return;
+			if (
+				!tap.submit ||
+				endpoints === null ||
+				cached ||
+				awaitingVisit ||
+				canActOnVisit?.(false) === false
+			)
+				return;
 			/* The run-immediately arm. Two things it must NOT do, both of which it did:
 			 *
 			 * - Derive the request from the DRAFT. The draft ref is assigned during
@@ -1147,7 +1167,15 @@ export const useComposer = (input: {
 				},
 			});
 		},
-		[endpoints, sessionId, setDraft, cancelDictationForSend, cached],
+		[
+			endpoints,
+			sessionId,
+			setDraft,
+			cancelDictationForSend,
+			cached,
+			awaitingVisit,
+			canActOnVisit,
+		],
 	);
 
 	const controls = useMemo(
@@ -1155,6 +1183,9 @@ export const useComposer = (input: {
 			composerControls({
 				connected: endpoints !== null,
 				cached,
+				awaitingVisit,
+				// Keep the composer in its running layout while a retained busy frame
+				// waits for authority. The press-time visit check still fences dispatch.
 				streaming,
 				hasDraft: draft.trim().length > 0,
 				hasImages: images.length > 0,
@@ -1173,6 +1204,7 @@ export const useComposer = (input: {
 			ended,
 			endpoints,
 			cached,
+			awaitingVisit,
 		],
 	);
 

@@ -1,0 +1,256 @@
+{
+  "record_kind": "i18n-audit",
+  "audit_id": "move-pick-fr-B-eda9d1ecfbe4-r1",
+  "audit_pass": "B",
+  "slice": "move-picker-seven-keys",
+  "locale": "fr",
+  "namespace": "mobile.remote_sessions",
+  "audit_date": "2026-11-22",
+  "round": 1,
+  "key_count": 7,
+  "keys_audited": [
+    "mobile.remote_sessions.move_pick.cannot_reach",
+    "mobile.remote_sessions.move_pick.destination_heading",
+    "mobile.remote_sessions.move_pick.discovery_help",
+    "mobile.remote_sessions.move_pick.no_answer",
+    "mobile.remote_sessions.move_pick.no_devices",
+    "mobile.remote_sessions.move_pick.on_this_computer",
+    "mobile.remote_sessions.move_pick.right_now"
+  ],
+  "translator_session": "3e5cf4a65579",
+  "translator_actual_model": "openai/gpt-6.1-sol",
+  "A_auditor_identity": {
+    "session": "e5caed1bcb4e",
+    "purpose": "independence only; A verdict not adopted"
+  },
+  "auditor": {
+    "agent": "translation-auditor (lopdev), fresh B",
+    "session": "eda9d1ecfbe4",
+    "model": "openai/gpt-6.1-sol",
+    "actual_model_source": "Visible model-switch receipt: temporary fallback from anthropic/claude-opus-5-5 because provider failure: quota",
+    "model_verified": true,
+    "independent_from_translator_session": true,
+    "independent_from_A_session": true
+  },
+  "draft": {
+    "path": "/Users/damian/.local-operator/sessions/3e5cf4a65579/scratchpad/draft-fr.json",
+    "sha256": "8db8ff0bdac7c4691240fa7d82bb8e275a39ad85dd79a0ba1d2da405888a098c",
+    "sha256_verified": true
+  },
+  "brief": {
+    "path": "/Users/damian/.local-operator/sessions/ca8720609fc7/scratchpad/translation-brief.json",
+    "sha256": "5a72dfd72dc820b1fa8e73d78b97807581572334ee0fd25eb2eab346e759ebca",
+    "sha256_verified": true
+  },
+  "brief_sha256": "5a72dfd72dc820b1fa8e73d78b97807581572334ee0fd25eb2eab346e759ebca",
+  "draft_sha256": "8db8ff0bdac7c4691240fa7d82bb8e275a39ad85dd79a0ba1d2da405888a098c",
+  "source_commit": "9362cce8a631791b676b2d2c9eda90c43fc7e11c",
+  "read_route": "Ordinary explicitly approved absolute copy/context/worktree reads. Nested JSON context read directly, not a routable public-copy key; read_public_copy not called; no public-copy receipt claimed.",
+  "input_hashes": {
+    "/Users/damian/.local-operator/sessions/ca8720609fc7/scratchpad/translation-brief.json": "5a72dfd72dc820b1fa8e73d78b97807581572334ee0fd25eb2eab346e759ebca",
+    "/Users/damian/.local-operator/sessions/3e5cf4a65579/scratchpad/draft-fr.json": "8db8ff0bdac7c4691240fa7d82bb8e275a39ad85dd79a0ba1d2da405888a098c",
+    "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/move-picker-locale-ledger.json": "21a195120ee4e0af308cd827b5f54f940345756f8ed2972ac9f90e8eafae59c7",
+    "/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/i18n/catalogues/en/mobile.remote_sessions.json": "436f8ec3bda274431146e7e7cb82b2add418f598bd2a7a6d7426f561a4312984",
+    "/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/i18n/catalogues/en/mobile.remote_sessions.context.json": "c703dff07b634d3d2d4b7c789e6a4a1eecf192a57618ea8e9e72197d325d08eb",
+    "/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/features/sessions/move-sheet.tsx": "6a3f7126eb2fefc5ad0138a1731e3898d66d333ea8ca1b4ac99321da18d495aa",
+    "/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/i18n/catalogues/fr/mobile.remote_sessions.json": "97c041855132c488e20dfa7f398e1e9c910469d2707fcfa3a1da4df9a30cdba4",
+    "/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/i18n/catalogues/fr/mobile.sidebar.json": "64389128f141bfa8394ab1fcd3db6c4c525f78bf0a86a6e2fd9e2df972fcb119",
+    "/Users/damian/local-operator/i18n/glossary.md": "0eb34437a8c3d6f564f278ef957a603b1d9f51bb07d5ddae5ea8f37deba962f8",
+    "/Users/damian/local-operator/i18n/style-guides/fr.md": "ae1519ab7617d19aa826918d607de1d018595094166edbc18aa58f6a8f0a4226"
+  },
+  "checks": {
+    "source_hashes": "PASS",
+    "placeholder_integrity": "PASS",
+    "NFC": "PASS",
+    "bidi_controls": "PASS: absent",
+    "ICU_CLDR": "N/A: seven simple messages",
+    "rendered_width": "UNVERIFIED",
+    "source_hook": "OPEN, not validated"
+  },
+  "redaction_marker_hits": {
+    "input_copy": {
+      "\\[(?:REDACTED|MASKED|FILTERED|SECRET)\\]": 0,
+      "<(?:REDACTED|MASKED|FILTERED|SECRET)>": 0,
+      "\\*{3,}": 0
+    },
+    "draft_including_metadata": {
+      "\\[(?:REDACTED|MASKED|FILTERED|SECRET)\\]": 0,
+      "<(?:REDACTED|MASKED|FILTERED|SECRET)>": 8,
+      "\\*{3,}": 0
+    }
+  },
+  "verdict": "PASS_WITH_MINORS",
+  "linguistic_verdict": "PASS",
+  "namespace_verdicts": {
+    "mobile.remote_sessions.move_pick": {
+      "verdict": "PASS_WITH_MINORS",
+      "key_count": 7,
+      "linguistically_clean_keys": 7
+    }
+  },
+  "current_report_verdict": {
+    "verdict": "PASS_WITH_MINORS",
+    "unresolved_blocker_major_count": 0,
+    "minor_count": 2
+  },
+  "findings": [
+    {
+      "id": "B-FR-1",
+      "severity": "minor",
+      "category": "width-risk",
+      "key": "mobile.remote_sessions.move_pick.destination_heading",
+      "current_text": "Déplacer ou copier vers",
+      "proposed_text": "Déplacer ou copier vers",
+      "recommendation": "Retain idiomatic wording; defer to rendered narrow-phone wrapping/height check. No translation-only remediation cycle.",
+      "reason": "Source-codepoint expansion 15 to 23 (1.533x) may add wrapping; these counts are not pixel or rendered overflow proof.",
+      "disposition": "deferred — rendered-width risk; no linguistic failure"
+    },
+    {
+      "id": "B-FR-2",
+      "severity": "minor",
+      "category": "width-risk",
+      "key": "mobile.remote_sessions.move_pick.discovery_help",
+      "current_text": "Seuls les appareils associés aux sessions visibles sont proposés. Un appareil sans session visible ne peut pas encore être sélectionné. Ouvrez Local Operator sur l’autre ordinateur, puis tirez la liste des sessions vers le bas pour l’actualiser.",
+      "proposed_text": "Seuls les appareils associés aux sessions visibles sont proposés. Un appareil sans session visible ne peut pas encore être sélectionné. Ouvrez Local Operator sur l’autre ordinateur, puis tirez la liste des sessions vers le bas pour l’actualiser.",
+      "recommendation": "Retain idiomatic wording; defer to rendered narrow-phone wrapping/height check. No translation-only remediation cycle.",
+      "reason": "Source-codepoint expansion 178 to 245 (1.376x) may add wrapping; these counts are not pixel or rendered overflow proof.",
+      "disposition": "deferred — rendered-width risk; no linguistic failure"
+    }
+  ],
+  "per_key": [
+    {
+      "key": "mobile.remote_sessions.move_pick.cannot_reach",
+      "english": "Can't reach {device}",
+      "current_text": "{device} est injoignable",
+      "linguistic_verdict": "PASS",
+      "reason": "Natural concise status. Injoignable matches existing French remote/session statuses. The arbitrary computer name remains a single opaque device placeholder; no translation or grammatical inflection is imposed on its contents.",
+      "placeholders": [
+        "{device}"
+      ],
+      "width": {
+        "english_codepoints": 20,
+        "french_codepoints": 24,
+        "ratio": 1.2,
+        "rendered_fit_verified": false
+      },
+      "findings": []
+    },
+    {
+      "key": "mobile.remote_sessions.move_pick.destination_heading",
+      "english": "Move or copy to",
+      "current_text": "Déplacer ou copier vers",
+      "linguistic_verdict": "PASS",
+      "reason": "Natural infinitive section heading, not a started-operation assertion. Both déplacer and copier are preserved; vers correctly introduces destination choices. Existing row hint uses déplacer ou copier.",
+      "placeholders": [],
+      "width": {
+        "english_codepoints": 15,
+        "french_codepoints": 23,
+        "ratio": 1.533,
+        "rendered_fit_verified": false
+      },
+      "findings": [
+        "B-FR-1"
+      ]
+    },
+    {
+      "key": "mobile.remote_sessions.move_pick.discovery_help",
+      "english": "This app can offer the devices your sessions show. A device with no visible session cannot be picked yet — open Local Operator on the other computer and pull the list to refresh.",
+      "current_text": "Seuls les appareils associés aux sessions visibles sont proposés. Un appareil sans session visible ne peut pas encore être sélectionné. Ouvrez Local Operator sur l’autre ordinateur, puis tirez la liste des sessions vers le bas pour l’actualiser.",
+      "linguistic_verdict": "PASS",
+      "reason": "Idiomatic professional French with Ouvrez and tirez (vous). Visible sessions constrain the eligible devices, rather than claiming network-wide discovery. Both opening Local Operator on the other computer and pulling the session list downward to refresh remain explicit. Added downward direction explains the mobile gesture, not a different operation.",
+      "placeholders": [],
+      "width": {
+        "english_codepoints": 178,
+        "french_codepoints": 245,
+        "ratio": 1.376,
+        "rendered_fit_verified": false
+      },
+      "findings": [
+        "B-FR-2"
+      ]
+    },
+    {
+      "key": "mobile.remote_sessions.move_pick.no_answer",
+      "english": "It did not answer when this computer asked.",
+      "current_text": "Il n’a pas répondu à la demande de cet ordinateur.",
+      "linguistic_verdict": "PASS",
+      "reason": "Il naturally refers to the remote ordinateur in this status context. La demande de cet ordinateur retains the connected-computer requester, without reassigning it to the phone. Calm client fallback only; the source expression preserves nonblank server reasons verbatim.",
+      "placeholders": [],
+      "width": {
+        "english_codepoints": 43,
+        "french_codepoints": 50,
+        "ratio": 1.163,
+        "rendered_fit_verified": false
+      },
+      "findings": []
+    },
+    {
+      "key": "mobile.remote_sessions.move_pick.no_devices",
+      "english": "No other devices are visible.",
+      "current_text": "Aucun autre appareil n’est visible.",
+      "linguistic_verdict": "PASS",
+      "reason": "Correct concise statement of visibility only. It does not say the other devices are offline or absent from the network. Appareil follows the locale glossary.",
+      "placeholders": [],
+      "width": {
+        "english_codepoints": 29,
+        "french_codepoints": 35,
+        "ratio": 1.207,
+        "rendered_fit_verified": false
+      },
+      "findings": []
+    },
+    {
+      "key": "mobile.remote_sessions.move_pick.on_this_computer",
+      "english": "On this computer",
+      "current_text": "Sur cet ordinateur",
+      "linguistic_verdict": "PASS",
+      "reason": "Natural compact location status; ordinateur correctly denotes the connected relay computer, not the phone. Sur aligns with the existing Sur {device} reusable key.",
+      "placeholders": [],
+      "width": {
+        "english_codepoints": 16,
+        "french_codepoints": 18,
+        "ratio": 1.125,
+        "rendered_fit_verified": false
+      },
+      "findings": []
+    },
+    {
+      "key": "mobile.remote_sessions.move_pick.right_now",
+      "english": "Right now",
+      "current_text": "Actuellement",
+      "linguistic_verdict": "PASS",
+      "reason": "Actuellement is idiomatic for present location. Unlike immédiatement, it does not turn the current-location heading into urgency or an instruction.",
+      "placeholders": [],
+      "width": {
+        "english_codepoints": 9,
+        "french_codepoints": 12,
+        "ratio": 1.333,
+        "rendered_fit_verified": false
+      },
+      "findings": []
+    }
+  ],
+  "pair_clearance": "PENDING_PARENT_CHECK_NOT_CLAIMED",
+  "separate_process_gap": {
+    "name": "SOURCEHOOKGAP",
+    "status": "OPEN",
+    "fixed_by_audit": false
+  },
+  "human_native_speaker": "waived; independent LLM audit only",
+  "unverified": [
+    "rendered phone width/wrapping/height",
+    "pseudo rendering",
+    "native rendering",
+    "source-hook execution"
+  ],
+  "artifacts": {
+    "report": "report.md",
+    "audit_log": "audit.log"
+  },
+  "ledger_appended": false,
+  "repo_modified": false,
+  "artifact_hashes": {
+    "report.md": "061c76638beba52f8f360be2fd442c7303d38bad7a60d318ab8ddec55f8e8ce8",
+    "audit.log": "b28c3e4b7ac2fb364733748bf33ee22ee29efe075cdded43bfb09a2a70102ae6"
+  }
+}

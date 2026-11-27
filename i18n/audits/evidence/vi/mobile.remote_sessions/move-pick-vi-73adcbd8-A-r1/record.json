@@ -1,0 +1,324 @@
+{
+  "record_kind": "i18n-audit",
+  "audit_id": "move-pick-vi-73adcbd8-A-r1",
+  "slice": "move-picker-seven-keys",
+  "locale": "vi",
+  "namespace": "mobile.remote_sessions",
+  "audit_date": "2026-11-22",
+  "round": 1,
+  "audit_lane": "A",
+  "key_count": 7,
+  "keys_audited": [
+    "mobile.remote_sessions.move_pick.cannot_reach",
+    "mobile.remote_sessions.move_pick.destination_heading",
+    "mobile.remote_sessions.move_pick.discovery_help",
+    "mobile.remote_sessions.move_pick.no_answer",
+    "mobile.remote_sessions.move_pick.no_devices",
+    "mobile.remote_sessions.move_pick.on_this_computer",
+    "mobile.remote_sessions.move_pick.right_now"
+  ],
+  "translator_session": "f194c81e7557",
+  "translator_actual_model": "openai/gpt-6.1-sol",
+  "auditor": {
+    "agent": "translation-auditor (team lopdev)",
+    "session": "73adcbd87dfe",
+    "model": "anthropic/claude-opus-5-5",
+    "actual_model_source": "Visible model-switch receipt changed anthropic/claude-opus-5-5 to openai/gpt-6.1-sol (provider failure: quota) before catalogue reads. Later visible session-state (2026-11-22) reports anthropic/claude-opus-5-5 before final checks/report. Both observed; no hidden provider inference. Fallback was actually used in this audit.",
+    "observed_fallback_model": "openai/gpt-6.1-sol",
+    "independent_from_translator_session": true
+  },
+  "draft": {
+    "path": "/Users/damian/.local-operator/sessions/f194c81e7557/scratchpad/draft-vi.json",
+    "sha256": "2194c4313e6d44521537042c9c4b33ab4275a08b746906691e2c003779ac1cb5",
+    "sha256_verified": true
+  },
+  "brief": {
+    "path": "/Users/damian/.local-operator/sessions/ca8720609fc7/scratchpad/translation-brief.json",
+    "sha256": "5a72dfd72dc820b1fa8e73d78b97807581572334ee0fd25eb2eab346e759ebca",
+    "sha256_verified": true
+  },
+  "brief_sha256": "5a72dfd72dc820b1fa8e73d78b97807581572334ee0fd25eb2eab346e759ebca",
+  "source_commit": "9362cce8a631791b676b2d2c9eda90c43fc7e11c",
+  "source_branch": "feat/i18n-move-sheet-copy",
+  "read_route": "Ordinary explicitly approved absolute worktree/scratch reads, Python pathlib/json and read-only git. Nested context is metadata, not routable public copy. No read_public_copy/public keyed-reader receipt claimed. Core vi style/glossary used as shared reference and cross-checked against actual mobile catalogues; no repository writes.",
+  "input_hashes": {
+    "0": {
+      "path": "/Users/damian/.local-operator/sessions/ca8720609fc7/scratchpad/translation-brief.json",
+      "sha256": "5a72dfd72dc820b1fa8e73d78b97807581572334ee0fd25eb2eab346e759ebca"
+    },
+    "1": {
+      "path": "/Users/damian/.local-operator/sessions/f194c81e7557/scratchpad/draft-vi.json",
+      "sha256": "2194c4313e6d44521537042c9c4b33ab4275a08b746906691e2c003779ac1cb5"
+    },
+    "2": {
+      "path": "/Users/damian/.local-operator/sessions/f194c81e7557/scratchpad/notes-vi.md",
+      "sha256": "a565d617aeab1250d03c7912ba0f00ccffcff2c61761555c874b21470d14c3d1"
+    },
+    "3": {
+      "path": "/Users/damian/.local-operator/sessions/f194c81e7557/scratchpad/verification-vi.json",
+      "sha256": "e19200bb53f459bb47399f4cb1d3875f0d9e0ed5489ad8e2830d309766aa006c"
+    },
+    "4": {
+      "path": "/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/i18n/catalogues/en/mobile.remote_sessions.json",
+      "sha256": "436f8ec3bda274431146e7e7cb82b2add418f598bd2a7a6d7426f561a4312984"
+    },
+    "5": {
+      "path": "/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/i18n/catalogues/en/mobile.remote_sessions.context.json",
+      "sha256": "c703dff07b634d3d2d4b7c789e6a4a1eecf192a57618ea8e9e72197d325d08eb"
+    },
+    "6": {
+      "path": "/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/features/sessions/move-sheet.tsx",
+      "sha256": "6a3f7126eb2fefc5ad0138a1731e3898d66d333ea8ca1b4ac99321da18d495aa"
+    },
+    "7": {
+      "path": "/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/i18n/catalogues/vi/mobile.remote_sessions.json",
+      "sha256": "97394e3bb4277d3d4b134f4df4ade4c95d21c355c43b78eaf0118c96ffc6b6e4"
+    },
+    "8": {
+      "path": "/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/i18n/catalogues/vi/mobile.sidebar.json",
+      "sha256": "3efb7dad6da33c182ef8dc59a6ce8f02a455a33df86ccf67760860e76f0f8286"
+    },
+    "9": {
+      "path": "/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/i18n/catalogues/vi/mobile.computers.json",
+      "sha256": "866a0bdb97785892899824912ed20e9ac95f81a124094573c08c04d888de74ca"
+    },
+    "10": {
+      "path": "/Users/damian/local-operator/i18n/style-guides/vi.md",
+      "sha256": "e4901497ed553e2b2ae4a2660bf776adb787b89e11d7eb0f8d08f3da4b227888"
+    },
+    "11": {
+      "path": "/Users/damian/local-operator/i18n/glossary.md",
+      "sha256": "0eb34437a8c3d6f564f278ef957a603b1d9f51bb07d5ddae5ea8f37deba962f8"
+    },
+    "schema_reference": {
+      "path": "/Users/damian/.local-operator/sessions/e5caed1bcb4e/scratchpad/bundles/fr/mobile.remote_sessions/move-pick-fr-e5caed1b-r1/record.json",
+      "sha256": "a2cb1e7f3fce51b1ae603ab066560c6beec1d7c40f2954d272f8bcdb6f96e85d"
+    }
+  },
+  "checks": {
+    "head": "9362cce8a631791b676b2d2c9eda90c43fc7e11c",
+    "key_count": 7,
+    "source_and_brief_and_context": "PASS",
+    "keys_missing": 0,
+    "keys_extra": 0,
+    "placeholder_check": "PASS exact device once, six noargs",
+    "negative_controls": {
+      "missing": true,
+      "extra": true,
+      "nested": true,
+      "renamed": true
+    },
+    "nfc": "PASS",
+    "bidi_controls": 0,
+    "icu": "simple-message grammar only; no full ICU parser",
+    "CLDR": "N/A no plural/select/count/number/date",
+    "RTL": "N/A vi LTR; arbitrary-name checks are literal not rendering",
+    "product": "Local Operator exact",
+    "server_reason": "source-read only, trimmed reason wins, not executed",
+    "opaque_name_substitution": [
+      "Không thể liên lạc với Work Mac",
+      "Không thể liên lạc với Máy tính của An",
+      "Không thể liên lạc với حاسوب أمل",
+      "Không thể liên lạc với 工作电脑",
+      "Không thể liên lạc với {odd} <name>"
+    ]
+  },
+  "redaction_marker_hits": {
+    "copy_inputs": 0,
+    "draft_values": 0,
+    "english_sources": 0,
+    "raw_file_marker_literal_hits": 2,
+    "explanation": "Two raw marker-literal matches in translator verification metadata pattern at line 94, not translated copy. Follow-up inspected exact line. Finite marker scan only; not a secret audit or public-reader receipt."
+  },
+  "verdict": "passed_with_minors",
+  "linguistic_verdict": "passed",
+  "namespace_verdicts": {
+    "mobile.remote_sessions (seven move_pick keys only)": "passed_with_minors"
+  },
+  "current_report_verdict": {
+    "status": "passed_with_minors",
+    "unresolved_blocker_major_count": 0,
+    "finding_ids": [
+      "V1",
+      "V2",
+      "V3"
+    ],
+    "verdict_reason": "All seven linguistically clean; three deferred non-gating unrendered expansion risks. A only, not paired clearance."
+  },
+  "findings": [
+    {
+      "id": "V1",
+      "severity": "minor",
+      "kind": "unverified_width_risk_not_proven_overflow",
+      "key": "mobile.remote_sessions.move_pick.cannot_reach",
+      "current_text": "Không thể liên lạc với {device}",
+      "proposed_text": "Không thể liên lạc với {device}",
+      "proposed_action": "Retain accurate wording; owning visual lane should check narrow-phone wrapping/height with actual arbitrary names where applicable. No translator rewrite required by these counts.",
+      "reason": "31 vs 20 English codepoints (+55.0%). Source permits wrapping; counts and synthetic pseudo expansion cannot prove rendered fit.",
+      "disposition": "deferred — non-gating width check outside read-only A audit; no minor-only translation round"
+    },
+    {
+      "id": "V2",
+      "severity": "minor",
+      "kind": "unverified_width_risk_not_proven_overflow",
+      "key": "mobile.remote_sessions.move_pick.destination_heading",
+      "current_text": "Di chuyển hoặc sao chép tới",
+      "proposed_text": "Di chuyển hoặc sao chép tới",
+      "proposed_action": "Retain accurate wording; owning visual lane should check narrow-phone wrapping/height with actual arbitrary names where applicable. No translator rewrite required by these counts.",
+      "reason": "27 vs 15 English codepoints (+80.0%). Source permits wrapping; counts and synthetic pseudo expansion cannot prove rendered fit.",
+      "disposition": "deferred — non-gating width check outside read-only A audit; no minor-only translation round"
+    },
+    {
+      "id": "V3",
+      "severity": "minor",
+      "kind": "unverified_width_risk_not_proven_overflow",
+      "key": "mobile.remote_sessions.move_pick.discovery_help",
+      "current_text": "Ứng dụng chỉ cho chọn những thiết bị có cuộc trò chuyện đang hiển thị. Chưa thể chọn thiết bị không có cuộc trò chuyện nào hiển thị — hãy mở Local Operator trên máy tính kia rồi kéo danh sách cuộc trò chuyện để làm mới.",
+      "proposed_text": "Ứng dụng chỉ cho chọn những thiết bị có cuộc trò chuyện đang hiển thị. Chưa thể chọn thiết bị không có cuộc trò chuyện nào hiển thị — hãy mở Local Operator trên máy tính kia rồi kéo danh sách cuộc trò chuyện để làm mới.",
+      "proposed_action": "Retain accurate wording; owning visual lane should check narrow-phone wrapping/height with actual arbitrary names where applicable. No translator rewrite required by these counts.",
+      "reason": "219 vs 178 English codepoints (+23.0%). Source permits wrapping; counts and synthetic pseudo expansion cannot prove rendered fit.",
+      "disposition": "deferred — non-gating width check outside read-only A audit; no minor-only translation round"
+    }
+  ],
+  "per_key": [
+    {
+      "key": "mobile.remote_sessions.move_pick.cannot_reach",
+      "english": "Can't reach {device}",
+      "current_text": "Không thể liên lạc với {device}",
+      "analysis_vi": "“Không thể liên lạc với” diễn đạt đúng việc không liên lạc được với máy tính từ xa, không biến thành lỗi kết nối của điện thoại. Cách dùng “liên lạc” khớp mục unreachable hiện có; {device} được giữ nguyên, không thêm danh xưng hay sửa tên máy.",
+      "linguistic_verdict": "passed",
+      "verdict": "passed_with_minor_width_risk",
+      "findings": [
+        "V1"
+      ],
+      "severity": "minor",
+      "width": {
+        "english_codepoints": 20,
+        "vi_codepoints": 31,
+        "ratio": 1.55,
+        "pseudo": "[Không thể liên lạc với {device}~~~~~~~~~~~]"
+      }
+    },
+    {
+      "key": "mobile.remote_sessions.move_pick.destination_heading",
+      "english": "Move or copy to",
+      "current_text": "Di chuyển hoặc sao chép tới",
+      "analysis_vi": "“Di chuyển hoặc sao chép tới” giữ đủ hai lựa chọn và giới thiệu nơi nhận ở bên dưới. Đây là tiêu đề, không khẳng định thao tác đã bắt đầu. “Di chuyển”, “sao chép” khớp lời gợi ý nhấn giữ hiện có; chữ đầu viết hoa, không có dấu chấm cuối.",
+      "linguistic_verdict": "passed",
+      "verdict": "passed_with_minor_width_risk",
+      "findings": [
+        "V2"
+      ],
+      "severity": "minor",
+      "width": {
+        "english_codepoints": 15,
+        "vi_codepoints": 27,
+        "ratio": 1.8,
+        "pseudo": "[Di chuyển hoặc sao chép tới~~~~~~~~~~]"
+      }
+    },
+    {
+      "key": "mobile.remote_sessions.move_pick.discovery_help",
+      "english": "This app can offer the devices your sessions show. A device with no visible session cannot be picked yet — open Local Operator on the other computer and pull the list to refresh.",
+      "current_text": "Ứng dụng chỉ cho chọn những thiết bị có cuộc trò chuyện đang hiển thị. Chưa thể chọn thiết bị không có cuộc trò chuyện nào hiển thị — hãy mở Local Operator trên máy tính kia rồi kéo danh sách cuộc trò chuyện để làm mới.",
+      "analysis_vi": "“Chỉ cho chọn” diễn đạt rõ giới hạn của danh sách, không hứa tìm thấy mọi thiết bị trong mạng. “Chưa thể” giữ nghĩa chưa chọn được ở thời điểm này. Hai bước mở Local Operator trên máy tính kia rồi kéo danh sách để làm mới đều còn nguyên; “cuộc trò chuyện” phù hợp cách gọi nội dung trong ứng dụng, không phải đổi tên một mã phiên kỹ thuật.",
+      "linguistic_verdict": "passed",
+      "verdict": "passed_with_minor_width_risk",
+      "findings": [
+        "V3"
+      ],
+      "severity": "minor",
+      "width": {
+        "english_codepoints": 178,
+        "vi_codepoints": 219,
+        "ratio": 1.2303,
+        "pseudo": "[Ứng dụng chỉ cho chọn những thiết bị có cuộc trò chuyện đang hiển thị. Chưa thể chọn thiết bị không có cuộc trò chuyện nào hiển thị — hãy mở Local Operator trên máy tính kia rồi kéo danh sách cuộc trò chuyện để làm mới.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]"
+      }
+    },
+    {
+      "key": "mobile.remote_sessions.move_pick.no_answer",
+      "english": "It did not answer when this computer asked.",
+      "current_text": "Máy tính đó không phản hồi yêu cầu từ máy tính này.",
+      "analysis_vi": "“Máy tính đó” là máy từ xa; “máy tính này” là máy tính chuyển tiếp đang kết nối, không phải điện thoại. “Không phản hồi yêu cầu” tự nhiên hơn việc dịch sát “asked” thành “hỏi”. Câu chỉ dùng khi không có lý do lỗi từ máy chủ; không dịch hay thay lý do đó.",
+      "linguistic_verdict": "passed",
+      "verdict": "passed",
+      "findings": [],
+      "severity": null,
+      "width": {
+        "english_codepoints": 43,
+        "vi_codepoints": 51,
+        "ratio": 1.186,
+        "pseudo": "[Máy tính đó không phản hồi yêu cầu từ máy tính này.~~~~~~~~~~~~~~~~~~]"
+      }
+    },
+    {
+      "key": "mobile.remote_sessions.move_pick.no_devices",
+      "english": "No other devices are visible.",
+      "current_text": "Không thấy thiết bị nào khác.",
+      "analysis_vi": "“Không thấy thiết bị nào khác” chỉ nói về khả năng nhìn thấy trong danh sách, không kết luận thiết bị ngoại tuyến hoặc không tồn tại. “Thiết bị” đúng thuật ngữ, câu ngắn, trung tính, không thêm lời trách hay yêu cầu.",
+      "linguistic_verdict": "passed",
+      "verdict": "passed",
+      "findings": [],
+      "severity": null,
+      "width": {
+        "english_codepoints": 29,
+        "vi_codepoints": 29,
+        "ratio": 1.0,
+        "pseudo": "[Không thấy thiết bị nào khác.~~~~~~~~~~~]"
+      }
+    },
+    {
+      "key": "mobile.remote_sessions.move_pick.on_this_computer",
+      "english": "On this computer",
+      "current_text": "Trên máy tính này",
+      "analysis_vi": "“Trên máy tính này” xác định đúng vị trí ở máy tính đang kết nối, không phải trên điện thoại. Cấu trúc “Trên…” khớp “Trên {device}” trong thanh bên; không thêm dấu chấm cuối cho nhãn trạng thái.",
+      "linguistic_verdict": "passed",
+      "verdict": "passed",
+      "findings": [],
+      "severity": null,
+      "width": {
+        "english_codepoints": 16,
+        "vi_codepoints": 17,
+        "ratio": 1.0625,
+        "pseudo": "[Trên máy tính này~~~~~~]"
+      }
+    },
+    {
+      "key": "mobile.remote_sessions.move_pick.right_now",
+      "english": "Right now",
+      "current_text": "Hiện tại",
+      "analysis_vi": "“Hiện tại” là nhãn mô tả vị trí lúc này, không phải mệnh lệnh phải làm ngay. Cách viết ngắn, trung tính, đúng kiểu viết hoa đầu câu và không có dấu chấm cuối.",
+      "linguistic_verdict": "passed",
+      "verdict": "passed",
+      "findings": [],
+      "severity": null,
+      "width": {
+        "english_codepoints": 9,
+        "vi_codepoints": 8,
+        "ratio": 0.8889,
+        "pseudo": "[Hiện tại~~~]"
+      }
+    }
+  ],
+  "separate_process_gap": {
+    "status": "OPEN",
+    "name": "source-hook evidence gap",
+    "linguistic_failure": false,
+    "fixed_by_audit": false,
+    "source": "Explicit delegation; hooks forbidden/not executed here."
+  },
+  "paired_audit": {
+    "A": "passed_with_minors",
+    "B": "pending fresh independent B",
+    "paired_clearance": false
+  },
+  "human_native_speaker": "waived by delegation; independent Vietnamese-language LLM assessment, not a human/native-speaker audit",
+  "unverified": [
+    "Rendered/native phone layout, height, pixel widths and shaping",
+    "Actual pseudo-localized rendered frames",
+    "Repository ICU parser, compiler, tests, builds and generated projection",
+    "Source-hook process evidence (OPEN)",
+    "Fresh B audit / paired clearance"
+  ],
+  "execution_scope": "Read-only repository; dependency-free Python stdlib and read-only git only. No hooks, testsuite, compiler, build, install, browser, native run, push, commits or worktree edits."
+}

@@ -1,0 +1,64 @@
+Actual dependency-free Python checks executed via functions.eval in auditor session 5a669872c784; no repo test or hook execution. Audit model openai/gpt-6.1-sol per visible switch receipt.
+brief hash: PASS — 5a72dfd72dc820b1fa8e73d78b97807581572334ee0fd25eb2eab346e759ebca
+draft hash: PASS — a98004322415178b983e8a2f86349086dd56465d1958afc818383746b854d476
+HEAD: PASS — 9362cce8a631791b676b2d2c9eda90c43fc7e11c
+exact seven keys: PASS — missing=[]; extra=[]; count=7
+source hash english: PASS — 436f8ec3bda274431146e7e7cb82b2add418f598bd2a7a6d7426f561a4312984
+source hash context: PASS — c703dff07b634d3d2d4b7c789e6a4a1eecf192a57618ea8e9e72197d325d08eb
+source hash usage: PASS — 6a3f7126eb2fefc5ad0138a1731e3898d66d333ea8ca1b4ac99321da18d495aa
+source/context mobile.remote_sessions.move_pick.cannot_reach: PASS — English and nested role/note byte-string values match brief
+source/context mobile.remote_sessions.move_pick.destination_heading: PASS — English and nested role/note byte-string values match brief
+source/context mobile.remote_sessions.move_pick.discovery_help: PASS — English and nested role/note byte-string values match brief
+source/context mobile.remote_sessions.move_pick.no_answer: PASS — English and nested role/note byte-string values match brief
+source/context mobile.remote_sessions.move_pick.no_devices: PASS — English and nested role/note byte-string values match brief
+source/context mobile.remote_sessions.move_pick.on_this_computer: PASS — English and nested role/note byte-string values match brief
+source/context mobile.remote_sessions.move_pick.right_now: PASS — English and nested role/note byte-string values match brief
+simple args mobile.remote_sessions.move_pick.cannot_reach: PASS — ['{device}']
+simple args mobile.remote_sessions.move_pick.destination_heading: PASS — []
+simple args mobile.remote_sessions.move_pick.discovery_help: PASS — []
+simple args mobile.remote_sessions.move_pick.no_answer: PASS — []
+simple args mobile.remote_sessions.move_pick.no_devices: PASS — []
+simple args mobile.remote_sessions.move_pick.on_this_computer: PASS — []
+simple args mobile.remote_sessions.move_pick.right_now: PASS — []
+negative/control dropped: PASS — accepted=False, expected=False
+negative/control renamed: PASS — accepted=False, expected=False
+negative/control duplicated: PASS — accepted=False, expected=False
+negative/control nested: PASS — accepted=False, expected=False
+negative/control select: PASS — accepted=False, expected=False
+negative/control correct: PASS — accepted=True, expected=True
+bidi controls: PASS — 0 in seven target values; not runtime bidi proof
+NFC: PASS — 7/7 normalized
+product name: PASS — exact Latin Local Operator once in discovery_help
+register: FAIL — no added please/formal-address/colloquial particles/exclamations
+REGISTER PROBE INVESTIGATION — initial naive substring test falsely matched 请 inside 请求 (request) in no_answer; read exact sentence and source request context. Probe corrected to distinguish lexical 请求 from politeness 请; no target edits.
+register corrected lexical probe: PASS — no added please/formal-address/colloquial particles/exclamations; 请求 is request, not please
+headings/location punctuation: PASS — compact labels have no terminal punctuation; full-sentence no_devices/no_answer/help retain 。
+opaque name substitution: PASS — synthetic input length=4; prefix-only concatenation preserves entire value (no ICU/runtime claim)
+opaque name substitution: PASS — synthetic input length=16; prefix-only concatenation preserves entire value (no ICU/runtime claim)
+opaque name substitution: PASS — synthetic input length=8; prefix-only concatenation preserves entire value (no ICU/runtime claim)
+opaque name substitution: PASS — synthetic input length=13; prefix-only concatenation preserves entire value (no ICU/runtime claim)
+opaque name substitution: PASS — synthetic input length=100; prefix-only concatenation preserves entire value (no ICU/runtime claim)
+redaction copy markers: PASS — {"english": 0, "context": 0, "draft_values": 0, "glossary_examples": 0}
+redaction metadata INFO — {"draft_non_values_marker_hits": 0, "raw_file_marker_pattern_hits": {"brief": 0, "draft": 0, "translator_notes": 0, "translator_verification": 1}}; scan pattern/example literals are metadata, not copy redactions; not a secret scan
+WIDTH heuristic only — {"mobile.remote_sessions.move_pick.cannot_reach": {"english_codepoints": 20, "target_codepoints": 12, "english_estimated_cells": 20, "target_estimated_cells": 16, "cell_ratio": 0.8}, "mobile.remote_sessions.move_pick.destination_heading": {"english_codepoints": 15, "target_codepoints": 6, "english_estimated_cells": 15, "target_estimated_cells": 12, "cell_ratio": 0.8}, "mobile.remote_sessions.move_pick.discovery_help": {"english_codepoints": 178, "target_codepoints": 67, "english_estimated_cells": 178, "target_estimated_cells": 120, "cell_ratio": 0.6742}, "mobile.remote_sessions.move_pick.no_answer": {"english_codepoints": 43, "target_codepoints": 17, "english_estimated_cells": 43, "target_estimated_cells": 34, "cell_ratio": 0.7907}, "mobile.remote_sessions.move_pick.no_devices": {"english_codepoints": 29, "target_codepoints": 11, "english_estimated_cells": 29, "target_estimated_cells": 22, "cell_ratio": 0.7586}, "mobile.remote_sessions.move_pick.on_this_computer": {"english_codepoints": 16, "target_codepoints": 5, "english_estimated_cells": 16, "target_estimated_cells": 10, "cell_ratio": 0.625}, "mobile.remote_sessions.move_pick.right_now": {"english_codepoints": 9, "target_codepoints": 2, "english_estimated_cells": 9, "target_estimated_cells": 4, "cell_ratio": 0.4444}}
+width expansion heuristic: PASS — no target exceeds English estimated cells; does not prove phone render fit
+source fallback branch: PASS — read TSX lines 484-485; opaque trimmed server reason wins; source-only inspection
+source reused remote key: PASS — source lines 475-476; no duplicate introduced in seven-key draft
+CLDR INFO — N/A: all seven simple messages, no plural/select/number/date skeleton/markup syntax; zh-CN other-only has no branches to add
+NOT RUN — repo hook, tests, builds, validators, browser/native, pseudo-rendering; delegated source-hook evidence gap remains OPEN
+RAW MARKER INVESTIGATION — translator_verification hit occurs in redaction_marker_scan.pattern regex literal, exact context inspected; draft metadata/copy hits 0.
+Mobile git ls-files i18n/style-guides/* i18n/glossary*: no output; shared core references used. Existing zh-CN intersection with seven new keys: empty (draft-only audit).
+final input unchanged brief: PASS — 5a72dfd72dc820b1fa8e73d78b97807581572334ee0fd25eb2eab346e759ebca
+final input unchanged draft: PASS — a98004322415178b983e8a2f86349086dd56465d1958afc818383746b854d476
+final input unchanged translator_notes: PASS — 994b893e40fae5a9b3ad99705220f2f69de295f126457d0288c4421f31a38b1c
+final input unchanged translator_verification: PASS — cf5c10cefc70d08f333ef2d8891258377cf380b8c9ac3f26f517b5b7f25a4c52
+final input unchanged english: PASS — 436f8ec3bda274431146e7e7cb82b2add418f598bd2a7a6d7426f561a4312984
+final input unchanged context: PASS — c703dff07b634d3d2d4b7c789e6a4a1eecf192a57618ea8e9e72197d325d08eb
+final input unchanged usage: PASS — 6a3f7126eb2fefc5ad0138a1731e3898d66d333ea8ca1b4ac99321da18d495aa
+final input unchanged zh_existing: PASS — eb825b4e48b28aa8bdc7bc1610c5edccd5b7bc2f679d36cab1c94ecd79ed1249
+final input unchanged zh_sidebar: PASS — 21a2fbc85ca4064074610e42737c521edd2969493979571c349b2c4163a644d2
+final input unchanged style: PASS — 8f95d89debbd0af848e72e4805e256ef9566632e520a5c6d9b37928cd617142c
+final input unchanged glossary: PASS — 0eb34437a8c3d6f564f278ef957a603b1d9f51bb07d5ddae5ea8f37deba962f8
+final input unchanged core_guidance: PASS — c8c66d86f7603dd4cfbcfc9beb887b369450004f3d9695a7d6e91e0fd58dba44
+final input unchanged mobile_guidance: PASS — 84021f7c9df58bfe01376669c187cbdf777c680d918f9f001201faeae2a14ad7
+final input unchanged schema_reference: PASS — a2cb1e7f3fce51b1ae603ab066560c6beec1d7c40f2954d272f8bcdb6f96e85d

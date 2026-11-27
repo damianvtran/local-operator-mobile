@@ -23,7 +23,14 @@ import { type DomShim, installDomShim } from "@/testing/dom-shim";
 type HostProps = {
 	children?: unknown;
 	className?: string;
-	style?: { maxHeight?: number; overflow?: string; minHeight?: number };
+	style?: {
+		maxHeight?: number;
+		overflow?: string;
+		minHeight?: number;
+		flexGrow?: number;
+		position?: string;
+		height?: number;
+	};
 	onLayout?: (event: { nativeEvent: { layout: { height: number } } }) => void;
 	onPress?: () => void;
 	accessibilityRole?: string;
@@ -61,6 +68,7 @@ vi.mock("react-native", () => ({
 	View: host("View"),
 	Text: host("Text"),
 	Pressable: host("Pressable"),
+	ScrollView: host("ScrollView"),
 	StyleSheet: { create: (v: unknown) => v, flatten: (v: unknown) => v },
 }));
 
@@ -82,6 +90,8 @@ const {
 	userMessageClipHeight,
 	userMessageLineHeight,
 	userMessageControlMarginTop,
+	userMessageFadeLines,
+	USER_MESSAGE_FADE_LINES,
 	collapseScrollOffset,
 	USER_MESSAGE_MORE_GROWTH,
 	USER_MESSAGE_COLLAPSE_INSET,
@@ -105,6 +115,10 @@ type RenderOptions = {
 	anchorRef?: { current: unknown };
 	/** A render-function body, handed the clamp's `expand` (R1-m1). */
 	body?: (expand: () => void) => React.ReactNode;
+	/** The clamp's optional bounds (PR #390 D1): fewer lines, and a cap on
+	 *  the open message. */
+	lines?: number;
+	expandedMaxHeight?: number;
 };
 
 const render = async (controlled?: Controlled, options: RenderOptions = {}) => {
@@ -113,6 +127,8 @@ const render = async (controlled?: Controlled, options: RenderOptions = {}) => {
 		testID: "row-more",
 		...controlled,
 		anchorRef: options.anchorRef,
+		lines: options.lines,
+		expandedMaxHeight: options.expandedMaxHeight,
 		children: options.body ?? createElement("span", null, "the message"),
 	} as unknown as Parameters<typeof UserMessageClamp>[0]);
 	await act(async () =>
@@ -523,5 +539,121 @@ describe("the scroller and the bubbles it keeps in view (D2)", () => {
 		expect(userArm).toContain("anchorRef={bubble}");
 		expect(ECHO).toContain("anchorRef={bubble}");
 		expect(ECHO).toContain("ref={bubble}");
+	});
+});
+
+/** The subagent screen pins its prompt above the list, on a screen that does
+ *  not scroll (PR #390 design round 1, D1 / QA Q1): fewer lines, and an open
+ *  message that scrolls inside a bounded scroller with Show less outside it. */
+describe("the wrapper's bounds for a pinned prompt", () => {
+	it("clips to the caller's line count, and decides the control by it", async () => {
+		await render(undefined, { lines: 3 });
+		const outer = rig.hosts.find((h) => h.props.style?.maxHeight);
+		expect(outer?.props.style?.maxHeight).toBe(userMessageClipHeight(1, 3));
+		expect(userMessageClipHeight(1, 3)).toBe(3 * userMessageLineHeight(1));
+		// Five lines fit the default eight, but not three: the control appears.
+		await layOut(5);
+		expect(control()?.accessibilityLabel).toBe("Show more");
+		expect(needsUserMessageClamp(5 * userMessageLineHeight(1), 1, 3)).toBe(
+			true,
+		);
+		expect(needsUserMessageClamp(5 * userMessageLineHeight(1), 1)).toBe(false);
+	});
+
+	it("open, scrolls the message inside a bounded scroller and keeps Show less outside it", async () => {
+		await render(undefined, { lines: 3, expandedMaxHeight: 300 });
+		await layOut(60);
+		expect(last("ScrollView")).toHaveLength(0);
+		await press();
+		const scrollers = last("ScrollView");
+		expect(scrollers).toHaveLength(1);
+		expect(scrollers[0]?.props.style).toEqual({ maxHeight: 300, flexGrow: 0 });
+		// The control is the scroller's SIBLING: nothing under the scroller's
+		// element tree carries the control's role or testID, so scrolling the
+		// message can never carry Show less out of view.
+		const holdsControl = (node: unknown): boolean => {
+			if (Array.isArray(node)) return node.some(holdsControl);
+			if (node === null || typeof node !== "object") return false;
+			const props = (node as { props?: HostProps }).props;
+			if (props === undefined) return false;
+			if (props.testID === "row-more" || props.accessibilityRole === "button")
+				return true;
+			return holdsControl(props.children);
+		};
+		expect(holdsControl(scrollers[0]?.props.children)).toBe(false);
+		expect(control()?.testID).toBe("row-more");
+		expect(control()?.accessibilityLabel).toBe("Show less");
+		// Closed again: no scroller, the three-line clip is back.
+		await press();
+		expect(last("ScrollView")).toHaveLength(0);
+		expect(
+			rig.hosts.find((h) => h.props.style?.maxHeight)?.props.style?.maxHeight,
+		).toBe(userMessageClipHeight(1, 3));
+	});
+
+	it("without a bound, an open message draws in full as before (the transcript's rows)", async () => {
+		await render();
+		await layOut(60);
+		await press();
+		expect(last("ScrollView")).toHaveLength(0);
+	});
+});
+
+/** PR #391 design round 1, D1 (QA Q1): at 320x692 and 200 % text the
+ *  subagent prompt's clamp shrinks to ONE line, and the 1.5-line fade covered
+ *  that only line (3.23 -> 1.29:1). The fade never reaches the first line, and
+ *  with no fade the control does not pull up over the text. */
+describe("the fade never covers the first line (PR #391 D1)", () => {
+	/** The fade's absolutely-positioned frame in the latest pass, if drawn. */
+	const fadeFrame = () =>
+		rig.hosts.find(
+			(h) => h.host === "View" && h.props.style?.position === "absolute",
+		)?.props.style;
+
+	it("fades nothing at one line, one line at two, and the standard 1.5 from three", () => {
+		expect(USER_MESSAGE_FADE_LINES).toBe(1.5);
+		expect(userMessageFadeLines(1)).toBe(0);
+		expect(userMessageFadeLines(2)).toBe(1);
+		expect(userMessageFadeLines(3)).toBe(1.5);
+		expect(userMessageFadeLines(8)).toBe(1.5);
+		// Omitted: the transcript's eight-line clamp, unchanged.
+		expect(userMessageFadeLines()).toBe(USER_MESSAGE_FADE_LINES);
+		// No fade: no pull-up. The standard fade keeps the 32 pt footprint.
+		expect(userMessageControlMarginTop(false, 48, 0)).toBe(0);
+		expect(userMessageControlMarginTop(false, 48, 1)).toBe(-16);
+		expect(userMessageControlMarginTop(false, 48)).toBe(-16);
+	});
+
+	it("a one-line clamp draws its line unfaded, with Show more below it", async () => {
+		rig.scale = 2;
+		await render(undefined, { lines: 1 });
+		await layOut(5);
+		expect(control()?.accessibilityLabel).toBe("Show more");
+		expect(last("Svg")).toHaveLength(0);
+		expect(fadeFrame()).toBeUndefined();
+		expect(control()?.style).toEqual({ minHeight: TOUCH_FLOOR, marginTop: 0 });
+	});
+
+	it("a two-line clamp fades one line and keeps the 32 pt pull-up", async () => {
+		rig.scale = 2;
+		await render(undefined, { lines: 2 });
+		await layOut(5);
+		expect(fadeFrame()?.height).toBe(userMessageLineHeight(2));
+		expect(control()?.style).toEqual({
+			minHeight: TOUCH_FLOOR,
+			marginTop: -(TOUCH_FLOOR - USER_MESSAGE_MORE_GROWTH),
+		});
+	});
+
+	it("the transcript's default eight-line clamp is unchanged", async () => {
+		await render();
+		await layOut(20);
+		expect(fadeFrame()?.height).toBe(
+			USER_MESSAGE_FADE_LINES * userMessageLineHeight(1),
+		);
+		expect(control()?.style).toEqual({
+			minHeight: TOUCH_FLOOR,
+			marginTop: -(TOUCH_FLOOR - USER_MESSAGE_MORE_GROWTH),
+		});
 	});
 });

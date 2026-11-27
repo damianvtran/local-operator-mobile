@@ -44,6 +44,72 @@ export const inlineChartExamples: (InlineUi & Json)[] = [
 			["Fri", 5],
 		],
 	},
+	// The operator's report (2026-11-26): an 84–154 USD series drew against a
+	// zero baseline with three ticks. It must fit to 80–160 in 20 USD steps,
+	// show "Nov 24" on the axis and keep "Nov 24 · rollout" for the tooltip.
+	{
+		type: "line",
+		title: "Datadog daily allocated spend through Nov 24 (UTC)",
+		unit: "USD",
+		data: [
+			["Nov 16", 153.66],
+			["Nov 17", 143.37],
+			["Nov 18", 140.61],
+			["Nov 19", 141.67],
+			["Nov 20", 126.94],
+			["Nov 21", 118.38],
+			["Nov 22 · PDF ends", 109.2],
+			["Nov 23", 124.37],
+			["Nov 24 · rollout", 84.04],
+		],
+	},
+	// 32 categories at phone width: label thinning, compact ticks (≥ 10 000)
+	// and no resting dots past 12 points.
+	{
+		type: "line",
+		title: "Requests per day",
+		unit: "requests",
+		// Real dates: October has 31 days, so the 32nd point is Nov 1 (the
+		// last label a reviewer reads as "the last label stays visible").
+		data: Array.from({ length: 32 }, (_, i): [string, number] => [
+			i < 31 ? `Oct ${i + 1}` : "Nov 1",
+			12_000 + ((i * 7919) % 9000) + i * 250,
+		]),
+	},
+	// Long labels switch a single-series bar chart to horizontal rows.
+	{
+		type: "bar",
+		title: "Spend by team",
+		unit: "USD",
+		data: [
+			["Platform infrastructure", 4210.5],
+			["Data engineering", 3120],
+			["Mobile clients", 1875.25],
+			["Customer support tooling", 940],
+			["Security", 610.75],
+		],
+	},
+	// Twelve items: the six largest plus "Other (6)"; slices under 3% get no
+	// direct label on wide boxes. The data table still lists all twelve.
+	{
+		type: "pie",
+		title: "Cloud spend by service",
+		unit: "USD",
+		data: [
+			["Compute", 4120],
+			["Storage", 2380],
+			["Database", 1990],
+			["Networking", 1210],
+			["Observability", 930],
+			["CDN", 610],
+			["Queues", 240],
+			["Search", 190],
+			["DNS", 60],
+			["Secrets", 45],
+			["Email", 30],
+			["Backups", 25],
+		],
+	},
 	{
 		type: "pie",
 		title: "Time by area",

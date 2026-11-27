@@ -772,11 +772,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Derive the version from the ref
-        # On `main` this is the placeholder version with a commit-count build
-        # number: both stores compare the build number, and the placeholder is
-        # what a non-release build is allowed to be. See docs/ci.md.
-        run: node scripts/ci/version.ts --write
+      - name: Derive the TestFlight version from the latest reachable release
+        id: testflight_version
+        # Keep the commit-count build number, but use the release's numeric train
+        # so TestFlight can offer this build as an update. A tag alone does not
+        # prove that App Store Connect has accepted the build on that train.
+        run: node scripts/ci/version.ts --testflight --write
 
       - name: Generate the native project
         env:
@@ -829,12 +830,13 @@ jobs:
           APPLE_ASC_PRIVATE_KEY_BASE64: ${{ secrets.APPLE_ASC_PRIVATE_KEY_BASE64 }}
           APPLE_ASC_PRIVATE_KEY_PATH: ${{ runner.temp }}/asc-upload-key.p8
           LO_IOS_IPA_DIR: ${{ runner.temp }}/ipa
+          LO_IOS_TAGGED_BUILD_NUMBER: ${{ steps.testflight_version.outputs.tagged_build_number }}
         run: |
           set -euo pipefail
           umask 077
           printf '%s' "$APPLE_ASC_PRIVATE_KEY_BASE64" | base64 --decode > "$APPLE_ASC_PRIVATE_KEY_PATH"
-          # The pinned fastlane `ios-signed-ipa` installed earlier in this job.
-          bundle exec fastlane ios testflight
+          # Check ASC here, not on export-only runs or at Git tag resolution.
+          bundle exec fastlane ios testflight require_tagged_baseline:true
 
       - name: Remove the upload key even if the upload fails
         if: always()

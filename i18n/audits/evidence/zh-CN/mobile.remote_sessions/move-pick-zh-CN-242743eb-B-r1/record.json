@@ -1,0 +1,282 @@
+{
+  "schema_version": 1,
+  "audit_pass": "B",
+  "audit_id": "move-pick-zh-CN-242743eb-B-r1",
+  "locale": "zh-CN",
+  "namespace": "mobile.remote_sessions",
+  "scope": "Only seven mobile.remote_sessions.move_pick.* draft values; not whole namespace/app clearance.",
+  "keycount": 7,
+  "source_commit": "9362cce8a631791b676b2d2c9eda90c43fc7e11c",
+  "worktree": "/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy",
+  "read_only_worktree": true,
+  "inputs": [
+    {
+      "path": "/Users/damian/.local-operator/sessions/ca8720609fc7/scratchpad/translation-brief.json",
+      "sha256": "5a72dfd72dc820b1fa8e73d78b97807581572334ee0fd25eb2eab346e759ebca"
+    },
+    {
+      "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/move-picker-locale-ledger.json",
+      "sha256": "bfe98c82dc835bd32470d5e744980664cc06cdd0916fbfab0e8affecc6c6139c"
+    },
+    {
+      "path": "/Users/damian/.local-operator/sessions/54921291584e/scratchpad/draft-zh-CN.json",
+      "sha256": "a98004322415178b983e8a2f86349086dd56465d1958afc818383746b854d476"
+    },
+    {
+      "path": "/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/i18n/catalogues/en/mobile.remote_sessions.json",
+      "sha256": "436f8ec3bda274431146e7e7cb82b2add418f598bd2a7a6d7426f561a4312984"
+    },
+    {
+      "path": "/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/i18n/catalogues/en/mobile.remote_sessions.context.json",
+      "sha256": "c703dff07b634d3d2d4b7c789e6a4a1eecf192a57618ea8e9e72197d325d08eb"
+    },
+    {
+      "path": "/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/features/sessions/move-sheet.tsx",
+      "sha256": "6a3f7126eb2fefc5ad0138a1731e3898d66d333ea8ca1b4ac99321da18d495aa"
+    },
+    {
+      "path": "/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/i18n/catalogues/zh-CN/mobile.remote_sessions.json",
+      "sha256": "eb825b4e48b28aa8bdc7bc1610c5edccd5b7bc2f679d36cab1c94ecd79ed1249"
+    },
+    {
+      "path": "/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy/src/i18n/catalogues/zh-CN/mobile.sidebar.json",
+      "sha256": "21a2fbc85ca4064074610e42737c521edd2969493979571c349b2c4163a644d2"
+    },
+    {
+      "path": "/Users/damian/local-operator/i18n/style-guides/zh-CN.md",
+      "sha256": "8f95d89debbd0af848e72e4805e256ef9566632e520a5c6d9b37928cd617142c"
+    },
+    {
+      "path": "/Users/damian/local-operator/i18n/glossary.md",
+      "sha256": "0eb34437a8c3d6f564f278ef957a603b1d9f51bb07d5ddae5ea8f37deba962f8"
+    }
+  ],
+  "draft_sha256": "a98004322415178b983e8a2f86349086dd56465d1958afc818383746b854d476",
+  "brief_sha256": "5a72dfd72dc820b1fa8e73d78b97807581572334ee0fd25eb2eab346e759ebca",
+  "source_hash_checks": [
+    {
+      "path": "src/i18n/catalogues/en/mobile.remote_sessions.json",
+      "actual_sha256": "436f8ec3bda274431146e7e7cb82b2add418f598bd2a7a6d7426f561a4312984",
+      "expected_sha256": "436f8ec3bda274431146e7e7cb82b2add418f598bd2a7a6d7426f561a4312984",
+      "committed_sha256": "436f8ec3bda274431146e7e7cb82b2add418f598bd2a7a6d7426f561a4312984",
+      "match": true
+    },
+    {
+      "path": "src/i18n/catalogues/en/mobile.remote_sessions.context.json",
+      "actual_sha256": "c703dff07b634d3d2d4b7c789e6a4a1eecf192a57618ea8e9e72197d325d08eb",
+      "expected_sha256": "c703dff07b634d3d2d4b7c789e6a4a1eecf192a57618ea8e9e72197d325d08eb",
+      "committed_sha256": "c703dff07b634d3d2d4b7c789e6a4a1eecf192a57618ea8e9e72197d325d08eb",
+      "match": true
+    },
+    {
+      "path": "src/features/sessions/move-sheet.tsx",
+      "actual_sha256": "6a3f7126eb2fefc5ad0138a1731e3898d66d333ea8ca1b4ac99321da18d495aa",
+      "expected_sha256": "6a3f7126eb2fefc5ad0138a1731e3898d66d333ea8ca1b4ac99321da18d495aa",
+      "committed_sha256": "6a3f7126eb2fefc5ad0138a1731e3898d66d333ea8ca1b4ac99321da18d495aa",
+      "match": true
+    }
+  ],
+  "actors": {
+    "translator": {
+      "session": "54921291584e",
+      "reported_model": "openai/gpt-6.1-sol",
+      "model_source": "draft and manager ledger, not independent serving receipt",
+      "verified_actual_model": "UNKNOWN"
+    },
+    "A": {
+      "session": "5a669872c784",
+      "reported_model": "openai/gpt-6.1-sol",
+      "model_source": "manager ledger only; A reasoning/report not read",
+      "verified_actual_model": "UNKNOWN"
+    },
+    "B": {
+      "session": "242743eba0de",
+      "reported_model": "openai/gpt-6.1-sol",
+      "verified_actual_model": "UNKNOWN",
+      "model_source": "visible model-switch event; no independent serving receipt",
+      "fallback_disclosure": "Temporary openai/gpt-6.1-sol fallback from anthropic/claude-opus-5-5 due to provider quota failure; no model/tool/default changes made by auditor."
+    }
+  },
+  "independence": {
+    "different_sessions": true,
+    "A_report_read": false,
+    "fresh_B_linguistic_judgment": true,
+    "limitation": "Translator draft metadata/notes were visible alongside values, but no translator or A conclusion substituted for independent EN/context/use/glossary comparison."
+  },
+  "read_route": {
+    "route": "Ordinary approved exact-file UTF-8 reads and Python json/pathlib; git rev-parse and git show are read-only.",
+    "nested_context": "Read directly as JSON objects; not routable through flat public-copy key reader.",
+    "public_reader_receipt": null
+  },
+  "per_key": [
+    {
+      "key": "mobile.remote_sessions.move_pick.cannot_reach",
+      "english": "Can't reach {device}",
+      "current": "无法连接{device}",
+      "brief_english_match": true,
+      "brief_context_match": true,
+      "source_arguments": [
+        "{device}"
+      ],
+      "target_arguments": [
+        "{device}"
+      ],
+      "NFC": true,
+      "bidi_controls": [],
+      "source_codepoints": 20,
+      "target_codepoints": 12,
+      "source_cell_estimate": 20,
+      "target_cell_estimate": 16,
+      "verdict": "PASS",
+      "findings": [],
+      "severity": null,
+      "proposed_text": null,
+      "linguistic_reasoning": "无法连接 is ordinary Chinese connectivity wording and matches the existing 无法连接会话所属电脑. The opaque {device} is preserved once; no phone error or offline diagnosis is added."
+    },
+    {
+      "key": "mobile.remote_sessions.move_pick.destination_heading",
+      "english": "Move or copy to",
+      "current": "移动或复制到",
+      "brief_english_match": true,
+      "brief_context_match": true,
+      "source_arguments": [],
+      "target_arguments": [],
+      "NFC": true,
+      "bidi_controls": [],
+      "source_codepoints": 15,
+      "target_codepoints": 6,
+      "source_cell_estimate": 15,
+      "target_cell_estimate": 12,
+      "verdict": "PASS",
+      "findings": [],
+      "severity": null,
+      "proposed_text": null,
+      "linguistic_reasoning": "移动或复制到 keeps both established action verbs and the destination preposition. As a section heading above radio choices it is idiomatic, not a claim that the operation has started."
+    },
+    {
+      "key": "mobile.remote_sessions.move_pick.discovery_help",
+      "english": "This app can offer the devices your sessions show. A device with no visible session cannot be picked yet — open Local Operator on the other computer and pull the list to refresh.",
+      "current": "本应用仅列出会话列表中可见的设备。没有可见会话的设备暂时无法选择。在另一台电脑上打开Local Operator，再下拉会话列表刷新。",
+      "brief_english_match": true,
+      "brief_context_match": true,
+      "source_arguments": [],
+      "target_arguments": [],
+      "NFC": true,
+      "bidi_controls": [],
+      "source_codepoints": 178,
+      "target_codepoints": 67,
+      "source_cell_estimate": 178,
+      "target_cell_estimate": 120,
+      "verdict": "PASS",
+      "findings": [],
+      "severity": null,
+      "proposed_text": null,
+      "linguistic_reasoning": "仅列出会话列表中可见的设备 expresses the session-derived discovery limitation, not a full network inventory. 没有可见会话…暂时无法选择 keeps the present selection restriction. 在另一台电脑上打开Local Operator，再下拉会话列表刷新 preserves the other-computer instruction, product spelling, pull gesture, list and ordering. No politeness 请 is introduced."
+    },
+    {
+      "key": "mobile.remote_sessions.move_pick.no_answer",
+      "english": "It did not answer when this computer asked.",
+      "current": "此电脑发出请求后，远程电脑未响应。",
+      "brief_english_match": true,
+      "brief_context_match": true,
+      "source_arguments": [],
+      "target_arguments": [],
+      "NFC": true,
+      "bidi_controls": [],
+      "source_codepoints": 43,
+      "target_codepoints": 17,
+      "source_cell_estimate": 43,
+      "target_cell_estimate": 34,
+      "verdict": "PASS",
+      "findings": [],
+      "severity": null,
+      "proposed_text": null,
+      "linguistic_reasoning": "此电脑发出请求后，远程电脑未响应 explicitly disambiguates the requesting relay from the nonresponding remote computer. 请求 means request; its 请 character is not the politeness marker 请 and is not a register defect. 未响应 is settled UI language rather than a calque of conversational answering."
+    },
+    {
+      "key": "mobile.remote_sessions.move_pick.no_devices",
+      "english": "No other devices are visible.",
+      "current": "当前没有其他可见设备。",
+      "brief_english_match": true,
+      "brief_context_match": true,
+      "source_arguments": [],
+      "target_arguments": [],
+      "NFC": true,
+      "bidi_controls": [],
+      "source_codepoints": 29,
+      "target_codepoints": 11,
+      "source_cell_estimate": 29,
+      "target_cell_estimate": 22,
+      "verdict": "PASS",
+      "findings": [],
+      "severity": null,
+      "proposed_text": null,
+      "linguistic_reasoning": "当前没有其他可见设备 is a complete factual visibility statement with natural full-sentence punctuation. 当前 is a harmless temporal clarification, not a claim of absence from the network or offline status."
+    },
+    {
+      "key": "mobile.remote_sessions.move_pick.on_this_computer",
+      "english": "On this computer",
+      "current": "在此电脑上",
+      "brief_english_match": true,
+      "brief_context_match": true,
+      "source_arguments": [],
+      "target_arguments": [],
+      "NFC": true,
+      "bidi_controls": [],
+      "source_codepoints": 16,
+      "target_codepoints": 5,
+      "source_cell_estimate": 16,
+      "target_cell_estimate": 10,
+      "verdict": "PASS",
+      "findings": [],
+      "severity": null,
+      "proposed_text": null,
+      "linguistic_reasoning": "在此电脑上 is a natural compact location status, retaining 电脑 and 此电脑 from the adjacent catalogue rather than calling the relay a phone. The 在…上 construction matches the existing remote location label."
+    },
+    {
+      "key": "mobile.remote_sessions.move_pick.right_now",
+      "english": "Right now",
+      "current": "当前",
+      "brief_english_match": true,
+      "brief_context_match": true,
+      "source_arguments": [],
+      "target_arguments": [],
+      "NFC": true,
+      "bidi_controls": [],
+      "source_codepoints": 9,
+      "target_codepoints": 2,
+      "source_cell_estimate": 9,
+      "target_cell_estimate": 4,
+      "verdict": "PASS",
+      "findings": [],
+      "severity": null,
+      "proposed_text": null,
+      "linguistic_reasoning": "当前 naturally labels current state above the location. It does not turn English Right now into an urgent imperative such as 立即."
+    }
+  ],
+  "findings": [],
+  "ICU_CLDR": "N/A: seven messages contain no plural/select/number/date skeletons. cannot_reach has exactly one opaque {device}; six have no arguments; no markup tokens. Chinese plural categories do not apply to these strings.",
+  "register": "Neutral modern Simplified Chinese; no 您/你 mismatch, no added politeness 请. 请求 is lexical request, not an instruction using please.",
+  "glossary": "电脑/此电脑, 设备, 会话, 移动/复制 and Local Operator match source-context and adjacent catalogue/glossary usage. No coined technical terms.",
+  "width": "All seven target codepoint and East-Asian-cell estimates are below English source. These are actual string measurements, not rendered/native fit. No pseudo-localization was executed. Arbitrary device-name wrapping remains unbounded and unverified.",
+  "RTL": "N/A for zh-CN paragraph direction. No inserted bidi controls. Embedded arbitrary device names remain opaque; no runtime bidi/paragraph-base claim.",
+  "redaction_scan": {
+    "copy_scope": "Seven source strings, seven target strings, seven nested context objects and selected zh-CN glossary examples. Metadata paths/session/hash fields excluded.",
+    "result": "See dependency-free audit.log fresh verification; no public-reader or repository-wide secrets receipt."
+  },
+  "current_report_verdict": {
+    "namespace": "PASS — seven scoped keys clean",
+    "overall": "PASS — independent B linguistic audit only",
+    "unresolved_blocker_major_count": 0,
+    "minor_count": 0,
+    "nit_count": 0
+  },
+  "not_verified": [
+    "Rendered/native fit and runtime language frame",
+    "Runtime mixed-direction device-name rendering",
+    "ICU runtime/compiler/tests/build/install/hooks",
+    "Shipping/source-hook gate closure",
+    "Paired audit clearance: parent must verify A+B evidence and identities"
+  ],
+  "source_hook_evidence": "OPEN per supplied ledger; this linguistic audit provides no shipping or hook-validation credit."
+}

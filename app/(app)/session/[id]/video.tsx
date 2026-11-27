@@ -1,4 +1,4 @@
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useIsFocused, useLocalSearchParams, useRouter } from "expo-router";
 import {
 	type StatusChangeEventPayload,
 	useVideoPlayer,
@@ -55,7 +55,8 @@ export default function VideoPlayer() {
 	const entryId = typeof entry === "string" ? entry : "";
 	const index = Number.parseInt(typeof i === "string" ? i : "", 10);
 	const router = useRouter();
-	const runtime = useSessionRuntime(sessionId);
+	const focused = useIsFocused();
+	const runtime = useSessionRuntime(sessionId, focused);
 
 	const [state, setState] = useState<
 		| { kind: "loading" }

@@ -1,6 +1,13 @@
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { type ReactNode, useEffect, useRef, useState } from "react";
+import { Pressable, Text, View } from "react-native";
 
 import type { ModelEntry } from "@/contracts";
+import { effortLabel } from "@/features/home/picker-model";
+import {
+	modelSearchReached,
+	type RunSettingLock,
+	type RunSettingSection,
+} from "@/features/session/composer-controls";
 import { t } from "@/i18n";
 import {
 	CONTROL,
@@ -11,12 +18,16 @@ import {
 	state,
 } from "@/ui/a11y";
 import { Sheet } from "@/ui/components";
+import { Alert } from "@/ui/components/alert";
 import { Badge } from "@/ui/components/badge";
 import { Button } from "@/ui/components/button";
+import { SectionHeader } from "@/ui/components/section-header";
+import { useComposedDir } from "@/ui/direction";
 import { CONTROL_DISABLED_INK, cx } from "@/ui/variants";
 
 /**
- * The model and effort sheets (`docs/ux/flows.md` F-6.7).
+ * The run-settings sheet: the model list and the effort rungs, together
+ * (`docs/ux/flows.md` F-6.7; issue #325).
  *
  * **The array's order IS the ranking** (`contract.md` §3.9): the daemon ranks the
  * catalogue, so this renders it as given and never re-sorts. Grouping by provider
@@ -28,18 +39,6 @@ import { CONTROL_DISABLED_INK, cx } from "@/ui/variants";
  * "why is my model missing", and hiding it turns a diagnosable state into an
  * absence.
  */
-export type ModelSheetProps = {
-	visible: boolean;
-	onClose: () => void;
-	models: ModelEntry[];
-	/** The projection's `model_selector` (`provider/model_id`). */
-	selected: string;
-	loading?: boolean;
-	failed?: boolean;
-	onRetry?: () => void;
-	onPick: (model: ModelEntry) => void;
-};
-
 interface ProviderGroup {
 	provider: string;
 	models: ModelEntry[];
@@ -147,87 +146,6 @@ export const ModelOptionRow = ({
 	);
 };
 
-export const ModelSheet = ({
-	visible,
-	onClose,
-	models,
-	selected,
-	loading = false,
-	failed = false,
-	onRetry,
-	onPick,
-}: ModelSheetProps) => {
-	const groups = groupByProvider(models);
-	return (
-		<Sheet
-			visible={visible}
-			onClose={onClose}
-			title={t("mobile.session.sheet_title.model")}
-			testID={SURFACE.modelSheet}
-		>
-			<ScrollView className="max-h-96">
-				{groups.map((group) => (
-					<View key={group.provider}>
-						<Text className="px-3 pt-2 pb-1 text-meta text-ink-dim">
-							{group.provider}
-						</Text>
-						{group.models.map((model) => (
-							<ModelOptionRow
-								key={selectorOf(model)}
-								model={model}
-								selected={selectorOf(model) === selected}
-								onPress={() => {
-									onPick(model);
-									onClose();
-								}}
-							/>
-						))}
-					</View>
-				))}
-				{loading ? (
-					<Text className="px-3 py-2 text-body-sm text-ink-dim">
-						{t("mobile.home.picker.loading")}
-					</Text>
-				) : failed ? (
-					<View className="px-3 py-2 gap-2">
-						<Text className="text-body-sm text-ink-dim">
-							{t("mobile.home.models_read_failed")}
-						</Text>
-						{onRetry ? (
-							<Button
-								label={t("mobile.computers.retry")}
-								variant="outline"
-								onPress={onRetry}
-								testID={CONTROL.sessionModelsRetry}
-							/>
-						) : null}
-					</View>
-				) : models.length === 0 ? (
-					<Text className="px-3 py-2 text-body-sm text-ink-dim">
-						{t("mobile.home.picker.model_empty")}
-					</Text>
-				) : null}
-			</ScrollView>
-		</Sheet>
-	);
-};
-
-/**
- * The effort rungs.
- *
- * Discrete rungs from the projection's own ladder, not a slider: the ladder is the
- * daemon's vocabulary and a slider would invent values between two rungs that no
- * provider accepts. An empty ladder means the selected model has no effort control,
- * which the caller must handle rather than opening an empty sheet.
- */
-export type EffortSheetProps = {
-	visible: boolean;
-	onClose: () => void;
-	ladder: string[];
-	selected: string;
-	onPick: (effort: string) => void;
-};
-
 /**
  * One effort rung: a radio dot and the rung's name. Shared by the session's effort
  * sheet (which shows the daemon's word, `label === rung`) and the home's effort
@@ -241,6 +159,7 @@ export const EffortRungRow = ({
 	onPress,
 	badge = null,
 	disabled = false,
+	compact = false,
 	testID,
 }: {
 	rung: string;
@@ -252,6 +171,9 @@ export const EffortRungRow = ({
 	testID?: string;
 	badge?: string | null;
 	disabled?: boolean;
+	/** Hug the label instead of filling the row, so the rungs wrap side by side
+	 *  in `EffortRungGroup` (design round 1, D1). The 44 pt touch floor stays. */
+	compact?: boolean;
 }) => (
 	<Pressable
 		accessibilityRole={ROLE.radio}
@@ -267,8 +189,18 @@ export const EffortRungRow = ({
 		disabled={disabled}
 		onPress={onPress}
 		testID={testID ?? effortRungId(rung)}
+		/* A compact rung is capped at the line and may shrink: RN's default
+		 *  `flexShrink: 0` let `Среднее · По умолчанию` run to x=358 in a 303 pt
+		 *  group at 320 pt / 200 % and clip its badge, the #325 failure again
+		 *  (round 2 F1/Q5). Its label and badge then wrap inside the rung. */
+		className={compact ? "max-w-full shrink" : undefined}
 	>
-		<View className="min-h-11 flex-row items-center gap-2 px-3">
+		<View
+			className={cx(
+				"min-h-11 flex-row items-center gap-2 px-3",
+				compact ? "flex-wrap" : null,
+			)}
+		>
 			{/* Only the selected rung paints its dot; the others keep the 8 pt slot
 			 *  so labels do not shift. An unselected `bg-hairline` dot measured
 			 *  1.23:1 dark / 1.44:1 light on `elevated` — under the 3:1 non-text
@@ -283,7 +215,9 @@ export const EffortRungRow = ({
 			/>
 			<Text
 				className={cx(
-					"min-w-0 flex-1 font-mono text-mono",
+					compact
+						? "shrink font-mono text-mono"
+						: "min-w-0 flex-1 font-mono text-mono",
 					disabled ? CONTROL_DISABLED_INK : "text-ink",
 				)}
 			>
@@ -294,32 +228,313 @@ export const EffortRungRow = ({
 	</Pressable>
 );
 
-export const EffortSheet = ({
+/**
+ * The effort rungs as ONE compact radio group: each rung hugs its label and the
+ * group wraps, so five rungs take two 44 pt lines at 390 pt instead of five
+ * full rows, and the group sits near the top of the run-settings sheet (design
+ * round 1, D1). Each rung keeps its row's dot, `aria-checked` and badge.
+ */
+export const EffortRungGroup = ({ children }: { children: ReactNode }) => (
+	<View
+		accessibilityRole={ROLE.radiogroup}
+		className="flex-row flex-wrap py-1"
+		testID={SURFACE.effortRungs}
+	>
+		{children}
+	</View>
+);
+
+/**
+ * The ONE sheet behind the composer's model-and-effort control (issue #325),
+ * shared by the home and the session so the two read as one surface.
+ *
+ * WHY ONE SHEET. The relay accepts exactly two run parameters besides the
+ * folder — the model and the effort (`provider`/`model_id`/`effort` at start,
+ * `set_model`/`set_effort` in a session) — and the effort's ladder is the
+ * MODEL's, so they are one question answered in two parts. The two chips that
+ * opened two sheets were cut to `Claude` on iOS.
+ *
+ * WHAT IS ABOVE THE FOLD (design round 1, D1). The current values ("Opus 5 ·
+ * High") lead, then the effort rungs as one compact wrapping group, then the
+ * model list, which is a screen or more tall on a real catalogue. Effort first
+ * because it is short and frequent; a model picked below visibly changes the
+ * rungs above. A refused change shows here, above both sections, while the
+ * sheet stays open (round 1 R2/D2).
+ *
+ * A pick COMMITS and the sheet stays open, so a model and its effort can be
+ * set in one visit; the sheet's Close (or the scrim) dismisses it. Each section
+ * keeps the old sheet's id (`modelTestID`, `effortTestID`), so a flow that asked
+ * for the model sheet finds the list.
+ */
+export const RunSettingsSheet = ({
 	visible,
 	onClose,
-	ladder,
-	selected,
-	onPick,
-}: EffortSheetProps) => (
-	<Sheet
-		visible={visible}
-		onClose={onClose}
-		title={t("mobile.session.sheet_title.effort")}
-		testID={SURFACE.effortSheet}
-	>
-		<View className="py-1">
-			{ladder.map((rung) => (
-				<EffortRungRow
-					key={rung}
-					rung={rung}
-					label={rung}
-					selected={rung === selected}
-					onPress={() => {
-						onPick(rung);
-						onClose();
-					}}
-				/>
-			))}
-		</View>
-	</Sheet>
+	headings,
+	summary = null,
+	error = null,
+	preface = null,
+	model,
+	effort,
+	modelSearch = null,
+	modelTestID,
+	effortTestID,
+}: {
+	visible: boolean;
+	onClose: () => void;
+	/** The two section headings, in the host's own catalogue words. */
+	headings: { model: string; effort: string };
+	/** The current model and effort, as the chips named them (`runSettingsSummary`). */
+	summary?: string | null;
+	/** A refused change, in the kit's own words. */
+	error?: string | null;
+	/** A line that applies to both sections (the home's "options are fixed"). */
+	preface?: ReactNode;
+	model: ReactNode;
+	/** `null` draws no effort section at all (`{ kind: "hidden" }`). */
+	effort: ReactNode;
+	/** A search over the model list (the home's long catalogue). Pinned under
+	 *  the title, but only once the reader reaches the models: see below. */
+	modelSearch?: ReactNode;
+	modelTestID: string;
+	effortTestID: string;
+}) => {
+	/* EFFORT LEADS, AND THE SEARCH STILL SURVIVES THE KEYBOARD (#335, the
+	 *  maintainer's ruling of 2026-11-24). A search in the body scrolls away
+	 *  under the keyboard (TestFlight 1295, fixed by #343's pinned slot); one
+	 *  pinned from the start sits above the rungs. So it is pinned, and appears
+	 *  once the body has scrolled to the models (`modelSearchReached`). It then
+	 *  stays for the visit — pulling it away on a scroll back up would hide the
+	 *  field that holds the reader's query — and the next visit starts clean. */
+	const [modelTop, setModelTop] = useState<number | null>(null);
+	const [searchShown, setSearchShown] = useState(false);
+	/* The body's last scroll facts this visit. The decision is asked again when
+	 *  the models section is measured: in the browser the body reports first,
+	 *  and a body that fits never scrolls, so the facts alone would never ask
+	 *  it once the section has a place (design round 5, D3). */
+	const bodyFacts = useRef<{
+		y: number;
+		viewport: number;
+		content: number;
+	} | null>(null);
+	/* Nothing from the last visit decides this one: the section is measured
+	 *  afresh, and a search pinned from its stale place reopened the sheet at
+	 *  the models (review R6-1). */
+	useEffect(() => {
+		if (visible) return;
+		setSearchShown(false);
+		setModelTop(null);
+		bodyFacts.current = null;
+	}, [visible]);
+	const searchable = modelSearch !== null;
+	useEffect(() => {
+		const facts = bodyFacts.current;
+		if (!visible || !searchable || searchShown || facts === null) return;
+		if (modelSearchReached({ ...facts, modelTop })) setSearchShown(true);
+	}, [visible, searchable, searchShown, modelTop]);
+	/* The summary leads with the model's Latin name, so on an RTL page its base
+	 *  would follow that letter and sit on the left under right-aligned
+	 *  headings (design round 4, D2). */
+	const composedDir = useComposedDir();
+	return (
+		<Sheet
+			visible={visible}
+			onClose={onClose}
+			title={t("mobile.chrome.composer.run_settings_title")}
+			/* Two lines, not an ellipsis, at 320 pt and 200 % text (the sidebar
+			 *  view sheet's rule, QA round 1 Q2). */
+			titleLines={2}
+			testID={SURFACE.runSettingsSheet}
+			pinned={searchable && searchShown ? modelSearch : undefined}
+			onBodyScroll={
+				/* Not while closing: the exit's events carry this visit's offset. */
+				visible && searchable && !searchShown
+					? (facts) => {
+							bodyFacts.current = facts;
+							if (modelSearchReached({ ...facts, modelTop }))
+								setSearchShown(true);
+						}
+					: undefined
+			}
+		>
+			{summary !== null ? (
+				<View className="px-3 pb-2" testID={SURFACE.runSettingsSummary}>
+					<Text
+						/* No caller style prop may join this element: the spread IS the
+						 *  native style (`@/ui/direction`). */
+						{...composedDir}
+						className="font-mono text-mono text-ink"
+					>
+						{summary}
+					</Text>
+				</View>
+			) : null}
+			{error !== null ? (
+				<View className="px-3 pb-2">
+					<Alert severity="error">{error}</Alert>
+				</View>
+			) : null}
+			{preface}
+			{effort === null ? null : (
+				<View testID={effortTestID}>
+					{/* On the rows' own 12 pt inset, so a heading and its rows share one
+					 *  leading edge. */}
+					<View className="px-3">
+						<SectionHeader label={headings.effort} />
+					</View>
+					{effort}
+				</View>
+			)}
+			<View
+				testID={modelTestID}
+				onLayout={(event) => setModelTop(event.nativeEvent.layout.y)}
+			>
+				<View className="px-3">
+					<SectionHeader label={headings.model} />
+				</View>
+				{model}
+			</View>
+		</Sheet>
+	);
+};
+
+/** The read-only form of a section: the reason, then the value, never a list of
+ *  rows that are all disabled. */
+const LockedSetting = ({ lock }: { lock: RunSettingLock }) => (
+	<View className="gap-1 px-3 pb-2">
+		<Text className="text-body-sm text-ink-muted">{lock.reason}</Text>
+		{lock.value !== null ? (
+			<Text className="text-body text-ink">{lock.value}</Text>
+		) : null}
+	</View>
 );
+
+/**
+ * The SESSION's run-settings sheet: the projection's model and ladder, applied
+ * with `set_model` / `set_effort`. What each section shows is decided once, in
+ * `sessionRunSettings` (pure, tested); this only draws it.
+ *
+ * **The array's order IS the ranking** (`contract.md` §3.9): models render as
+ * given, grouped by provider in first-seen order. Discrete rungs from the
+ * projection's own ladder, not a slider: a slider would invent values between
+ * two rungs no provider accepts. The ✓ and the dot follow the PROJECTION — the
+ * value the relay applied — so a refused tap never moves them.
+ */
+export const SessionRunSettingsSheet = ({
+	visible,
+	onClose,
+	models,
+	selectedModel,
+	selectedEffort,
+	loading = false,
+	failed = false,
+	onRetry,
+	model,
+	effort,
+	summary,
+	error,
+	onPickModel,
+	onPickEffort,
+}: {
+	visible: boolean;
+	onClose: () => void;
+	models: ModelEntry[];
+	/** The projection's `model_selector` (`provider/model_id`). */
+	selectedModel: string;
+	selectedEffort: string;
+	loading?: boolean;
+	/** The stored catalogue could not be read (an ended chat, PR #350). */
+	failed?: boolean;
+	onRetry?: () => void;
+	model: RunSettingSection;
+	effort: RunSettingSection;
+	summary: string | null;
+	error: string | null;
+	onPickModel: (model: ModelEntry) => void;
+	onPickEffort: (effort: string) => void;
+}) => {
+	const groups = groupByProvider(models);
+	return (
+		<RunSettingsSheet
+			visible={visible}
+			onClose={onClose}
+			headings={{
+				model: t("mobile.session.sheet_title.model"),
+				effort: t("mobile.session.sheet_title.effort"),
+			}}
+			summary={summary}
+			error={error}
+			modelTestID={SURFACE.modelSheet}
+			effortTestID={SURFACE.effortSheet}
+			effort={
+				effort.kind === "hidden" ? null : effort.kind === "locked" ? (
+					<LockedSetting lock={effort.lock} />
+				) : effort.kind === "ladder" ? (
+					<EffortRungGroup>
+						{effort.rungs.map((rung) => (
+							<EffortRungRow
+								key={rung}
+								rung={rung}
+								/* The summary's words (`effortLabel`), not the
+								 *  daemon's `xhigh` (design round 2, D2). */
+								label={effortLabel(rung)}
+								compact
+								selected={rung === selectedEffort}
+								onPress={() => onPickEffort(rung)}
+							/>
+						))}
+					</EffortRungGroup>
+				) : (
+					<Text className="px-3 pb-2 text-body-sm text-ink-muted">
+						{t("mobile.home.picker.effort_none")}
+					</Text>
+				)
+			}
+			model={
+				model.kind === "locked" ? (
+					<LockedSetting lock={model.lock} />
+				) : (
+					<>
+						{groups.map((group) => (
+							<View key={group.provider}>
+								<Text className="px-3 pt-2 pb-1 text-meta text-ink-dim">
+									{group.provider}
+								</Text>
+								{group.models.map((entry) => (
+									<ModelOptionRow
+										key={selectorOf(entry)}
+										model={entry}
+										selected={selectorOf(entry) === selectedModel}
+										onPress={() => onPickModel(entry)}
+									/>
+								))}
+							</View>
+						))}
+						{loading ? (
+							<Text className="px-3 py-2 text-body-sm text-ink-dim">
+								{t("mobile.home.picker.loading")}
+							</Text>
+						) : failed ? (
+							<View className="px-3 py-2 gap-2">
+								<Text className="text-body-sm text-ink-dim">
+									{t("mobile.home.models_read_failed")}
+								</Text>
+								{onRetry ? (
+									<Button
+										label={t("mobile.computers.retry")}
+										variant="outline"
+										onPress={onRetry}
+										testID={CONTROL.sessionModelsRetry}
+									/>
+								) : null}
+							</View>
+						) : models.length === 0 ? (
+							<Text className="px-3 py-2 text-body-sm text-ink-dim">
+								{t("mobile.home.picker.model_empty")}
+							</Text>
+						) : null}
+					</>
+				)
+			}
+		/>
+	);
+};

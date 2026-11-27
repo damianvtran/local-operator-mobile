@@ -24,6 +24,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { SessionProjection } from "../../src/contracts";
 import { RelayEndpoints, RelayHttpClient } from "../../src/relay";
+import { inlineChartExamples } from "./inline-charts.ts";
 import { createRelay, DEFAULT_PASSWORD } from "./relay.ts";
 
 interface ScheduleListing {
@@ -199,7 +200,10 @@ it("serves the same scoped chart sidecars on seed and ordinary admission over on
 		});
 		const seed = rich.frames[0];
 		const overlay = seed?.inline_ui as { messages?: object } | undefined;
-		expect(Object.keys(overlay?.messages ?? {})).toHaveLength(10);
+		// One sidecar per fixture chart; the literal-fence row has none.
+		expect(Object.keys(overlay?.messages ?? {})).toHaveLength(
+			inlineChartExamples.length,
+		);
 		expect(legacy.frames[0]?.inline_ui).toBeUndefined();
 		const text = "ordinary chart fixture admission";
 		expect(

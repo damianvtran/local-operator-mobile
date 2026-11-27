@@ -100,16 +100,22 @@ export type CatalogueKey =
 	| "mobile.chrome.clear_search"
 	| "mobile.chrome.close_conversations"
 	| "mobile.chrome.composer.dismiss_keyboard"
+	| "mobile.chrome.composer.folder"
+	| "mobile.chrome.composer.folder_hint"
+	| "mobile.chrome.composer.folder_hint_fixed"
 	| "mobile.chrome.composer.more"
 	| "mobile.chrome.composer.open_queue"
 	| "mobile.chrome.composer.queued"
 	| "mobile.chrome.composer.row_cost"
-	| "mobile.chrome.composer.row_effort"
+	| "mobile.chrome.composer.row_folder"
 	| "mobile.chrome.composer.row_identity"
 	| "mobile.chrome.composer.row_model"
 	| "mobile.chrome.composer.row_questions"
 	| "mobile.chrome.composer.row_queue"
 	| "mobile.chrome.composer.row_usage"
+	| "mobile.chrome.composer.run_settings"
+	| "mobile.chrome.composer.run_settings_hint"
+	| "mobile.chrome.composer.run_settings_title"
 	| "mobile.chrome.destination.inbox"
 	| "mobile.chrome.destination.inbox_count"
 	| "mobile.chrome.destination.past"
@@ -569,6 +575,9 @@ export type CatalogueKey =
 	| "mobile.home.picker.effort_unknown"
 	| "mobile.home.picker.effort_unsupported"
 	| "mobile.home.picker.effort_use_default"
+	| "mobile.home.picker.folder_current"
+	| "mobile.home.picker.folder_current_label"
+	| "mobile.home.picker.folder_fixed"
 	| "mobile.home.picker.folder_home"
 	| "mobile.home.picker.folder_other"
 	| "mobile.home.picker.folder_outside"
@@ -847,6 +856,13 @@ export type CatalogueKey =
 	| "mobile.remote_sessions.health_reconnecting"
 	| "mobile.remote_sessions.loading"
 	| "mobile.remote_sessions.media_changed"
+	| "mobile.remote_sessions.move_pick.cannot_reach"
+	| "mobile.remote_sessions.move_pick.destination_heading"
+	| "mobile.remote_sessions.move_pick.discovery_help"
+	| "mobile.remote_sessions.move_pick.no_answer"
+	| "mobile.remote_sessions.move_pick.no_devices"
+	| "mobile.remote_sessions.move_pick.on_this_computer"
+	| "mobile.remote_sessions.move_pick.right_now"
 	| "mobile.remote_sessions.owner_only"
 	| "mobile.remote_sessions.owner_unresolved"
 	| "mobile.remote_sessions.retained_only"
@@ -902,9 +918,11 @@ export type CatalogueKey =
 	| "mobile.session.back_to"
 	| "mobile.session.back_to_session"
 	| "mobile.session.chip.effort_change_failed"
+	| "mobile.session.chip.effort_label"
 	| "mobile.session.chip.effort_resume_hint"
 	| "mobile.session.chip.model_change_failed"
 	| "mobile.session.chip.model_default"
+	| "mobile.session.chip.model_label"
 	| "mobile.session.chip.model_resume_hint"
 	| "mobile.session.chip.model_unknown"
 	| "mobile.session.chip.model_unrecorded_hint"
@@ -949,6 +967,15 @@ export type CatalogueKey =
 	| "mobile.session.history.loading"
 	| "mobile.session.history.refresh_failed"
 	| "mobile.session.history.stalled"
+	| "mobile.session.inline_chart.also_label"
+	| "mobile.session.inline_chart.more"
+	| "mobile.session.inline_chart.no_data"
+	| "mobile.session.inline_chart.other"
+	| "mobile.session.inline_chart.position"
+	| "mobile.session.inline_chart.right_axis"
+	| "mobile.session.inline_chart.share"
+	| "mobile.session.inline_chart.total"
+	| "mobile.session.inline_chart.value_count"
 	| "mobile.session.inline_chart_data"
 	| "mobile.session.jump_to_latest"
 	| "mobile.session.jump_to_latest_name"
@@ -991,8 +1018,11 @@ export type CatalogueKey =
 	| "mobile.session.slash.load_failed"
 	| "mobile.session.slash.no_matches"
 	| "mobile.session.status_tray.hint"
+	| "mobile.session.subagent.load_failed"
 	| "mobile.session.subagent.no_rows"
+	| "mobile.session.subagent.not_kept"
 	| "mobile.session.subagent.prompt_label"
+	| "mobile.session.subagent.queued_next"
 	| "mobile.session.subagent.result_label"
 	| "mobile.session.subagent.screen_title"
 	| "mobile.session.subagent.status"
@@ -1560,15 +1590,19 @@ export type NoParamKey =
 	| "mobile.chrome.clear_search"
 	| "mobile.chrome.close_conversations"
 	| "mobile.chrome.composer.dismiss_keyboard"
+	| "mobile.chrome.composer.folder_hint"
+	| "mobile.chrome.composer.folder_hint_fixed"
 	| "mobile.chrome.composer.more"
 	| "mobile.chrome.composer.open_queue"
 	| "mobile.chrome.composer.row_cost"
-	| "mobile.chrome.composer.row_effort"
+	| "mobile.chrome.composer.row_folder"
 	| "mobile.chrome.composer.row_identity"
 	| "mobile.chrome.composer.row_model"
 	| "mobile.chrome.composer.row_questions"
 	| "mobile.chrome.composer.row_queue"
 	| "mobile.chrome.composer.row_usage"
+	| "mobile.chrome.composer.run_settings_hint"
+	| "mobile.chrome.composer.run_settings_title"
 	| "mobile.chrome.destination.inbox"
 	| "mobile.chrome.destination.past"
 	| "mobile.chrome.destination.schedules"
@@ -1940,6 +1974,8 @@ export type NoParamKey =
 	| "mobile.home.picker.effort_unknown"
 	| "mobile.home.picker.effort_unsupported"
 	| "mobile.home.picker.effort_use_default"
+	| "mobile.home.picker.folder_current"
+	| "mobile.home.picker.folder_fixed"
 	| "mobile.home.picker.folder_home"
 	| "mobile.home.picker.folder_other"
 	| "mobile.home.picker.folder_outside"
@@ -2185,6 +2221,12 @@ export type NoParamKey =
 	| "mobile.remote_sessions.gate_unsupported"
 	| "mobile.remote_sessions.loading"
 	| "mobile.remote_sessions.media_changed"
+	| "mobile.remote_sessions.move_pick.destination_heading"
+	| "mobile.remote_sessions.move_pick.discovery_help"
+	| "mobile.remote_sessions.move_pick.no_answer"
+	| "mobile.remote_sessions.move_pick.no_devices"
+	| "mobile.remote_sessions.move_pick.on_this_computer"
+	| "mobile.remote_sessions.move_pick.right_now"
 	| "mobile.remote_sessions.owner_unresolved"
 	| "mobile.remote_sessions.retained_only"
 	| "mobile.remote_sessions.row_long_press_hint"
@@ -2257,6 +2299,9 @@ export type NoParamKey =
 	| "mobile.session.history.loading"
 	| "mobile.session.history.refresh_failed"
 	| "mobile.session.history.stalled"
+	| "mobile.session.inline_chart.also_label"
+	| "mobile.session.inline_chart.no_data"
+	| "mobile.session.inline_chart.total"
 	| "mobile.session.inline_chart_data"
 	| "mobile.session.jump_to_latest"
 	| "mobile.session.jump_to_latest_name"
@@ -2296,8 +2341,11 @@ export type NoParamKey =
 	| "mobile.session.slash.load_failed"
 	| "mobile.session.slash.no_matches"
 	| "mobile.session.status_tray.hint"
+	| "mobile.session.subagent.load_failed"
 	| "mobile.session.subagent.no_rows"
+	| "mobile.session.subagent.not_kept"
 	| "mobile.session.subagent.prompt_label"
+	| "mobile.session.subagent.queued_next"
 	| "mobile.session.subagent.result_label"
 	| "mobile.session.subagent.screen_title"
 	| "mobile.session.subagent.unavailable_headline"
@@ -2781,16 +2829,22 @@ export type MessageParams = {
 	"mobile.chrome.clear_search": NoParams;
 	"mobile.chrome.close_conversations": NoParams;
 	"mobile.chrome.composer.dismiss_keyboard": NoParams;
+	"mobile.chrome.composer.folder": { folder: string | number; source: string };
+	"mobile.chrome.composer.folder_hint": NoParams;
+	"mobile.chrome.composer.folder_hint_fixed": NoParams;
 	"mobile.chrome.composer.more": NoParams;
 	"mobile.chrome.composer.open_queue": NoParams;
 	"mobile.chrome.composer.queued": { count: number };
 	"mobile.chrome.composer.row_cost": NoParams;
-	"mobile.chrome.composer.row_effort": NoParams;
+	"mobile.chrome.composer.row_folder": NoParams;
 	"mobile.chrome.composer.row_identity": NoParams;
 	"mobile.chrome.composer.row_model": NoParams;
 	"mobile.chrome.composer.row_questions": NoParams;
 	"mobile.chrome.composer.row_queue": NoParams;
 	"mobile.chrome.composer.row_usage": NoParams;
+	"mobile.chrome.composer.run_settings": { effort: string | number; model: string | number };
+	"mobile.chrome.composer.run_settings_hint": NoParams;
+	"mobile.chrome.composer.run_settings_title": NoParams;
 	"mobile.chrome.destination.inbox": NoParams;
 	"mobile.chrome.destination.inbox_count": { count: number };
 	"mobile.chrome.destination.past": NoParams;
@@ -3250,6 +3304,9 @@ export type MessageParams = {
 	"mobile.home.picker.effort_unknown": NoParams;
 	"mobile.home.picker.effort_unsupported": NoParams;
 	"mobile.home.picker.effort_use_default": NoParams;
+	"mobile.home.picker.folder_current": NoParams;
+	"mobile.home.picker.folder_current_label": { path: string | number };
+	"mobile.home.picker.folder_fixed": NoParams;
 	"mobile.home.picker.folder_home": NoParams;
 	"mobile.home.picker.folder_other": NoParams;
 	"mobile.home.picker.folder_outside": NoParams;
@@ -3528,6 +3585,13 @@ export type MessageParams = {
 	"mobile.remote_sessions.health_reconnecting": { owner: string | number };
 	"mobile.remote_sessions.loading": NoParams;
 	"mobile.remote_sessions.media_changed": NoParams;
+	"mobile.remote_sessions.move_pick.cannot_reach": { device: string | number };
+	"mobile.remote_sessions.move_pick.destination_heading": NoParams;
+	"mobile.remote_sessions.move_pick.discovery_help": NoParams;
+	"mobile.remote_sessions.move_pick.no_answer": NoParams;
+	"mobile.remote_sessions.move_pick.no_devices": NoParams;
+	"mobile.remote_sessions.move_pick.on_this_computer": NoParams;
+	"mobile.remote_sessions.move_pick.right_now": NoParams;
 	"mobile.remote_sessions.owner_only": { owner: string | number };
 	"mobile.remote_sessions.owner_unresolved": NoParams;
 	"mobile.remote_sessions.retained_only": NoParams;
@@ -3583,9 +3647,11 @@ export type MessageParams = {
 	"mobile.session.back_to": { name: string | number };
 	"mobile.session.back_to_session": NoParams;
 	"mobile.session.chip.effort_change_failed": NoParams;
+	"mobile.session.chip.effort_label": { effort: string | number };
 	"mobile.session.chip.effort_resume_hint": NoParams;
 	"mobile.session.chip.model_change_failed": NoParams;
 	"mobile.session.chip.model_default": NoParams;
+	"mobile.session.chip.model_label": { model: string | number };
 	"mobile.session.chip.model_resume_hint": NoParams;
 	"mobile.session.chip.model_unknown": NoParams;
 	"mobile.session.chip.model_unrecorded_hint": NoParams;
@@ -3630,6 +3696,15 @@ export type MessageParams = {
 	"mobile.session.history.loading": NoParams;
 	"mobile.session.history.refresh_failed": NoParams;
 	"mobile.session.history.stalled": NoParams;
+	"mobile.session.inline_chart.also_label": NoParams;
+	"mobile.session.inline_chart.more": { count: string | number };
+	"mobile.session.inline_chart.no_data": NoParams;
+	"mobile.session.inline_chart.other": { count: string | number };
+	"mobile.session.inline_chart.position": { count: string | number; index: string | number };
+	"mobile.session.inline_chart.right_axis": { label: string | number };
+	"mobile.session.inline_chart.share": { share: string | number };
+	"mobile.session.inline_chart.total": NoParams;
+	"mobile.session.inline_chart.value_count": { count: string | number };
 	"mobile.session.inline_chart_data": NoParams;
 	"mobile.session.jump_to_latest": NoParams;
 	"mobile.session.jump_to_latest_name": NoParams;
@@ -3672,8 +3747,11 @@ export type MessageParams = {
 	"mobile.session.slash.load_failed": NoParams;
 	"mobile.session.slash.no_matches": NoParams;
 	"mobile.session.status_tray.hint": NoParams;
+	"mobile.session.subagent.load_failed": NoParams;
 	"mobile.session.subagent.no_rows": NoParams;
+	"mobile.session.subagent.not_kept": NoParams;
 	"mobile.session.subagent.prompt_label": NoParams;
+	"mobile.session.subagent.queued_next": NoParams;
 	"mobile.session.subagent.result_label": NoParams;
 	"mobile.session.subagent.screen_title": NoParams;
 	"mobile.session.subagent.status": { status: string };
@@ -4266,16 +4344,22 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.chrome.clear_search": "Clear search",
 	"mobile.chrome.close_conversations": "Close conversations",
 	"mobile.chrome.composer.dismiss_keyboard": "Dismiss keyboard",
+	"mobile.chrome.composer.folder": "{source, select, chosen {Folder, {folder}, chosen for this conversation} default {Folder, {folder}, this computer's default} other {Folder, {folder}}}",
+	"mobile.chrome.composer.folder_hint": "Choose another folder",
+	"mobile.chrome.composer.folder_hint_fixed": "Shows this conversation's full folder path",
 	"mobile.chrome.composer.more": "More context",
 	"mobile.chrome.composer.open_queue": "Open the queue",
 	"mobile.chrome.composer.queued": "{count, plural, one {# queued message} other {# queued messages}}",
 	"mobile.chrome.composer.row_cost": "Cost",
-	"mobile.chrome.composer.row_effort": "Effort",
+	"mobile.chrome.composer.row_folder": "Folder",
 	"mobile.chrome.composer.row_identity": "Agent or team",
 	"mobile.chrome.composer.row_model": "Model",
 	"mobile.chrome.composer.row_questions": "Questions",
 	"mobile.chrome.composer.row_queue": "Queue",
 	"mobile.chrome.composer.row_usage": "Context",
+	"mobile.chrome.composer.run_settings": "{model}, {effort}",
+	"mobile.chrome.composer.run_settings_hint": "Choose the model and effort",
+	"mobile.chrome.composer.run_settings_title": "Model and effort",
 	"mobile.chrome.destination.inbox": "Inbox",
 	"mobile.chrome.destination.inbox_count": "Inbox, {count, plural, one {# unread} other {# unread}}",
 	"mobile.chrome.destination.past": "Past",
@@ -4735,6 +4819,9 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.home.picker.effort_unknown": "This computer doesn't know this model's levels, so it will use the nearest level the model supports.",
 	"mobile.home.picker.effort_unsupported": "This computer's Local Operator is too old to accept an effort, so it uses its configured level. Update it to choose one here.",
 	"mobile.home.picker.effort_use_default": "This computer's level",
+	"mobile.home.picker.folder_current": "Current folder",
+	"mobile.home.picker.folder_current_label": "Current folder, {path}",
+	"mobile.home.picker.folder_fixed": "A conversation keeps the folder it started in. To use another folder, start a new chat.",
 	"mobile.home.picker.folder_home": "Home",
 	"mobile.home.picker.folder_other": "Other path…",
 	"mobile.home.picker.folder_outside": "This computer starts conversations only inside your home folder or its temporary folder.",
@@ -5013,6 +5100,13 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.remote_sessions.health_reconnecting": "This phone lost its connection and keeps trying. The conversation may still be running on {owner}; sending may fail until the connection is back.",
 	"mobile.remote_sessions.loading": "Checking this computer’s remote-session support…",
 	"mobile.remote_sessions.media_changed": "This media changed or access ended during download. Nothing was opened. Try again when the owner computer is available.",
+	"mobile.remote_sessions.move_pick.cannot_reach": "Can't reach {device}",
+	"mobile.remote_sessions.move_pick.destination_heading": "Move or copy to",
+	"mobile.remote_sessions.move_pick.discovery_help": "This app can offer the devices your sessions show. A device with no visible session cannot be picked yet — open Local Operator on the other computer and pull the list to refresh.",
+	"mobile.remote_sessions.move_pick.no_answer": "It did not answer when this computer asked.",
+	"mobile.remote_sessions.move_pick.no_devices": "No other devices are visible.",
+	"mobile.remote_sessions.move_pick.on_this_computer": "On this computer",
+	"mobile.remote_sessions.move_pick.right_now": "Right now",
 	"mobile.remote_sessions.owner_only": "Approvals, Stop, model changes and slash commands work only on {owner} for now.",
 	"mobile.remote_sessions.owner_unresolved": "The relay cannot confirm which computer owns this conversation. Refresh the sessions list and try again.",
 	"mobile.remote_sessions.retained_only": "Highlight previews need a newer Local Operator on the connected computer. Open them on the owner computer for now. Attached documents can still be saved.",
@@ -5068,9 +5162,11 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.session.back_to": "Back to {name}",
 	"mobile.session.back_to_session": "Back to session",
 	"mobile.session.chip.effort_change_failed": "Could not change the effort.",
+	"mobile.session.chip.effort_label": "Effort, {effort}",
 	"mobile.session.chip.effort_resume_hint": "Resume this session to change the effort",
 	"mobile.session.chip.model_change_failed": "Could not change the model.",
 	"mobile.session.chip.model_default": "Default",
+	"mobile.session.chip.model_label": "Model, {model}",
 	"mobile.session.chip.model_resume_hint": "Resume this session to change the model",
 	"mobile.session.chip.model_unknown": "Unknown",
 	"mobile.session.chip.model_unrecorded_hint": "This session has not recorded a model",
@@ -5115,6 +5211,15 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.session.history.loading": "Loading earlier messages…",
 	"mobile.session.history.refresh_failed": "The latest messages could not be loaded.",
 	"mobile.session.history.stalled": "Earlier messages stopped loading. Try again, or reopen this conversation.",
+	"mobile.session.inline_chart.also_label": "Also:",
+	"mobile.session.inline_chart.more": "+{count} more",
+	"mobile.session.inline_chart.no_data": "No data",
+	"mobile.session.inline_chart.other": "Other ({count})",
+	"mobile.session.inline_chart.position": "{index} of {count}",
+	"mobile.session.inline_chart.right_axis": "{label} · right axis",
+	"mobile.session.inline_chart.share": "{share} of total",
+	"mobile.session.inline_chart.total": "Total",
+	"mobile.session.inline_chart.value_count": "Values: {count}",
 	"mobile.session.inline_chart_data": "Chart data",
 	"mobile.session.jump_to_latest": "↓ Jump to latest",
 	"mobile.session.jump_to_latest_name": "Jump to latest",
@@ -5157,8 +5262,11 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.session.slash.load_failed": "Couldn’t load commands from your computer. Reopen this conversation to try again.",
 	"mobile.session.slash.no_matches": "No matching commands",
 	"mobile.session.status_tray.hint": "Opens the working line, tasks and subagents",
+	"mobile.session.subagent.load_failed": "This subagent’s messages could not be loaded.",
 	"mobile.session.subagent.no_rows": "This subagent has no transcript rows of its own.",
+	"mobile.session.subagent.not_kept": "This subagent’s transcript wasn’t kept, or the computer isn’t answering.",
 	"mobile.session.subagent.prompt_label": "prompt",
+	"mobile.session.subagent.queued_next": "Not started yet. Its messages appear here once it runs.",
 	"mobile.session.subagent.result_label": "result",
 	"mobile.session.subagent.screen_title": "Subagent",
 	"mobile.session.subagent.status": "{status, select, queued {queued} running {running} completed {completed} failed {failed} parked {parked} cancelled {cancelled} loading {loading} unavailable {unavailable} other {unknown}}",
@@ -5736,16 +5844,22 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.chrome.clear_search": { role: "button", note: "Empties the search text. Used in three places: the accessible name of the small × inside the sidebar's search field (shown only while the field has text), and the visible button label under 'Nothing matches that.' in the sidebar's no-match empty state and on the Past sessions screen. Short imperative, no final full stop." },
 	"mobile.chrome.close_conversations": { role: "button", note: "Accessible name (screen readers only, never shown) of two controls that both dismiss the conversations sidebar: the ✕ in the sidebar header and the dimmed page strip beside the open sidebar. 'Conversations' is the sidebar's list of chat sessions, not one conversation. Imperative, no final full stop." },
 	"mobile.chrome.composer.dismiss_keyboard": { role: "button", note: "Build389 shared composer context strip / exclusive home presentation. Preserve {count} plural and {host} parameters where present." },
+	"mobile.chrome.composer.folder": { role: "button", note: "Spoken name of the composer's icon-only folder button (screen readers; never painted). {folder} is the folder's own name, a file-system path segment such as local-operator or ~, copied verbatim and never translated. {source} is a fixed selector: chosen = the reader picked this folder for the next conversation, default = it is the connected computer's own default folder, other = unknown (a running conversation). Keep the three arms' shape and the comma-separated, list-like reading of the model button (mobile.home.chip.model_chosen)." },
+	"mobile.chrome.composer.folder_hint": { role: "help", note: "Screen-reader hint on the composer's folder button where the folder can still change: the button opens a sheet listing the computer's folders. Imperative, no final full stop." },
+	"mobile.chrome.composer.folder_hint_fixed": { role: "help", note: "Screen-reader hint on the composer's folder button once the conversation has started and its folder can no longer change: the button opens a read-only sheet with the full path. Describes what the button does; no final full stop." },
 	"mobile.chrome.composer.more": { role: "button", note: "Build389 shared composer context strip / exclusive home presentation. Preserve {count} plural and {host} parameters where present." },
 	"mobile.chrome.composer.open_queue": { role: "button", note: "Opens the queued-messages surface from the composer context sheet. Only rendered where the screen can open that surface; never a disabled control." },
 	"mobile.chrome.composer.queued": { role: "button", note: "Build389 shared composer context strip / exclusive home presentation. Preserve {count} plural and {host} parameters where present." },
 	"mobile.chrome.composer.row_cost": { role: "meta", note: "Row label in the composer's More sheet for the conversation's spend; the amount is shown at the other end of the same row. A noun, no colon." },
-	"mobile.chrome.composer.row_effort": { role: "meta", note: "Row label in the composer's More sheet; the reasoning-effort level is shown at the other end of the same row. A noun, no colon." },
+	"mobile.chrome.composer.row_folder": { role: "meta", note: "Row label in the composer's More sheet, shown only when the folder button does not fit on a narrow phone; the folder's name is shown at the other end of the same row and tapping the row opens the folder sheet. A noun, no colon." },
 	"mobile.chrome.composer.row_identity": { role: "meta", note: "Row label in the composer's More sheet for which agent or team the new chat starts as; its value is that name or \"Default agent\". Short. New in the new-chat identity picker; the non-English text awaits the translation audit." },
 	"mobile.chrome.composer.row_model": { role: "meta", note: "Row label in the composer's More sheet; the model's name is shown at the other end of the same row. A noun, no colon." },
 	"mobile.chrome.composer.row_questions": { role: "meta", note: "Row label in the composer's More sheet for the agent's questions to the user (including ones that timed out); the count is shown at the other end of the same row and tapping the row opens the questions sheet. A plural noun, no colon." },
 	"mobile.chrome.composer.row_queue": { role: "meta", note: "Row label in the composer's More sheet for messages waiting to be sent; the count is shown at the other end of the same row. A noun, no colon." },
 	"mobile.chrome.composer.row_usage": { role: "meta", note: "Row label in the composer's More sheet for how much of the model's context window is used; the reading is shown at the other end of the same row. A noun, no colon." },
+	"mobile.chrome.composer.run_settings": { role: "button", note: "Spoken name of the composer's icon-only model-and-effort button (screen readers; never painted). {model} and {effort} are two already-translated phrases, for example 'Model, Opus 5, chosen for this conversation' and 'Effort, High'. Only the joining punctuation and order are translatable: keep model first, use the list separator natural in your language." },
+	"mobile.chrome.composer.run_settings_hint": { role: "help", note: "Screen-reader hint on the composer's model-and-effort button: it opens one sheet listing the models and the reasoning-effort levels. 'Effort' is the same term as mobile.home.picker.effort_title. Imperative, no final full stop." },
+	"mobile.chrome.composer.run_settings_title": { role: "heading", note: "Title of the sheet that holds both the model list and the reasoning-effort levels for a conversation. Use the same words as mobile.home.picker.model_title and mobile.home.picker.effort_title. Short: it is one line on a 320 pt phone." },
 	"mobile.chrome.destination.inbox": { role: "button", note: "Label under the inbox icon in the sidebar's destinations strip (five equal slots, ~52 pt each, label at 11-12 pt). One short word; the slot truncates anything longer. Opens the notifications inbox." },
 	"mobile.chrome.destination.inbox_count": { role: "button", note: "Accessible name of the Inbox destination when it has unread items. {count} is a positive integer; the visible badge shows only the number. No final full stop." },
 	"mobile.chrome.destination.past": { role: "button", note: "Label under the history icon in the sidebar's destinations strip (~52 pt slot). One short word meaning past/finished sessions; opens the resumable history list." },
@@ -6205,6 +6319,9 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.home.picker.effort_unknown": { role: "help", note: "The computer does not know which effort levels this model supports; every level is offered and the computer uses the nearest one the model supports. New in the three-pickers change; the non-English text awaits the translation audit." },
 	"mobile.home.picker.effort_unsupported": { role: "help", note: "The connected computer runs a Local Operator too old to accept an effort level when starting, so the picker offers nothing. \"Local Operator\" is the product name; do not translate it. New in the three-pickers change; the non-English text awaits the translation audit." },
 	"mobile.home.picker.effort_use_default": { role: "button", note: "First row of the effort picker when the computer's default level for the chosen model is unknown: picking it sends no effort, so the computer applies its configured level. Added in the pickers' round-1 remediation; the non-English text awaits the translation audit." },
+	"mobile.home.picker.folder_current": { role: "meta", note: "Small label above the full path of the folder a conversation runs (or will start) in, at the top of the folder sheet. The path itself is shown verbatim under it. No colon." },
+	"mobile.home.picker.folder_current_label": { role: "meta", note: "Spoken label of the folder sheet's header (screen readers; never painted as one line): the label mobile.home.picker.folder_current followed by the full path. {path} is a file-system path, copied verbatim and never translated. Use your language's list separator between the two." },
+	"mobile.home.picker.folder_fixed": { role: "help", note: "Shown in the folder sheet once a conversation has started, under its full path: the folder cannot be changed for a running conversation (the computer only accepts a folder when a conversation starts), and the second sentence gives the next step. 'New chat' is the same term as mobile.chrome.new_chat. Two short sentences, each with a final full stop." },
 	"mobile.home.picker.folder_home": { role: "meta", note: "Badge on the folder row that is the owner's home folder on the computer. One short word. New in the three-pickers change; the non-English text awaits the translation audit." },
 	"mobile.home.picker.folder_other": { role: "button", note: "Secondary row in the folder picker that reveals a field for typing a path no row names. Ends with an ellipsis because it opens more input. New in the three-pickers change; the non-English text awaits the translation audit." },
 	"mobile.home.picker.folder_outside": { role: "status", note: "Why a typed path cannot be used: the computer only starts conversations under the home folder or its temp folder. One sentence. New in the three-pickers change; the non-English text awaits the translation audit." },
@@ -6483,6 +6600,13 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.remote_sessions.health_reconnecting": { role: "status", note: "Status sheet, remote conversation, phone reconnecting. Keep {owner} unchanged." },
 	"mobile.remote_sessions.loading": { role: "status", note: "Remote conversation support or per-operation relay failure; owner means the mesh computer that holds the conversation, not the phone. Never suggest signing out or recalling the session." },
 	"mobile.remote_sessions.media_changed": { role: "status", note: "Operation-local remote Highlight refusal. Keep transcript and attached documents usable; never suggest signing out." },
+	"mobile.remote_sessions.move_pick.cannot_reach": { role: "status", note: "Move/copy picker: calm, short status when the conversation's remote computer is unreachable, not a phone connection error. {device} is an arbitrary computer display name passed verbatim; preserve the exact placeholder, never translate its value. Allow wrapping on narrow phones. Urdu: natural RTL with a potentially mixed-direction name; do not add bidi controls or assume a Latin-only name." },
+	"mobile.remote_sessions.move_pick.destination_heading": { role: "heading", note: "Compact section heading above destination radio buttons. Preserve both Move and Copy; not an action button or a promise that an operation has started. Allow wrapping on narrow phones. No placeholders or final punctuation. Urdu: natural RTL prose without directional controls." },
+	"mobile.remote_sessions.move_pick.discovery_help": { role: "help", note: "Empty-state explanation: destinations come from visible sessions, not a complete network inventory. Preserve both instructions: open Local Operator on the other computer, then pull the session list to refresh. Local Operator is the product name, not a command; do not translate it. Multi-line phone body: preserve the visibility limitation, do not abbreviate away instructions. No placeholders. Urdu: natural RTL with the Latin product name; no inserted bidi controls." },
+	"mobile.remote_sessions.move_pick.no_answer": { role: "status", note: "Client fallback only when server unreachable_reason is absent or blank; server reasons are not translated here. 'It' is the remote computer; 'this computer' is the connected relay computer, never the phone. Calm body text may wrap. No placeholders. Urdu: natural RTL prose without directional controls." },
+	"mobile.remote_sessions.move_pick.no_devices": { role: "status", note: "Empty state: no other eligible destinations are visible in the session list. Do not claim devices are offline or absent from the network. Brief factual sentence, wrapping allowed on narrow phones. No placeholders. Urdu: natural RTL prose without directional controls." },
+	"mobile.remote_sessions.move_pick.on_this_computer": { role: "status", note: "Current location for a local conversation. 'This computer' is the connected relay computer, not the phone. Compact status, wrapping allowed; no placeholders or final punctuation. Remote locations reuse mobile.sidebar.row.on_device. Urdu: natural RTL prose without directional controls." },
+	"mobile.remote_sessions.move_pick.right_now": { role: "heading", note: "Move/copy picker: compact section label above the current computer, not a command to act immediately. Narrow phone sheet; no final punctuation or placeholders. Urdu: natural RTL prose without inserted directional controls." },
 	"mobile.remote_sessions.owner_only": { role: "status", note: "Shown instead of unavailable controls in a remote conversation (approve/deny, stop, model and effort pickers, typed slash commands). {owner} is the owner computer's display name; keep it unchanged. Not an error: a current limit of remote conversations." },
 	"mobile.remote_sessions.owner_unresolved": { role: "status", note: "Remote conversation support or per-operation relay failure; owner means the mesh computer that holds the conversation, not the phone. Never suggest signing out or recalling the session." },
 	"mobile.remote_sessions.retained_only": { role: "status", note: "Fallback only for a connected relay without remote Highlight reads: update that computer or open on the owner computer. Retained attached documents remain supported. Highlights is the feature label." },
@@ -6538,9 +6662,11 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.session.back_to": { role: "button", note: "Back-navigation label on the video and agent-job screens; {name} is the parent session's own name or the noun phrase from mobile.session.fallback_name ('session') when unknown. Must read grammatically with BOTH (mind case/article: e.g. ru dative). Sentence case, no full stop." },
 	"mobile.session.back_to_session": { role: "button", note: "Back-navigation label on the video and agent-job screens when the parent session has no name of its own (replaces 'Back to {name}' in that case). Full phrase, sentence case, no full stop; free to adapt article/case/word order. Reuse the locale's 'session' term." },
 	"mobile.session.chip.effort_change_failed": { role: "status", note: "Inline error under the composer when changing the session's effort level failed. 'Effort' is the product's word for how hard the model works." },
+	"mobile.session.chip.effort_label": { role: "meta", note: "Spoken label of a conversation's effort (reasoning effort) level (the composer's run-settings button reads it). {effort} is the level's name. Use the same word for 'effort' as mobile.home.chip.effort_chosen." },
 	"mobile.session.chip.effort_resume_hint": { role: "help", note: "Accessibility hint on the effort (reasoning effort) chip of an ENDED session: shown but disabled until the session is resumed. Use the same word for 'effort' as mobile.home effort copy. Imperative, no final full stop." },
 	"mobile.session.chip.model_change_failed": { role: "status", note: "Inline error under the composer when changing the session's model failed. One short sentence." },
 	"mobile.session.chip.model_default": { role: "meta", note: "The model chip when the reader has chosen no model: the computer's configured default is what a start uses. One word, sentence case, no final full stop — it sits in a chip beside the folder name and must stay short enough for a 320 pt row." },
+	"mobile.session.chip.model_label": { role: "meta", note: "Spoken label of a conversation's model (the composer's run-settings button reads it). {model} is the model's name, untranslated. Use the same word for 'model' as mobile.home.chip.model_chosen." },
 	"mobile.session.chip.model_resume_hint": { role: "help", note: "Accessibility hint on the model chip of an ENDED session: the chip shows the model it last ran with but is disabled, because nothing can change a model until the session is resumed. Imperative, no final full stop." },
 	"mobile.session.chip.model_unknown": { role: "meta", note: "The model chip when the model list could not be read at all. One word, sentence case, no final full stop: the accessible name carries the explanation. Never renders as a model name." },
 	"mobile.session.chip.model_unrecorded_hint": { role: "help", note: "Accessibility hint on the model chip of an ended session when no model was ever recorded; the chip itself shows a dash. A statement, no final full stop." },
@@ -6585,6 +6711,15 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.session.history.loading": { role: "status", note: "Busy state while reading one earlier transcript page." },
 	"mobile.session.history.refresh_failed": { role: "status", note: "Reading the newest transcript page failed (returning to the app, Check again, or reloading history). Shown at the newest edge with a Try again button; do not repeat that label. Must not say EARLIER messages failed." },
 	"mobile.session.history.stalled": { role: "status", note: "The server returned a cursor that did not advance; automatic reads stop. Name the button's own action (Try again) or reopening; plain wording, no engineering terms." },
+	"mobile.session.inline_chart.also_label": { role: "meta", note: "Lead-in label of the one line under a wide donut chart that lists the slices too small to label on the chart; each \"label percentage\" item follows it as its own tappable text. Keep the colon (or this language's equivalent); no final full stop." },
+	"mobile.session.inline_chart.more": { role: "meta", note: "Last line of the tooltip of the grouped \"Other\" pie slice when it groups more items than it lists. {count} is the number not listed (always at least 1). No final full stop." },
+	"mobile.session.inline_chart.no_data": { role: "meta", note: "Value shown in a heatmap tooltip and read by screen readers for a cell that has no value (drawn hatched). Short phrase, no final full stop." },
+	"mobile.session.inline_chart.other": { role: "meta", note: "Label of the pie-chart slice that groups the smallest items once a chart has more than seven. {count} is how many items it groups (always at least 2). Keep it short: it sits in a legend row beside a percentage." },
+	"mobile.session.inline_chart.position": { role: "meta", note: "Read by screen readers after a chart value: which mark of how many is selected, e.g. \"3 of 9\". {index} and {count} are positive integers. No final full stop." },
+	"mobile.session.inline_chart.right_axis": { role: "meta", note: "Legend entry of a chart series drawn against the right-hand axis, e.g. \"Latency · right axis\". {label} is the series name as authored. Keep the middle dot separator. No final full stop." },
+	"mobile.session.inline_chart.share": { role: "meta", note: "Line in a chart tooltip giving the slice or segment as a part of the whole, e.g. \"38.2% of total\". {share} is an already formatted percentage. No final full stop." },
+	"mobile.session.inline_chart.total": { role: "meta", note: "Row label in a stacked-chart tooltip and the caption under the total in the centre of a donut chart. One word, no final full stop." },
+	"mobile.session.inline_chart.value_count": { role: "meta", note: "Read by screen readers as the value of a chart before any mark is selected: how many values the chart holds, e.g. \"Values: 9\". {count} is a positive integer; the label-colon-number form avoids a plural. No final full stop." },
 	"mobile.session.inline_chart_data": { role: "button", note: "Disclosure below a chart in an assistant reply. Opens and closes the chart's exact values as a table. The button label stays the same and the expanded state is read separately. Short noun phrase, no final full stop." },
 	"mobile.session.jump_to_latest": { role: "button", note: "The visible and accessible name of the floating chip over the transcript that takes a reader who scrolled up back to the newest message. It appears only after new output arrived while they were away. Keep the leading down arrow; imperative, sentence case, no final full stop. The arrow points at the newest content below, not at the reading direction." },
 	"mobile.session.jump_to_latest_name": { role: "button", note: "The ACCESSIBLE name of the floating \"jump to latest\" chip: the same sentence as mobile.session.jump_to_latest WITHOUT the leading down arrow, because a screen reader would read the glyph as \"down arrow\". Imperative, sentence case, no final full stop. Shown visually only by screen readers, never on the chip itself." },
@@ -6627,8 +6762,11 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.session.slash.load_failed": { role: "status", note: "Muted line in the commands sheet when this phone could not read the list of slash commands from the reader's computer and holds none. It replaces the list, so it must not suggest that nothing matched. The second sentence is the remedy: leaving and reopening the conversation reads the list again. Two short sentences with final full stops; the apostrophe is a typographic ’." },
 	"mobile.session.slash.no_matches": { role: "status", note: "Muted line in the commands sheet when the filter text matches none of the slash commands the computer offers. A short status in sentence case, no final full stop." },
 	"mobile.session.status_tray.hint": { role: "help", note: "Accessibility hint read after the status tray's label. Describes what activating the tray opens; no final full stop. \"Subagents\" is a product term." },
+	"mobile.session.subagent.load_failed": { role: "status", note: "Muted line on a subagent's screen when this phone could not read the subagent's messages (the link dropped); a Try again button follows. Nothing has been shown yet, so it must not say 'the latest' messages. One sentence with a final full stop; the apostrophe is a typographic ’." },
 	"mobile.session.subagent.no_rows": { role: "status", note: "Muted line shown when a subagent's transcript is empty. One sentence." },
+	"mobile.session.subagent.not_kept": { role: "status", note: "Dim line on a subagent's screen when the computer has no saved messages for this subagent: either they were not kept, or the computer is not answering. Stands alone (no headline above it), so it names the subagent. One sentence with a final full stop; apostrophes are typographic ’." },
 	"mobile.session.subagent.prompt_label": { role: "meta", note: "Lower-case label above the instruction the subagent was given. One word, lower case to match its sibling label." },
+	"mobile.session.subagent.queued_next": { role: "status", note: "Muted line on a subagent's screen while the subagent is queued and has not started, so it has no messages yet. Replaces a loading placeholder: it must say the subagent has not run, not that the phone is slow. 'Its' is the subagent. Two short sentences with final full stops." },
 	"mobile.session.subagent.result_label": { role: "meta", note: "Lower-case label above the text the subagent returned. One word, lower case to match its sibling label." },
 	"mobile.session.subagent.screen_title": { role: "heading", note: "Title of the screen that shows one subagent's run. One word; 'subagent' is the product's word for a helper agent started by the main agent." },
 	"mobile.session.subagent.status": { role: "status", note: "The status badge beside a subagent's name on its own screen. {status} selects the arm and is never shown itself. queued: waiting to start; running: working now; completed: finished successfully; failed: finished with an error; parked: paused, can resume later; cancelled: stopped by someone before it finished; loading: this phone is still fetching the subagent's details; unavailable: the fetch finished and the computer has no record of this subagent (the screen's body says so too); other: a state this app does not know yet. Each arm is one short lower-case word (no full stop) that fits a small pill beside a title on a 320 pt phone." },
@@ -7220,16 +7358,22 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.chrome.clear_search": "Borrar búsqueda",
 		"mobile.chrome.close_conversations": "Cerrar conversaciones",
 		"mobile.chrome.composer.dismiss_keyboard": "Ocultar teclado",
+		"mobile.chrome.composer.folder": "{source, select, chosen {Carpeta, {folder}, elegida para esta conversación} default {Carpeta, {folder}, predeterminada de esta máquina} other {Carpeta, {folder}}}",
+		"mobile.chrome.composer.folder_hint": "Elige otra carpeta",
+		"mobile.chrome.composer.folder_hint_fixed": "Muestra la ruta completa de la carpeta de esta conversación",
 		"mobile.chrome.composer.more": "Más contexto",
 		"mobile.chrome.composer.open_queue": "Abrir la cola",
 		"mobile.chrome.composer.queued": "{count, plural, one {# mensaje en cola} other {# mensajes en cola}}",
 		"mobile.chrome.composer.row_cost": "Costo",
-		"mobile.chrome.composer.row_effort": "Esfuerzo",
+		"mobile.chrome.composer.row_folder": "Carpeta",
 		"mobile.chrome.composer.row_identity": "Agente o equipo",
 		"mobile.chrome.composer.row_model": "Modelo",
 		"mobile.chrome.composer.row_questions": "Preguntas",
 		"mobile.chrome.composer.row_queue": "Cola",
 		"mobile.chrome.composer.row_usage": "Contexto",
+		"mobile.chrome.composer.run_settings": "{model}, {effort}",
+		"mobile.chrome.composer.run_settings_hint": "Elige el modelo y el esfuerzo",
+		"mobile.chrome.composer.run_settings_title": "Modelo y esfuerzo",
 		"mobile.chrome.destination.inbox": "Bandeja",
 		"mobile.chrome.destination.inbox_count": "Bandeja, {count, plural, one {# sin leer} other {# sin leer}}",
 		"mobile.chrome.destination.past": "Anteriores",
@@ -7689,6 +7833,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.picker.effort_unknown": "Esta máquina no conoce los niveles de este modelo, así que usará el nivel más cercano que el modelo admita.",
 		"mobile.home.picker.effort_unsupported": "El Local Operator de esta máquina es demasiado antiguo para aceptar un esfuerzo, así que usa su nivel configurado. Actualízalo para elegir uno aquí.",
 		"mobile.home.picker.effort_use_default": "Nivel de esta máquina",
+		"mobile.home.picker.folder_current": "Carpeta actual",
+		"mobile.home.picker.folder_current_label": "Carpeta actual, {path}",
+		"mobile.home.picker.folder_fixed": "Una conversación conserva la carpeta en la que empezó. Para usar otra carpeta, inicia un nuevo chat.",
 		"mobile.home.picker.folder_home": "Personal",
 		"mobile.home.picker.folder_other": "Otra ruta…",
 		"mobile.home.picker.folder_outside": "Esta máquina solo inicia conversaciones dentro de tu carpeta personal o de su carpeta temporal.",
@@ -7967,6 +8114,13 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.remote_sessions.health_reconnecting": "Este teléfono perdió la conexión y sigue intentándolo. Puede que la conversación siga ejecutándose en {owner}; los envíos pueden fallar hasta que vuelva la conexión.",
 		"mobile.remote_sessions.loading": "Comprobando la compatibilidad con sesiones remotas…",
 		"mobile.remote_sessions.media_changed": "Este contenido multimedia cambió o se perdió el acceso durante la descarga. No se abrió nada. Vuelve a intentarlo cuando el equipo propietario esté disponible.",
+		"mobile.remote_sessions.move_pick.cannot_reach": "No se puede contactar con {device}",
+		"mobile.remote_sessions.move_pick.destination_heading": "Mover o copiar a",
+		"mobile.remote_sessions.move_pick.discovery_help": "Esta app solo ofrece los dispositivos que aparecen en tus sesiones. Si un dispositivo no tiene ninguna sesión visible, aún no puedes seleccionarlo. Abre Local Operator en el otro equipo y desliza la lista hacia abajo para actualizarla.",
+		"mobile.remote_sessions.move_pick.no_answer": "No respondió a la solicitud de este equipo.",
+		"mobile.remote_sessions.move_pick.no_devices": "No hay otros dispositivos visibles.",
+		"mobile.remote_sessions.move_pick.on_this_computer": "En este equipo",
+		"mobile.remote_sessions.move_pick.right_now": "Ahora mismo",
 		"mobile.remote_sessions.owner_only": "Por ahora, las aprobaciones, Detener, los cambios de modelo y los comandos con barra solo funcionan en {owner}.",
 		"mobile.remote_sessions.owner_unresolved": "El relé no puede confirmar qué equipo es propietario de esta conversación. Actualiza la lista de sesiones y vuelve a intentarlo.",
 		"mobile.remote_sessions.retained_only": "Las vistas previas de Highlights necesitan una versión más reciente de Local Operator en el equipo conectado. Por ahora, ábrelas en el equipo propietario. Los documentos adjuntos se pueden seguir guardando.",
@@ -8022,9 +8176,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.back_to": "Volver a {name}",
 		"mobile.session.back_to_session": "Volver a la sesión",
 		"mobile.session.chip.effort_change_failed": "No se pudo cambiar el esfuerzo.",
+		"mobile.session.chip.effort_label": "Esfuerzo, {effort}",
 		"mobile.session.chip.effort_resume_hint": "Reanuda esta sesión para cambiar el esfuerzo",
 		"mobile.session.chip.model_change_failed": "No se pudo cambiar el modelo.",
 		"mobile.session.chip.model_default": "Predeterminado",
+		"mobile.session.chip.model_label": "Modelo, {model}",
 		"mobile.session.chip.model_resume_hint": "Reanuda esta sesión para cambiar el modelo",
 		"mobile.session.chip.model_unknown": "Desconocido",
 		"mobile.session.chip.model_unrecorded_hint": "Esta sesión no ha registrado ningún modelo",
@@ -8069,6 +8225,15 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.history.loading": "Cargando mensajes anteriores…",
 		"mobile.session.history.refresh_failed": "No se pudieron cargar los mensajes más recientes.",
 		"mobile.session.history.stalled": "Los mensajes anteriores dejaron de cargarse. Reintenta o abre de nuevo esta conversación.",
+		"mobile.session.inline_chart.also_label": "También:",
+		"mobile.session.inline_chart.more": "+{count} más",
+		"mobile.session.inline_chart.no_data": "Sin datos",
+		"mobile.session.inline_chart.other": "Otros ({count})",
+		"mobile.session.inline_chart.position": "{index} de {count}",
+		"mobile.session.inline_chart.right_axis": "{label} · eje derecho",
+		"mobile.session.inline_chart.share": "{share} del total",
+		"mobile.session.inline_chart.total": "Total",
+		"mobile.session.inline_chart.value_count": "Valores: {count}",
 		"mobile.session.inline_chart_data": "Datos del gráfico",
 		"mobile.session.jump_to_latest": "↓ Ir a lo más reciente",
 		"mobile.session.jump_to_latest_name": "Ir a lo más reciente",
@@ -8111,8 +8276,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.slash.load_failed": "No se pudieron cargar los comandos desde tu máquina. Vuelve a abrir esta conversación para intentarlo de nuevo.",
 		"mobile.session.slash.no_matches": "Ningún comando coincide",
 		"mobile.session.status_tray.hint": "Abre la línea de trabajo, las tareas y los subagentes",
+		"mobile.session.subagent.load_failed": "No se pudieron cargar los mensajes de este subagente.",
 		"mobile.session.subagent.no_rows": "Este subagente no tiene entradas propias en la transcripción.",
+		"mobile.session.subagent.not_kept": "No se conservó la transcripción de este subagente o la máquina no responde.",
 		"mobile.session.subagent.prompt_label": "prompt",
+		"mobile.session.subagent.queued_next": "Todavía no ha empezado. Sus mensajes aparecerán aquí cuando se ejecute.",
 		"mobile.session.subagent.result_label": "resultado",
 		"mobile.session.subagent.screen_title": "Subagente",
 		"mobile.session.subagent.status": "{status, select, queued {en cola} running {en curso} completed {completado} failed {fallido} parked {en pausa} cancelled {cancelado} loading {cargando} unavailable {no disponible} other {desconocido}}",
@@ -8688,16 +8856,22 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.chrome.clear_search": "Effacer la recherche",
 		"mobile.chrome.close_conversations": "Fermer les conversations",
 		"mobile.chrome.composer.dismiss_keyboard": "Masquer le clavier",
+		"mobile.chrome.composer.folder": "{source, select, chosen {Dossier, {folder}, choisi pour cette conversation} default {Dossier, {folder}, par défaut sur cet ordinateur} other {Dossier, {folder}}}",
+		"mobile.chrome.composer.folder_hint": "Choisir un autre dossier",
+		"mobile.chrome.composer.folder_hint_fixed": "Affiche le chemin complet du dossier de cette conversation",
 		"mobile.chrome.composer.more": "Plus de contexte",
 		"mobile.chrome.composer.open_queue": "Ouvrir la file",
 		"mobile.chrome.composer.queued": "{count, plural, one {# message en attente} other {# messages en attente}}",
 		"mobile.chrome.composer.row_cost": "Coût",
-		"mobile.chrome.composer.row_effort": "Effort",
+		"mobile.chrome.composer.row_folder": "Dossier",
 		"mobile.chrome.composer.row_identity": "Agent ou équipe",
 		"mobile.chrome.composer.row_model": "Modèle",
 		"mobile.chrome.composer.row_questions": "Questions",
 		"mobile.chrome.composer.row_queue": "File d’attente",
 		"mobile.chrome.composer.row_usage": "Contexte",
+		"mobile.chrome.composer.run_settings": "{model}, {effort}",
+		"mobile.chrome.composer.run_settings_hint": "Choisir le modèle et l’effort",
+		"mobile.chrome.composer.run_settings_title": "Modèle et effort",
 		"mobile.chrome.destination.inbox": "Boîte",
 		"mobile.chrome.destination.inbox_count": "Boîte, {count, plural, one {# non lue} other {# non lues}}",
 		"mobile.chrome.destination.past": "Passées",
@@ -9157,6 +9331,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.picker.effort_unknown": "Cet ordinateur ne connaît pas les niveaux de ce modèle ; il utilisera donc le niveau le plus proche que le modèle prend en charge.",
 		"mobile.home.picker.effort_unsupported": "Le Local Operator de cet ordinateur est trop ancien pour accepter un niveau d’effort ; il utilise donc son niveau configuré. Mettez-le à jour pour en choisir un ici.",
 		"mobile.home.picker.effort_use_default": "Niveau de cet ordinateur",
+		"mobile.home.picker.folder_current": "Dossier actuel",
+		"mobile.home.picker.folder_current_label": "Dossier actuel, {path}",
+		"mobile.home.picker.folder_fixed": "Une conversation conserve le dossier dans lequel elle a démarré. Pour utiliser un autre dossier, démarrez un nouveau chat.",
 		"mobile.home.picker.folder_home": "Dossier personnel",
 		"mobile.home.picker.folder_other": "Autre chemin…",
 		"mobile.home.picker.folder_outside": "Cet ordinateur ne démarre des conversations que dans votre dossier personnel ou son dossier temporaire.",
@@ -9435,6 +9612,13 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.remote_sessions.health_reconnecting": "Ce téléphone a perdu sa connexion et continue d’essayer. La conversation est peut-être toujours en cours sur {owner} ; l’envoi peut échouer jusqu’au retour de la connexion.",
 		"mobile.remote_sessions.loading": "Vérification de la prise en charge des sessions distantes…",
 		"mobile.remote_sessions.media_changed": "Ce média a changé ou l’accès a pris fin pendant le téléchargement. Rien n’a été ouvert. Réessayez lorsque l’ordinateur propriétaire sera disponible.",
+		"mobile.remote_sessions.move_pick.cannot_reach": "{device} est injoignable",
+		"mobile.remote_sessions.move_pick.destination_heading": "Déplacer ou copier vers",
+		"mobile.remote_sessions.move_pick.discovery_help": "Seuls les appareils associés aux sessions visibles sont proposés. Un appareil sans session visible ne peut pas encore être sélectionné. Ouvrez Local Operator sur l’autre ordinateur, puis tirez la liste des sessions vers le bas pour l’actualiser.",
+		"mobile.remote_sessions.move_pick.no_answer": "Il n’a pas répondu à la demande de cet ordinateur.",
+		"mobile.remote_sessions.move_pick.no_devices": "Aucun autre appareil n’est visible.",
+		"mobile.remote_sessions.move_pick.on_this_computer": "Sur cet ordinateur",
+		"mobile.remote_sessions.move_pick.right_now": "Actuellement",
 		"mobile.remote_sessions.owner_only": "Pour l’instant, les approbations, Arrêter, les changements de modèle et les commandes slash ne fonctionnent que sur {owner}.",
 		"mobile.remote_sessions.owner_unresolved": "Le relais ne peut pas confirmer quel ordinateur possède cette conversation. Actualisez la liste des sessions et réessayez.",
 		"mobile.remote_sessions.retained_only": "Les aperçus des Highlights nécessitent une version plus récente de Local Operator sur l’ordinateur connecté. Ouvrez-les sur l’ordinateur propriétaire en attendant. Les documents joints peuvent toujours être enregistrés.",
@@ -9490,9 +9674,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.back_to": "Retour à {name}",
 		"mobile.session.back_to_session": "Retour à la session",
 		"mobile.session.chip.effort_change_failed": "Impossible de changer le niveau d’effort.",
+		"mobile.session.chip.effort_label": "Effort, {effort}",
 		"mobile.session.chip.effort_resume_hint": "Reprenez cette session pour changer l’effort",
 		"mobile.session.chip.model_change_failed": "Impossible de changer de modèle.",
 		"mobile.session.chip.model_default": "Par défaut",
+		"mobile.session.chip.model_label": "Modèle, {model}",
 		"mobile.session.chip.model_resume_hint": "Reprenez cette session pour changer de modèle",
 		"mobile.session.chip.model_unknown": "Inconnu",
 		"mobile.session.chip.model_unrecorded_hint": "Cette session n’a enregistré aucun modèle",
@@ -9537,6 +9723,15 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.history.loading": "Chargement des messages précédents…",
 		"mobile.session.history.refresh_failed": "Les derniers messages n’ont pas pu être chargés.",
 		"mobile.session.history.stalled": "Le chargement des messages précédents s’est arrêté. Réessayez ou rouvrez cette conversation.",
+		"mobile.session.inline_chart.also_label": "Aussi :",
+		"mobile.session.inline_chart.more": "+{count} de plus",
+		"mobile.session.inline_chart.no_data": "Aucune donnée",
+		"mobile.session.inline_chart.other": "Autres ({count})",
+		"mobile.session.inline_chart.position": "{index} sur {count}",
+		"mobile.session.inline_chart.right_axis": "{label} · axe de droite",
+		"mobile.session.inline_chart.share": "{share} du total",
+		"mobile.session.inline_chart.total": "Total",
+		"mobile.session.inline_chart.value_count": "Valeurs : {count}",
 		"mobile.session.inline_chart_data": "Données du graphique",
 		"mobile.session.jump_to_latest": "↓ Aller au plus récent",
 		"mobile.session.jump_to_latest_name": "Aller au plus récent",
@@ -9579,8 +9774,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.slash.load_failed": "Impossible de charger les commandes depuis votre ordinateur. Rouvrez cette conversation pour réessayer.",
 		"mobile.session.slash.no_matches": "Aucune commande ne correspond",
 		"mobile.session.status_tray.hint": "Ouvre la ligne d’activité, les tâches et les sous-agents",
+		"mobile.session.subagent.load_failed": "Impossible de charger les messages de ce sous-agent.",
 		"mobile.session.subagent.no_rows": "Ce sous-agent n’a aucune ligne de transcription qui lui soit propre.",
+		"mobile.session.subagent.not_kept": "La transcription de ce sous-agent n’a pas été conservée, ou l’ordinateur ne répond pas.",
 		"mobile.session.subagent.prompt_label": "prompt",
+		"mobile.session.subagent.queued_next": "Pas encore démarré. Ses messages s’afficheront ici dès qu’il s’exécutera.",
 		"mobile.session.subagent.result_label": "résultat",
 		"mobile.session.subagent.screen_title": "Sous-agent",
 		"mobile.session.subagent.status": "{status, select, queued {en attente} running {en cours} completed {terminé} failed {en échec} parked {en pause} cancelled {annulé} loading {chargement} unavailable {indisponible} other {inconnu}}",
@@ -10156,16 +10354,22 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.chrome.clear_search": "खोज साफ़ करें",
 		"mobile.chrome.close_conversations": "बातचीत बंद करें",
 		"mobile.chrome.composer.dismiss_keyboard": "कीबोर्ड छिपाएँ",
+		"mobile.chrome.composer.folder": "{source, select, chosen {फ़ोल्डर, {folder}, इस बातचीत के लिए चुना गया} default {फ़ोल्डर, {folder}, इस कंप्यूटर का डिफ़ॉल्ट} other {फ़ोल्डर, {folder}}}",
+		"mobile.chrome.composer.folder_hint": "दूसरा फ़ोल्डर चुनें",
+		"mobile.chrome.composer.folder_hint_fixed": "इस बातचीत के फ़ोल्डर का पूरा पाथ दिखाता है",
 		"mobile.chrome.composer.more": "अधिक संदर्भ",
 		"mobile.chrome.composer.open_queue": "कतार खोलें",
 		"mobile.chrome.composer.queued": "{count, plural, one {# संदेश कतार में} other {# संदेश कतार में}}",
 		"mobile.chrome.composer.row_cost": "लागत",
-		"mobile.chrome.composer.row_effort": "प्रयास",
+		"mobile.chrome.composer.row_folder": "फ़ोल्डर",
 		"mobile.chrome.composer.row_identity": "एजेंट या टीम",
 		"mobile.chrome.composer.row_model": "मॉडल",
 		"mobile.chrome.composer.row_questions": "प्रश्न",
 		"mobile.chrome.composer.row_queue": "कतार",
 		"mobile.chrome.composer.row_usage": "संदर्भ",
+		"mobile.chrome.composer.run_settings": "{model}, {effort}",
+		"mobile.chrome.composer.run_settings_hint": "मॉडल और प्रयास चुनें",
+		"mobile.chrome.composer.run_settings_title": "मॉडल और प्रयास",
 		"mobile.chrome.destination.inbox": "इनबॉक्स",
 		"mobile.chrome.destination.inbox_count": "इनबॉक्स, {count, plural, one {# अपठित} other {# अपठित}}",
 		"mobile.chrome.destination.past": "पिछले",
@@ -10625,6 +10829,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.picker.effort_unknown": "यह कंप्यूटर इस मॉडल के स्तर नहीं जानता, इसलिए वह मॉडल द्वारा समर्थित सबसे नज़दीकी स्तर इस्तेमाल करेगा।",
 		"mobile.home.picker.effort_unsupported": "इस कंप्यूटर का Local Operator प्रयास स्वीकार करने के लिए बहुत पुराना है, इसलिए वह अपना कॉन्फ़िगर किया गया स्तर इस्तेमाल करता है। यहाँ से चुनने के लिए इसे अपडेट करें।",
 		"mobile.home.picker.effort_use_default": "इस कंप्यूटर का स्तर",
+		"mobile.home.picker.folder_current": "मौजूदा फ़ोल्डर",
+		"mobile.home.picker.folder_current_label": "मौजूदा फ़ोल्डर, {path}",
+		"mobile.home.picker.folder_fixed": "बातचीत उसी फ़ोल्डर में रहती है जिसमें वह शुरू हुई थी। दूसरा फ़ोल्डर इस्तेमाल करने के लिए नई चैट शुरू करें।",
 		"mobile.home.picker.folder_home": "होम",
 		"mobile.home.picker.folder_other": "अन्य पाथ…",
 		"mobile.home.picker.folder_outside": "यह कंप्यूटर बातचीत केवल आपके होम फ़ोल्डर या उसके अस्थायी फ़ोल्डर के अंदर शुरू करता है।",
@@ -10903,6 +11110,13 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.remote_sessions.health_reconnecting": "इस फ़ोन का कनेक्शन टूट गया है और यह कोशिश कर रहा है। बातचीत शायद अब भी {owner} पर चल रही है; कनेक्शन लौटने तक भेजना विफल हो सकता है।",
 		"mobile.remote_sessions.loading": "इस कंप्यूटर पर दूरस्थ सत्रों का समर्थन जाँचा जा रहा है…",
 		"mobile.remote_sessions.media_changed": "डाउनलोड के दौरान यह मीडिया बदल गया या पहुँच समाप्त हो गई। कुछ भी नहीं खोला गया। स्वामी कंप्यूटर उपलब्ध होने पर फिर कोशिश करें।",
+		"mobile.remote_sessions.move_pick.cannot_reach": "{device} से संपर्क नहीं हो पा रहा",
+		"mobile.remote_sessions.move_pick.destination_heading": "ले जाने या कॉपी करने की जगह",
+		"mobile.remote_sessions.move_pick.discovery_help": "यह ऐप सिर्फ़ उन डिवाइसों को दिखा सकता है जिनके सत्र आपकी सूची में दिखते हैं। जिस डिवाइस का कोई सत्र नहीं दिखता, उसे अभी नहीं चुन सकते — दूसरे कंप्यूटर पर Local Operator खोलें, फिर सत्रों की सूची नीचे खींचकर रीफ़्रेश करें।",
+		"mobile.remote_sessions.move_pick.no_answer": "इस कंप्यूटर के अनुरोध पर उसने जवाब नहीं दिया।",
+		"mobile.remote_sessions.move_pick.no_devices": "कोई दूसरा डिवाइस नहीं दिख रहा।",
+		"mobile.remote_sessions.move_pick.on_this_computer": "इस कंप्यूटर पर",
+		"mobile.remote_sessions.move_pick.right_now": "अभी",
 		"mobile.remote_sessions.owner_only": "फ़िलहाल अनुमतियाँ, रोकें, मॉडल बदलना और स्लैश कमांड सिर्फ़ {owner} पर काम करते हैं।",
 		"mobile.remote_sessions.owner_unresolved": "रिले पुष्टि नहीं कर पा रहा कि यह बातचीत किस कंप्यूटर की है। सत्रों की सूची रीफ़्रेश करें और दोबारा कोशिश करें।",
 		"mobile.remote_sessions.retained_only": "Highlights का पूर्वावलोकन देखने के लिए जुड़े कंप्यूटर पर Local Operator का नया संस्करण चाहिए। फ़िलहाल इन्हें स्वामी कंप्यूटर पर खोलें। संलग्न दस्तावेज़ अब भी सहेजे जा सकते हैं।",
@@ -10958,9 +11172,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.back_to": "{name} पर वापस जाएँ",
 		"mobile.session.back_to_session": "सत्र पर वापस जाएँ",
 		"mobile.session.chip.effort_change_failed": "प्रयास नहीं बदला जा सका।",
+		"mobile.session.chip.effort_label": "प्रयास, {effort}",
 		"mobile.session.chip.effort_resume_hint": "प्रयास बदलने के लिए यह सत्र फिर से शुरू करें",
 		"mobile.session.chip.model_change_failed": "मॉडल नहीं बदला जा सका।",
 		"mobile.session.chip.model_default": "डिफ़ॉल्ट",
+		"mobile.session.chip.model_label": "मॉडल, {model}",
 		"mobile.session.chip.model_resume_hint": "मॉडल बदलने के लिए यह सत्र फिर से शुरू करें",
 		"mobile.session.chip.model_unknown": "अज्ञात",
 		"mobile.session.chip.model_unrecorded_hint": "इस सत्र ने कोई मॉडल दर्ज नहीं किया है",
@@ -11005,6 +11221,15 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.history.loading": "पहले के संदेश लोड हो रहे हैं…",
 		"mobile.session.history.refresh_failed": "सबसे नए संदेश लोड नहीं हो सके।",
 		"mobile.session.history.stalled": "पहले के संदेश लोड होना रुक गया। फिर से कोशिश करें, या यह बातचीत दोबारा खोलें।",
+		"mobile.session.inline_chart.also_label": "साथ ही:",
+		"mobile.session.inline_chart.more": "+{count} और",
+		"mobile.session.inline_chart.no_data": "कोई डेटा नहीं",
+		"mobile.session.inline_chart.other": "अन्य ({count})",
+		"mobile.session.inline_chart.position": "{count} में से {index}",
+		"mobile.session.inline_chart.right_axis": "{label} · दायाँ अक्ष",
+		"mobile.session.inline_chart.share": "कुल का {share}",
+		"mobile.session.inline_chart.total": "कुल",
+		"mobile.session.inline_chart.value_count": "मान: {count}",
 		"mobile.session.inline_chart_data": "चार्ट का डेटा",
 		"mobile.session.jump_to_latest": "↓ नवीनतम पर जाएँ",
 		"mobile.session.jump_to_latest_name": "नवीनतम पर जाएँ",
@@ -11047,8 +11272,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.slash.load_failed": "आपके कंप्यूटर से कमांड लोड नहीं हो सकीं। फिर से कोशिश करने के लिए यह बातचीत दोबारा खोलें।",
 		"mobile.session.slash.no_matches": "कोई कमांड मेल नहीं खाती",
 		"mobile.session.status_tray.hint": "कार्यरत पंक्ति, कार्य और उप-एजेंट खोलता है",
+		"mobile.session.subagent.load_failed": "इस उप-एजेंट के संदेश लोड नहीं हो सके।",
 		"mobile.session.subagent.no_rows": "इस उप-एजेंट की ट्रांसक्रिप्ट में अपनी कोई पंक्ति नहीं है।",
+		"mobile.session.subagent.not_kept": "इस उप-एजेंट का ट्रांसक्रिप्ट सहेजा नहीं गया था, या कंप्यूटर जवाब नहीं दे रहा है।",
 		"mobile.session.subagent.prompt_label": "प्रॉम्प्ट",
+		"mobile.session.subagent.queued_next": "अभी शुरू नहीं हुआ। चलने पर इसके संदेश यहाँ दिखेंगे।",
 		"mobile.session.subagent.result_label": "परिणाम",
 		"mobile.session.subagent.screen_title": "उप-एजेंट",
 		"mobile.session.subagent.status": "{status, select, queued {कतार में} running {चल रहा} completed {पूरा} failed {विफल} parked {रुका हुआ} cancelled {रद्द} loading {लोड हो रहा} unavailable {उपलब्ध नहीं} other {अज्ञात}}",
@@ -11624,16 +11852,22 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.chrome.clear_search": "Очистить поиск",
 		"mobile.chrome.close_conversations": "Закрыть список бесед",
 		"mobile.chrome.composer.dismiss_keyboard": "Скрыть клавиатуру",
+		"mobile.chrome.composer.folder": "{source, select, chosen {Папка, {folder}, выбрана для этой беседы} default {Папка, {folder}, по умолчанию на этом компьютере} other {Папка, {folder}}}",
+		"mobile.chrome.composer.folder_hint": "Выберите другую папку",
+		"mobile.chrome.composer.folder_hint_fixed": "Показывает полный путь к папке этой беседы",
 		"mobile.chrome.composer.more": "Дополнительный контекст",
 		"mobile.chrome.composer.open_queue": "Открыть очередь",
 		"mobile.chrome.composer.queued": "{count, plural, one {# сообщение в очереди} few {# сообщения в очереди} many {# сообщений в очереди} other {# сообщения в очереди}}",
 		"mobile.chrome.composer.row_cost": "Стоимость",
-		"mobile.chrome.composer.row_effort": "Усилие",
+		"mobile.chrome.composer.row_folder": "Папка",
 		"mobile.chrome.composer.row_identity": "Агент или команда",
 		"mobile.chrome.composer.row_model": "Модель",
 		"mobile.chrome.composer.row_questions": "Вопросы",
 		"mobile.chrome.composer.row_queue": "Очередь",
 		"mobile.chrome.composer.row_usage": "Контекст",
+		"mobile.chrome.composer.run_settings": "{model}, {effort}",
+		"mobile.chrome.composer.run_settings_hint": "Выберите модель и усилие",
+		"mobile.chrome.composer.run_settings_title": "Модель и усилие",
 		"mobile.chrome.destination.inbox": "Входящие",
 		"mobile.chrome.destination.inbox_count": "Входящие, {count, plural, one {# непрочитанное} few {# непрочитанных} many {# непрочитанных} other {# непрочитанного}}",
 		"mobile.chrome.destination.past": "Прошлые",
@@ -12093,6 +12327,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.picker.effort_unknown": "Этот компьютер не знает уровней этой модели, поэтому он использует ближайший уровень, который поддерживает модель.",
 		"mobile.home.picker.effort_unsupported": "Local Operator на этом компьютере слишком старый, чтобы принять уровень усилия, поэтому он использует настроенный уровень. Обновите его, чтобы выбирать здесь.",
 		"mobile.home.picker.effort_use_default": "Уровень этого компьютера",
+		"mobile.home.picker.folder_current": "Текущая папка",
+		"mobile.home.picker.folder_current_label": "Текущая папка, {path}",
+		"mobile.home.picker.folder_fixed": "Беседа остаётся в той папке, в которой началась. Чтобы использовать другую папку, начните новый чат.",
 		"mobile.home.picker.folder_home": "Домашняя",
 		"mobile.home.picker.folder_other": "Другой путь…",
 		"mobile.home.picker.folder_outside": "Этот компьютер начинает беседы только внутри вашей домашней папки или его временной папки.",
@@ -12371,6 +12608,13 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.remote_sessions.health_reconnecting": "Телефон потерял соединение и продолжает попытки. Разговор, возможно, всё ещё идёт на {owner}; отправка может не работать, пока соединение не восстановится.",
 		"mobile.remote_sessions.loading": "Проверяем поддержку удалённых сеансов…",
 		"mobile.remote_sessions.media_changed": "Во время загрузки медиафайл изменился или доступ к нему прекратился. Ничего не было открыто. Повторите попытку, когда компьютер-владелец будет доступен.",
+		"mobile.remote_sessions.move_pick.cannot_reach": "{device}: нет связи",
+		"mobile.remote_sessions.move_pick.destination_heading": "Куда переместить или скопировать",
+		"mobile.remote_sessions.move_pick.discovery_help": "Приложение предлагает устройства, сессии которых видны в списке. Устройство без видимой сессии пока нельзя выбрать — откройте Local Operator на другом компьютере и потяните список сессий вниз, чтобы обновить его.",
+		"mobile.remote_sessions.move_pick.no_answer": "Удалённый компьютер не ответил на запрос этого компьютера.",
+		"mobile.remote_sessions.move_pick.no_devices": "Другие устройства не видны.",
+		"mobile.remote_sessions.move_pick.on_this_computer": "На этом компьютере",
+		"mobile.remote_sessions.move_pick.right_now": "Сейчас",
 		"mobile.remote_sessions.owner_only": "Пока что одобрения, «Стоп», смена модели и слэш-команды работают только на {owner}.",
 		"mobile.remote_sessions.owner_unresolved": "Ретранслятор не может подтвердить, какому компьютеру принадлежит разговор. Обновите список сеансов и повторите попытку.",
 		"mobile.remote_sessions.retained_only": "Для предпросмотра Highlights нужна более новая версия Local Operator на подключённом компьютере. Пока открывайте их на компьютере-владельце. Прикреплённые документы по-прежнему можно сохранять.",
@@ -12426,9 +12670,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.back_to": "Назад: {name}",
 		"mobile.session.back_to_session": "Назад к сессии",
 		"mobile.session.chip.effort_change_failed": "Не удалось изменить усилие.",
+		"mobile.session.chip.effort_label": "Усилие, {effort}",
 		"mobile.session.chip.effort_resume_hint": "Возобновите этот сеанс, чтобы изменить усилие",
 		"mobile.session.chip.model_change_failed": "Не удалось сменить модель.",
 		"mobile.session.chip.model_default": "По умолчанию",
+		"mobile.session.chip.model_label": "Модель, {model}",
 		"mobile.session.chip.model_resume_hint": "Возобновите этот сеанс, чтобы сменить модель",
 		"mobile.session.chip.model_unknown": "Неизвестно",
 		"mobile.session.chip.model_unrecorded_hint": "Этот сеанс не сохранил модель",
@@ -12473,6 +12719,15 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.history.loading": "Загрузка предыдущих сообщений…",
 		"mobile.session.history.refresh_failed": "Не удалось загрузить последние сообщения.",
 		"mobile.session.history.stalled": "Загрузка предыдущих сообщений остановилась. Повторите или откройте беседу заново.",
+		"mobile.session.inline_chart.also_label": "Также:",
+		"mobile.session.inline_chart.more": "ещё {count}",
+		"mobile.session.inline_chart.no_data": "Нет данных",
+		"mobile.session.inline_chart.other": "Другое ({count})",
+		"mobile.session.inline_chart.position": "{index} из {count}",
+		"mobile.session.inline_chart.right_axis": "{label} · правая ось",
+		"mobile.session.inline_chart.share": "{share} от общего",
+		"mobile.session.inline_chart.total": "Итого",
+		"mobile.session.inline_chart.value_count": "Значений: {count}",
 		"mobile.session.inline_chart_data": "Данные диаграммы",
 		"mobile.session.jump_to_latest": "↓ К последнему сообщению",
 		"mobile.session.jump_to_latest_name": "К последнему сообщению",
@@ -12515,8 +12770,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.slash.load_failed": "Не удалось загрузить команды с вашего компьютера. Откройте эту беседу снова, чтобы повторить попытку.",
 		"mobile.session.slash.no_matches": "Нет подходящих команд",
 		"mobile.session.status_tray.hint": "Открывает строку текущей работы, задачи и субагентов",
+		"mobile.session.subagent.load_failed": "Не удалось загрузить сообщения этого субагента.",
 		"mobile.session.subagent.no_rows": "У этого субагента нет собственных строк транскрипта.",
+		"mobile.session.subagent.not_kept": "Транскрипт этого субагента не сохранён или компьютер не отвечает.",
 		"mobile.session.subagent.prompt_label": "промпт",
+		"mobile.session.subagent.queued_next": "Ещё не запущен. Его сообщения появятся здесь, когда он начнёт работу.",
 		"mobile.session.subagent.result_label": "результат",
 		"mobile.session.subagent.screen_title": "Субагент",
 		"mobile.session.subagent.status": "{status, select, queued {в очереди} running {выполняется} completed {завершён} failed {ошибка} parked {приостановлен} cancelled {отменён} loading {загрузка} unavailable {недоступен} other {неизвестно}}",
@@ -13092,16 +13350,22 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.chrome.clear_search": "تلاش صاف کریں",
 		"mobile.chrome.close_conversations": "گفتگوئیں بند کریں",
 		"mobile.chrome.composer.dismiss_keyboard": "کی بورڈ بند کریں",
+		"mobile.chrome.composer.folder": "{source, select, chosen {فولڈر، {folder}، اس گفتگو کے لیے منتخب} default {فولڈر، {folder}، اس کمپیوٹر کا ڈیفالٹ} other {فولڈر، {folder}}}",
+		"mobile.chrome.composer.folder_hint": "دوسرا فولڈر منتخب کریں",
+		"mobile.chrome.composer.folder_hint_fixed": "اس گفتگو کے فولڈر کا پورا پاتھ دکھاتا ہے",
 		"mobile.chrome.composer.more": "مزید سیاق",
 		"mobile.chrome.composer.open_queue": "قطار کھولیں",
 		"mobile.chrome.composer.queued": "{count, plural, one {# پیغام قطار میں} other {# پیغامات قطار میں}}",
 		"mobile.chrome.composer.row_cost": "لاگت",
-		"mobile.chrome.composer.row_effort": "شدت",
+		"mobile.chrome.composer.row_folder": "فولڈر",
 		"mobile.chrome.composer.row_identity": "ایجنٹ یا ٹیم",
 		"mobile.chrome.composer.row_model": "ماڈل",
 		"mobile.chrome.composer.row_questions": "سوالات",
 		"mobile.chrome.composer.row_queue": "قطار",
 		"mobile.chrome.composer.row_usage": "سیاق",
+		"mobile.chrome.composer.run_settings": "{model}، {effort}",
+		"mobile.chrome.composer.run_settings_hint": "ماڈل اور استدلال کی شدت منتخب کریں",
+		"mobile.chrome.composer.run_settings_title": "ماڈل اور استدلال کی شدت",
 		"mobile.chrome.destination.inbox": "ان باکس",
 		"mobile.chrome.destination.inbox_count": "ان باکس، {count, plural, one {# غیر پڑھا} other {# غیر پڑھے}}",
 		"mobile.chrome.destination.past": "گزشتہ",
@@ -13561,6 +13825,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.picker.effort_unknown": "یہ کمپیوٹر اس ماڈل کی سطحیں نہیں جانتا، اس لیے یہ ماڈل کی معاونت والی قریب ترین سطح استعمال کرے گا۔",
 		"mobile.home.picker.effort_unsupported": "اس کمپیوٹر کا Local Operator استدلال کی شدت قبول کرنے کے لیے بہت پرانا ہے، اس لیے یہ اپنی ترتیب شدہ سطح استعمال کرتا ہے۔ یہاں سے منتخب کرنے کے لیے اسے اپ ڈیٹ کریں۔",
 		"mobile.home.picker.effort_use_default": "اس کمپیوٹر کی سطح",
+		"mobile.home.picker.folder_current": "موجودہ فولڈر",
+		"mobile.home.picker.folder_current_label": "موجودہ فولڈر، {path}",
+		"mobile.home.picker.folder_fixed": "گفتگو اسی فولڈر میں رہتی ہے جس میں وہ شروع ہوئی تھی۔ دوسرا فولڈر استعمال کرنے کے لیے نئی چیٹ شروع کریں۔",
 		"mobile.home.picker.folder_home": "ہوم",
 		"mobile.home.picker.folder_other": "دوسرا پاتھ…",
 		"mobile.home.picker.folder_outside": "یہ کمپیوٹر گفتگو صرف آپ کے ہوم فولڈر یا اس کے عارضی فولڈر کے اندر شروع کرتا ہے۔",
@@ -13839,6 +14106,13 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.remote_sessions.health_reconnecting": "اس فون کا کنکشن ٹوٹ گیا ہے اور یہ کوشش کر رہا ہے۔ گفتگو شاید اب بھی {owner} پر چل رہی ہے؛ کنکشن واپس آنے تک بھیجنا ناکام ہو سکتا ہے۔",
 		"mobile.remote_sessions.loading": "اس کمپیوٹر پر دور دراز سیشن کی معاونت جانچی جا رہی ہے…",
 		"mobile.remote_sessions.media_changed": "ڈاؤن لوڈ کے دوران یہ میڈیا بدل گیا یا رسائی ختم ہو گئی۔ کچھ بھی نہیں کھولا گیا۔ مالک کمپیوٹر دستیاب ہونے پر دوبارہ کوشش کریں۔",
+		"mobile.remote_sessions.move_pick.cannot_reach": "{device} سے رابطہ نہیں ہو رہا",
+		"mobile.remote_sessions.move_pick.destination_heading": "منتقل یا کاپی کرنے کی جگہ",
+		"mobile.remote_sessions.move_pick.discovery_help": "یہ ایپ صرف وہ ڈیوائسز دکھا سکتی ہے جن کے سیشن فہرست میں نظر آتے ہیں۔ جس ڈیوائس کا کوئی سیشن نظر نہیں آ رہا، اسے ابھی منتخب نہیں کیا جا سکتا — دوسرے کمپیوٹر پر Local Operator کھولیں، پھر سیشن کی فہرست کو نیچے کھینچ کر تازہ کریں۔",
+		"mobile.remote_sessions.move_pick.no_answer": "جب اس کمپیوٹر نے رابطہ کیا تو اس نے جواب نہیں دیا۔",
+		"mobile.remote_sessions.move_pick.no_devices": "کوئی اور ڈیوائس نظر نہیں آ رہی۔",
+		"mobile.remote_sessions.move_pick.on_this_computer": "اس کمپیوٹر پر",
+		"mobile.remote_sessions.move_pick.right_now": "اس وقت",
 		"mobile.remote_sessions.owner_only": "فی الحال منظوریاں، روکیں، ماڈل کی تبدیلی اور سلیش کمانڈز صرف {owner} پر کام کرتی ہیں۔",
 		"mobile.remote_sessions.owner_unresolved": "ریلے تصدیق نہیں کر پا رہا کہ یہ گفتگو کس کمپیوٹر کی ہے۔ سیشن کی فہرست تازہ کریں اور دوبارہ کوشش کریں۔",
 		"mobile.remote_sessions.retained_only": "Highlights کے پیش منظر کے لیے منسلک کمپیوٹر پر Local Operator کا نیا ورژن درکار ہے۔ فی الحال انہیں مالک کمپیوٹر پر کھولیں۔ منسلک دستاویزات اب بھی محفوظ کی جا سکتی ہیں۔",
@@ -13894,9 +14168,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.back_to": "{name} پر واپس جائیں",
 		"mobile.session.back_to_session": "سیشن پر واپس جائیں",
 		"mobile.session.chip.effort_change_failed": "استدلال کی شدت تبدیل نہیں ہو سکی۔",
+		"mobile.session.chip.effort_label": "استدلال کی شدت، {effort}",
 		"mobile.session.chip.effort_resume_hint": "کوشش بدلنے کے لیے یہ سیشن دوبارہ شروع کریں",
 		"mobile.session.chip.model_change_failed": "ماڈل تبدیل نہیں ہو سکا۔",
 		"mobile.session.chip.model_default": "ڈیفالٹ",
+		"mobile.session.chip.model_label": "ماڈل، {model}",
 		"mobile.session.chip.model_resume_hint": "ماڈل بدلنے کے لیے یہ سیشن دوبارہ شروع کریں",
 		"mobile.session.chip.model_unknown": "نامعلوم",
 		"mobile.session.chip.model_unrecorded_hint": "اس سیشن نے کوئی ماڈل درج نہیں کیا",
@@ -13941,6 +14217,15 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.history.loading": "پہلے کے پیغامات لوڈ ہو رہے ہیں…",
 		"mobile.session.history.refresh_failed": "تازہ ترین پیغامات لوڈ نہیں ہو سکے۔",
 		"mobile.session.history.stalled": "تاریخچے کے پہلے کے پیغامات لوڈ ہونا رک گئے۔ دوبارہ کوشش کریں، یا یہ گفتگو دوبارہ کھولیں۔",
+		"mobile.session.inline_chart.also_label": "نیز:",
+		"mobile.session.inline_chart.more": "+{count} مزید",
+		"mobile.session.inline_chart.no_data": "کوئی ڈیٹا نہیں",
+		"mobile.session.inline_chart.other": "دیگر ({count})",
+		"mobile.session.inline_chart.position": "{count} میں سے {index}",
+		"mobile.session.inline_chart.right_axis": "{label} · دایاں محور",
+		"mobile.session.inline_chart.share": "کل کا {share}",
+		"mobile.session.inline_chart.total": "کل",
+		"mobile.session.inline_chart.value_count": "اقدار: {count}",
 		"mobile.session.inline_chart_data": "چارٹ کا ڈیٹا",
 		"mobile.session.jump_to_latest": "↓ تازہ ترین پر جائیں",
 		"mobile.session.jump_to_latest_name": "تازہ ترین پر جائیں",
@@ -13983,8 +14268,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.slash.load_failed": "آپ کے کمپیوٹر سے کمانڈز لوڈ نہیں ہو سکیں۔ دوبارہ کوشش کے لیے یہ گفتگو پھر سے کھولیں۔",
 		"mobile.session.slash.no_matches": "کوئی کمانڈ مماثل نہیں",
 		"mobile.session.status_tray.hint": "جاری سرگرمی کی لائن، کام اور ذیلی ایجنٹس کھولتا ہے",
+		"mobile.session.subagent.load_failed": "اس ذیلی ایجنٹ کے پیغامات لوڈ نہیں ہو سکے۔",
 		"mobile.session.subagent.no_rows": "اس ذیلی ایجنٹ کے اپنے ٹرانسکرپٹ میں کوئی سطر نہیں۔",
+		"mobile.session.subagent.not_kept": "اس ذیلی ایجنٹ کا ٹرانسکرپٹ محفوظ نہیں رکھا گیا، یا کمپیوٹر جواب نہیں دے رہا۔",
 		"mobile.session.subagent.prompt_label": "پرامپٹ",
+		"mobile.session.subagent.queued_next": "ابھی شروع نہیں ہوا۔ چلنے پر اس کے پیغامات یہاں نظر آئیں گے۔",
 		"mobile.session.subagent.result_label": "نتیجہ",
 		"mobile.session.subagent.screen_title": "ذیلی ایجنٹ",
 		"mobile.session.subagent.status": "{status, select, queued {قطار میں} running {جاری} completed {مکمل} failed {ناکام} parked {موقوف} cancelled {منسوخ} loading {لوڈ ہو رہا} unavailable {دستیاب نہیں} other {نامعلوم}}",
@@ -14560,16 +14848,22 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.chrome.clear_search": "Xóa tìm kiếm",
 		"mobile.chrome.close_conversations": "Đóng danh sách cuộc trò chuyện",
 		"mobile.chrome.composer.dismiss_keyboard": "Ẩn bàn phím",
+		"mobile.chrome.composer.folder": "{source, select, chosen {Thư mục, {folder}, đã chọn cho cuộc trò chuyện này} default {Thư mục, {folder}, mặc định của máy tính này} other {Thư mục, {folder}}}",
+		"mobile.chrome.composer.folder_hint": "Chọn thư mục khác",
+		"mobile.chrome.composer.folder_hint_fixed": "Hiển thị đường dẫn đầy đủ đến thư mục của cuộc trò chuyện này",
 		"mobile.chrome.composer.more": "Thêm ngữ cảnh",
 		"mobile.chrome.composer.open_queue": "Mở hàng đợi",
 		"mobile.chrome.composer.queued": "{count, plural, other {# tin nhắn trong hàng đợi}}",
 		"mobile.chrome.composer.row_cost": "Chi phí",
-		"mobile.chrome.composer.row_effort": "Mức suy luận",
+		"mobile.chrome.composer.row_folder": "Thư mục",
 		"mobile.chrome.composer.row_identity": "Tác nhân hoặc nhóm",
 		"mobile.chrome.composer.row_model": "Mô hình",
 		"mobile.chrome.composer.row_questions": "Câu hỏi",
 		"mobile.chrome.composer.row_queue": "Hàng đợi",
 		"mobile.chrome.composer.row_usage": "Ngữ cảnh",
+		"mobile.chrome.composer.run_settings": "{model}, {effort}",
+		"mobile.chrome.composer.run_settings_hint": "Chọn mô hình và mức suy luận",
+		"mobile.chrome.composer.run_settings_title": "Mô hình và mức suy luận",
 		"mobile.chrome.destination.inbox": "Hộp thư",
 		"mobile.chrome.destination.inbox_count": "Hộp thư, {count, plural, other {# chưa đọc}}",
 		"mobile.chrome.destination.past": "Trước",
@@ -15029,6 +15323,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.picker.effort_unknown": "Máy tính này chưa biết các mức của mô hình này, nên sẽ dùng mức gần nhất mà mô hình hỗ trợ.",
 		"mobile.home.picker.effort_unsupported": "Local Operator trên máy tính này quá cũ để nhận mức suy luận, nên nó dùng mức đã cấu hình. Hãy cập nhật để chọn tại đây.",
 		"mobile.home.picker.effort_use_default": "Mức của máy tính này",
+		"mobile.home.picker.folder_current": "Thư mục hiện tại",
+		"mobile.home.picker.folder_current_label": "Thư mục hiện tại, {path}",
+		"mobile.home.picker.folder_fixed": "Cuộc trò chuyện giữ nguyên thư mục lúc bắt đầu. Để dùng thư mục khác, hãy bắt đầu cuộc trò chuyện mới.",
 		"mobile.home.picker.folder_home": "Home",
 		"mobile.home.picker.folder_other": "Đường dẫn khác…",
 		"mobile.home.picker.folder_outside": "Máy tính này chỉ bắt đầu cuộc trò chuyện bên trong thư mục home của bạn hoặc thư mục tạm của nó.",
@@ -15307,6 +15604,13 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.remote_sessions.health_reconnecting": "Điện thoại này mất kết nối và đang thử lại. Cuộc trò chuyện có thể vẫn đang chạy trên {owner}; việc gửi có thể thất bại cho đến khi kết nối trở lại.",
 		"mobile.remote_sessions.loading": "Đang kiểm tra khả năng hỗ trợ phiên từ xa…",
 		"mobile.remote_sessions.media_changed": "Nội dung đa phương tiện đã thay đổi hoặc quyền truy cập đã kết thúc khi đang tải xuống. Chưa mở nội dung nào. Hãy thử lại khi máy tính sở hữu cuộc trò chuyện sẵn sàng.",
+		"mobile.remote_sessions.move_pick.cannot_reach": "Không thể liên lạc với {device}",
+		"mobile.remote_sessions.move_pick.destination_heading": "Di chuyển hoặc sao chép tới",
+		"mobile.remote_sessions.move_pick.discovery_help": "Ứng dụng chỉ cho chọn những thiết bị có cuộc trò chuyện đang hiển thị. Chưa thể chọn thiết bị không có cuộc trò chuyện nào hiển thị — hãy mở Local Operator trên máy tính kia rồi kéo danh sách cuộc trò chuyện để làm mới.",
+		"mobile.remote_sessions.move_pick.no_answer": "Máy tính đó không phản hồi yêu cầu từ máy tính này.",
+		"mobile.remote_sessions.move_pick.no_devices": "Không thấy thiết bị nào khác.",
+		"mobile.remote_sessions.move_pick.on_this_computer": "Trên máy tính này",
+		"mobile.remote_sessions.move_pick.right_now": "Hiện tại",
 		"mobile.remote_sessions.owner_only": "Hiện tại, phê duyệt, Dừng, đổi mô hình và lệnh gạch chéo chỉ hoạt động trên {owner}.",
 		"mobile.remote_sessions.owner_unresolved": "Máy chuyển tiếp chưa thể xác nhận máy tính nào sở hữu cuộc trò chuyện này. Làm mới danh sách phiên rồi thử lại.",
 		"mobile.remote_sessions.retained_only": "Để xem trước Highlights, máy tính đang kết nối cần có phiên bản Local Operator mới hơn. Tạm thời hãy mở chúng trên máy tính sở hữu cuộc trò chuyện. Bạn vẫn có thể lưu tài liệu đính kèm.",
@@ -15362,9 +15666,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.back_to": "Quay lại {name}",
 		"mobile.session.back_to_session": "Quay lại phiên",
 		"mobile.session.chip.effort_change_failed": "Không thể đổi mức suy luận.",
+		"mobile.session.chip.effort_label": "Mức suy luận, {effort}",
 		"mobile.session.chip.effort_resume_hint": "Tiếp tục phiên này để đổi mức suy luận",
 		"mobile.session.chip.model_change_failed": "Không thể đổi mô hình.",
 		"mobile.session.chip.model_default": "Mặc định",
+		"mobile.session.chip.model_label": "Mô hình, {model}",
 		"mobile.session.chip.model_resume_hint": "Tiếp tục phiên này để đổi mô hình",
 		"mobile.session.chip.model_unknown": "Không rõ",
 		"mobile.session.chip.model_unrecorded_hint": "Phiên này chưa ghi lại mô hình nào",
@@ -15409,6 +15715,15 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.history.loading": "Đang tải tin nhắn trước đó…",
 		"mobile.session.history.refresh_failed": "Không tải được các tin nhắn mới nhất.",
 		"mobile.session.history.stalled": "Tin nhắn trước đó đã ngừng tải. Hãy thử lại hoặc mở lại cuộc trò chuyện này.",
+		"mobile.session.inline_chart.also_label": "Ngoài ra:",
+		"mobile.session.inline_chart.more": "+{count} mục khác",
+		"mobile.session.inline_chart.no_data": "Không có dữ liệu",
+		"mobile.session.inline_chart.other": "Khác ({count})",
+		"mobile.session.inline_chart.position": "{index} / {count}",
+		"mobile.session.inline_chart.right_axis": "{label} · trục phải",
+		"mobile.session.inline_chart.share": "{share} tổng số",
+		"mobile.session.inline_chart.total": "Tổng",
+		"mobile.session.inline_chart.value_count": "Giá trị: {count}",
 		"mobile.session.inline_chart_data": "Dữ liệu biểu đồ",
 		"mobile.session.jump_to_latest": "↓ Đến mới nhất",
 		"mobile.session.jump_to_latest_name": "Đến mới nhất",
@@ -15451,8 +15766,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.slash.load_failed": "Không thể tải lệnh từ máy tính của bạn. Hãy mở lại cuộc trò chuyện này để thử lại.",
 		"mobile.session.slash.no_matches": "Không có lệnh phù hợp",
 		"mobile.session.status_tray.hint": "Mở dòng làm việc, tác vụ và tác nhân con",
+		"mobile.session.subagent.load_failed": "Không thể tải tin nhắn của tác nhân con này.",
 		"mobile.session.subagent.no_rows": "Tác nhân con này không có dòng bản ghi riêng nào.",
+		"mobile.session.subagent.not_kept": "Bản ghi của tác nhân con này không được lưu giữ hoặc máy tính không phản hồi.",
 		"mobile.session.subagent.prompt_label": "prompt",
+		"mobile.session.subagent.queued_next": "Chưa bắt đầu. Tin nhắn của nó sẽ hiện ở đây khi nó chạy.",
 		"mobile.session.subagent.result_label": "kết quả",
 		"mobile.session.subagent.screen_title": "Tác nhân con",
 		"mobile.session.subagent.status": "{status, select, queued {đang chờ} running {đang chạy} completed {đã xong} failed {thất bại} parked {tạm dừng} cancelled {đã hủy} loading {đang tải} unavailable {không khả dụng} other {không rõ}}",
@@ -16028,16 +16346,22 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.chrome.clear_search": "清除搜索",
 		"mobile.chrome.close_conversations": "关闭对话列表",
 		"mobile.chrome.composer.dismiss_keyboard": "收起键盘",
+		"mobile.chrome.composer.folder": "{source, select, chosen {文件夹，{folder}，已为此对话选择} default {文件夹，{folder}，此电脑的默认设置} other {文件夹，{folder}}}",
+		"mobile.chrome.composer.folder_hint": "选择其他文件夹",
+		"mobile.chrome.composer.folder_hint_fixed": "显示此对话文件夹的完整路径",
 		"mobile.chrome.composer.more": "更多上下文",
 		"mobile.chrome.composer.open_queue": "打开队列",
 		"mobile.chrome.composer.queued": "{count, plural, other {# 条排队消息}}",
 		"mobile.chrome.composer.row_cost": "费用",
-		"mobile.chrome.composer.row_effort": "推理强度",
+		"mobile.chrome.composer.row_folder": "文件夹",
 		"mobile.chrome.composer.row_identity": "智能体或团队",
 		"mobile.chrome.composer.row_model": "模型",
 		"mobile.chrome.composer.row_questions": "问题",
 		"mobile.chrome.composer.row_queue": "队列",
 		"mobile.chrome.composer.row_usage": "上下文",
+		"mobile.chrome.composer.run_settings": "{model}，{effort}",
+		"mobile.chrome.composer.run_settings_hint": "选择模型和推理强度",
+		"mobile.chrome.composer.run_settings_title": "模型和推理强度",
 		"mobile.chrome.destination.inbox": "收件箱",
 		"mobile.chrome.destination.inbox_count": "收件箱，{count, plural, other {# 条未读}}",
 		"mobile.chrome.destination.past": "历史",
@@ -16497,6 +16821,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.picker.effort_unknown": "此电脑不知道此模型支持的级别，因此会使用模型支持的最接近级别。",
 		"mobile.home.picker.effort_unsupported": "此电脑上的 Local Operator 版本过旧，无法接受推理强度，因此会使用其已配置的级别。更新后即可在此选择。",
 		"mobile.home.picker.effort_use_default": "此电脑的级别",
+		"mobile.home.picker.folder_current": "当前文件夹",
+		"mobile.home.picker.folder_current_label": "当前文件夹，{path}",
+		"mobile.home.picker.folder_fixed": "对话会一直使用开始时所在的文件夹。如需使用其他文件夹，请开始新聊天。",
 		"mobile.home.picker.folder_home": "主目录",
 		"mobile.home.picker.folder_other": "其他路径…",
 		"mobile.home.picker.folder_outside": "此电脑只会在你的主目录或其临时文件夹内开始对话。",
@@ -16775,6 +17102,13 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.remote_sessions.health_reconnecting": "此手机已断开连接，正在重试。对话可能仍在 {owner} 上运行；连接恢复前发送可能会失败。",
 		"mobile.remote_sessions.loading": "正在检查此电脑是否支持远程会话…",
 		"mobile.remote_sessions.media_changed": "下载期间，此媒体已更改或访问权限已失效。未打开任何内容。请在所属电脑可用时重试。",
+		"mobile.remote_sessions.move_pick.cannot_reach": "无法连接{device}",
+		"mobile.remote_sessions.move_pick.destination_heading": "移动或复制到",
+		"mobile.remote_sessions.move_pick.discovery_help": "本应用仅列出会话列表中可见的设备。没有可见会话的设备暂时无法选择。在另一台电脑上打开Local Operator，再下拉会话列表刷新。",
+		"mobile.remote_sessions.move_pick.no_answer": "此电脑发出请求后，远程电脑未响应。",
+		"mobile.remote_sessions.move_pick.no_devices": "当前没有其他可见设备。",
+		"mobile.remote_sessions.move_pick.on_this_computer": "在此电脑上",
+		"mobile.remote_sessions.move_pick.right_now": "当前",
 		"mobile.remote_sessions.owner_only": "目前，批准、停止、更换模型和斜杠命令仅能在 {owner} 上使用。",
 		"mobile.remote_sessions.owner_unresolved": "中继无法确认此对话属于哪台电脑。请刷新会话列表后重试。",
 		"mobile.remote_sessions.retained_only": "预览 Highlights 需要所连接的电脑安装更新版本的 Local Operator。暂时请在所属电脑上打开。附件文档仍可保存。",
@@ -16830,9 +17164,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.back_to": "返回{name}",
 		"mobile.session.back_to_session": "返回会话",
 		"mobile.session.chip.effort_change_failed": "无法更改推理强度。",
+		"mobile.session.chip.effort_label": "推理强度，{effort}",
 		"mobile.session.chip.effort_resume_hint": "恢复此会话以更改推理强度",
 		"mobile.session.chip.model_change_failed": "无法更改模型。",
 		"mobile.session.chip.model_default": "默认",
+		"mobile.session.chip.model_label": "模型，{model}",
 		"mobile.session.chip.model_resume_hint": "恢复此会话以更改模型",
 		"mobile.session.chip.model_unknown": "未知",
 		"mobile.session.chip.model_unrecorded_hint": "此会话未记录模型",
@@ -16877,6 +17213,15 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.history.loading": "正在加载更早的消息…",
 		"mobile.session.history.refresh_failed": "无法加载最新的消息。",
 		"mobile.session.history.stalled": "无法继续加载更早的消息。请重试或重新打开此对话。",
+		"mobile.session.inline_chart.also_label": "另外：",
+		"mobile.session.inline_chart.more": "另有 {count} 项",
+		"mobile.session.inline_chart.no_data": "无数据",
+		"mobile.session.inline_chart.other": "其他 ({count})",
+		"mobile.session.inline_chart.position": "第 {index} 项，共 {count} 项",
+		"mobile.session.inline_chart.right_axis": "{label} · 右轴",
+		"mobile.session.inline_chart.share": "占总数 {share}",
+		"mobile.session.inline_chart.total": "总计",
+		"mobile.session.inline_chart.value_count": "数值：{count}",
 		"mobile.session.inline_chart_data": "图表数据",
 		"mobile.session.jump_to_latest": "↓ 跳到最新",
 		"mobile.session.jump_to_latest_name": "跳到最新",
@@ -16919,8 +17264,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.slash.load_failed": "无法从你的电脑加载命令。请重新打开此对话以重试。",
 		"mobile.session.slash.no_matches": "没有匹配的命令",
 		"mobile.session.status_tray.hint": "打开工作状态行、任务和子智能体",
+		"mobile.session.subagent.load_failed": "无法加载此子智能体的消息。",
 		"mobile.session.subagent.no_rows": "此子智能体没有自己的会话记录条目。",
+		"mobile.session.subagent.not_kept": "此子智能体的会话记录未保留，或电脑没有响应。",
 		"mobile.session.subagent.prompt_label": "提示词",
+		"mobile.session.subagent.queued_next": "尚未开始。运行后，它的消息会显示在这里。",
 		"mobile.session.subagent.result_label": "结果",
 		"mobile.session.subagent.screen_title": "子智能体",
 		"mobile.session.subagent.status": "{status, select, queued {排队中} running {运行中} completed {已完成} failed {失败} parked {已暂停} cancelled {已取消} loading {加载中} unavailable {不可用} other {未知}}",

@@ -1,4 +1,11 @@
 {
+	"mobile.remote_sessions.move_pick.right_now": "अभी",
+	"mobile.remote_sessions.move_pick.cannot_reach": "{device} से संपर्क नहीं हो पा रहा",
+	"mobile.remote_sessions.move_pick.no_answer": "इस कंप्यूटर के अनुरोध पर उसने जवाब नहीं दिया।",
+	"mobile.remote_sessions.move_pick.on_this_computer": "इस कंप्यूटर पर",
+	"mobile.remote_sessions.move_pick.no_devices": "कोई दूसरा डिवाइस नहीं दिख रहा।",
+	"mobile.remote_sessions.move_pick.discovery_help": "यह ऐप सिर्फ़ उन डिवाइसों को दिखा सकता है जिनके सत्र आपकी सूची में दिखते हैं। जिस डिवाइस का कोई सत्र नहीं दिखता, उसे अभी नहीं चुन सकते — दूसरे कंप्यूटर पर Local Operator खोलें, फिर सत्रों की सूची नीचे खींचकर रीफ़्रेश करें।",
+	"mobile.remote_sessions.move_pick.destination_heading": "ले जाने या कॉपी करने की जगह",
 	"mobile.remote_sessions.title": "दूरस्थ बातचीत",
 	"mobile.remote_sessions.loading": "इस कंप्यूटर पर दूरस्थ सत्रों का समर्थन जाँचा जा रहा है…",
 	"mobile.remote_sessions.unsupported": "यह कार्रवाई अभी रिमोट बातचीत में उपलब्ध नहीं है। इसे मालिक कंप्यूटर पर इस्तेमाल करें।",

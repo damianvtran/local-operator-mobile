@@ -99,6 +99,35 @@ describe("the remote row's device line states the page's base", () => {
 	});
 });
 
+/* Move picker (PR #365 design round 1, D1): the "where it is now" line renders
+ * either `cannot_reach` or `on_device` around the same device label, usually a
+ * Latin name and always Latin in its fallbacks (`device …<last6>`, `another
+ * device`). The shipped ur `cannot_reach` LEADS with `{device}`, so without a
+ * stated base first-strong detection sets the line LTR and the Urdu tail sits
+ * on the wrong edge. One spread on the shared Text covers both branches. */
+describe("the move picker's device line states the page's base", () => {
+	it("the Urdu unreachable line really starts with the Latin name (the premise)", () => {
+		const line = renderFor(
+			"mobile.remote_sessions.move_pick.cannot_reach",
+			{ device: "Studio Mac" },
+			"ur",
+		);
+		expect(line).toMatch(STARTS_LATIN);
+		expect(line).toMatch(HAS_ARABIC_SCRIPT);
+	});
+
+	it("PickBody: the device-line Text spreads useComposedDir()", () => {
+		const source = read("../../features/sessions/move-sheet.tsx");
+		expect(source).toContain("const composedDir = useComposedDir();");
+		expect(
+			textOpeningBefore(
+				source,
+				't("mobile.remote_sessions.move_pick.cannot_reach"',
+			),
+		).toContain("{...composedDir}");
+	});
+});
+
 describe("a composedDir spread never shares its element with a style prop", () => {
 	/* #257 design round 1, D1: on native the helper's answer is a `style`
 	 * (`writingDirection`), because iOS takes the paragraph base only from that

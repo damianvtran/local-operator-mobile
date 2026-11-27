@@ -223,8 +223,8 @@ export interface PrimaryControl {
 
 export interface ComposerControls {
 	primary: PrimaryControl;
-	/** Stop is a separate control beside the primary, and it exists exactly while
-	 *  a turn is running. */
+	/** Layout only. A busy retained visit keeps its Stop slot beside the primary;
+	 *  the screen owns the authority to enable it. */
 	stopVisible: boolean;
 	/** A send is in flight: the primary reads `…` and is disabled. */
 	sending: boolean;
@@ -246,6 +246,8 @@ export interface ComposerControlInput {
 	 *  old, and its `streaming` is forced false, so a send would be `prompt`
 	 *  even while the desktop turn is still running (PR #246 R1/Q1-1). */
 	cached?: boolean;
+	/** Back retained a frame, but this visit hasn't confirmed which turn is current. */
+	awaitingVisit?: boolean;
 	streaming: boolean;
 	hasDraft: boolean;
 	hasImages: boolean;
@@ -298,9 +300,11 @@ export const composerControls = (
 	 *  action that brings the session back. The reader is told what a send does
 	 *  by the placeholder, not by a dead control. */
 	const cached = input.cached === true;
+	const awaitingVisit = input.awaitingVisit === true;
 	const disabled =
 		input.connected === false ||
 		cached ||
+		awaitingVisit ||
 		input.sending ||
 		blocked ||
 		!hasContent;

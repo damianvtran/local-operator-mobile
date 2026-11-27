@@ -247,6 +247,18 @@
 		"role": "status",
 		"note": "Muted line shown when a subagent's transcript is empty. One sentence."
 	},
+	"mobile.session.subagent.queued_next": {
+		"role": "status",
+		"note": "Muted line on a subagent's screen while the subagent is queued and has not started, so it has no messages yet. Replaces a loading placeholder: it must say the subagent has not run, not that the phone is slow. 'Its' is the subagent. Two short sentences with final full stops."
+	},
+	"mobile.session.subagent.load_failed": {
+		"role": "status",
+		"note": "Muted line on a subagent's screen when this phone could not read the subagent's messages (the link dropped); a Try again button follows. Nothing has been shown yet, so it must not say 'the latest' messages. One sentence with a final full stop; the apostrophe is a typographic ’."
+	},
+	"mobile.session.subagent.not_kept": {
+		"role": "status",
+		"note": "Dim line on a subagent's screen when the computer has no saved messages for this subagent: either they were not kept, or the computer is not answering. Stands alone (no headline above it), so it names the subagent. One sentence with a final full stop; apostrophes are typographic ’."
+	},
 	"mobile.session.not_connected.headline": {
 		"role": "status",
 		"note": "Empty-state headline on a session screen opened with no computer connected. Sentence with a final full stop."
@@ -282,6 +294,14 @@
 	"mobile.session.chip.effort_change_failed": {
 		"role": "status",
 		"note": "Inline error under the composer when changing the session's effort level failed. 'Effort' is the product's word for how hard the model works."
+	},
+	"mobile.session.chip.model_label": {
+		"role": "meta",
+		"note": "Spoken label of a conversation's model (the composer's run-settings button reads it). {model} is the model's name, untranslated. Use the same word for 'model' as mobile.home.chip.model_chosen."
+	},
+	"mobile.session.chip.effort_label": {
+		"role": "meta",
+		"note": "Spoken label of a conversation's effort (reasoning effort) level (the composer's run-settings button reads it). {effort} is the level's name. Use the same word for 'effort' as mobile.home.chip.effort_chosen."
 	},
 	"mobile.session.composer.retained_instruction": {
 		"role": "confirm",
@@ -434,5 +454,41 @@
 	"mobile.session.diagram.viewer": {
 		"role": "heading",
 		"note": "Accessible name of the full-screen diagram viewer dialog. A short noun phrase, sentence case, no final full stop."
+	},
+	"mobile.session.inline_chart.other": {
+		"role": "meta",
+		"note": "Label of the pie-chart slice that groups the smallest items once a chart has more than seven. {count} is how many items it groups (always at least 2). Keep it short: it sits in a legend row beside a percentage."
+	},
+	"mobile.session.inline_chart.share": {
+		"role": "meta",
+		"note": "Line in a chart tooltip giving the slice or segment as a part of the whole, e.g. \"38.2% of total\". {share} is an already formatted percentage. No final full stop."
+	},
+	"mobile.session.inline_chart.total": {
+		"role": "meta",
+		"note": "Row label in a stacked-chart tooltip and the caption under the total in the centre of a donut chart. One word, no final full stop."
+	},
+	"mobile.session.inline_chart.more": {
+		"role": "meta",
+		"note": "Last line of the tooltip of the grouped \"Other\" pie slice when it groups more items than it lists. {count} is the number not listed (always at least 1). No final full stop."
+	},
+	"mobile.session.inline_chart.also_label": {
+		"role": "meta",
+		"note": "Lead-in label of the one line under a wide donut chart that lists the slices too small to label on the chart; each \"label percentage\" item follows it as its own tappable text. Keep the colon (or this language's equivalent); no final full stop."
+	},
+	"mobile.session.inline_chart.no_data": {
+		"role": "meta",
+		"note": "Value shown in a heatmap tooltip and read by screen readers for a cell that has no value (drawn hatched). Short phrase, no final full stop."
+	},
+	"mobile.session.inline_chart.value_count": {
+		"role": "meta",
+		"note": "Read by screen readers as the value of a chart before any mark is selected: how many values the chart holds, e.g. \"Values: 9\". {count} is a positive integer; the label-colon-number form avoids a plural. No final full stop."
+	},
+	"mobile.session.inline_chart.position": {
+		"role": "meta",
+		"note": "Read by screen readers after a chart value: which mark of how many is selected, e.g. \"3 of 9\". {index} and {count} are positive integers. No final full stop."
+	},
+	"mobile.session.inline_chart.right_axis": {
+		"role": "meta",
+		"note": "Legend entry of a chart series drawn against the right-hand axis, e.g. \"Latency · right axis\". {label} is the series name as authored. Keep the middle dot separator. No final full stop."
 	}
 }

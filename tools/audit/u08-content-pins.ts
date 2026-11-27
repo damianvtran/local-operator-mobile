@@ -236,8 +236,12 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	 * the U-08 scene, checks and thresholds are unchanged. */
 	"tools/mock-relay/relay.ts":
 		"53ba7d083d6e3c5fae20cc20b4ecc591c3793e6f4660625fdae87ac4f10b8f9e",
+	/* Inline-chart redesign: the chart dataset gains the operator's Datadog
+	 * series, a 32-day line, a long-label bar and a 12-slice pie; round-1
+	 * remediation ends the 32-day line on a real date (Nov 1, not Oct 32). Data
+	 * only — the U-08 scene, checks and thresholds are unchanged. */
 	"tools/mock-relay/inline-charts.ts":
-		"d5ff734f546a710b51b1521a56958d5479dc4416c659e1218fd16690fc26678e",
+		"69b74c0e42d072537da066c64b79a1d15daba6395bfc956165ca87e5e6a3c13e",
 	/* Re-pinned 2026-10-29 after merging main's session-health work into the French
 	 * wave: `src` and `app` carry that surface plus the French catalogues and the
 	 * per-render copy modules, and the readiness/matrix/scenario helpers moved with
@@ -255,6 +259,9 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	 * false`. `--print`, staged. */
 	/* PR #207 round 5: omit the false head-pin flag, matching Core's wire.
 	 * Re-derived with --print from the staged tree; no capture assertion moved. */
+	/* Re-pinned 2026-11-18 for issue #325 with --print: two NEW scenarios
+	 *  (`run-settings`, `run-settings-streaming`) with no cell; no existing
+	 *  scenario's world moved. */
 	/* Re-pinned 2026-11-18 for issue #322 with --print: one ADDED world,
 	 *  `peer-tail-history`, and its builder. Existing worlds are byte-identical
 	 *  to main (JSON SHA256 prefixes: long-transcript 11bfa6d3e7b72831,
@@ -264,8 +271,11 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	 *  the mock relay gains the `start-targets*` worlds, `GET /api/start-targets`
 	 *  and the start route's `agent`/`team` handling. Source identity only — no
 	 *  U-08 scene, assertion or threshold changed here; not rendered evidence. */
+	/* Re-pinned 2026-11-24 with --print when #335 converged with main a7293e87:
+	 *  the union of #325's `run-settings*` worlds and main's `start-targets*`
+	 *  worlds. Source identity only — no U-08 scene moved. */
 	"tools/mock-relay/scenarios.ts":
-		"bb2b4728e34452970811f8ed030e100461ae71abc4e91c6633814e5d5419ed3c",
+		"0acc19a1cc13ec9b6d026a1bcb7e5a85238a8a23a3910f359636617736a32b9e",
 	"tools/mock-relay/shape.ts":
 		"0ef0c342578ffaf4a7067d4427f10a999740152d6a56ec2da63d75697f08fb5b",
 	/* The startup evidence helper the fixture's relay imports. It has been loaded by

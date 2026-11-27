@@ -52,6 +52,7 @@ import {
 	anchoredScrollTop,
 	historyTopReached,
 } from "@/features/session/history-scroll";
+import { inlineChartsContainerTouch } from "@/features/session/inline-chart-touch";
 import {
 	bottomArrival,
 	contentArrival,
@@ -87,6 +88,16 @@ import {
 	textSelectionContainerTouchCancel,
 	textSelectionContainerTouchEnd,
 } from "@/features/session/text-selection";
+
+/* One list-level touch start serves both tap-outside rules: it may end a text
+ *  selection (on lift) and it dismisses a chart's pinned mark when the touch
+ *  began outside every chart (inline-chart.tsx, X7). Module scope keeps the
+ *  FlatList prop stable. */
+const onListTouchStart = () => {
+	textSelectionContainerTouch();
+	inlineChartsContainerTouch();
+};
+
 import {
 	edgeFadeLevels,
 	type ScrollPresence,
@@ -197,9 +208,9 @@ export type TranscriptListProps = {
 	 *  the NEWEST turn may condense: an idle session condenses its finished last
 	 *  turn immediately (the relay's `!live` rule), a live one never touches it.
 	 *  When omitted it is read off the props that already mean "a turn is
-	 *  running" — a streaming row, or the turn interrupt the screen threads only
-	 *  while the composer's Stop is visible. Callers that have neither signal but
-	 *  know the run state (a subagent view, the startup transcript) pass it. */
+	 *  running" — a streaming row or an actionable turn interrupt. A caller that
+	 *  knows the run state without those signals (a retained busy visit, a
+	 *  subagent view, the startup transcript) passes it explicitly. */
 	turnLive?: boolean;
 	/** Resolves an attachment's bytes. */
 	loadImage?: (entryId: string, index: number) => Promise<string | null>;
@@ -217,8 +228,8 @@ export type TranscriptListProps = {
 	 *  rows render exactly as before. */
 	loadBridgeBody?: BridgeBodyLoader;
 	/** The turn interrupt, threaded to image-gen cards (the composer's Stop
-	 *  path). `undefined` while no turn is live; resolves whether the request
-	 *  reached the relay (review round 1, F2). */
+	 *  path). `undefined` while no live turn can be acted on; resolves whether
+	 *  the request reached the relay (review round 1, F2). */
 	onCancelTurn?: () => Promise<boolean>;
 	/** Rendered when there are no rows at all (a seeded but empty session). An
 	 *  ELEMENT rather than arbitrary nodes, because `ListEmptyComponent` takes a
@@ -2346,7 +2357,8 @@ export const TranscriptList = ({
 				onScrollBeginDrag={onScrollBeginDrag}
 				// A TAP outside the selecting message ends the select mode; a
 				// drag that scrolls does not (start/end/cancel, `text-selection.ts`).
-				onTouchStart={textSelectionContainerTouch}
+				// A touch outside a chart also dismisses its pinned mark.
+				onTouchStart={onListTouchStart}
 				onTouchEnd={textSelectionContainerTouchEnd}
 				onTouchCancel={textSelectionContainerTouchCancel}
 				onScrollEndDrag={onScrollEndDrag}

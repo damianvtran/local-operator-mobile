@@ -1,290 +1,994 @@
-import { proportions, scaledSeries, stackSegments } from "./inline-series";
-import type { InlineUi } from "./inline-ui-parts";
+/**
+ * Pure geometry and formatting for inline `lop-ui` charts.
+ *
+ * Everything here follows the shared inline-chart design spec (desktop, relay
+ * web and this app render the same payloads the same way). The renderer in
+ * `components/inline-chart.tsx` owns pixels and gestures; this module owns the
+ * decisions that must agree across surfaces — plot height, nice ticks, the zero
+ * rule, label thinning, pie folding, keyboard steps and tooltip placement — so
+ * they are unit-tested without React Native in the graph.
+ *
+ * Section references (§n) point at that spec.
+ */
+import { proportions, stackSegments } from "./inline-series";
+import type { CategoryChart, InlineUi } from "./inline-ui-parts";
 
 export type InlineChart = Exclude<
 	InlineUi,
 	{ type: "table" | "spreadsheet" | "heatmap" }
 >;
+export type HeatmapChart = Extract<InlineUi, { type: "heatmap" }>;
+/** Everything the plot component draws: the cartesian/pie charts and the
+ * heatmap (§4), which has its own grid model below. */
+export type PlotChart = InlineChart | HeatmapChart;
 
-type Point = { x: number; y: number };
-type Bar = {
-	x: number;
-	width: number;
-	from: number;
-	to: number;
-	color: number;
-};
-type Tick = { position: number; value: number };
-type Axis = { ticks: Tick[]; unit?: string; zero: number; scale: number };
+// §1 — "narrow" is a content box under 520; phones are always narrow.
+export const NARROW_WIDTH = 520;
+// §1 — margins around the plot. Left is measured from the tick labels.
+export const PLOT_MARGIN = { top: 12, right: 12, bottom: 24, minLeft: 28 };
+// §2 — RN has no canvas text metrics before layout; the spec's estimate for a
+// 12 px tabular label, multiplied by the reader's text scale at the call site.
+export const CHAR_WIDTH = 6.6;
+// Slack added to every estimated label box: the 6.6/char estimate runs short
+// for wide glyphs (M, W, CJK), and the box — not the glyphs — is what the
+// non-overlap guarantee is about, so the slack is part of the box.
+const LABEL_SLACK = 4;
+/**
+ * The ONE text-measurement function for axis labels (§2, §8): the renderer
+ * sizes every label box with it and the thinning tests measure with it, so a
+ * test that proves boxes disjoint proves what is drawn.
+ */
+export const labelWidth = (text: string, fontScale = 1) =>
+	text.length === 0
+		? 0
+		: Math.ceil(
+				[...text].reduce((sum, ch) => sum + glyphEm(ch), 0) *
+					CHAR_WIDTH *
+					fontScale,
+			) + LABEL_SLACK;
 
-// Line and scatter domains can zoom into nearby nonzero values. In the
-// wire domain, their absolute coordinates cannot overflow; keeping those
-// values avoids rounding their axis origin through normalization.
-const axisScale = (values: readonly number[]) => {
-	const max = scaledSeries(values);
-	return max <= Number.MAX_SAFE_INTEGER ? 1 : max;
-};
+// The flat 6.6/char estimate under-measures digits and wide glyphs: in the
+// Expo web fixture "Wed" and "50–100" drew wider than their boxes and were
+// ellipsized ("W…", "50–1…"). Measured in the app font (Figtree 12 px,
+// tabular-nums; inline-block probe in the harness browser, 2026-11-26): a
+// digit is 7.48 px (1.13 × 6.6), M 10.15 (1.54), i 2.78 (0.42), lowercase
+// prose ~5.4. Weights are in units of 6.6 and err wide — an over-wide box
+// costs a little thinning, an under-wide one truncates.
+const WIDE = new Set([..."MWmw@%"]);
+const NARROW = new Set([..."ilIjt.,:;|!'’ "]);
+// R12: a glyph outside ASCII and CJK (Cyrillic, Greek, Devanagari, Arabic,
+// Thai, accented Latin) is charged the repo's own sans fallback rule —
+// `SANS_UNKNOWN_ADVANCE_EM` (0.7 em) in ui/components/list-row-meta.ts,
+// "an under-counted line is the one the platform clamps" — in units of
+// 6.6 px at the 12 px meta size. Restated rather than imported so this model
+// stays free of the i18n/UI imports that file carries; the model test pins it
+// to `sansTextWidthDp` so the two cannot drift. A capital is wider than that
+// floor (Figtree O is 0.779 em; wide capitals such as Ж and Ю come from a
+// fallback face this table cannot measure), so a non-ASCII capital
+// takes the WIDE weight (0.88 em), and an accented letter never measures
+// below its base letter.
+const UNCOVERED = (0.7 * 12) / CHAR_WIDTH;
+function glyphEm(ch: string): number {
+	const code = ch.codePointAt(0) ?? 0;
+	if (code >= 0x2e80) return 1.9; // CJK and other full-width scripts
+	if (code >= 0x80) {
+		const base = ch.normalize("NFD").charAt(0);
+		const baseEm = base !== ch && base < "\u0080" ? glyphEm(base) : 0;
+		const capital = ch !== ch.toLowerCase();
+		return Math.max(UNCOVERED, baseEm, capital ? 1.6 : 0);
+	}
+	if (WIDE.has(ch)) return 1.6;
+	if (NARROW.has(ch)) return 0.6;
+	if (ch >= "0" && ch <= "9") return 1.15;
+	if (ch >= "A" && ch <= "Z") return 1.25;
+	return 1;
+}
+// §1 — horizontal bars: 16 bar + 12 gap per category.
+export const HORIZONTAL_ROW = 28;
 
-type Cartesian = {
-	kind: "cartesian";
-	left: Axis;
-	right?: Axis;
-	xAxis?: Axis;
-	categories?: { label: string; position: number }[];
-	legend?: string[];
-	bars?: Bar[];
-	lines?: Point[][];
-	points?: Point[];
-};
+/** §1 — cartesian plot height: 180 at 360 wide, 240 at 760 wide. */
+export const plotHeightFor = (width: number) =>
+	Math.min(240, Math.max(180, Math.round(width * 0.34)));
 
-type Pie = {
-	kind: "pie";
-	slices: { label: string; start: number; end: number }[];
-};
+/** §3 — donut outer diameter: 200 wide; narrow fits the box with 16 per side. */
+export const pieDiameterFor = (width: number) =>
+	width >= NARROW_WIDTH ? 200 : Math.max(0, Math.min(180, width - 32));
 
-function extent(values: readonly number[], zero: boolean): [number, number] {
-	const min = Math.min(zero ? 0 : Infinity, ...values);
-	const max = Math.max(zero ? 0 : -Infinity, ...values);
-	// An all-zero bar plot keeps its baseline at the bottom. A constant line
-	// or scatter axis gets a single measured tick, not an invented range.
-	if (zero && min === max) return [0, 1];
-	return [min, max];
+/**
+ * §2 — target tick count: 5 at a 240 plot, never below 4 (cross-surface
+ * decision X1). With the spec's floor of 3, every phone (plot 180) fitted the
+ * operator's 84–154 USD series to 50–200 and the data filled under half the
+ * plot; a floor of 4 gives 80…160 at 180 as well as at 240.
+ */
+export const tickTarget = (plotHeight: number) =>
+	Math.min(6, Math.max(4, Math.floor(plotHeight / 48)));
+
+/** §1 — horizontal orientation for long or many-category single-series bars. */
+export function horizontalBars(labels: readonly string[], width: number) {
+	const longest = Math.max(0, ...labels.map((label) => [...label].length));
+	return (
+		labels.length > 12 ||
+		longest > 12 ||
+		(width < NARROW_WIDTH && labels.length > 6)
+	);
 }
 
-function axis([min, max]: [number, number], scale: number, unit?: string) {
-	const constant = min === max;
-	const position = (n: number) =>
-		constant ? (n === min ? 0.5 : -1) : (n - min) / (max - min);
-	const middle = min < 0 && max > 0 ? 0 : (min + max) / 2;
+export type Ticks = {
+	lo: number;
+	hi: number;
+	step: number;
+	decimals: number;
+	values: number[];
+};
+
+const NICE = [1, 2, 2.5, 5] as const;
+
+// A step of m×10^k carries max(0,−k) decimals, plus one for 2.5. Computing
+// 10^−k by division keeps 0.1-style steps exact enough to label.
+const niceStep = (m: number, k: number) => (k < 0 ? m / 10 ** -k : m * 10 ** k);
+const stepDecimals = (m: number, k: number) =>
+	Math.max(0, -k) + (m === 2.5 && k <= 0 ? 1 : 0);
+const roundTo = (n: number, decimals: number) =>
+	decimals > 20 ? n : Number(n.toFixed(decimals));
+// Floor/ceil in step units with a relative tolerance so 0.3/0.1 = 2.9999…
+// does not grow the domain by an extra step.
+const EPS = 1e-9;
+const floorSteps = (n: number, step: number) => Math.floor(n / step + EPS);
+const ceilSteps = (n: number, step: number) => Math.ceil(n / step - EPS);
+
+// Near 2^53 a double cannot hold a 0.2 step (9007199254740990 + 0.2 is
+// itself); skip steps finer than a few ulps so every tick is a distinct value.
+const representableStep = (a: number, b: number) =>
+	Math.max(Math.abs(a), Math.abs(b)) * Number.EPSILON * 8;
+
+function ticksFrom(
+	loIndex: number,
+	count: number,
+	m: number,
+	k: number,
+): Ticks {
+	const step = niceStep(m, k);
+	const decimals = stepDecimals(m, k);
+	const values = Array.from({ length: count }, (_, i) =>
+		roundTo((loIndex + i) * step, decimals),
+	);
 	return {
-		position,
-		scale,
-		unit,
-		zero: position(0),
-		ticks: [...new Set(constant ? [min] : [min, middle, max])].map((value) => ({
-			position: position(value),
-			value,
-		})),
+		lo: values[0] ?? 0,
+		hi: values[values.length - 1] ?? 0,
+		step,
+		decimals,
+		values,
 	};
 }
 
-export function inlineChartModel(chart: InlineChart): Cartesian | Pie {
-	if (chart.type === "pie") {
-		const shares = proportions(chart.data.map(([, n]) => n));
-		let end = 0;
-		return {
-			kind: "pie",
-			slices: chart.data.map(([label], i) => {
-				const start = end;
-				end = i === shares.length - 1 ? 1 : Math.min(1, end + (shares[i] ?? 0));
-				return { label, start, end };
-			}),
-		};
+/** §2 — flat data pads ±10% of |value|, or ±1 at zero. */
+function padFlat(min: number, max: number): [number, number] {
+	if (min !== max) return [min, max];
+	const pad = min === 0 ? 1 : Math.abs(min) * 0.1;
+	return [min - pad, max + pad];
+}
+
+/**
+ * §2 — nice ticks. Step is the smallest {1, 2, 2.5, 5}×10^k that yields at most
+ * `target + 1` ticks once the domain extends outward to whole steps.
+ */
+export function niceTicks(min: number, max: number, target: number): Ticks {
+	const [a, b] = padFlat(min, max);
+	const span = b - a;
+	// Start two decades below the span so the first candidates are too small.
+	let k = Math.floor(Math.log10(span)) - 2;
+	const resolution = representableStep(a, b);
+	for (let guard = 0; guard < 40; guard++, k++) {
+		for (const m of NICE) {
+			const step = niceStep(m, k);
+			if (step < resolution) continue;
+			const lo = floorSteps(a, step);
+			const hi = ceilSteps(b, step);
+			if (hi - lo + 1 <= target + 1) return ticksFrom(lo, hi - lo + 1, m, k);
+		}
 	}
+	return { lo: a, hi: b, step: span, decimals: 0, values: [a, b] };
+}
+
+/**
+ * §2 dual axis — the right axis uses the left's tick COUNT so gridlines drawn
+ * from the left align with the right labels: the smallest nice step whose
+ * `count - 1` steps from the floored minimum reach the maximum.
+ */
+export function fixedCountTicks(
+	min: number,
+	max: number,
+	count: number,
+): Ticks {
+	const [a, b] = padFlat(min, max);
+	const steps = Math.max(1, count - 1);
+	let k = Math.floor(Math.log10(b - a)) - 2;
+	const resolution = representableStep(a, b);
+	for (let guard = 0; guard < 40; guard++, k++) {
+		for (const m of NICE) {
+			const step = niceStep(m, k);
+			if (step < resolution) continue;
+			const lo = floorSteps(a, step);
+			if (lo + steps >= ceilSteps(b, step)) return ticksFrom(lo, count, m, k);
+		}
+	}
+	return niceTicks(a, b, steps);
+}
+
+/**
+ * §2 zero rule. Bars, histogram, grouped, stacked and horizontal always include
+ * 0; line and scatter include it only when it is within a third of the range of
+ * the data, so 84–154 USD fits to 80–160 instead of flattening against 0.
+ */
+export function valueExtent(
+	values: readonly number[],
+	includeZero: boolean,
+): [number, number] {
+	const min = Math.min(...values);
+	const max = Math.max(...values);
+	if (includeZero) return [Math.min(0, min), Math.max(0, max)];
+	const third = (max - min) / 3;
+	return min - third <= 0 && max + third >= 0
+		? [Math.min(0, min), Math.max(0, max)]
+		: [min, max];
+}
+
+export type Axis = Ticks & {
+	unit?: string;
+	compact: boolean;
+	/** Data value → 0 (bottom/left) … 1 (top/right) of the plot. */
+	position: (value: number) => number;
+};
+
+function toAxis(ticks: Ticks, unit?: string): Axis {
+	const range = ticks.hi - ticks.lo || 1;
+	return {
+		...ticks,
+		unit,
+		// §2 — compact ticks from a domain magnitude of 10 000.
+		compact: Math.max(Math.abs(ticks.lo), Math.abs(ticks.hi)) >= 10_000,
+		position: (value) => (value - ticks.lo) / range,
+	};
+}
+
+// §2 — percent mode is fixed at 0/25/50/75/100 whatever the plot height.
+const PERCENT_TICKS: Ticks = {
+	lo: 0,
+	hi: 1,
+	step: 0.25,
+	decimals: 0,
+	values: [0, 0.25, 0.5, 0.75, 1],
+};
+
+/** §2 — units that attach without a space. */
+const TIGHT_UNITS = new Set(["%", "‰", "°", "°C", "°F"]);
+export const withUnit = (text: string, unit?: string) =>
+	!unit ? text : TIGHT_UNITS.has(unit) ? `${text}${unit}` : `${text} ${unit}`;
+
+/** Exact value as authored, grouped, never compact (tooltips and the table). */
+export const formatExact = (value: number, locale: string) =>
+	new Intl.NumberFormat(locale, { maximumFractionDigits: 20 }).format(value);
+
+/** One-decimal share, e.g. 38.2% (stacked/percent tooltips). */
+export const formatShare = (share: number, locale: string) =>
+	new Intl.NumberFormat(locale, {
+		style: "percent",
+		maximumFractionDigits: 1,
+	}).format(share);
+
+/**
+ * Pie shares (X9): whole percent everywhere a pie shows one — direct labels,
+ * legend, centre readout, tooltip, announcement — so one chart never mixes
+ * `34.8%` with `5%`. A non-zero slice that would round to 0% reads `<1%`.
+ */
+export function formatPieShare(share: number, locale: string) {
+	const whole = new Intl.NumberFormat(locale, {
+		style: "percent",
+		maximumFractionDigits: 0,
+	});
+	return share > 0 && share < 0.005
+		? `<${whole.format(0.01)}`
+		: whole.format(share);
+}
+
+/**
+ * §2 tick labels: compact from 10 000, else standard with the step's decimals.
+ *
+ * Compact labels (X3) use ONE fixed number of fraction digits per axis — the
+ * fewest, 0–3, at which every label is distinct and none is rounded (each
+ * equals its 6-digit rendering) — so 10,050–10,300 reads `10.05K, 10.10K …`
+ * and 1,000,000–1,004,000 reads `1.000M … 1.004M`, never five `10K`s or a
+ * `13K` that is really 12,500. Fixed per axis so the column of labels lines
+ * up, matching desktop and relay. When three digits are not enough, the full
+ * grouped numbers are shown instead.
+ *
+ * C1: "none is rounded" means each label round-trips to its TRUE value, so
+ * the reference rendering carries 20 fraction digits (the Intl maximum every
+ * engine accepts) — a 6-digit reference would itself round 1,000,000,000,001
+ * to `1T` and let a rounded label pass as exact.
+ */
+export function tickLabels(axis: Axis, locale: string, percent = false) {
+	if (percent)
+		return axis.values.map((v) =>
+			new Intl.NumberFormat(locale, { style: "percent" }).format(v),
+		);
+	const standard = new Intl.NumberFormat(locale, {
+		minimumFractionDigits: Math.min(20, axis.decimals),
+		maximumFractionDigits: Math.min(20, axis.decimals),
+	});
+	if (axis.compact) {
+		const compactAt = (min: number, max: number) =>
+			new Intl.NumberFormat(locale, {
+				notation: "compact",
+				minimumFractionDigits: min,
+				maximumFractionDigits: max,
+			});
+		// Unrounded check: the trimmed rendering at `digits` must equal the
+		// trimmed 6-digit one; the shown label then pads to `digits`.
+		const exact = axis.values.map((v) => compactAt(0, 20).format(v));
+		for (let digits = 0; digits <= 3; digits++) {
+			const trimmed = axis.values.map((v) => compactAt(0, digits).format(v));
+			if (
+				new Set(trimmed).size === trimmed.length &&
+				trimmed.every((label, i) => label === exact[i])
+			) {
+				const fixed = compactAt(digits, digits);
+				return axis.values.map((v) => fixed.format(v));
+			}
+		}
+	}
+	return axis.values.map((v) => standard.format(v));
+}
+
+/** §2 — the axis shows the label part before the first " · " annotation. */
+export const axisText = (label: string) => label.split(" · ")[0] ?? label;
+
+/** §2 — x of each category: line-like charts put points on the plot's ends,
+ * bars/histograms/heatmap columns at slot centres. One function so the
+ * renderer's anchors and the thinning tests agree. */
+export function categoryX(
+	count: number,
+	x0: number,
+	x1: number,
+	lineLike: boolean,
+) {
+	const span = x1 - x0;
+	const slot = lineLike
+		? count > 1
+			? span / (count - 1)
+			: span
+		: span / Math.max(1, count);
+	const at = (i: number) =>
+		lineLike
+			? count > 1
+				? x0 + i * slot
+				: x0 + span / 2
+			: x0 + (i + 0.5) * slot;
+	return { slot, at };
+}
+
+/** Truncate to `max` px of the shared estimate, ending in "…". */
+export function truncateLabel(text: string, max: number, fontScale = 1) {
+	if (labelWidth(text, fontScale) <= max) return text;
+	const chars = [...text];
+	for (let n = chars.length - 1; n > 0; n--) {
+		const candidate = `${chars.slice(0, n).join("").trimEnd()}…`;
+		if (labelWidth(candidate, fontScale) <= max) return candidate;
+	}
+	return labelWidth("…", fontScale) <= max ? "…" : "";
+}
+
+export type LabelBox = {
+	index: number;
+	/** What to draw: the label, or its "…" truncation to the box. */
+	text: string;
+	left: number;
+	width: number;
+	align: "left" | "center" | "right";
+};
+
+/** Minimum clear space between two shown x labels (X2). */
+export const LABEL_GAP = 4;
+
+/**
+ * §2 / X2 x-label thinning on REAL boxes. Each label's box is measured with
+ * `labelWidth` at its actual anchor — `edges` (line/scatter): first label
+ * start-anchored, last end-anchored, the rest centred; otherwise all centred —
+ * and clamped inside `[lo, hi]`. Stride starts at the spec's
+ * `ceil((widest + 12) / slot)` and grows until no two shown boxes come within
+ * LABEL_GAP of each other; when only the first and last remain and still
+ * collide, the first keeps its room and the last truncates with "…" to the
+ * space it actually has. First and last always show.
+ */
+export function layoutXLabels({
+	texts,
+	anchors,
+	edges,
+	lo,
+	hi,
+	fontScale = 1,
+}: {
+	texts: readonly string[];
+	anchors: readonly number[];
+	edges: boolean;
+	lo: number;
+	hi: number;
+	fontScale?: number;
+}): LabelBox[] {
+	const n = texts.length;
+	if (n === 0) return [];
+	const last = n - 1;
+	const span = Math.max(0, hi - lo);
+	const alignOf = (i: number): LabelBox["align"] =>
+		edges && n > 1 && i === 0
+			? "left"
+			: edges && n > 1 && i === last
+				? "right"
+				: "center";
+	// The box for label i drawn at most `cap` wide, inside [from, to].
+	const box = (i: number, cap = span, from = lo, to = hi): LabelBox => {
+		const x = anchors[i] ?? lo;
+		const align = alignOf(i);
+		const room =
+			align === "left" ? to - x : align === "right" ? x - from : to - from;
+		const text = truncateLabel(
+			texts[i] ?? "",
+			Math.max(0, Math.min(cap, room)),
+			fontScale,
+		);
+		const width = labelWidth(text, fontScale);
+		const left =
+			align === "left"
+				? x
+				: align === "right"
+					? x - width
+					: Math.min(to - width, Math.max(from, x - width / 2));
+		return { index: i, text, left, width, align };
+	};
+	if (n === 1) return [box(0)];
+	const disjoint = (boxes: LabelBox[]) =>
+		boxes.every((b, i) => {
+			const next = boxes[i + 1];
+			return !next || b.left + b.width + LABEL_GAP <= next.left;
+		});
+	const slot = Math.abs((anchors[1] ?? 0) - (anchors[0] ?? 0)) || 1;
+	const widest = Math.max(...texts.map((t) => labelWidth(t, fontScale)));
+	for (let k = Math.max(1, Math.ceil((widest + 12) / slot)); k < last; k++) {
+		const shown: number[] = [];
+		for (let i = 0; i < last; i += k) shown.push(i);
+		// The forced last label replaces a previous one it would crowd.
+		if (shown.length > 1 && last - (shown[shown.length - 1] ?? 0) < k)
+			shown.pop();
+		shown.push(last);
+		const boxes = shown.map((i) => box(i));
+		if (disjoint(boxes)) return boxes;
+	}
+	// Only the ends remain. Keep the first whole unless that would leave the
+	// last less than one character and "…"; the last takes what is left.
+	const ends = [box(0), box(last)];
+	if (disjoint(ends)) return ends;
+	const minLast = labelWidth(
+		`${[...(texts[last] ?? "")][0] ?? ""}…`,
+		fontScale,
+	);
+	const lastRight = alignOf(last) === "right" ? (anchors[last] ?? hi) : hi;
+	const limit = lastRight - LABEL_GAP - minLast;
+	// A centred first label moves as it shrinks, so shrink until its right
+	// edge clears `limit` (a few passes; each one only narrows it).
+	let first = box(0);
+	for (let pass = 0; pass < 8 && first.left + first.width > limit; pass++)
+		first = box(
+			0,
+			Math.max(0, first.width - (first.left + first.width - limit)),
+		);
+	return [first, box(last, span, first.left + first.width + LABEL_GAP, hi)];
+}
+
+/** §1 bar band: 30% padding, bars ≤ 48, grouped bars 2 apart. Offsets are
+ * each series bar's left edge relative to the slot centre. */
+export function barBand(
+	slot: number,
+	seriesCount: number,
+	mode: "single" | "grouped" | "stacked" | "histogram",
+) {
+	if (mode === "histogram") {
+		// Spec deviation (recorded in the PR): adjacent bins keep a 2 px gap so
+		// a continuous distribution does not read as separate categories.
+		const width = Math.max(1, slot - 2);
+		return { width, offsets: [-width / 2] };
+	}
+	const band = slot * 0.7;
+	if (mode !== "grouped" || seriesCount <= 1) {
+		const width = Math.min(48, band);
+		return { width, offsets: [-width / 2] };
+	}
+	const gap = 2;
+	const width = Math.max(
+		1,
+		Math.min(48, (band - gap * (seriesCount - 1)) / seriesCount),
+	);
+	const total = width * seriesCount + gap * (seriesCount - 1);
+	return {
+		width,
+		offsets: Array.from(
+			{ length: seriesCount },
+			(_, i) => -total / 2 + i * (width + gap),
+		),
+	};
+}
+
+export type BarMark = {
+	category: number;
+	series: number;
+	/** Authored value; for percent mode the share is in `share`. */
+	value: number;
+	share?: number;
+	/** Value-axis positions (0…1) of the segment's ends. */
+	from: number;
+	to: number;
+	/** Whether this segment is the outermost one in its direction (rounded). */
+	outer: boolean;
+};
+
+export type LineSeries = {
+	series: number;
+	axis: "left" | "right";
+	points: { category: number; value: number; y: number }[];
+};
+
+export type Cartesian = {
+	kind: "cartesian";
+	variant:
+		| "bar"
+		| "histogram"
+		| "line"
+		| "scatter"
+		| "grouped"
+		| "stacked"
+		| "percent"
+		| "dual";
+	horizontal: boolean;
+	left: Axis;
+	right?: Axis;
+	/** Scatter only: the numeric x axis. */
+	xAxis?: Axis;
+	categories: string[];
+	series: { label: string; axis: "left" | "right" }[];
+	bars?: BarMark[];
+	lines?: LineSeries[];
+	points?: { x: number; y: number; value: [number, number] }[];
+	/** Stacked/percent: each category's sum of authored values. */
+	totals?: number[];
+};
+
+export type PieSlice = {
+	label: string;
+	value: number;
+	share: number;
+	start: number;
+	end: number;
+	/** Chart palette slot, or `null` for the folded "Other" slice (ink-dim). */
+	color: number | null;
+	/** Original rows folded into "Other", largest first. */
+	folded?: { label: string; value: number }[];
+};
+
+export type Pie = { kind: "pie"; slices: PieSlice[]; total: number };
+
+/**
+ * §3 — slices sorted by value descending (stable on ties); more than seven fold
+ * the smallest into "Other (k)", always last. The data table keeps every row.
+ */
+export function pieSlices(data: readonly [string, number][]): Pie {
+	const sorted = data
+		.map(([label, value], index) => ({ label, value, index }))
+		.sort((a, b) => b.value - a.value || a.index - b.index);
+	const kept = sorted.length > 7 ? sorted.slice(0, 6) : sorted;
+	const folded = sorted.length > 7 ? sorted.slice(6) : [];
+	const groups = [
+		...kept.map(({ label, value }) => ({ label, value, folded: undefined })),
+		...(folded.length
+			? [
+					{
+						label: "",
+						value: folded.reduce((sum, { value }) => sum + value, 0),
+						folded: folded.map(({ label, value }) => ({ label, value })),
+					},
+				]
+			: []),
+	];
+	const shares = proportions(groups.map(({ value }) => value));
+	let end = 0;
+	const slices = groups.map((group, i): PieSlice => {
+		const start = end;
+		end = i === groups.length - 1 ? 1 : Math.min(1, end + (shares[i] ?? 0));
+		return {
+			...group,
+			share: shares[i] ?? 0,
+			start,
+			end,
+			color: group.folded ? null : i,
+			...(group.folded ? { folded: group.folded } : {}),
+		};
+	});
+	return {
+		kind: "pie",
+		slices,
+		total: data.reduce((sum, [, value]) => sum + value, 0),
+	};
+}
+
+/** §5 — shared active-mark state for pointer, touch and keyboard. */
+export type ActiveMark = { category: number; series: number };
+export type ChartStep =
+	| "next"
+	| "previous"
+	| "up"
+	| "down"
+	| "first"
+	| "last"
+	| "clear";
+
+export function stepActive(
+	active: ActiveMark | null,
+	step: ChartStep,
+	categories: number,
+	series: number,
+): ActiveMark | null {
+	if (step === "clear" || categories === 0) return null;
+	const current = active ?? { category: 0, series: 0 };
+	// The first move from rest lands on mark 0, like focusing the chart.
+	if (!active && step !== "last") return current;
+	const clamp = (n: number, size: number) => Math.min(size - 1, Math.max(0, n));
+	switch (step) {
+		case "next":
+			return { ...current, category: clamp(current.category + 1, categories) };
+		case "previous":
+			return { ...current, category: clamp(current.category - 1, categories) };
+		case "down":
+			return { ...current, series: clamp(current.series + 1, series) };
+		case "up":
+			return { ...current, series: clamp(current.series - 1, series) };
+		case "first":
+			return { ...current, category: 0 };
+		case "last":
+			return { ...current, category: categories - 1 };
+	}
+}
+
+/** §5 keyboard map (web build and hardware keyboards); others are ignored. */
+const KEY_STEPS: Record<string, ChartStep> = {
+	ArrowRight: "next",
+	ArrowLeft: "previous",
+	ArrowDown: "down",
+	ArrowUp: "up",
+	Home: "first",
+	End: "last",
+	Escape: "clear",
+};
+export const keyStep = (key: string): ChartStep | undefined => KEY_STEPS[key];
+
+/**
+ * §5 placement: 8 above the anchor, flipped below when it would cross the top,
+ * clamped 4 inside the chart box horizontally.
+ *
+ * X4: vertically it never leaves `[minTop, maxBottom]` — the plot area, which
+ * ends above the x labels, so a flipped tooltip can neither cover the axis
+ * labels nor spill onto the "Chart data" button below the chart.
+ */
+export function tooltipPlacement({
+	x,
+	top,
+	bottom = top,
+	width,
+	height,
+	box,
+	minTop = 0,
+	maxBottom = Number.POSITIVE_INFINITY,
+}: {
+	x: number;
+	top: number;
+	bottom?: number;
+	width: number;
+	height: number;
+	box: number;
+	minTop?: number;
+	maxBottom?: number;
+}) {
+	const above = top - 8 - height;
+	const flipped = above < minTop;
+	const y = flipped ? bottom + 8 : above;
+	return {
+		left: Math.max(4, Math.min(box - 4 - width, x - width / 2)),
+		top: Math.max(minTop, Math.min(maxBottom - height, y)),
+		flipped,
+	};
+}
+
+/**
+ * X5: the wide donut's tooltip sits BESIDE the ring, on the active slice's
+ * side (right half → right of the ring), 8 clear of the outer radius, so it
+ * never covers the ring it describes. Its width is capped to that side's room;
+ * vertically it centres on the slice and stays inside the plot.
+ */
+export function sideTooltipPlacement({
+	cx,
+	outer,
+	side,
+	y,
+	width,
+	height,
+	box,
+	boxHeight,
+}: {
+	cx: number;
+	outer: number;
+	side: 1 | -1;
+	y: number;
+	width: number;
+	height: number;
+	box: number;
+	boxHeight: number;
+}) {
+	const near = side > 0 ? cx + outer + 8 : cx - outer - 8;
+	const maxWidth = Math.max(0, side > 0 ? box - 4 - near : near - 4);
+	const w = Math.min(width, maxWidth);
+	return {
+		left: side > 0 ? near : near - w,
+		top: Math.max(0, Math.min(boxHeight - height, y - height / 2)),
+		maxWidth,
+	};
+}
+
+/** §5 heatmap screen-reader steps walk the cells in reading order, so
+ * increment/decrement reaches every row, not just the first one. */
+export function stepCell(
+	active: ActiveMark | null,
+	direction: 1 | -1,
+	columns: number,
+	rows: number,
+): ActiveMark | null {
+	if (columns === 0 || rows === 0) return null;
+	if (!active) return { category: 0, series: 0 };
+	const index = Math.min(
+		columns * rows - 1,
+		Math.max(0, active.series * columns + active.category + direction),
+	);
+	return { category: index % columns, series: Math.floor(index / columns) };
+}
+
+/** Live-region / `accessibilityValue` text: "Nov 18, Spend, 140.61 USD, 3 of 9". */
+export function describeMark(parts: (string | undefined)[], position: string) {
+	return [
+		...parts.filter((part): part is string => Boolean(part)),
+		position,
+	].join(", ");
+}
+
+/**
+ * Normalised model of a cartesian chart for a given plot height (tick count
+ * depends on it, §2). Positions are fractions of the plot; the renderer maps
+ * them to pixels with the measured width and the spec's margins.
+ */
+export function inlineChartModel(
+	chart: InlineChart,
+	plotHeight = 180,
+): Cartesian | Pie {
+	if (chart.type === "pie") return pieSlices(chart.data);
+	const target = tickTarget(plotHeight);
 	if (chart.type === "scatter") {
 		const xs = chart.data.map(([x]) => x);
 		const ys = chart.data.map(([, y]) => y);
-		const sx = axisScale(xs);
-		const sy = axisScale(ys);
-		const xAxis = axis(
-			extent(
-				xs.map((x) => x / sx),
-				false,
-			),
-			sx,
+		const xAxis = toAxis(
+			niceTicks(...valueExtent(xs, false), target),
 			chart.xLabel,
 		);
-		const left = axis(
-			extent(
-				ys.map((y) => y / sy),
-				false,
-			),
-			sy,
+		const left = toAxis(
+			niceTicks(...valueExtent(ys, false), target),
 			chart.yLabel,
 		);
 		return {
 			kind: "cartesian",
+			variant: "scatter",
+			horizontal: false,
 			left,
 			xAxis,
+			categories: [],
+			series: [],
 			points: chart.data.map(([x, y]) => ({
-				x: xAxis.position(x / sx),
-				y: left.position(y / sy),
+				x: xAxis.position(x),
+				y: left.position(y),
+				value: [x, y],
 			})),
 		};
 	}
 	if (chart.type !== "series") {
 		const values = chart.data.map(([, n]) => n);
+		const categories = chart.data.map(([label]) => label);
 		const line = chart.type === "line";
-		const scale = line ? axisScale(values) : scaledSeries(values);
-		const scaled = values.map((n) => n / scale);
-		const left = axis(extent(scaled, !line), scale, chart.unit);
-		const width = 1 / values.length;
-		const center = (i: number) => (i + 0.5) * width;
-		const categories = chart.data.map(([label], i) => ({
-			label,
-			position: center(i),
-		}));
-		return line
-			? {
-					kind: "cartesian",
-					left,
-					categories,
-					lines: [
-						scaled.map((n, i) => ({
-							x: center(i),
-							y: left.position(n),
+		const left = toAxis(
+			niceTicks(...valueExtent(values, !line), target),
+			chart.unit,
+		);
+		const base = {
+			kind: "cartesian" as const,
+			left,
+			categories,
+			series: [{ label: "", axis: "left" as const }],
+		};
+		if (line)
+			return {
+				...base,
+				variant: "line",
+				horizontal: false,
+				lines: [
+					{
+						series: 0,
+						axis: "left",
+						points: values.map((value, category) => ({
+							category,
+							value,
+							y: left.position(value),
 						})),
-					],
-				}
-			: {
-					kind: "cartesian",
-					left,
-					categories,
-					bars: scaled.map((n, i) => ({
-						x: center(i),
-						width: width * (chart.type === "histogram" ? 1 : 0.68),
-						from: left.zero,
-						to: left.position(n),
-						color: 0,
-					})),
-				};
+					},
+				],
+			};
+		return {
+			...base,
+			variant: chart.type,
+			horizontal: false,
+			bars: values.map((value, category) => ({
+				category,
+				series: 0,
+				value,
+				from: left.position(0),
+				to: left.position(value),
+				outer: true,
+			})),
+		};
 	}
 
 	const { labels, series, mode } = chart;
-	const dual = mode === "dual";
-	const scaleFor = (side: "left" | "right") =>
-		scaledSeries(
-			series.flatMap(({ values, axis }) =>
-				!dual || axis === side ? values : [],
-			),
-		);
-	const leftScale = mode === "percent" ? 100 : scaleFor("left");
-	const rightScale = dual ? scaleFor("right") : leftScale;
-	const scaledCategories = labels.map((_, i) => {
-		// Decoding guarantees a value for every category of every series.
-		const values = series.map((item) => item.values[i] ?? 0);
-		return mode === "percent"
-			? proportions(values)
-			: values.map(
-					(n, j) =>
-						n / (dual && series[j]?.axis === "right" ? rightScale : leftScale),
-				);
-	});
-	const stacked = mode === "stacked" || mode === "percent";
-	const segments = scaledCategories.map((values) =>
-		stacked
-			? stackSegments(values)
-			: values.map((n): [number, number] => [0, n]),
-	);
-	// Independent units/scales, shared zero. Taking the union in normalized
-	// coordinates aligns the baselines without mixing the actual quantities.
-	const domain: [number, number] =
-		mode === "percent" ? [0, 1] : extent(segments.flat(2), true);
-	const left = axis(domain, leftScale, mode === "percent" ? "%" : chart.unit);
-	const right = dual ? axis(domain, rightScale, chart.rightUnit) : undefined;
-	const slot = 1 / labels.length;
-	const center = (i: number) => (i + 0.5) * slot;
-	const groupWidth = slot * 0.76;
-	const barWidth = stacked ? groupWidth : groupWidth / series.length;
-	const categories = labels.map((label, i) => ({
+	const meta = series.map(({ label, axis }) => ({
 		label,
-		position: center(i),
+		axis:
+			mode === "dual" && axis === "right"
+				? ("right" as const)
+				: ("left" as const),
 	}));
-	const legend = series.map(({ label }) => label);
-	// Dual series are trends, as on desktop. Each line projects against its own
-	// labelled rail, never against the other quantity or a combined total.
-	if (right) {
+	if (mode === "dual") {
+		const side = (which: "left" | "right") =>
+			series.flatMap(({ values }, i) =>
+				meta[i]?.axis === which ? values : [],
+			);
+		const leftValues = side("left");
+		const rightValues = side("right");
+		const left = toAxis(
+			niceTicks(
+				...valueExtent(leftValues.length ? leftValues : [0], false),
+				target,
+			),
+			chart.unit,
+		);
+		const right = rightValues.length
+			? toAxis(
+					fixedCountTicks(
+						...valueExtent(rightValues, false),
+						left.values.length,
+					),
+					chart.rightUnit,
+				)
+			: undefined;
 		return {
 			kind: "cartesian",
+			variant: "dual",
+			horizontal: false,
 			left,
 			right,
-			categories,
-			legend,
-			lines: series.map(({ axis, values }) => {
-				const y = axis === "right" ? right : left;
-				return values.map((n, i) => ({
-					x: center(i),
-					y: y.position(n / y.scale),
-				}));
+			categories: labels,
+			series: meta,
+			lines: series.map(({ values }, i) => {
+				const axis = meta[i]?.axis === "right" && right ? right : left;
+				return {
+					series: i,
+					axis: axis === left ? "left" : "right",
+					points: values.map((value, category) => ({
+						category,
+						value,
+						y: axis.position(value),
+					})),
+				};
 			}),
 		};
 	}
+
+	// Decoding guarantees a value for every category of every series.
+	const byCategory = labels.map((_, i) => series.map((s) => s.values[i] ?? 0));
+	const stacked = mode === "stacked" || mode === "percent";
+	const shares = byCategory.map((values) => proportions(values));
+	const segments = byCategory.map((values, i) =>
+		stackSegments(mode === "percent" ? (shares[i] ?? []) : values),
+	);
+	const left =
+		mode === "percent"
+			? toAxis(PERCENT_TICKS, "%")
+			: toAxis(
+					niceTicks(
+						...valueExtent(
+							stacked ? segments.flat(2) : byCategory.flat(),
+							true,
+						),
+						target,
+					),
+					chart.unit,
+				);
+	const bars: BarMark[] = segments.flatMap((category, i) => {
+		// The outermost segment per direction gets the rounded corners.
+		const lastPositive = category.findLastIndex(([from, to]) => to > from);
+		const lastNegative = category.findLastIndex(([from, to]) => to < from);
+		return category.map(([from, to], j) => ({
+			category: i,
+			series: j,
+			value: byCategory[i]?.[j] ?? 0,
+			// "x% of total" (X6): percent mode always keeps it — the share IS
+			// what it plots. A plain stack keeps it only when every part has
+			// the same sign; a mixed stack (gains and losses) has no whole to
+			// be a share of, while an all-negative one still does.
+			...(mode === "percent" ||
+			(mode === "stacked" &&
+				(byCategory[i]?.every((n) => n >= 0) ||
+					byCategory[i]?.every((n) => n <= 0)))
+				? { share: shares[i]?.[j] ?? 0 }
+				: {}),
+			from: left.position(stacked ? from : 0),
+			to: left.position(stacked ? to : (byCategory[i]?.[j] ?? 0)),
+			outer: !stacked || j === lastPositive || j === lastNegative,
+		}));
+	});
 	return {
 		kind: "cartesian",
+		variant: mode,
+		horizontal: false,
 		left,
-		categories,
-		legend,
-		bars: segments.flatMap((category, i) =>
-			category.map(([from, to], j) => {
-				return {
-					x: center(i) + (stacked ? 0 : (j + 0.5) * barWidth - groupWidth / 2),
-					width: barWidth,
-					from: left.position(from),
-					to: left.position(to),
-					color: j,
-				};
-			}),
-		),
+		categories: labels,
+		series: meta,
+		bars,
+		...(stacked
+			? {
+					totals: byCategory.map((values) => values.reduce((a, b) => a + b, 0)),
+				}
+			: {}),
 	};
 }
 
-/** Compact labels never replace the exact original numbers in the grid. Keep
- * cumulative tick labels finite even when a valid input overflows in raw units. */
-export function chartTickLabel(
-	value: number,
-	scale: number,
-	locale: string,
-): string {
-	const number = value * scale;
-	const magnitude = Math.abs(number);
-	if (
-		Number.isFinite(number) &&
-		(number === 0 || (magnitude >= 0.01 && magnitude < 10_000))
-	) {
-		return new Intl.NumberFormat(locale, {
-			maximumSignificantDigits: 3,
-		}).format(number);
-	}
-	if (Number.isFinite(number)) return number.toExponential(1);
-	const exponent = Math.floor(Math.log10(scale));
-	return `${(value * (scale / 10 ** exponent)).toFixed(1)}e${exponent}`;
-}
-
-/** If compact absolute labels collide, put their shared origin in the axis
- * caption. The rails can show small deltas without clipping extra digits. */
-export function chartAxisLabels(axis: Axis, locale: string) {
-	const ticks = axis.ticks.map((tick) => ({
-		...tick,
-		label: chartTickLabel(tick.value, axis.scale, locale),
-	}));
-	const absolute = { ticks, offset: undefined };
-	if (new Set(ticks.map(({ label }) => label)).size === ticks.length)
-		return absolute;
-
-	const first = ticks[0];
-	if (!first) return absolute;
-	const origin = first.value * axis.scale;
-	if (!Number.isFinite(origin)) return absolute;
-	const distinct = ticks.map(({ value, position }) => ({
-		value,
-		position,
-		delta: (value - first.value) * axis.scale,
-	}));
-	const originMagnitude = Math.abs(origin);
-	const exactOrigin = new Intl.NumberFormat(locale, {
-		notation:
-			originMagnitude !== 0 &&
-			(originMagnitude < 0.001 || originMagnitude >= 1e9)
-				? "scientific"
-				: "standard",
-		maximumSignificantDigits: 17,
-	}).format(origin);
+/**
+ * §1 horizontal bars reuse the bar model with the value axis along x; its tick
+ * count follows the plot WIDTH (one tick per ~96 px, clamped 3–6).
+ */
+export function horizontalBarModel(
+	chart: CategoryChart,
+	plotWidth: number,
+): Cartesian {
+	const values = chart.data.map(([, n]) => n);
+	const target = Math.min(6, Math.max(3, Math.floor(plotWidth / 96)));
+	const left = toAxis(
+		niceTicks(...valueExtent(values, true), target),
+		chart.unit,
+	);
 	return {
-		offset: exactOrigin,
-		ticks: distinct.map(({ value, position, delta }) => ({
+		kind: "cartesian",
+		variant: "bar",
+		horizontal: true,
+		left,
+		categories: chart.data.map(([label]) => label),
+		series: [{ label: "", axis: "left" }],
+		bars: values.map((value, category) => ({
+			category,
+			series: 0,
 			value,
-			position,
-			label: chartTickLabel(delta, 1, locale),
+			from: left.position(0),
+			to: left.position(value),
+			outer: true,
 		})),
 	};
 }
@@ -301,4 +1005,33 @@ export function histogramAxisLabels(labels: readonly string[]) {
 	if (!unit || !parsed.every((match) => match?.[2] === unit))
 		return { labels, unit: undefined };
 	return { labels: parsed.map((match) => match?.[1] ?? ""), unit };
+}
+
+/**
+ * §4 heatmap, with the X10 floor. The spec's sequential scale is
+ * `t = 12 + 88 × fraction` of accent mixed into surface; at t = 12 a 0 cell
+ * measured 1.10:1 against the light canvas — indistinguishable from the
+ * message ground and from a "No data" cell. The floor is raised to 28, the
+ * cross-surface constant (0 cell ≥ 1.387:1 against canvas, surface and message
+ * ground in both shipped localOperator themes); the top stays 100 and the
+ * scale stays linear.
+ */
+export const HEAT_FLOOR = 0.28;
+/** §1 heatmap rows: 28 wide, 24 narrow. */
+export const heatRowHeight = (width: number) =>
+	width >= NARROW_WIDTH ? 28 : 24;
+
+export function heatmapModel(chart: HeatmapChart) {
+	const values = chart.rows.flat().filter((n): n is number => n !== null);
+	const min = values.length ? Math.min(...values) : 0;
+	const max = values.length ? Math.max(...values) : 0;
+	const range = max - min;
+	return {
+		min,
+		max,
+		hasData: values.length > 0,
+		/** Mix amount (HEAT_FLOOR…1) for a value; flat data paints the top. */
+		mix: (value: number) =>
+			HEAT_FLOOR + (1 - HEAT_FLOOR) * (range === 0 ? 1 : (value - min) / range),
+	};
 }

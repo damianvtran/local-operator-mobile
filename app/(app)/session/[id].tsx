@@ -1,4 +1,4 @@
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useIsFocused, useLocalSearchParams, useRouter } from "expo-router";
 import { Search } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -14,6 +14,7 @@ import type { PendingAsk, PromptImage } from "@/contracts";
 import { avatarRefOf } from "@/features/agent-avatar/agent-avatar";
 import { HeaderAgentAvatar } from "@/features/agent-avatar/agent-avatar-view";
 import { useListState } from "@/features/auth/connection-provider";
+import { FolderPicker } from "@/features/home/home-pickers";
 import { homeEffortChip, modelLabel } from "@/features/home/picker-model";
 import { useStartup } from "@/features/new-session/use-startup";
 import {
@@ -44,10 +45,7 @@ import { Composer } from "@/features/session/components/composer";
 import { ConnectionBanner } from "@/features/session/components/connection-banner";
 import { FindBar } from "@/features/session/components/find-bar";
 import { FindSheet } from "@/features/session/components/find-sheet";
-import {
-	EffortSheet,
-	ModelSheet,
-} from "@/features/session/components/model-sheet";
+import { SessionRunSettingsSheet } from "@/features/session/components/model-sheet";
 import { PendingCard } from "@/features/session/components/pending-card";
 import { PendingEchoRows } from "@/features/session/components/pending-echo-row";
 import { RemoteFeatureNotice } from "@/features/session/components/remote-feature-notice";
@@ -76,6 +74,10 @@ import {
 	WorkingLine,
 } from "@/features/session/components/working-line";
 import { createComposerCompaction } from "@/features/session/composer-compaction";
+import {
+	sessionFolderControl,
+	sessionRunSettings,
+} from "@/features/session/composer-controls";
 import { isRouteRefused } from "@/features/session/connection-view";
 import { headerHealth, healthDetailKey } from "@/features/session/health";
 import {
@@ -258,7 +260,8 @@ function Session() {
 	 *  reconcile against the same SSE frame. */
 	const [tagsOpen, setTagsOpen] = useState(false);
 
-	const runtime = useSessionRuntime(sessionId);
+	const focused = useIsFocused();
+	const runtime = useSessionRuntime(sessionId, focused);
 	const provisional = useStartup(null, sessionId);
 	const provisionalEditor =
 		provisional.coordinator === null
@@ -333,6 +336,8 @@ function Session() {
 		/* A warm-cache frame is a picture, not a conversation: no send until the
 		 *  first live frame replaces it (PR #246 R1). */
 		cached: runtime.hydrated,
+		awaitingVisit: runtime.awaitingVisit,
+		canActOnVisit: runtime.canActOnVisit,
 		/* The ended verdict comes FROM THE DOT (`headerHealth`), not
 		 *  `projection.ended` alone: a history-only conversation (pid 0) is ended
 		 *  too, and a send to either REOPENS it. */
@@ -358,17 +363,24 @@ function Session() {
 		setText: composer.setDraft,
 		slashDraft: draftSlashQuery(composer.draft) !== null,
 	});
-	/* Stop is withheld when the relay does not forward `abort`: every Stop on this
-	 *  screen (composer ■, pinned line, image-gen Cancel) reads this one gate. */
-	const stopAllowed = controlPolicy.allows("abort");
+	/* Retain the busy layout, not its authority: replacing the Stop branch
+	 * drops the pinned counts and moves the composer's menu under Stop. Only
+	 * the accepted visit can send a session-scoped abort; warm-cache frames
+	 * do not count as streaming and cannot reserve a Stop slot. */
+	const abortSupported = controlPolicy.allows("abort");
+	const stopAllowed = runtime.turnActionsReady && abortSupported;
+	const stopInert =
+		runtime.awaitingVisit && runtime.streaming && abortSupported;
+	const stopMounted = stopAllowed || stopInert;
 	const composerControls = useMemo(
 		() =>
-			stopAllowed
+			stopMounted
 				? composer.controls
 				: { ...composer.controls, stopVisible: false },
-		[composer.controls, stopAllowed],
+		[composer.controls, stopMounted],
 	);
-	const asksAnswerable = controlPolicy.allows("ask_respond");
+	const asksAnswerable =
+		runtime.turnActionsReady && controlPolicy.allows("ask_respond");
 	/* What the reader just sent and the transcript does not carry yet, resolved by
 	 *  command id against the rows (`pending-echo.ts`). */
 	const pendingEchoes = usePendingEchoes(sessionId, runtime.entries);
@@ -410,8 +422,10 @@ function Session() {
 	 *  the panels stay inline, so this is never true there. */
 	const [statusSheetOpen, setStatusSheetOpen] = useState(false);
 
-	const [modelsOpen, setModelsOpen] = useState(false);
-	const [effortOpen, setEffortOpen] = useState(false);
+	/** The run-settings sheet (model and effort, one sheet since issue #325)
+	 *  and the read-only folder sheet behind the composer's two icons. */
+	const [runSettingsOpen, setRunSettingsOpen] = useState(false);
+	const [folderOpen, setFolderOpen] = useState(false);
 	/* A refused `set_model`/`set_effort` (409 on a session that ended under the
 	 *  sheet, a dropped route) was a silent `void` (review round 1, m1): the
 	 *  chip kept its old value and nothing said why. It rides the composer's
@@ -438,7 +452,7 @@ function Session() {
 		draftReady: composer.draftReady,
 		attachments: composer.images.length,
 		dictating: composer.voice.phase !== "idle",
-		otherSheetOpen: modelsOpen || effortOpen,
+		otherSheetOpen: runSettingsOpen || folderOpen,
 	});
 	/* The asks sheet auto-opens on a conversation opened with questions waiting;
 	 *  a remote relay that forwards no ask op must not open a sheet of answer
@@ -519,8 +533,8 @@ function Session() {
 		entries: runtime.entries,
 		anchorVisible: completionVisible,
 		blocked: overlaysBlocked({
-			models: modelsOpen,
-			effort: effortOpen,
+			runSettings: runSettingsOpen,
+			folder: folderOpen,
 			panel: openPanel !== null,
 			asks: asksOpen,
 			slash: slash !== null,
@@ -646,7 +660,7 @@ function Session() {
 		sessionChips.model = {
 			kind: "value",
 			text: name,
-			accessibilityLabel: `Model, ${name}`,
+			accessibilityLabel: t("mobile.session.chip.model_label", { model: name }),
 		};
 	}
 	if (storedPicker) {
@@ -695,6 +709,27 @@ function Session() {
 								),
 				};
 
+	/* The folder this conversation runs in, for the composer's read-only folder
+	 *  control: the projection's, else the list row's (a durable fold carries an
+	 *  empty one — TestFlight 578, as the pending card's risk line reads it). */
+	const sessionFolder = sessionFolderControl(
+		projection?.cwd || listRow?.cwd || "",
+	);
+	/* What the run-settings sheet shows, from the same chips the composer's
+	 *  control is named from (round 1 R1/R3; pure and tested). */
+	const runSettings = sessionRunSettings({
+		chips: chipLabels,
+		ladder: effortLadder,
+		ended: headerHealth(projection, runtime.link) === "ended",
+		stored: storedPicker
+			? {
+					loading: storedModel.loading,
+					failed: storedModel.failed,
+					modelKnown: selectedModel !== null,
+				}
+			: null,
+	});
+
 	/* The strip exists when it has something true to say: a context read, or a
 	 * roster. Not before — an empty band on every session is noise, and a band
 	 * showing `—` for an unknown number is worse than the noise. */
@@ -707,12 +742,11 @@ function Session() {
 	 *  present, a `pending` card of `kind == "ask"` is one of those rows mirrored
 	 *  for old clients and must be IGNORED here — rendering both would draw the
 	 *  same ask twice and collect a second answer. Approvals are unaffected. */
-	/* A warm-cache frame's pending approval may already be answered on the
-	 *  desktop, and answering it is a send against a cached frame (PR #246 R1
-	 *  lead). No card until the first live frame says the ask still stands. */
-	const pending = runtime.hydrated
-		? null
-		: blockingPending(projection?.pending ?? null, projection?.asks);
+	/* A saved or retained approval may already be answered on the desktop.
+	 * Wait for this visit's accepted projection before offering a decision. */
+	const pending = runtime.turnActionsReady
+		? blockingPending(projection?.pending ?? null, projection?.asks)
+		: null;
 
 	/* The header dot's sheet + the session menu, held here (not in the control) so
 	 *  the acceptance line survives the sheet closing, and so the `S5/health-sheet`
@@ -1177,6 +1211,9 @@ function Session() {
 							pending={pendingRows}
 							sendMark={composer.sendMark}
 							streamingRowId={runtime.streamingRowId}
+							// If there is no streaming row yet, the list must not infer idle
+							// from the image Cancel callback being withheld on a busy visit.
+							turnLive={runtime.streaming}
 							streamArrivalEpoch={runtime.streamArrivalEpoch}
 							streamArrivalTail={runtime.streamArrivalTail}
 							loadImage={runtime.loadImage}
@@ -1199,14 +1236,13 @@ function Session() {
 									? runtime.loadBridgeBody
 									: undefined
 							}
-							/* The image-gen card's Cancel is the composer's OWN stop path (the
-					   one turn-interrupt — no second mechanism). The gate is the
-					   composer's own (`stopVisible` = a turn is running), so the two
-					   controls cannot diverge about when a cancel is real: while the
-					   gate is closed the card hides the control rather than offering
-					   a dead one. */
+							/* Image Cancel is another route to the same abort, not part of
+					   the retained Stop layout. Never infer its authority from the
+					   reserved composer slot. */
 							onCancelTurn={
-								composerControls.stopVisible ? composer.stop : undefined
+								stopAllowed && composerControls.stopVisible
+									? composer.stop
+									: undefined
 							}
 							anchorId={attentionRecord(runtime.projection)?.anchor_id ?? null}
 							onAnchorVisible={setCompletionVisible}
@@ -1941,7 +1977,8 @@ function Session() {
 						{activityLineHost ? (
 							<PinnedWorkingLine
 								line={pinned}
-								onStop={stopAllowed ? composer.stop : undefined}
+								onStop={stopMounted ? composer.stop : undefined}
+								stopInert={stopInert}
 								stopping={composer.stopping}
 								gapBelow={outstandingAsks(projection?.asks).length > 0}
 								trailing={lineCountsElement}
@@ -2027,6 +2064,7 @@ function Session() {
 							storedModel.clearSettingsError();
 						}}
 						onStop={composer.stop}
+						stopInert={stopInert}
 						stopping={composer.stopping}
 						retainedMessage={
 							composer.retained !== null
@@ -2035,7 +2073,7 @@ function Session() {
 						}
 						notice={composer.notice}
 						onRetry={composer.retry}
-						showResume={aborted}
+						showResume={runtime.turnActionsReady && aborted}
 						onResume={composer.send}
 						ended={ended}
 						error={pending === null ? (composer.error ?? chipError) : null}
@@ -2052,8 +2090,19 @@ function Session() {
 						bottomInset={insets.bottom}
 						modelChip={chipLabels.model}
 						effortChip={chipLabels.effort}
-						onOpenModels={() => setModelsOpen(true)}
-						onOpenEffort={() => setEffortOpen(true)}
+						onOpenRunSettings={() => setRunSettingsOpen(true)}
+						/* The folder a running conversation is in, read-only: the
+						 *  relay takes a folder only at start (issue #325). The
+						 *  row's cwd backs a durable fold's empty one, as above. */
+						folder={
+							sessionFolder === null
+								? null
+								: {
+										...sessionFolder,
+										onPress: () => setFolderOpen(true),
+										testID: CONTROL.composerFolder,
+									}
+						}
 						/* Any ask, waiting or timed out: a lapsed-only queue paints no
 						 *  ask bar (build 753), so this row is its door to Dismiss. */
 						questions={(() => {
@@ -2116,37 +2165,51 @@ function Session() {
 				</View>
 			</Sheet>
 
-			<ModelSheet
-				visible={modelsOpen}
-				onClose={() => setModelsOpen(false)}
+			<SessionRunSettingsSheet
+				visible={runSettingsOpen}
+				onClose={() => setRunSettingsOpen(false)}
+				/* Main's stored-model lane (PR #350/#353): an ended local chat
+				 *  chooses from the stored catalogue before it reopens, and a pending
+				 *  choice leads the projection until Resume/Send applies it. */
 				models={pickerModels}
-				selected={
+				selectedModel={
 					storedModel.pending?.model.selector ??
 					projection?.model_selector ??
 					""
 				}
+				selectedEffort={storedModel.pending?.effort ?? projection?.effort ?? ""}
 				loading={storedPicker && storedModel.loading}
 				failed={storedPicker && storedModel.failed}
 				onRetry={storedPicker ? storedModel.retry : undefined}
-				onPick={(model) => {
+				/* Locked, ladder, none or hidden — decided once in `sessionRunSettings`
+				 *  (an ended session's recorded effort is shown, round 1 R1). */
+				{...runSettings}
+				/* A refused change shows inside the open sheet (round 1 R2). */
+				error={chipError}
+				onPickModel={(model) => {
 					if (composer.sending || resume.busy) return;
 					// The hook records the failure as `settingsError`; the rejection
 					// is only kept from going unhandled here.
 					void storedModel.selectModel(model).catch(() => {});
 				}}
-			/>
-
-			<EffortSheet
-				visible={effortOpen && effortLadder.length > 0}
-				onClose={() => setEffortOpen(false)}
-				ladder={effortLadder}
-				selected={storedModel.pending?.effort ?? projection?.effort ?? ""}
-				onPick={(effort) => {
+				onPickEffort={(effort) => {
 					if (composer.sending || resume.busy) return;
 					// The hook records the failure as `settingsError`; the rejection
 					// is only kept from going unhandled here.
 					void storedModel.selectEffort(effort, selectedModel).catch(() => {});
 				}}
+			/>
+
+			<FolderPicker
+				visible={folderOpen}
+				onClose={() => setFolderOpen(false)}
+				folders={null}
+				current={sessionFolder?.path ?? null}
+				failure={null}
+				onRetry={() => undefined}
+				retrying={false}
+				editable={sessionFolder?.editable ?? false}
+				onPick={() => undefined}
 			/>
 
 			<FindSheet
@@ -2178,8 +2241,9 @@ function Session() {
 			<AsksSheet
 				visible={asksOpen}
 				onClose={asksSheet.close}
+				canSettle={runtime.canActOnVisit}
 				initialOpenAsk={asksSheet.initialOpenAsk}
-				frameRows={asksSheet.frameRows}
+				frameRows={asksAnswerable ? asksSheet.frameRows : null}
 				onReadFailed={asksSheet.readFailed}
 				/* The queue's own read, back to the screen: the ask-id chips in the
 				   prose resolve an id against what this sheet can show — the one

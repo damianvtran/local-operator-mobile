@@ -152,8 +152,10 @@ const NAMESPACES = [
 		 *  (TestFlight 906, replacing two hard-coded sentences).
 		 *  92 with the new-chat identity picker (PR #358): 25 `identity.*` keys
 		 *  for the pill, the "Start this chat with" sheet and its refusals, and 1
-		 *  from its round-1 remediation (`refused_connecting`, F2): 66 + 26. */
-		expected: 95,
+		 *  from its round-1 remediation (`refused_connecting`, F2): 66 + 26.
+		 *  98 with the folder sheet's full-path header label, its spoken form and
+		 *  its read-only line (issue #325): 95 + 3. */
+		expected: 98,
 	},
 	{
 		/* The Past sessions screen: its search field's label and its empty
@@ -257,7 +259,7 @@ const NAMESPACES = [
 		name: "mobile.session",
 		messages: session,
 		context: sessionContext,
-		expected: 109, // fix/session-view-polish (#312) +4: the subagent badge words (subagent.status), the find sheet title (sheet_title.search) and the slash sheet filter / no-match lines, and +1 for its round-1 remediation's failed-read line (slash.load_failed) (104 + 5 = 109, counted over the merged en JSON); PR #376 +1: inline_chart_data (103 + 1 = 104); feat/jump-to-latest +2: the "Jump to latest" chip's full and narrow labels (100 + 2 = 102), and +1 for its round-1 remediation's arrow-free accessible name (jump_to_latest_name); PR #353 +1: composer.settings_not_applied (99 + 1 = 100); feat/pele-diagrams +8: the mermaid diagram block (label, titled label, open hint, copy, copied marker, could-not-draw notice, viewer name, viewer close) (91 + 8 = 99); O3-a +2: the commands and attach sheet titles; PR #275 +8: background sending (outbox) — waiting / exhausted / discarded captions, Retry, Discard, and three composer hints (wait, stopped, discarding) (81 + 2 + 8 = 91); +3: Title-case sheet titles (visual audit D14); +1: newest-edge gap notice; +1: reload hint; +1: newest-refresh failure copy; +1: explicit history reload; +7: lazy history states; +1: default-closed reasoning disclosure; +1: retry-attempt storage receipt; +1: definitely-not-sent storage receipt; +3: the ended-session chip hints (TestFlight 578); +9: the pending echo; +16: session route literals keyed by the app/ scan (subagent screen, empty states, find, chip errors, retained notice); +2: the user message's Show more / Show less (iOS build 836); +15: scanner-blind expression literals (context tray, scroll cues, video title, fallback names, region labels, back-to labels); +1: the new-conversation "not confirmed" caption (PR #256 Q3)
+		expected: 123, // feat/native-inline-chart-polish (#397) +9: the inline chart's "Other (n)", share, Total, "+n more", position and right-axis keys (+6), the wide donut's "Also:" lead-in (also_label), the heatmap's "No data" cell and the adjustable chart's at-rest value (value_count) (114 + 9 = 123, counted over the merged en JSON); feat/composer-icon-controls (#335) +2: the session chips' keyed spoken names (chip.model_label, chip.effort_label), the run-settings icon's only name (QA round 4, Q2) (112 + 2 = 114); fix/subagent-transcript (#390) +3 for its design round-1 remediation: the queued child's not-started line (subagent.queued_next) and its own failed-read and not-kept lines (subagent.load_failed, subagent.not_kept) (109 + 3 = 112); fix/session-view-polish (#312) +4: the subagent badge words (subagent.status), the find sheet title (sheet_title.search) and the slash sheet filter / no-match lines, and +1 for its round-1 remediation's failed-read line (slash.load_failed) (104 + 5 = 109, counted over the merged en JSON); PR #376 +1: inline_chart_data (103 + 1 = 104); feat/jump-to-latest +2: the "Jump to latest" chip's full and narrow labels (100 + 2 = 102), and +1 for its round-1 remediation's arrow-free accessible name (jump_to_latest_name); PR #353 +1: composer.settings_not_applied (99 + 1 = 100); feat/pele-diagrams +8: the mermaid diagram block (label, titled label, open hint, copy, copied marker, could-not-draw notice, viewer name, viewer close) (91 + 8 = 99); O3-a +2: the commands and attach sheet titles; PR #275 +8: background sending (outbox) — waiting / exhausted / discarded captions, Retry, Discard, and three composer hints (wait, stopped, discarding) (81 + 2 + 8 = 91); +3: Title-case sheet titles (visual audit D14); +1: newest-edge gap notice; +1: reload hint; +1: newest-refresh failure copy; +1: explicit history reload; +7: lazy history states; +1: default-closed reasoning disclosure; +1: retry-attempt storage receipt; +1: definitely-not-sent storage receipt; +3: the ended-session chip hints (TestFlight 578); +9: the pending echo; +16: session route literals keyed by the app/ scan (subagent screen, empty states, find, chip errors, retained notice); +2: the user message's Show more / Show less (iOS build 836); +15: scanner-blind expression literals (context tray, scroll cues, video title, fallback names, region labels, back-to labels); +1: the new-conversation "not confirmed" caption (PR #256 Q3)
 	},
 	{
 		/* The relay's own two namespaces, under its own keys. They are here rather
@@ -341,8 +343,11 @@ const NAMESPACES = [
 		context: chromeContext,
 		// +5: the More sheet's row labels (visual audit D5); +1 its Questions row
 		// (build 753); +1 the search pill's "Clear search" (TestFlight 906);
-		// +1 its "Agent or team" row (new-chat identity picker, PR #358).
-		expected: 28,
+		// +1 its "Agent or team" row (new-chat identity picker, PR #358) = 28.
+		// Issue #325: +7 the folder and run-settings icon controls (two spoken
+		// names, two hints, the run-settings sheet title, More's Folder row and
+		// the folder's read-only hint) = 35; -1 More's retired Effort row = 34.
+		expected: 34,
 	},
 	{
 		/* The shared date/time words (O3-a): inbox and Team Bridge day buckets,
@@ -368,8 +373,9 @@ const NAMESPACES = [
 		 *  plus round-1 remediation (10): the gate's own sentence, the header's
 		 *  owner subtitle, the owner-only control line, five owner-aware health
 		 *  sentences, the Save button's name and the row's long-press hint. */
-		// +2 owner-routed Highlight refusal sentences.
-		expected: 24,
+		// +2 owner-routed Highlight refusal sentences; +7 move-picker client
+		// messages keep its fallback and row copy keyed without changing server text.
+		expected: 31,
 	},
 ] as const;
 
@@ -551,6 +557,8 @@ const IDENTICAL_BY_DESIGN_JUDGED: Readonly<
 > = {
 	en: {},
 	fr: {
+		"mobile.session.inline_chart.total":
+			"« Total » is the French word for a sum (stacked-chart tooltip row, donut centre caption), spelled as in English; identical spelling is idiomatic, not an English fallback.",
 		"mobile.asks.title_fallback":
 			"« Questions » is the French word too, spelled as in English; the relay page's French catalogue uses it for the same panel.",
 		"mobile.asks.urgent":
@@ -605,6 +613,8 @@ const IDENTICAL_BY_DESIGN_JUDGED: Readonly<
 			"Radient is the product's name, and every shipped catalogue already keeps it in Latin script inside translated sentences (e.g. the switcher's own section heading); there is no word to translate.",
 		"mobile.session.highlights.withheld_reasons_join":
 			"Placeholder-only list separator, `{first}, {second}` — this locale enumerates with the Latin comma; there is no prose to translate.",
+		"mobile.chrome.composer.run_settings":
+			"Placeholder-only screen-reader name, `{model}, {effort}`: both parts are already-translated phrases and the separator is this locale's Latin comma; there is no prose to translate.",
 		"mobile.sidebar.row_label.join":
 			"Placeholder-only list separator, `{first}, {second}` — this locale enumerates with the Latin comma; there is no prose to translate.",
 		...PROJECT_TAG_EXAMPLE,
@@ -631,12 +641,12 @@ const IDENTICAL_BY_DESIGN_JUDGED: Readonly<
 			"Mirrored from the core relay's French catalogue, which keeps « Tags » (the app's own tag vocabulary in French).",
 		"mobile.chrome.destinations":
 			"« Destinations » is the French word for the same set of places.",
-		"mobile.chrome.composer.row_effort":
-			"« Effort » is the French word, and the one the French effort chip already uses (« Effort par défaut »).",
 		"mobile.chrome.composer.row_questions":
 			"« Questions » is the French plural of « question », spelled as in English.",
 		"mobile.session.sheet_title.effort":
 			"« Effort » is the French word; the sheet's title is that one noun.",
+		"mobile.session.chip.effort_label":
+			"« Effort » is the French word for the setting (as in mobile.home.chip.effort_chosen); the spoken name is that noun and the level placeholder.",
 		"mobile.notifications.title":
 			"French spells this one the same: 'Notifications' is the platform's own word for the screen, not an English sentence left behind.",
 		/* French « session » is the same word as English "session": identical
@@ -676,6 +686,8 @@ const IDENTICAL_BY_DESIGN_JUDGED: Readonly<
 	/* Spanish preserves these placeholder-only templates: names and separators
 	 * have no English prose to translate. Each key remains explicitly listed. */
 	es: {
+		"mobile.session.inline_chart.total":
+			"«Total» is the Spanish word for a sum (stacked-chart tooltip row, donut centre caption), spelled as in English; identical spelling is idiomatic, not an English fallback.",
 		"mobile.settings.account.app_name":
 			"Local Operator is the product name, kept in Latin script in every locale (glossary: never translated); audited as required in the M2 expression-literal wave.",
 		"mobile.session.subagent.prompt_label":
@@ -694,6 +706,8 @@ const IDENTICAL_BY_DESIGN_JUDGED: Readonly<
 			"Radient is the product's name, and every shipped catalogue already keeps it in Latin script inside translated sentences (e.g. the switcher's own section heading); there is no word to translate.",
 		"mobile.session.highlights.withheld_reasons_join":
 			"Placeholder-only list separator, `{first}, {second}` — this locale enumerates with the Latin comma; there is no prose to translate.",
+		"mobile.chrome.composer.run_settings":
+			"Placeholder-only screen-reader name, `{model}, {effort}`: both parts are already-translated phrases and the separator is this locale's Latin comma; there is no prose to translate.",
 		"mobile.sidebar.row_label.join":
 			"Placeholder-only list separator, `{first}, {second}` — this locale enumerates with the Latin comma; there is no prose to translate.",
 		...PROJECT_NAME_EXAMPLE,
@@ -749,6 +763,8 @@ const IDENTICAL_BY_DESIGN_JUDGED: Readonly<
 			"Radient is the product's name, and every shipped catalogue already keeps it in Latin script inside translated sentences (e.g. the switcher's own section heading); there is no word to translate.",
 		"mobile.session.highlights.withheld_reasons_join":
 			"Placeholder-only list separator, `{first}, {second}` — this locale enumerates with the Latin comma; there is no prose to translate.",
+		"mobile.chrome.composer.run_settings":
+			"Placeholder-only screen-reader name, `{model}, {effort}`: both parts are already-translated phrases and the separator is this locale's Latin comma; there is no prose to translate.",
 		"mobile.sidebar.row_label.join":
 			"Placeholder-only list separator, `{first}, {second}` — this locale enumerates with the Latin comma; there is no prose to translate.",
 		...PROJECT_NAME_EXAMPLE,
@@ -783,6 +799,8 @@ const IDENTICAL_BY_DESIGN_JUDGED: Readonly<
 			"Radient is the product's name, and every shipped catalogue already keeps it in Latin script inside translated sentences (e.g. the switcher's own section heading); there is no word to translate.",
 		"mobile.session.highlights.withheld_reasons_join":
 			"Placeholder-only list separator, `{first}, {second}` — this locale enumerates with the Latin comma; there is no prose to translate.",
+		"mobile.chrome.composer.run_settings":
+			"Placeholder-only screen-reader name, `{model}, {effort}`: both parts are already-translated phrases and the separator is this locale's Latin comma; there is no prose to translate.",
 		"mobile.sidebar.row_label.join":
 			"Placeholder-only list separator, `{first}, {second}` — this locale enumerates with the Latin comma; there is no prose to translate.",
 		...PROJECT_NAME_EXAMPLE,
@@ -819,6 +837,8 @@ const IDENTICAL_BY_DESIGN_JUDGED: Readonly<
 			"Radient is the product's name, and every shipped catalogue already keeps it in Latin script inside translated sentences (e.g. the switcher's own section heading); there is no word to translate.",
 		"mobile.session.highlights.withheld_reasons_join":
 			"Placeholder-only list separator, `{first}, {second}` — this locale enumerates with the Latin comma; there is no prose to translate.",
+		"mobile.chrome.composer.run_settings":
+			"Placeholder-only screen-reader name, `{model}, {effort}`: both parts are already-translated phrases and the separator is this locale's Latin comma; there is no prose to translate.",
 		"mobile.sidebar.row_label.join":
 			"Placeholder-only list separator, `{first}, {second}` — this locale enumerates with the Latin comma; there is no prose to translate.",
 		...PROJECT_NAME_EXAMPLE,

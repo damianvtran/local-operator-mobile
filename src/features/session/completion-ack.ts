@@ -143,10 +143,11 @@ export function mayAcknowledge(gates: AckGates): boolean {
  * miss).
  */
 export interface ScreenOverlays {
-	/** The model picker. */
-	models: boolean;
-	/** The effort picker. */
-	effort: boolean;
+	/** The run-settings sheet (the model list and the effort rungs, one sheet
+	 *  since issue #325). */
+	runSettings: boolean;
+	/** The read-only folder sheet (the conversation's full path). */
+	folder: boolean;
 	/** Either bottom panel — todos or subagents (one at a time). */
 	panel: boolean;
 	/** The queued-questions sheet. */
@@ -166,8 +167,8 @@ export interface ScreenOverlays {
  *  walked as one expression so a test can turn each term on alone. */
 export function overlaysBlocked(overlays: ScreenOverlays): boolean {
 	return (
-		overlays.models ||
-		overlays.effort ||
+		overlays.runSettings ||
+		overlays.folder ||
 		overlays.panel ||
 		overlays.asks ||
 		overlays.slash ||

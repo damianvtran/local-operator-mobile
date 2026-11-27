@@ -1,0 +1,118 @@
+ACTUAL CHECK SCRIPT
+import pathlib,json,hashlib,re,unicodedata,subprocess,datetime
+W=pathlib.Path('/Users/damian/local-operator-mobile/.worktrees/i18n-move-sheet-copy')
+ROOT=pathlib.Path('/Users/damian/.local-operator/sessions/eda9d1ecfbe4/scratchpad')
+OUT=ROOT/'bundles/fr/mobile.remote_sessions/move-pick-fr-B-eda9d1ecfbe4-r1'
+OUT.mkdir(parents=True,exist_ok=False)
+briefpath=pathlib.Path('/Users/damian/.local-operator/sessions/ca8720609fc7/scratchpad/translation-brief.json')
+draftpath=pathlib.Path('/Users/damian/.local-operator/sessions/3e5cf4a65579/scratchpad/draft-fr.json')
+ledgerpath=pathlib.Path('/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/move-picker-locale-ledger.json')
+sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+b=json.loads(briefpath.read_text());d=json.loads(draftpath.read_text());ledger=json.loads(ledgerpath.read_text());values=d['values'];keys=[x['key'] for x in b['keys']]
+logs=[]
+def log(x): logs.append(str(x));print(x)
+log('DEPENDENCY-FREE COMMAND: python3 '+str(ROOT/'audit-fr-B.py'))
+log('Audit checks use Python stdlib and git rev-parse only; no application imports, hooks, tests, compiler, build, install, browser or native execution.')
+head=subprocess.check_output(['git','-C',str(W),'rev-parse','HEAD'],text=True).strip()
+assert head==b['source_sha']==d['sourcecommit']==ledger['source_commit']=='9362cce8a631791b676b2d2c9eda90c43fc7e11c'
+log('PASS frozen HEAD '+head)
+assert sha(briefpath)==d['briefsha256']==ledger['brief_sha256']=='5a72dfd72dc820b1fa8e73d78b97807581572334ee0fd25eb2eab346e759ebca'
+assert sha(draftpath)==ledger['locales']['fr']['draft_sha256']=='8db8ff0bdac7c4691240fa7d82bb8e275a39ad85dd79a0ba1d2da405888a098c'
+log('PASS full brief/draft byte hashes independently match approved brief and ledger')
+inputs={str(briefpath):sha(briefpath),str(draftpath):sha(draftpath),str(ledgerpath):sha(ledgerpath)}
+for p,expected in b['authoring_files'].items():
+ actual=sha(W/p);assert actual==expected['sha256']==d['source_files_sha256'][p];inputs[str(W/p)]=actual;log('PASS source full-byte SHA256 '+p+' '+actual)
+assert sha(W/'src/i18n/catalogues/en/mobile.remote_sessions.json')==d['fullsource_sha256']
+assert sha(W/'src/i18n/catalogues/en/mobile.remote_sessions.context.json')==d['contextsha256']
+for p in [W/'src/i18n/catalogues/fr/mobile.remote_sessions.json',W/'src/i18n/catalogues/fr/mobile.sidebar.json',pathlib.Path('/Users/damian/local-operator/i18n/glossary.md'),pathlib.Path('/Users/damian/local-operator/i18n/style-guides/fr.md')]:inputs[str(p)]=sha(p)
+en=json.loads((W/'src/i18n/catalogues/en/mobile.remote_sessions.json').read_text());context=json.loads((W/'src/i18n/catalogues/en/mobile.remote_sessions.context.json').read_text());fr=json.loads((W/'src/i18n/catalogues/fr/mobile.remote_sessions.json').read_text());sidebar=json.loads((W/'src/i18n/catalogues/fr/mobile.sidebar.json').read_text())
+assert len(values)==7 and set(values)==set(keys)
+assert len(set(['eda9d1ecfbe4',d['translator_session'],ledger['locales']['fr']['auditor_session']]))==3
+log('PASS seven exact keys; B session differs from translator and A auditor')
+assert sidebar['mobile.sidebar.row.on_device']=='Sur {device}'
+assert all(k not in fr for k in keys)
+log('PASS French seven-key input is external draft; existing catalogue has none of these seven new keys; existing on_device remains Sur {device}')
+patterns=[r'\[(?:REDACTED|MASKED|FILTERED|SECRET)\]',r'<(?:REDACTED|MASKED|FILTERED|SECRET)>',r'\*{3,}']
+bidi=set([0x061c,0x200e,0x200f,*range(0x202a,0x202f),*range(0x2066,0x206a)])
+reason={
+'cannot_reach':'Natural concise status. Injoignable matches existing French remote/session statuses. The arbitrary computer name remains a single opaque device placeholder; no translation or grammatical inflection is imposed on its contents.',
+'destination_heading':'Natural infinitive section heading, not a started-operation assertion. Both déplacer and copier are preserved; vers correctly introduces destination choices. Existing row hint uses déplacer ou copier.',
+'discovery_help':'Idiomatic professional French with Ouvrez and tirez (vous). Visible sessions constrain the eligible devices, rather than claiming network-wide discovery. Both opening Local Operator on the other computer and pulling the session list downward to refresh remain explicit. Added downward direction explains the mobile gesture, not a different operation.',
+'no_answer':'Il naturally refers to the remote ordinateur in this status context. La demande de cet ordinateur retains the connected-computer requester, without reassigning it to the phone. Calm client fallback only; the source expression preserves nonblank server reasons verbatim.',
+'no_devices':'Correct concise statement of visibility only. It does not say the other devices are offline or absent from the network. Appareil follows the locale glossary.',
+'on_this_computer':'Natural compact location status; ordinateur correctly denotes the connected relay computer, not the phone. Sur aligns with the existing Sur {device} reusable key.',
+'right_now':'Actuellement is idiomatic for present location. Unlike immédiatement, it does not turn the current-location heading into urgency or an instruction.'}
+per=[];width=[]
+copytexts=[]
+for row in b['keys']:
+ k=row['key'];e=en[k];v=values[k];assert e==row['english'] and context[k]==row['context']
+ ep=re.findall(r'\{[^{}]+\}',e);vp=re.findall(r'\{[^{}]+\}',v);assert ep==vp
+ assert vp==(['{device}'] if k.endswith('cannot_reach') else [])
+ assert unicodedata.normalize('NFC',v)==v
+ assert not any(ord(c) in bidi for c in v)
+ assert not re.search(r'\{[^{}]*,\s*(plural|select|selectordinal|number|date|time)',e+v)
+ assert not re.search(r'<[^>]+>|`',e+v)
+ if k.endswith('discovery_help'):assert v.count('Local Operator')==e.count('Local Operator')==1
+ if k.endswith(('destination_heading','on_this_computer','right_now')):assert v[-1] not in '.!?:;'
+ r={'key':k,'english':e,'current_text':v,'linguistic_verdict':'PASS','reason':reason[k.rsplit('.',1)[-1]],'placeholders':vp,'width':{'english_codepoints':len(e),'french_codepoints':len(v),'ratio':round(len(v)/len(e),3),'rendered_fit_verified':False},'findings':[]}
+ per.append(r);width.append(r['width']);copytexts.extend([e,v,json.dumps(context[k],ensure_ascii=False)])
+ log('PASS '+k+' EN='+repr(e)+' FR='+repr(v)+' placeholders='+repr(vp)+' codepoints='+str(len(e))+'->'+str(len(v)))
+ log('REASON '+r['reason'])
+copyhits={p:sum(len(re.findall(p,t,re.I)) for t in copytexts) for p in patterns};assert sum(copyhits.values())==0
+metadatahits={p:len(re.findall(p,draftpath.read_text(),re.I)) for p in patterns}
+log('PASS NFC seven values; banned Unicode bidi controls absent; one opaque device placeholder and six no-argument messages')
+log('PASS Local Operator exact Latin name; markup/number/date skeletons absent. ICU/CLDR plural expansion N/A: seven simple messages, no plural/select/count source.')
+log('COPY redaction-marker scan (EN + context + seven FR values): '+json.dumps(copyhits))
+log('METADATA whole-draft redaction-marker scan: '+json.dumps(metadatahits)+'; matches in scan-describing metadata are not translated copy defects')
+findings=[]
+for suffix,fid in [('destination_heading','B-FR-1'),('discovery_help','B-FR-2')]:
+ r=next(x for x in per if x['key'].endswith('.'+suffix));f={'id':fid,'severity':'minor','category':'width-risk','key':r['key'],'current_text':r['current_text'],'proposed_text':r['current_text'],'recommendation':'Retain idiomatic wording; defer to rendered narrow-phone wrapping/height check. No translation-only remediation cycle.','reason':f"Source-codepoint expansion {r['width']['english_codepoints']} to {r['width']['french_codepoints']} ({r['width']['ratio']}x) may add wrapping; these counts are not pixel or rendered overflow proof.",'disposition':'deferred — rendered-width risk; no linguistic failure'};findings.append(f);r['findings'].append(fid)
+log('VERDICT mobile.remote_sessions.move_pick: PASS_WITH_MINORS; 7 keys; unresolved blocker/major=0; 2 deferred source-width risks; pair clearance pending parent')
+log('UNVERIFIED SOURCEHOOKGAP OPEN; audit is not source-hook validation. No pseudo run, rendered/native width, shaping or phone proof. French LTR: RTL ordering audit not applicable.')
+logtext='ACTUAL CHECK SCRIPT\n'+pathlib.Path(__file__).read_text()+'\nACTUAL OUTPUT (successful completion)\n'+'\n'.join(logs)+'\n'
+(OUT/'audit.log').write_text(logtext)
+report=['# French fresh B audit — Move PickBody','',f'Frozen source: `{head}`. Locale: fr. Namespace: `mobile.remote_sessions.move_pick`. Exactly **7 keys read and judged**; no whole-app audit.','', '## Independence and provenance','B auditor: session `eda9d1ecfbe4`, actual model `openai/gpt-6.1-sol`, verified by the visible model-switch receipt (temporary fallback from anthropic/claude-opus-5-5 due to provider quota failure). Translator `3e5cf4a65579`; A auditor `e5caed1bcb4e`: distinct sessions, same-model actors allowed. A reasoning/report was not used for judgement. The ledger necessarily exposed A status/minor summaries during input discovery; fresh comparison was made from the actual seven values, English, sidecar, usage and glossary before schema inspection. A record was subsequently inspected for field schema only. No native-human proof; human review waived.','', '## Per-key linguistic assessment']
+for r in per:report.extend(['', '### '+r['key'], '- EN: '+r['english'],'- FR: '+r['current_text'],'- PASS: '+r['reason'],f"- Width: {r['width']['english_codepoints']} → {r['width']['french_codepoints']} codepoints ({r['width']['ratio']}×); placeholders unexpanded; not rendered proof."])
+report.extend(['','## Findings'])
+for f in findings:report.extend(['',f"### {f['id']} — {f['severity']} — {f['key']}",'Current: '+f['current_text'],'Proposed: retain '+f['proposed_text'],f['reason'],f['recommendation']])
+report.extend(['','## Integrity and evidence boundaries','Full source/draft/brief hashes independently verified, including usage file; exact checks and actual output are in audit.log. All seven source/context rows matched the brief. {device} occurs exactly once in cannot_reach; the other six messages take no arguments. Local Operator remains Latin unchanged. NFC passes; banned bidi controls absent. Input-copy redaction-marker scan returns zero; whole-draft metadata scan is separately recorded and can match descriptions of the scan itself. No claim of secret scanning beyond those markers.','ICU/CLDR: N/A for these seven simple messages: no plural/select, count, number/date skeletons or markup to preserve. French CLDR one/many/other was read in the style guide but no branches need inventing here. French is LTR; Urdu source-codepoint tracing and native RTL ordering claims are outside this audit.','Usage read confirms unchanged reuse of mobile.sidebar.row.on_device, blank/missing-only server-reason fallback, current-location and destination-heading roles. Draft bytes preserved. No repository edits, hook execution, tests, compiler, build, installs, push, browser or native work. Pseudo expansion is a source-length risk assessment, not a pseudo-render execution. SOURCEHOOKGAP remains OPEN and unvalidated.','','## Verdict','Namespace mobile.remote_sessions.move_pick: **PASS WITH MINORS**, 7/7 linguistically clean, 0 unresolved blocker/major; two deferred width-check risks. Overall B-only verdict: **PASS WITH MINORS**. Parent must independently check A/B pair clearance; no claim here of pair clearance, shippability or rendered fit. No other namespace or locale audited.'])
+(OUT/'report.md').write_text('\n'.join(report)+'\n')
+record={'record_kind':'i18n-audit','audit_id':OUT.name,'audit_pass':'B','slice':'move-picker-seven-keys','locale':'fr','namespace':'mobile.remote_sessions','audit_date':datetime.date.today().isoformat(),'round':1,'key_count':7,'keys_audited':keys,'translator_session':d['translator_session'],'translator_actual_model':ledger['locales']['fr']['translator_actual_model'],'A_auditor_identity':{'session':ledger['locales']['fr']['auditor_session'],'purpose':'independence only; A verdict not adopted'},'auditor':{'agent':'translation-auditor (lopdev), fresh B','session':'eda9d1ecfbe4','model':'openai/gpt-6.1-sol','actual_model_source':'Visible model-switch receipt: temporary fallback from anthropic/claude-opus-5-5 because provider failure: quota','model_verified':True,'independent_from_translator_session':True,'independent_from_A_session':True},'draft':{'path':str(draftpath),'sha256':sha(draftpath),'sha256_verified':True},'brief':{'path':str(briefpath),'sha256':sha(briefpath),'sha256_verified':True},'brief_sha256':sha(briefpath),'draft_sha256':sha(draftpath),'source_commit':head,'read_route':'Ordinary explicitly approved absolute copy/context/worktree reads. Nested JSON context read directly, not a routable public-copy key; read_public_copy not called; no public-copy receipt claimed.','input_hashes':inputs,'checks':{'source_hashes':'PASS','placeholder_integrity':'PASS','NFC':'PASS','bidi_controls':'PASS: absent','ICU_CLDR':'N/A: seven simple messages','rendered_width':'UNVERIFIED','source_hook':'OPEN, not validated'},'redaction_marker_hits':{'input_copy':copyhits,'draft_including_metadata':metadatahits},'verdict':'PASS_WITH_MINORS','linguistic_verdict':'PASS','namespace_verdicts':{'mobile.remote_sessions.move_pick':{'verdict':'PASS_WITH_MINORS','key_count':7,'linguistically_clean_keys':7}},'current_report_verdict':{'verdict':'PASS_WITH_MINORS','unresolved_blocker_major_count':0,'minor_count':2},'findings':findings,'per_key':per,'pair_clearance':'PENDING_PARENT_CHECK_NOT_CLAIMED','separate_process_gap':{'name':'SOURCEHOOKGAP','status':'OPEN','fixed_by_audit':False},'human_native_speaker':'waived; independent LLM audit only','unverified':['rendered phone width/wrapping/height','pseudo rendering','native rendering','source-hook execution'],'artifacts':{'report':'report.md','audit_log':'audit.log'},'ledger_appended':False,'repo_modified':False,'artifact_hashes':{name:sha(OUT/name) for name in ['report.md','audit.log']}}
+(OUT/'record.json').write_text(json.dumps(record,ensure_ascii=False,indent=2)+'\n')
+print('BUNDLE',OUT)
+for name in ['record.json','report.md','audit.log']:
+ p=OUT/name;raw=p.read_bytes();print('READBACK',name,len(raw),'bytes SHA256',sha(p));assert raw
+reread=json.loads((OUT/'record.json').read_text());assert reread['key_count']==7 and reread['current_report_verdict']['unresolved_blocker_major_count']==0
+assert sha(draftpath)==reread['draft_sha256']
+print('PASS readback all three files; record parse and draft preservation verified')
+
+ACTUAL OUTPUT (successful completion)
+DEPENDENCY-FREE COMMAND: python3 /Users/damian/.local-operator/sessions/eda9d1ecfbe4/scratchpad/audit-fr-B.py
+Audit checks use Python stdlib and git rev-parse only; no application imports, hooks, tests, compiler, build, install, browser or native execution.
+PASS frozen HEAD 9362cce8a631791b676b2d2c9eda90c43fc7e11c
+PASS full brief/draft byte hashes independently match approved brief and ledger
+PASS source full-byte SHA256 src/i18n/catalogues/en/mobile.remote_sessions.json 436f8ec3bda274431146e7e7cb82b2add418f598bd2a7a6d7426f561a4312984
+PASS source full-byte SHA256 src/i18n/catalogues/en/mobile.remote_sessions.context.json c703dff07b634d3d2d4b7c789e6a4a1eecf192a57618ea8e9e72197d325d08eb
+PASS source full-byte SHA256 src/features/sessions/move-sheet.tsx 6a3f7126eb2fefc5ad0138a1731e3898d66d333ea8ca1b4ac99321da18d495aa
+PASS seven exact keys; B session differs from translator and A auditor
+PASS French seven-key input is external draft; existing catalogue has none of these seven new keys; existing on_device remains Sur {device}
+PASS mobile.remote_sessions.move_pick.cannot_reach EN="Can't reach {device}" FR='{device} est injoignable' placeholders=['{device}'] codepoints=20->24
+REASON Natural concise status. Injoignable matches existing French remote/session statuses. The arbitrary computer name remains a single opaque device placeholder; no translation or grammatical inflection is imposed on its contents.
+PASS mobile.remote_sessions.move_pick.destination_heading EN='Move or copy to' FR='Déplacer ou copier vers' placeholders=[] codepoints=15->23
+REASON Natural infinitive section heading, not a started-operation assertion. Both déplacer and copier are preserved; vers correctly introduces destination choices. Existing row hint uses déplacer ou copier.
+PASS mobile.remote_sessions.move_pick.discovery_help EN='This app can offer the devices your sessions show. A device with no visible session cannot be picked yet — open Local Operator on the other computer and pull the list to refresh.' FR='Seuls les appareils associés aux sessions visibles sont proposés. Un appareil sans session visible ne peut pas encore être sélectionné. Ouvrez Local Operator sur l’autre ordinateur, puis tirez la liste des sessions vers le bas pour l’actualiser.' placeholders=[] codepoints=178->245
+REASON Idiomatic professional French with Ouvrez and tirez (vous). Visible sessions constrain the eligible devices, rather than claiming network-wide discovery. Both opening Local Operator on the other computer and pulling the session list downward to refresh remain explicit. Added downward direction explains the mobile gesture, not a different operation.
+PASS mobile.remote_sessions.move_pick.no_answer EN='It did not answer when this computer asked.' FR='Il n’a pas répondu à la demande de cet ordinateur.' placeholders=[] codepoints=43->50
+REASON Il naturally refers to the remote ordinateur in this status context. La demande de cet ordinateur retains the connected-computer requester, without reassigning it to the phone. Calm client fallback only; the source expression preserves nonblank server reasons verbatim.
+PASS mobile.remote_sessions.move_pick.no_devices EN='No other devices are visible.' FR='Aucun autre appareil n’est visible.' placeholders=[] codepoints=29->35
+REASON Correct concise statement of visibility only. It does not say the other devices are offline or absent from the network. Appareil follows the locale glossary.
+PASS mobile.remote_sessions.move_pick.on_this_computer EN='On this computer' FR='Sur cet ordinateur' placeholders=[] codepoints=16->18
+REASON Natural compact location status; ordinateur correctly denotes the connected relay computer, not the phone. Sur aligns with the existing Sur {device} reusable key.
+PASS mobile.remote_sessions.move_pick.right_now EN='Right now' FR='Actuellement' placeholders=[] codepoints=9->12
+REASON Actuellement is idiomatic for present location. Unlike immédiatement, it does not turn the current-location heading into urgency or an instruction.
+PASS NFC seven values; banned Unicode bidi controls absent; one opaque device placeholder and six no-argument messages
+PASS Local Operator exact Latin name; markup/number/date skeletons absent. ICU/CLDR plural expansion N/A: seven simple messages, no plural/select/count source.
+COPY redaction-marker scan (EN + context + seven FR values): {"\\[(?:REDACTED|MASKED|FILTERED|SECRET)\\]": 0, "<(?:REDACTED|MASKED|FILTERED|SECRET)>": 0, "\\*{3,}": 0}
+METADATA whole-draft redaction-marker scan: {"\\[(?:REDACTED|MASKED|FILTERED|SECRET)\\]": 0, "<(?:REDACTED|MASKED|FILTERED|SECRET)>": 8, "\\*{3,}": 0}; matches in scan-describing metadata are not translated copy defects
+VERDICT mobile.remote_sessions.move_pick: PASS_WITH_MINORS; 7 keys; unresolved blocker/major=0; 2 deferred source-width risks; pair clearance pending parent
+UNVERIFIED SOURCEHOOKGAP OPEN; audit is not source-hook validation. No pseudo run, rendered/native width, shaping or phone proof. French LTR: RTL ordering audit not applicable.

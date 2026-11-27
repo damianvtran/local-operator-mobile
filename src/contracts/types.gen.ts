@@ -418,6 +418,22 @@ export interface SessionProjection {
 	heartbeat_stale?: boolean | null;
 	/** Existing Core wire signal: the opening row is detached from this tail. */
 	transcript_head_pinned?: boolean;
+	/**
+	 * Core's statement that the journal holds rows OLDER than this transcript's
+	 * oldest (unpinned) row, so "load earlier" must be offered and may page
+	 * from the tail's oldest row (local-operator #4521,
+	 * `SessionProjection.transcript_has_older` in `mobile/types.py`). Set when
+	 * the render opens at a compaction marker or a cap trimmed its head: a
+	 * compacted session's kept window can seed e.g. 14 rows with no pin.
+	 *
+	 * A SEPARATE fact from `transcript_head_pinned` on purpose: the pin says
+	 * row 0 is the detached opener, and reading "has older" as a pin would
+	 * detach whatever row 0 is (a compaction marker) as a false opener.
+	 *
+	 * ABSENT when false (Core pops it) and on Core older than #4521; absence
+	 * reads as "no statement", exactly the pre-field behaviour.
+	 */
+	transcript_has_older?: boolean;
 	transcript: TranscriptEntry[];
 	todos: TodoPhase[];
 	subagents: SubagentRow[];

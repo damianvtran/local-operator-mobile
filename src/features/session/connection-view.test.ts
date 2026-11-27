@@ -193,6 +193,15 @@ describe("C2 — a genuine reconnect, and only then", () => {
 		);
 		expect(view.id).toBe("C2");
 	});
+
+	it("keeps reporting recovery while a new body waits for its first projection", () => {
+		// The previous connection's frame gives the reader an age, not proof that
+		// the replacement body has delivered anything.
+		const view = connectionView(
+			input({ stream: "open", ageS: 7, reconnectExpired: true }),
+		);
+		expect(view.id).toBe("C2");
+	});
 });
 
 describe("C3 — silence, with the last snapshot still readable", () => {

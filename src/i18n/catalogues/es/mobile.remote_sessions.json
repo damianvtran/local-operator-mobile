@@ -1,4 +1,11 @@
 {
+	"mobile.remote_sessions.move_pick.right_now": "Ahora mismo",
+	"mobile.remote_sessions.move_pick.cannot_reach": "No se puede contactar con {device}",
+	"mobile.remote_sessions.move_pick.no_answer": "No respondió a la solicitud de este equipo.",
+	"mobile.remote_sessions.move_pick.on_this_computer": "En este equipo",
+	"mobile.remote_sessions.move_pick.no_devices": "No hay otros dispositivos visibles.",
+	"mobile.remote_sessions.move_pick.discovery_help": "Esta app solo ofrece los dispositivos que aparecen en tus sesiones. Si un dispositivo no tiene ninguna sesión visible, aún no puedes seleccionarlo. Abre Local Operator en el otro equipo y desliza la lista hacia abajo para actualizarla.",
+	"mobile.remote_sessions.move_pick.destination_heading": "Mover o copiar a",
 	"mobile.remote_sessions.title": "Conversación remota",
 	"mobile.remote_sessions.loading": "Comprobando la compatibilidad con sesiones remotas…",
 	"mobile.remote_sessions.unsupported": "Esta acción aún no está disponible en conversaciones remotas. Úsala en el equipo propietario.",

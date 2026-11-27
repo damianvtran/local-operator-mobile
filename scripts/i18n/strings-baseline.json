@@ -294,34 +294,10 @@
 		},
 		{
 			"file": "src/features/sessions/move-sheet.tsx",
-			"text": "Move or copy to",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/features/sessions/move-sheet.tsx",
 			"text": "No answer yet — not a failure.",
 			"owner": "Mobile i18n",
 			"payoff": "Key this literal in the catalogue",
 			"ruleVersion": "copy-props-v1"
-		},
-		{
-			"file": "src/features/sessions/move-sheet.tsx",
-			"text": "No other devices are visible.",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/features/sessions/move-sheet.tsx",
-			"text": "On this computer",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/features/sessions/move-sheet.tsx",
-			"text": "Right now",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
 		},
 		{
 			"file": "src/features/sessions/move-sheet.tsx",
@@ -348,12 +324,6 @@
 			"owner": "Mobile i18n",
 			"payoff": "Key this literal in the catalogue",
 			"ruleVersion": "copy-props-v1"
-		},
-		{
-			"file": "src/features/sessions/move-sheet.tsx",
-			"text": "This app can offer the devices your sessions show. A device with no",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
 		},
 		{
 			"file": "src/features/settings/notifications-section.tsx",

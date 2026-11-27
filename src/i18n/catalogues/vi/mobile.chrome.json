@@ -21,10 +21,16 @@
 	"mobile.chrome.drawer.open_count": "Mở cuộc trò chuyện, {count, plural, other {# cuộc trò chuyện mới}}",
 	"mobile.chrome.drawer.agents": "Tác nhân",
 	"mobile.chrome.composer.row_model": "Mô hình",
-	"mobile.chrome.composer.row_effort": "Mức suy luận",
 	"mobile.chrome.composer.row_usage": "Ngữ cảnh",
 	"mobile.chrome.composer.row_cost": "Chi phí",
 	"mobile.chrome.composer.row_queue": "Hàng đợi",
 	"mobile.chrome.composer.row_questions": "Câu hỏi",
+	"mobile.chrome.composer.folder": "{source, select, chosen {Thư mục, {folder}, đã chọn cho cuộc trò chuyện này} default {Thư mục, {folder}, mặc định của máy tính này} other {Thư mục, {folder}}}",
+	"mobile.chrome.composer.folder_hint": "Chọn thư mục khác",
+	"mobile.chrome.composer.folder_hint_fixed": "Hiển thị đường dẫn đầy đủ đến thư mục của cuộc trò chuyện này",
+	"mobile.chrome.composer.run_settings": "{model}, {effort}",
+	"mobile.chrome.composer.run_settings_hint": "Chọn mô hình và mức suy luận",
+	"mobile.chrome.composer.run_settings_title": "Mô hình và mức suy luận",
+	"mobile.chrome.composer.row_folder": "Thư mục",
 	"mobile.chrome.composer.row_identity": "Tác nhân hoặc nhóm"
 }

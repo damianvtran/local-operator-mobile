@@ -337,8 +337,9 @@ shimmer still says "working" on that row, which is enough, and costs no geometry
 
 ## 8. Sheet (bottom sheet)
 
-**Existing implementation:** `components/ui/sheet.tsx` — used by the model sheet,
-the effort rungs, the slash sheet, and the subagent detail.
+**Existing implementation:** `components/ui/sheet.tsx` — used by the run-settings
+sheet (the effort rungs and the model list), the folder sheet, the slash sheet,
+and the subagent detail.
 
 **Bottom-anchored, not centred.** A centred dialog on a phone is under neither
 thumb.
@@ -468,7 +469,7 @@ primitive in the app, and the one that carries the most information.
 │  ┌────────────────────────────────────┐  ⬤  ⬤           │
 │  │ Message…                           │  stop  send       │
 │  └────────────────────────────────────┘                  │
-│  2 queued                             opus-4.6   high    │
+│  2 queued                         [folder] [model] ⋯     │
 └──────────────────────────────────────────────────────────┘
 ```
 
@@ -480,11 +481,50 @@ primitive in the app, and the one that carries the most information.
 | Send / steer | 44 circle, `accent` fill, `on-accent` glyph `↑`, `fab` is 56 where it stands alone |
 | Stop | 44 circle, transparent fill, `danger-border`, `danger` `■` at 13pt |
 | Queued count | `mono-sm` `ink-dim`, left; the count is the only thing on that line that changes |
-| Model chip | `mono-sm` `ink-dim`, opens the model sheet |
-| Effort chip | `mono-sm` `ink-dim`, opens the rung sheet |
+| Folder control | `IconButton` (folder glyph, 20), opens the folder sheet: the full path, then the choices while the folder can change; read-only once the conversation has started |
+| Run-settings control | `IconButton` (sliders glyph, 20), opens ONE sheet: current values, the effort rungs, then the model list |
 | Attachments | 64 thumbs with a remove control; each image capped at **1568 px** on its long edge before upload |
 | Slash sheet | the same sheet in § 8, filtered as the draft starts with `/` |
-| Leading chip (`leadingChip`, home only) | the folder chip: `homeShortened(target.cwd, home)`, `size="sm"`, tap pushes `/new` |
+| Non-default mark | a 6 pt `accent` dot at the glyph's top-end corner when the reader chose a value that differs from the computer's default (§ 7's dot), also spoken |
+
+### The folder and run-settings controls (issue #325)
+
+The folder and the model used to be text chips. On iOS they were cut to `loc`
+and `Claude` with no ellipsis, and More could leave the row while Stop was up:
+React Native 0.86's vendored Yoga freezes a min-floored shrinker in its first
+pass and still charges the next one against the original free space
+([yoga#2006](https://github.com/facebook/yoga/issues/2006)), and the two chips
+were two such shrinkers. Both are now icon controls — rigid touch-floor squares
+— so nothing in the controls zone shrinks.
+
+- **Spoken names carry the values.** The folder control says its folder's own
+  name and where it comes from (`Folder, app, chosen for this conversation`);
+  the run-settings control says the model's and the effort's own spoken names
+  (`Model, Opus 5, Effort, High`). The full path is the folder sheet's header.
+- **Which controls fit is a plan, not a shrink.** `composerControlsPlan` reads
+  the zone's measured width (it is `flex-1` between fixed siblings, so it cannot
+  feed itself). The queued sentence goes first, then the folder, then run
+  settings. A control that leaves the row becomes a row in More, so More takes
+  the trailing slot whenever anything is displaced. Otherwise More shows only
+  when it has rows of its own (usage, cost, queue, questions): an empty More
+  opened nothing.
+- **The non-default mark is a shape.** `IconButton`'s `active` fill
+  (`row-selected`) has no visible edge on the composer's `elevated` shell
+  (about 1.05:1 in dark), so the mark is the list row's 6 pt `accent` dot. The
+  meaning is also spoken. The dot is centred on the glyph's top-end corner
+  (`customMarkInset`). `IconButton` draws its 44 pt visual box at the top-start of
+  the touch-floor pressable, so the dot's top inset is 9 on every floor and its
+  trailing inset is 9 on 44 pt and 13 on 48 dp.
+- **The run-settings sheet leads with effort.** It opens on the current values
+  (`Opus 5 · High`), then the effort rungs as one compact wrapping group, then
+  the model list. A compact rung is capped at the line and wraps its label and
+  badge inside itself. A pick never adds a badge, so the rungs do not move under
+  the thumb; "Chosen for this conversation" is said once, under the heading. A real catalogue's model list is more than a screen tall, so
+  effort below it was out of reach when the sheet opened. A pick commits and the
+  sheet stays open; a refused change shows as an error alert at the top of the
+  sheet, and the check mark keeps following the value the relay applied. A value
+  that cannot change, such as an ended session's recorded effort, is shown
+  read-only with its reason.
 
 ### The shell's edge, and why it is a child
 
@@ -612,35 +652,31 @@ That is a host problem, not a product defect.
 
 ### Glass (iOS)
 
-The shell and the strip's model/effort chips draw `expo-glass-effect` Liquid
-Glass when the host's `useChromeGlass()` says so (iOS 26, glass API available,
+The shell draws `expo-glass-effect` Liquid Glass when the host's `useChromeGlass()` says so (iOS 26, glass API available,
 Reduce Transparency resolved **off**); the home and the session screen each take
 ONE decision and pass it as `glass`. It is **fill only**: the shell's glass is an
 absolutely positioned `ChromeSurface` layer clipped by the shell's own animated
-shape, so the box, radii and every target are identical to the solid frame; the
-strip row becomes a `ChromeGroup` and each chip its own capsule. The solid
-fallback is unchanged (no wrapper on a solid chip, `elevated` on the shell), the
-`border-control` ring stays the rim, and **attach and send stay opaque** in both
+shape, so the box, radii and every target are identical to the solid frame. The
+controls on the card sit on the shell's one material and take no capsule of
+their own (the folder and run-settings controls are transparent icon buttons,
+like attach's glyph and the mic). The solid fallback is unchanged (`elevated`
+on the shell), the `border-control` ring stays the rim, and **attach and send stay opaque** in both
 branches so `on-accent` on `accent` never depends on what scrolls behind the
 glass. The shell's glass layer takes a fixed 24 pt radius
 (`COMPOSER_GLASS_LAYER_RADIUS`, the smallest the animated shell ever reaches), so
-the shell's clip is always the only shape. Each strip capsule hugs its chip
-(`alignSelf: flex-start`) and the strip's group merge distance is 0, under its
-4 pt gap, so model and effort read as two capsules, never one fused bar. No web
-frame can show glass (the module renders a plain view there).
+the shell's clip is always the only shape. No web frame can show glass (the module renders a plain view there).
 
-### Home's use of it, and the two additive props
+### Home's use of it
 
-Home (S4) mounts the same composer with two additive props, one of which it
-leaves empty:
-
-- `leadingChip` — the **folder chip** above the field's row, naming the folder a
-  new session would start in (`homeShortened`, so `$HOME` shortens first); tap
-  pushes `/new`, the deliberate path. It is the home's only new chip.
-- `effortChip` — **`null` on home**: there is no turn yet to apply an effort to,
-  and the view's rule (`new-session.tsx:36-39`) is that a chip whose enabled
-  state disagrees with its label is a dead end; the same composer still renders
-  the effort chip beside `modelChip` on the session view.
+Home (S4) mounts the same composer and passes its `folder`: the folder a new
+conversation would start in, its source (the computer's default or the
+reader's pick), and whether it can still change. Before the start the folder
+sheet lists the computer's folders under the full path; once the conversation
+has started it shows the path read-only, because the relay accepts a folder only
+when a conversation starts (`StartSessionRequest.cwd`). The session view passes
+its own folder, always read-only. The run-settings sheet applies the model and
+effort with the start body on home and with `set_model` / `set_effort` in a
+session.
 
 The home also passes `fieldRef` — a handle to the platform field — because
 *New chat* (in the conversations panel) closes the panel and puts the caret in

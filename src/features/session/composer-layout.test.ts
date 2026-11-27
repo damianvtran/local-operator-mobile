@@ -2,18 +2,11 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
 	COMPOSER_ACTION_CLUSTER,
-	COMPOSER_CHIP_CAPSULE_ALIGN,
 	COMPOSER_CHIP_TRAILING,
 	COMPOSER_CONTROLS_ROW,
 	COMPOSER_DISC,
 	COMPOSER_META_GAP_PT,
 	COMPOSER_META_ROW,
-	chipWidthEstimate,
-	composerChipPlan,
-	FOLDER_CHIP_MAX_PT,
-	folderChipText,
-	HOME_STRIP_SHRINK,
-	MODEL_FLOOR_PT,
 	NOTICE_ACTION_GAP_PT,
 	noticeActionPlan,
 	queuedChipWidthEstimate,
@@ -30,12 +23,31 @@ const read = (path: string) =>
 const COMPOSER = read("src/features/session/components/composer.tsx");
 const SCREEN = read("app/(app)/session/[id].tsx");
 const PANE = read("src/features/sessions/conversations-pane.tsx");
+const SPACE = /\s+/g;
 describe("build389 persistent field and context", () => {
 	it("retains disc spacing and target floors", () => {
 		expect(COMPOSER_CONTROLS_ROW).toContain("gap-x-1");
 		expect(COMPOSER_ACTION_CLUSTER).toContain("gap-1");
 		expect(COMPOSER_DISC).toContain("h-11 w-11");
-		expect(MODEL_FLOOR_PT).toBe(44);
+	});
+	it("disables the retained Stop in place in both toolbar layouts", () => {
+		const composer = COMPOSER.replace(SPACE, " ");
+		const stop = composer.slice(
+			composer.indexOf("const stopButton ="),
+			composer.indexOf("const sendButton ="),
+		);
+		expect(stop).toContain("controls.stopVisible ? (");
+		expect(stop).toContain("disabled={stopInert}");
+		expect(stop).toContain("disabled: stopInert");
+		expect(stop).toContain("onPress={() => { if (!stopInert) onStop(); }}");
+		expect(stop).toContain("minWidth: TOUCH_FLOOR, minHeight: TOUCH_FLOOR");
+		// The card and the pill use the same Stop node in the same cluster.
+		expect(composer).toContain(
+			"className={COMPOSER_ACTION_CLUSTER}> {stopButton} {sendButton}",
+		);
+		expect(composer).toContain(
+			"className={COMPOSER_ACTION_CLUSTER}> {stopButton} {pillSend ? sendButton : null}",
+		);
 	});
 	it("mounts one Textarea independently of idle, focus and keyboard", () => {
 		expect(COMPOSER.match(/<Textarea\b/g)).toHaveLength(1);
@@ -43,16 +55,17 @@ describe("build389 persistent field and context", () => {
 		expect(COMPOSER).not.toContain("inlineMetaFits");
 		expect(COMPOSER).not.toContain("composerGeometry");
 	});
-	it("keeps model and effort explicit on the card's controls row and in More", () => {
-		/* D5: the chips ride the card's controls row, in the zone between attach
-		 *  and the mic/send cluster — not a strip above the shell. */
+	it("keeps the folder and run settings on the card's controls row, and in More only when off it", () => {
+		/* D5 / issue #325: the controls ride the card's controls row, in the zone
+		 *  between attach and the mic/send cluster — now as icon controls. */
 		const zone = COMPOSER.slice(
-			COMPOSER.indexOf("const chipZone = ("),
+			COMPOSER.indexOf("const controlZone = ("),
 			COMPOSER.indexOf("const clearDraft ="),
 		);
 		expect(zone).toContain("className={COMPOSER_CHIP_ZONE}");
+		expect(zone).toContain("testID={folder.testID}");
 		expect(zone).toContain("CONTROL.composerModelChip");
-		expect(zone).toContain("CONTROL.composerEffortChip");
+		expect(zone).not.toContain("CONTROL.composerEffortChip");
 		expect(zone).toContain("CONTROL.composerDismissKeyboard");
 		expect(zone).toContain("CONTROL.composerContext");
 		/* The queued count is on the card ONLY where the host says it has no
@@ -60,17 +73,26 @@ describe("build389 persistent field and context", () => {
 		 *  own shrinking chip, and never unconditionally. */
 		expect(zone).not.toContain("{queuedChip}");
 		expect(zone).toContain("{cardQueuedChip}");
-		/* More still names both, as label/value rows on one edge. */
-		expect(COMPOSER).toContain("testID={CONTROL.composerContextModel}");
-		expect(COMPOSER).toContain("testID={CONTROL.composerContextEffort}");
+		/* More names a control only while that control is not on the row: one
+		 *  way in, never two (UX U5). Its effort row is gone — effort lives in
+		 *  the run-settings sheet with the model. */
 		const sheet = COMPOSER.slice(
 			COMPOSER.indexOf("testID={CONTROL.composerContextSheet}"),
 		);
+		const folderRow = sheet.indexOf("testID={CONTROL.composerContextFolder}");
+		const modelRow = sheet.indexOf("testID={CONTROL.composerContextModel}");
+		expect(
+			sheet.lastIndexOf("{folder !== null && !onRow.folder ? (", folderRow),
+		).toBeGreaterThan(-1);
+		expect(sheet.lastIndexOf("{!onRow.settings ? (", modelRow)).toBeGreaterThan(
+			folderRow,
+		);
+		expect(COMPOSER).not.toContain("CONTROL.composerContextEffort");
 		/* Seven: the home-only "Agent or team" row (identity-picker spec D-S2)
 		 *  leads More, rendered only when the host passes `identityRow`. */
 		expect(sheet.match(/<ContextRow\b/g) ?? []).toHaveLength(7);
 		expect(sheet.indexOf("CONTROL.composerContextIdentity")).toBeLessThan(
-			sheet.indexOf("CONTROL.composerContextModel"),
+			folderRow,
 		);
 		expect(sheet).not.toContain("<ComposerChipButton");
 		// D2 (round 6): landscape has ONE context affordance — the compact strip's.
@@ -202,7 +224,7 @@ describe("round 5 — regressions that fail if the fix is reverted", () => {
 		);
 		expect(
 			row.replace(/\{\/\*[\s\S]*?\*\/\}/g, "").replace(/\s+/g, " "),
-		).toContain("{restsAsCard ? ( <> {pasteChip} {chipZone}");
+		).toContain("{restsAsCard ? ( <> {pasteChip} {controlZone}");
 	});
 	it("bounds the queue chip so large text cannot push a control off the card", () => {
 		/* The strip's chip keeps the 160 pt cap; the card's takes the width the
@@ -488,237 +510,66 @@ describe("strip glass capsules stay per-chip", () => {
 		 *  glass capsules of their own and no group merges them. */
 		expect(COMPOSER).not.toContain("<ChromeGroup");
 	});
-	it("makes each capsule hug its chip, in the glass branch only", () => {
-		expect(COMPOSER_CHIP_CAPSULE_ALIGN).toBe("flex-start");
-		const surface = COMPOSER.slice(
-			COMPOSER.indexOf("const stripChipSurface ="),
-			COMPOSER.indexOf("export const Composer ="),
-		);
-		expect(surface).toContain("alignSelf: COMPOSER_CHIP_CAPSULE_ALIGN");
-		/* The solid branch is the chip itself, unwrapped and unchanged. */
-		expect(surface).toMatch(/\) : \(\s*chip\s*\);/);
+	it("draws no capsule at all since the chips became icon controls (issue #325)", () => {
+		/* Transparent `IconButton`s like attach and the mic: nothing to wrap. */
+		expect(COMPOSER).not.toContain("stripChipSurface");
+		expect(COMPOSER).not.toContain("COMPOSER_CHIP_CAPSULE_ALIGN");
 	});
 });
 
-describe("the home strip's folder chip (design D2 / UX U4 / U5)", () => {
-	it("shows the folder's name at ordinary text and the glyph alone past large text", () => {
-		expect(folderChipText("app", 1)).toBe("app");
-		expect(folderChipText("app", 1.4)).toBe("app");
-		expect(folderChipText("app", 1.5)).toBe("");
-		expect(folderChipText("app", 2)).toBe("");
+describe("the card's icon controls (issue #325)", () => {
+	/* The folder and model chips were cut to `loc` / `Claude` with no ellipsis
+	 *  on iOS, and More could leave the row while Stop was up: RN 0.86.3's
+	 *  vendored Yoga freezes a min-floored shrinker in its first pass and still
+	 *  charges the next against the ORIGINAL free space (yoga#2006, fixed
+	 *  upstream in 73bebc0, not vendored). The fix removes the shape the bug
+	 *  needs: nothing in the zone shrinks. The plan's own arithmetic is pinned in
+	 *  `composer-controls.test.ts`; this pins the wiring. */
+	const code = COMPOSER.replace(/\{?\/\*[\s\S]*?\*\/\}?/g, "").replace(
+		/\s+/g,
+		" ",
+	);
+	const zone = code.slice(
+		code.indexOf("const controlZone = ("),
+		code.indexOf("const clearDraft ="),
+	);
+
+	it("feeds the plan the zone's own width and the trailing slot's occupant", () => {
+		const plan = code.slice(
+			code.indexOf("const controlsPlan = composerControlsPlan({"),
+			code.indexOf("const onRow ="),
+		);
+		expect(plan).toContain("width: zoneWidth,");
+		expect(plan).toContain("touchFloor: TOUCH_FLOOR,");
+		expect(plan).toContain("gap: COMPOSER_META_GAP_PT,");
+		expect(plan).toContain("folder: folder !== null,");
+		expect(plan).toContain("dismiss: keyboardVisible || focused,");
+		expect(plan).toContain("moreRows,");
+		/* More is shown for its own rows or a displaced control, never empty. */
+		expect(code).toContain(
+			"const moreRows = moreHasRows({ context: !!contextLabel, cost: !!costLabel, queued: queuedCount, questions: questions !== null, identity: identityRow !== null, });",
+		);
+		expect(zone).toContain('controlsPlan.trailing === "more" ? (');
 	});
 
-	it("caps the chip below the old 160 pt and above its 44 pt floor", () => {
-		expect(FOLDER_CHIP_MAX_PT).toBe(112);
-		expect(FOLDER_CHIP_MAX_PT).toBeGreaterThan(MODEL_FLOOR_PT);
+	it("has no shrinker left in the zone: every member is a rigid icon square", () => {
+		expect(zone).not.toMatch(/flexShrink|\bshrink\b|min-w-0 shrink/);
+		expect(zone).not.toContain("<Chip");
+		expect(zone.match(/<ComposerIconControl\b/g) ?? []).toHaveLength(2);
+		const control = COMPOSER.slice(
+			COMPOSER.indexOf("const ComposerIconControl"),
+			COMPOSER.indexOf("/** The failure notice's row floor:"),
+		);
+		expect(control).toContain("<IconButton");
+		expect(control).toContain("size={ATTACH_GLYPH_PT}");
 	});
 
-	it("yields folder first, then effort, then model", () => {
-		expect(HOME_STRIP_SHRINK.folder).toBeGreaterThan(HOME_STRIP_SHRINK.effort);
-		expect(HOME_STRIP_SHRINK.effort).toBeGreaterThan(HOME_STRIP_SHRINK.model);
-		const strip = COMPOSER.slice(
-			COMPOSER.indexOf("{folderChip ? ("),
-			COMPOSER.indexOf("testID={CONTROL.composerEffortChip}"),
+	it("packs the icons left; only the trailing slot takes the zone's free width", () => {
+		/* TestFlight 578: the selectors stay left-justified beside attach. */
+		const strip = zone.slice(
+			zone.indexOf("{folder !== null && onRow.folder ? ("),
+			zone.indexOf("testID={CONTROL.composerContext}"),
 		);
-		expect(strip).toContain("flexShrink: HOME_STRIP_SHRINK.folder");
-		expect(strip).toContain("maxWidth: FOLDER_CHIP_MAX_PT");
-		expect(strip).toContain("folderChipText(folderChip.label, effectiveScale)");
-		expect(strip).toContain("<Folder");
-		expect(strip).toContain("flexShrink: HOME_STRIP_SHRINK.model");
-		/* D5: effort no longer SHRINKS at all — it is whole or it is in More. */
-		expect(strip.replace(/\s+/g, " ")).toContain(
-			"{effortChip && chipPlan.effort ? (",
-		);
-		expect(strip).toContain("flexShrink: 0");
-	});
-	it("lets only the model shrink on the card; effort is rigid and leaves by plan", () => {
-		const model = COMPOSER.slice(
-			COMPOSER.indexOf("{chipPlan.model ? ("),
-			COMPOSER.indexOf("testID={CONTROL.composerModelChip}"),
-		).replace(/\s+/g, " ");
-		expect(model).toContain('className="min-w-0 shrink"');
-		expect(model).toContain("minWidth: MODEL_FLOOR_PT");
-		expect(model).toContain('flexBasis: "auto"');
-		/* The plan counts the ONE trailing slot the zone renders (More, or
-		 *  keyboard-dismiss in its place) and reads the zone's own width. */
-		const plan = COMPOSER.slice(
-			COMPOSER.indexOf("const chipPlan = composerChipPlan({"),
-			COMPOSER.indexOf("const chipZone = ("),
-		).replace(/\s+/g, " ");
-		expect(plan).toContain("width: chipZoneWidth,");
-		expect(plan).toContain("trailing: moreSlot,");
-		expect(COMPOSER).toContain("{keyboardVisible || focused ? (");
-		/* R3-M1 stands: effort is RIGID, so on native Yoga (0.86.3, yoga#2006)
-		 *  the model is the only chip after the folder that floors. The same
-		 *  goes for the card's queued count: rigid, at its planned width. */
-		const effort = COMPOSER.slice(
-			COMPOSER.indexOf("{effortChip && chipPlan.effort ? ("),
-			COMPOSER.indexOf("testID={CONTROL.composerEffortChip}"),
-		);
-		expect(effort).toContain("<View style={{ flexShrink: 0 }}>");
-		expect(COMPOSER).toContain("flexShrink: planned === null ? 1 : 0");
-	});
-
-	/* Review round 1, M1: the count was visible only on the compact strip and
-	 *  on the host's activity line, so a tablet and a narrow short-landscape
-	 *  split — which have neither — showed nothing for a queued message. */
-	describe("the queued count on the card (no activity line above it)", () => {
-		const LABEL = "2 queued";
-		const at = (width: number, scale = 1, extra = {}) =>
-			composerChipPlan({
-				width,
-				scale,
-				modelChars: "claude-opus-5".length,
-				effortChars: "High".length,
-				folder: false,
-				trailing: 1,
-				touchFloor: 44,
-				queued: { labelChars: LABEL.length, countChars: 1 },
-				...extra,
-			});
-		const label = queuedChipWidthEstimate(LABEL.length, 1, 44);
-		const model = chipWidthEstimate("claude-opus-5".length, 1);
-		const effort = chipWidthEstimate("High".length, 1);
-
-		it("wires the plan to the host's flag and paints the planned form", () => {
-			const plan = COMPOSER.slice(
-				COMPOSER.indexOf("const chipPlan = composerChipPlan({"),
-				COMPOSER.indexOf("const chipZone = ("),
-			).replace(/\s+/g, " ");
-			expect(plan).toContain("queueOnCard && queuedCount > 0 ? {");
-			expect(plan).toContain(
-				'dictationLargeText || chipPlan.queued.form === "count",',
-			);
-			/* Off unless the host asks: the home and the portrait phone show the
-			 *  queue elsewhere, and their rows must not change. */
-			expect(COMPOSER).toContain("queueOnCard = false,");
-			expect(at(600, 1, { queued: null })).toEqual({
-				model: true,
-				effort: true,
-			});
-			expect(at(600, 1, { queued: null }).queued).toBeUndefined();
-		});
-
-		it("tablet arm: a wide zone shows the sentence beside model and effort", () => {
-			expect(label).toBe(Math.ceil(8 * 7.2) + 8);
-			/* A 768 pt tablet's zone is several hundred points wide. */
-			expect(at(500)).toEqual({
-				model: true,
-				effort: true,
-				queued: { form: "label", width: label },
-			});
-			/* The count is charged before the chips: effort leaves exactly one
-			 *  point under More + count + model + effort and their three gaps. */
-			const all = 44 + 4 + label + 4 + model + 4 + effort;
-			expect(at(all).effort).toBe(true);
-			expect(at(all - 1)).toEqual({
-				model: true,
-				effort: false,
-				queued: { form: "label", width: label },
-			});
-			/* Unmeasured: everything, as without a queue. */
-			expect(at(0)).toEqual({
-				model: true,
-				effort: true,
-				queued: { form: "label", width: label },
-			});
-		});
-
-		it("compact-not-single arm: a narrow zone keeps the COUNT, whatever else goes", () => {
-			/* The sentence holds while the model still fits at its floor… */
-			const floor = 44 + 4 + label + 4 + 44;
-			expect(at(floor)).toEqual({
-				model: true,
-				effort: false,
-				queued: { form: "label", width: label },
-			});
-			/* …one point under, it becomes the bare number and the model stays… */
-			expect(at(floor - 1)).toEqual({
-				model: true,
-				effort: false,
-				queued: { form: "count", width: 44 },
-			});
-			/* …and when even the model cannot fit, the count is still there. */
-			for (const width of [44 + 4 + 44 + 4 + 43, 92, 60, 1]) {
-				expect(at(width), String(width)).toEqual({
-					model: false,
-					effort: false,
-					queued: { form: "count", width: 44 },
-				});
-			}
-			/* The zone's floor is More + the planned count, so the clip that may
-			 *  cut a chip can never cut either of them. */
-			expect(COMPOSER.replace(/\s+/g, " ")).toContain(
-				"minWidth: TOUCH_FLOOR + (chipPlan.queued ? chipPlan.queued.width + COMPOSER_META_GAP_PT : 0),",
-			);
-		});
-
-		it("charges the number, not the sentence, at large text", () => {
-			/* The composer passes the number's length as the label there. */
-			expect(queuedChipWidthEstimate(1, 2, 44)).toBe(44);
-			expect(queuedChipWidthEstimate(3, 2, 44)).toBe(Math.ceil(3 * 14.4) + 8);
-		});
-	});
-
-	it("drops effort whole before the model's name is cut (D5)", () => {
-		const at = (width: number, scale = 1, extra = {}) =>
-			composerChipPlan({
-				width,
-				scale,
-				modelChars: "claude-opus-5".length,
-				effortChars: "High".length,
-				folder: false,
-				trailing: 1,
-				touchFloor: 44,
-				...extra,
-			});
-		const model = chipWidthEstimate("claude-opus-5".length, 1);
-		const effort = chipWidthEstimate("High".length, 1);
-		const both = 44 + 4 + model + 4 + effort;
-		/* Unmeasured: everything, so the common case does not flicker in. */
-		expect(at(0)).toEqual({ model: true, effort: true });
-		expect(at(both)).toEqual({ model: true, effort: true });
-		/* One point short: effort goes, WHOLE; the model keeps the row. */
-		expect(at(both - 1)).toEqual({ model: true, effort: false });
-		/* The model stays (and may truncate) down to its floor beside More… */
-		expect(at(44 + 4 + 44)).toEqual({ model: true, effort: false });
-		/* …and under that More, which lists both, is all that is left. */
-		expect(at(44 + 4 + 43)).toEqual({ model: false, effort: false });
-		/* 200 % text needs twice the label width, so effort leaves sooner. */
-		expect(at(both, 2).effort).toBe(false);
-		/* No effort offered for the row (home's unnamed default): never shown. */
-		expect(at(both + 200, 1, { effortChars: null }).effort).toBe(false);
-		/* The home's folder chip is charged at its floor, plus its gap. */
-		expect(at(both + 47, 1, { folder: true }).effort).toBe(false);
-		expect(at(both + 48, 1, { folder: true }).effort).toBe(true);
-	});
-	/* TestFlight 578: "Left justify the effort selector with the other selectors
-	 *  on that row." A growing model slot left effort floating right of a gap on
-	 *  BOTH strips: `[folder][Claude Opus 5.5]      [Medium] ⋯`. */
-	it("packs the chips left; only More's slot takes the zone's free width", () => {
-		/* Comments stripped: the WHY comments name `grow`/`flex-1` themselves. */
-		const code = COMPOSER.replace(/\{?\/\*[\s\S]*?\*\/\}?/g, "").replace(
-			/\s+/g,
-			" ",
-		);
-		const strip = code.slice(
-			code.indexOf("{folderChip ? ("),
-			code.indexOf("testID={CONTROL.composerContext}"),
-		);
-		const model = strip.slice(
-			strip.indexOf("{chipPlan.model ? ("),
-			strip.indexOf("testID={CONTROL.composerModelChip}"),
-		);
-		expect(model).toContain('className="min-w-0 shrink"');
-		expect(model).toContain('flexBasis: "auto"');
-		expect(model).not.toMatch(/\bgrow\b|flex-1|flexGrow/);
-		const effort = strip.slice(
-			strip.indexOf("{effortChip && chipPlan.effort ? ("),
-			strip.indexOf("testID={CONTROL.composerEffortChip}"),
-		);
-		expect(effort).not.toMatch(/\bgrow\b|flex-1|flexGrow/);
-		/* The ONLY thing that absorbs the zone's free width is the trailing
-		 *  slot's auto margin, so More holds one place whatever the chips do. */
 		expect(strip).toContain(
 			"<View className={COMPOSER_CHIP_TRAILING} testID={SURFACE.composerStripTrailing} >",
 		);
@@ -727,8 +578,28 @@ describe("the home strip's folder chip (design D2 / UX U4 / U5)", () => {
 		]);
 		expect(strip.match(/\bgrow\b|flex-1|flexGrow|ms-auto/g)).toBeNull();
 	});
-	it("offers the folder once: the More sheet no longer repeats it", () => {
-		expect(COMPOSER).not.toContain("folderChip.onPress();");
+
+	it("keeps the queued count on the card where the host asks, at its planned form", () => {
+		expect(code).toContain(
+			"const queuedOnCard = queueOnCard && queuedCount > 0;",
+		);
+		expect(code).toContain(
+			'dictationLargeText || controlsPlan.queued.form === "count",',
+		);
+		/* Off unless the host asks: the home and the portrait phone show the
+		 *  queue elsewhere, and their rows must not change. */
+		expect(COMPOSER).toContain("queueOnCard = false,");
+		/* The zone's floor is one square + the planned count, so the clip that
+		 *  may cut an icon can never cut the count or More. */
+		expect(zone).toContain(
+			"minWidth: TOUCH_FLOOR + (controlsPlan.queued ? controlsPlan.queued.width + COMPOSER_META_GAP_PT : 0),",
+		);
+	});
+
+	it("charges the number, not the sentence, at large text", () => {
+		/* The composer passes the number's length as the label there. */
+		expect(queuedChipWidthEstimate(1, 2, 44)).toBe(44);
+		expect(queuedChipWidthEstimate(3, 2, 44)).toBe(Math.ceil(3 * 14.4) + 8);
 	});
 });
 

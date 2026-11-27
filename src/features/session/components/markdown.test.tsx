@@ -165,6 +165,17 @@ vi.mock("react-native", async () => {
 		},
 		Linking: { openURL: host.open },
 		useWindowDimensions: () => host.window,
+		// Inline charts: an inert entrance fade and gesture responder.
+		Animated: {
+			View: view,
+			Value: class {
+				setValue() {}
+				stopAnimation() {}
+			},
+			timing: () => ({ start() {} }),
+		},
+		AccessibilityInfo: { isReduceMotionEnabled: async () => true },
+		PanResponder: { create: () => ({ panHandlers: {} }) },
 	};
 });
 vi.mock("react-native-svg", async () => {
@@ -188,11 +199,12 @@ vi.mock("expo-clipboard", () => ({
 }));
 vi.mock("@/ui/appearance", () => ({
 	useTokenColor: () => "#ffffff",
-	useTheme: () => ({ active: { colors: {} } }),
+	useTheme: () => ({ active: { colors: {} }, chart: [], theme: "light" }),
 }));
 vi.mock("@/ui/direction", () => ({
 	useIsRTL: () => false,
 	LTR_TEXT: { writingDirection: "ltr" },
+	TEXT_END_CLASS: "web:text-end native:text-right",
 }));
 vi.mock("@/ui/text-scale-provider", () => ({
 	useTextScale: () => ({ effectiveScale: 1 }),

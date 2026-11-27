@@ -383,20 +383,12 @@ export const connectionView = (input: ConnectionViewInput): ConnectionView => {
 	if (input.droppedSinceFrame === true) {
 		return view("C2", "The connection dropped. Reconnecting…", "warning");
 	}
-	if (input.stream === "connecting" && input.reconnectExpired) {
-		return view("C2", "Reconnecting…", "warning");
-	}
-
-	/* ---- C2 again: an OPEN stream that has produced no frame at all. ----
-	 * The flows table's second C2 trigger is "no frame after a rotation", and an
-	 * open socket that has sent nothing past the reconnect deadline is that case
-	 * with the socket still up: the silence watchdog will reopen it, but until the
-	 * window elapses the reader gets no state at all — an open stream with an empty
-	 * transcript, which looks like loading forever. `ageS === null` is the fact that
-	 * says "not one frame since this connection opened". */
+	/* A reconnect whose headers did not arrive within its deadline. Headers
+	 * cancel the deadline but do not end recovery (`overdue` stays until a
+	 * projection); after them, only evidence that the seed was skipped (a
+	 * keepalive, a foreign or malformed projection) restarts the stream. */
 	if (
-		input.stream === "open" &&
-		input.ageS === null &&
+		(input.stream === "connecting" || input.stream === "open") &&
 		input.reconnectExpired
 	) {
 		return view("C2", "Reconnecting…", "warning");

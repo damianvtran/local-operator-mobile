@@ -1,4 +1,4 @@
-import { useFocusEffect, useRouter } from "expo-router";
+import { useFocusEffect, useIsFocused, useRouter } from "expo-router";
 import { CheckCheck, X } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -147,7 +147,8 @@ export default function Notifications() {
 		connectionGeneration,
 	);
 	const [answerSession, setAnswerSession] = useState<string | null>(null);
-	const runtime = useSessionRuntime(answerSession ?? "");
+	const focused = useIsFocused();
+	const runtime = useSessionRuntime(answerSession ?? "", focused);
 	/* The row's "Dismiss all from <conversation>" accessibility action. It walks
 	 *  the conversation's full scope itself (the list holds one page), so the
 	 *  confirmation's number is the number applied; the detail's From card runs

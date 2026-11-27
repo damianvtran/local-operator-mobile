@@ -1,8 +1,16 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+	useCallback,
+	useEffect,
+	useLayoutEffect,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
 import { AppState } from "react-native";
 import { useStore } from "zustand";
 import type {
 	BridgeCardBody,
+	HistoryResponse,
 	ModelEntry,
 	SlashCommand,
 	SubagentDetail,
@@ -38,6 +46,7 @@ import {
 	createResumeClock,
 	heldTimer,
 	OUTAGE_GRACE_MS,
+	reconnectTimer,
 } from "@/features/session/resume-hold";
 import {
 	deviceOnline,
@@ -77,13 +86,13 @@ import { warmCache } from "./warm-store";
  * Everything a session screen reads: the relay client, the projection stream, the
  * connection state, and the two catalogues the composer's sheets need.
  *
- * **The reconnect deadline is the only timer that changes a user-visible state.**
- * `C1` — the gateway's 60-second lease ending — must be invisible, so a clean EOF
- * starts no state at all; what this hook watches for is the case the contract
- * calls `C2`: a reconnect that OPENED but produced no snapshot, which becomes a
- * state only when the deadline passes. The alternative (marking any stream
- * transition as a loss) is the bug the flows exist to catch, because a one-minute
- * flicker teaches the reader to ignore the indicator that matters.
+ * **`C2` is reported from evidence, not from a seed timer.** `C1` — the
+ * gateway's 60-second lease ending — must be invisible. This hook reports `C2`
+ * for a held drop, or for a RECONNECT whose headers do not arrive within
+ * `RECONNECT_DEADLINE_MS` (a first load stays quiet). Once headers arrive, a
+ * seed that is still being built is waited for (the transport's byte watchdog
+ * bounds it); only a keepalive, a foreign or a malformed projection before the
+ * seed proves it was skipped, and that retires the stream into the backoff.
  *
  * **The snapshot age ticks locally**, once a second, because `C3` is an absence:
  * nothing arrives to tell the screen that nothing arrived, so the screen has to
@@ -115,6 +124,13 @@ export interface SessionRuntime {
 	historyErrorScope: "newest" | "older" | null;
 	streaming: boolean;
 	streamingRowId: string | null;
+	/** Retained paint is usable for reading, but not authority for turn actions. */
+	turnActionsReady: boolean;
+	/** True only when retained paint is waiting on this visit's projection. */
+	awaitingVisit: boolean;
+	/** Fences captured presses across blur. Only a new submission without any
+	 * projection may opt out of the seed requirement (ordinary cold open). */
+	canActOnVisit: (requireProjection?: boolean) => boolean;
 	/** Motion can only be attributed to arrivals on this accepted wire stream. */
 	streamArrivalEpoch: number | null;
 	/** The wire tail, not a row introduced by history paging or gap healing. */
@@ -161,6 +177,16 @@ export interface SessionRuntime {
 	loadBridgeBody: (entryId: string) => Promise<BridgeCardBody | null>;
 	/** Loads a child's full detail, which the aggregate roster strips. */
 	loadAgent: (jobId: string) => Promise<SubagentDetail | null>;
+	/** One page of a child's OWN transcript (`GET …/agents/{job}/history`,
+	 *  lineage-checked by the relay; same `{entries, has_more}` paging as the
+	 *  root `/history`). The detail route never carries those rows from a
+	 *  current Core, so this is the subagent screen's only source of them.
+	 *  REJECTS on failure (unlike `loadAgent`) so the caller can tell a 404 —
+	 *  no route, or no transcript to serve — from a dropped link. `null` until
+	 *  the relay endpoints exist, so nothing reads (or fails) before a link. */
+	loadAgentHistory:
+		| ((jobId: string, before?: string) => Promise<HistoryResponse>)
+		| null;
 	/** Turn supplements (memo §2.4/§3.1 row 18): the projection's newest beat
 	 *  per anchor, read through `supplementsFromWire` — absent on an older relay
 	 *  and empty when no anchor carries one. */
@@ -225,7 +251,16 @@ const isTransient = (error: RelayError): boolean =>
 export const hasSessionId = (sessionId: string): boolean =>
 	sessionId.trim() !== "";
 
-export const useSessionRuntime = (sessionId: string): SessionRuntime => {
+export const useSessionRuntime = (
+	sessionId: string,
+	focused: boolean,
+): SessionRuntime => {
+	// Expo retains a separate mounted screen for each dynamic path in the
+	// stack. The foreground reader, not the mounted screen, owns the live
+	// body: otherwise each visit leaves a subscriber (and its retries) behind.
+	// Keep the reader and its rows mounted for native Back and draft continuity.
+	const focusedRef = useRef(focused);
+	focusedRef.current = focused;
 	const providerConnection = useConnection();
 	const snapshot = useConnectionState((state) => state);
 	const route = snapshot.route;
@@ -254,6 +289,22 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 		[snapshot.revision, snapshot.tunnelId, sessionId],
 	);
 
+	// A visit is narrower than a projection owner. The same mounted screen can
+	// come Back to its own rows, but the desktop may have started a new turn.
+	// Invalidate captured presses at the focus commit, before passive SSE setup.
+	const visit = useMemo(
+		() => ({ focused, identity, endpoints, reason: source.reason }),
+		[focused, identity, endpoints, source.reason],
+	);
+	const currentVisit = useRef<typeof visit | null>(null);
+	const [acceptedVisit, setAcceptedVisit] = useState<typeof visit | null>(null);
+	useLayoutEffect(() => {
+		currentVisit.current = visit.focused ? visit : null;
+		return () => {
+			currentVisit.current = null;
+		};
+	}, [visit]);
+
 	const [facts, setFacts] = useSessionValue<StreamFacts>(
 		identity,
 		INITIAL_STREAM_FACTS,
@@ -279,12 +330,9 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 	 * count the time the phone was locked. Both report timers below go through it;
 	 * typed refusals never do (they reach `setError` directly). */
 	const resumeClock = useRef(createResumeClock());
-	/** Bumped on every return so the reconnect deadline re-arms for the fresh
-	 *  reopen even when the stream was already `connecting` before the lock. */
-	const [resumeEpoch, setResumeEpoch] = useState(0);
 	const dropGraceTimer = useRef<(() => void) | null>(null);
 	useEffect(() => {
-		if (!facts.droppedSinceFrame) {
+		if (!focused || !facts.droppedSinceFrame) {
 			// Recovery: cancel any pending report and clear at once.
 			dropGraceTimer.current?.();
 			dropGraceTimer.current = null;
@@ -297,14 +345,14 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 			OUTAGE_GRACE_MS,
 			() => {
 				dropGraceTimer.current = null;
-				setDroppedGrace(true);
+				if (focusedRef.current) setDroppedGrace(true);
 			},
 		);
 		return () => {
 			dropGraceTimer.current?.();
 			dropGraceTimer.current = null;
 		};
-	}, [facts.droppedSinceFrame, setDroppedGrace]);
+	}, [focused, facts.droppedSinceFrame, setDroppedGrace]);
 	const [, historyChanged] = useState(0);
 	// Endpoint and owner changes allocate a new reader synchronously, so an old
 	// account/session's cached rows cannot paint before effect cleanup runs.
@@ -366,14 +414,12 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 	/** `history: false` re-reads commands and models only: the resume gate
 	 * dedupes the history read, never the rest of a return (PR #217 R1-4). */
 	const rereadRef = useRef<(history?: boolean) => void>(() => undefined);
-	const streamRef = useRef<{ stop: () => void } | null>(null);
 	/** One gate for every resume signal (foreground, stream recovery). */
 	const resumeGate = useRef(createResumeGate());
 	/** Set when the stream reported a drop or stall; the next frame is the
 	 *  reconnect, and the moment to re-read the newest durable page. */
 	const recovering = useRef(false);
 	/** A pending reconnect after a transient drop; cleared whenever the stream is. */
-	const retryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const lastFrameAt = useRef<number | null>(null);
 	/** Which session the current `lastFrameAt` reading belongs to, so a reconnect for
 	 *  the SAME session keeps it and a session change does not inherit it. */
@@ -395,9 +441,9 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 	// Claim before the stream effect below: a screen supersedes any seed take,
 	// while a same-session reconnect keeps its onscreen token continuously held.
 	useEffect(() => {
-		if (!hasSessionId(sessionId) || endpoints === null) return;
-		// Mounted does not mean onscreen while iOS suspends the app. Release
-		// only on background; reclaim on resume BEFORE reopening the live stream,
+		if (!focused || !hasSessionId(sessionId) || endpoints === null) return;
+		// Blur and background both give up the onscreen warm-sync claim.
+		// Reclaim on resume BEFORE reopening the live stream,
 		// so a push can seed the last-viewed session but never race its screen.
 		let release =
 			AppState.currentState === "background" ? null : warmSync.view(sessionId);
@@ -405,14 +451,14 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 			if (state === "background") {
 				release?.();
 				release = null;
-			} else if (state === "active" && !release)
+			} else if (state === "active" && focusedRef.current && !release)
 				release = warmSync.view(sessionId);
 		});
 		return () => {
 			release?.();
 			subscription.remove();
 		};
-	}, [sessionId, endpoints]);
+	}, [focused, sessionId, endpoints]);
 	/** Cancels a held resume history read (`holdResumeRead`) on unmount. */
 	const heldHistoryRead = useRef<(() => void) | null>(null);
 	const [historyErrorHeld, setHistoryErrorHeld] = useSessionValue<boolean>(
@@ -422,32 +468,105 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 
 	/* ------------------------------------------------------------- the stream */
 	useEffect(() => {
-		// An unnamed session has no stream to open (Q10).
-		if (!hasSessionId(sessionId)) return;
+		const { identity: owner, focused, endpoints, reason } = visit;
+		// A hidden or unnamed screen has no stream to open (Q10).
+		if (!focused || !hasSessionId(sessionId)) return;
+		// Refocus is a new visit, not evidence that the old leg dropped. Retain
+		// its transcript and age, but don't carry its retry debt or banner over.
+		recovering.current = false;
+		retries.current = 0;
+		resumePending.current = null;
+		setFacts((current) => ({ ...INITIAL_STREAM_FACTS, ageMs: current.ageMs }));
+		setDroppedGrace(false);
+		setHistoryErrorHeld(false);
+		if (AppState.currentState === "background")
+			resumeClock.current.background();
+		else if (resumeClock.current.backgrounded()) resumeClock.current.resume();
 		let active = true;
-		const owner: ProjectionOwner = {
-			revision: snapshot.revision,
-			tunnelId: snapshot.tunnelId,
-			sessionId,
-		};
+		let sawFrameThisVisit = false;
+		let acceptedProjection = false;
 		/* A gateway refusal on a stream that was serving moments ago is a
 		 * reconnect for two minutes, not a terminal block (`refusal-grace.ts`;
 		 * field report 2026-11-17: "login may have expired, or billing may be
 		 * inactive" over a rate-limit blip, with both fine). One per stream
 		 * effect: a new owner starts with no health to vouch for it. */
 		const grace = createRefusalGrace();
+		let retireStream: (() => void) | null = null;
+		let cancelRetry: (() => void) | null = null;
+		/* MISSED-SEED GRACE (#369 design D1). A skipped, foreign or malformed
+		 * seed restarts the stream at the 1 s backoff and the replacement
+		 * usually seeds 30–100 ms later (QA O3, rows 3c/3d). Marking the reopen
+		 * overdue at once flashed C2 for about a second over a retry that had
+		 * not failed, against the operator's "silently … unless subsequent
+		 * retries fail". So a missed seed arms the SAME `OUTAGE_GRACE_MS` the
+		 * drop path holds its report behind (the relay web app's 2.5 s outage
+		 * hysteresis), and only a recovery still unseeded when it fires is
+		 * reported. It is NOT routed through `droppedSinceFrame`: nothing
+		 * dropped, and that flag's copy says it did. A retry that fails before
+		 * the grace ends still reports through its own path (`onError` → the
+		 * graced drop; the reconnect deadline in `onState`). Armed once per
+		 * recovery, like the drop grace: repeated skipped seeds do not push the
+		 * report back. Cleared by an accepted frame and by the effect's end. */
+		let cancelSeedGrace: (() => void) | null = null;
+		const clearSeedGrace = () => {
+			cancelSeedGrace?.();
+			cancelSeedGrace = null;
+		};
+		const scheduleRetry = (
+			missedProjection: boolean,
+			retryAfterMs?: number,
+		) => {
+			recovering.current = true;
+			setFacts((current) => ({
+				...current,
+				state: "connecting",
+				lastEnd: missedProjection ? undefined : "error",
+				droppedSinceFrame: current.droppedSinceFrame || !missedProjection,
+			}));
+			if (missedProjection && cancelSeedGrace === null) {
+				cancelSeedGrace = heldTimer(
+					resumeClock.current,
+					OUTAGE_GRACE_MS,
+					() => {
+						cancelSeedGrace = null;
+						if (
+							focusedRef.current &&
+							active &&
+							sameProjectionOwner(owner, currentIdentity.current)
+						)
+							setFacts((current) => ({ ...current, overdue: true }));
+					},
+				);
+			}
+			const delay = reconnectDelay(retries.current, retryAfterMs);
+			retries.current += 1;
+			// A retry can become due while iOS is suspended too, so it never opens a
+			// replacement while backgrounded (R2-2) -- but it does NOT wait out the
+			// resume window like a report: the retries inside it are what keep the
+			// held drop report from ever firing (R3-1, `reconnectTimer`).
+			cancelRetry?.();
+			cancelRetry = reconnectTimer(resumeClock.current, delay, () => {
+				cancelRetry = null;
+				connect();
+			});
+		};
 		const connect = () => {
-			if (!active || !sameProjectionOwner(owner, currentIdentity.current))
+			if (
+				!focusedRef.current ||
+				!active ||
+				currentVisit.current !== visit ||
+				!sameProjectionOwner(owner, currentIdentity.current)
+			)
 				return;
 			if (endpoints === null) {
-				setLoading(source.reason === "pending");
+				setLoading(reason === "pending");
 				return;
 			}
 			// A reload replaces the stream: leaving the old one open would put two
 			// subscribers on one projection and let a stale frame overtake a fresh one.
-			if (retryTimer.current !== null) clearTimeout(retryTimer.current);
-			retryTimer.current = null;
-			streamRef.current?.stop();
+			cancelRetry?.();
+			cancelRetry = null;
+			retireStream?.();
 			// The age is only reset for a session this screen has not shown before. It must
 			// NOT be reset per reconnect: `ageS` is "how long since anything arrived", and a
 			// stream that reconnects silently would otherwise reset the one reading `C3`
@@ -456,6 +575,10 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 			if (!sameProjectionOwner(ageOwner.current, owner)) {
 				ageOwner.current = owner;
 				lastFrameAt.current = null;
+				// A recovery belongs to the session it was for: carried into the
+				// next one, it would make that session's slow first load count as a
+				// reconnect and paint `C2` at the deadline (R3-2).
+				recovering.current = false;
 			}
 			sessions.getState().beginStream(sessionId);
 			// The reader can reopen an HTTP body inside this one stream object.
@@ -463,19 +586,57 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 			// the projection fence or changing how this connection retries.
 			let pendingAttemptSeed = true;
 			setError(null);
+			let retired = false;
+			let cancelDeadline: (() => void) | null = null;
+			let awaitingSeed = false;
+			const isCurrent = () =>
+				focusedRef.current &&
+				!retired &&
+				active &&
+				currentVisit.current === visit &&
+				sameProjectionOwner(owner, currentIdentity.current);
+			/* The relay daemon writes NOTHING between this response's headers and
+			 * its seed frame (`daemon.py` `api_session_events`: the durable capture
+			 * runs first, keepalives start only after it). So silence after the
+			 * headers is a seed still being built -- slow under machine load or for
+			 * a cold conversation -- and the transport's byte watchdog
+			 * (`STREAM_SILENCE_MS`, the relay web app's `SILENCE_MS`) already bounds
+			 * it; a client timer here cut slow and still-arriving seeds (#369 R2-1).
+			 * A keepalive, or a finished projection we cannot use, BEFORE the seed
+			 * proves the daemon skipped this seed, and waiting cannot help: only
+			 * that evidence retires the body, through the held backoff. */
+			const missedSeed = () => {
+				if (!isCurrent() || !awaitingSeed) return;
+				retireStream?.();
+				sessions.getState().endStream(sessionId);
+				scheduleRetry(true);
+			};
 			const stream = endpoints.sessionStream(sessionId, {
 				inlineUi: true,
 				// Read per connect, not per effect: a stream opened before the first
 				// live list frame declares on its next reconnect (`steer-journal-order.ts`).
 				steerJournalOrder: steerJournalOrderDeclared(listStore.getState()),
 				onFrame: (frame) => {
+					if (!isCurrent()) return;
 					if (
-						!active ||
 						frame.kind !== "projection" ||
-						!sameProjectionOwner(owner, currentIdentity.current)
-					)
+						frame.data.session_id !== sessionId
+					) {
+						// Unknown events stay ignorable: the streams are additive.
+						if (
+							(frame.kind === "ignorable" && frame.reason === "keepalive") ||
+							(frame.kind === "malformed" && frame.event === "projection") ||
+							frame.kind === "projection"
+						)
+							missedSeed();
 						return;
+					}
+					cancelDeadline?.();
+					cancelDeadline = null;
+					clearSeedGrace();
+					awaitingSeed = false;
 					projectionOwner.current = owner;
+					sawFrameThisVisit = true;
 					lastFrameAt.current = Date.now();
 					grace.healthy(lastFrameAt.current);
 					retries.current = 0;
@@ -494,7 +655,13 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 					const decision = sessions
 						.getState()
 						.applyFrame(sessionId, frame.data, pendingAttemptSeed);
-					if (decision !== "dropped-older") pendingAttemptSeed = false;
+					if (decision !== "dropped-older") {
+						pendingAttemptSeed = false;
+						if (!acceptedProjection) {
+							acceptedProjection = true;
+							setAcceptedVisit(visit);
+						}
+					}
 					if (readOnResume) {
 						const reader = historyRef.current;
 						heldHistoryRead.current?.();
@@ -530,9 +697,29 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 					}));
 				},
 				onState: (status) => {
-					if (!active || !sameProjectionOwner(owner, currentIdentity.current))
-						return;
+					if (!isCurrent()) return;
 					if (status.state === "open") pendingAttemptSeed = true;
+					cancelDeadline?.();
+					cancelDeadline = null;
+					awaitingSeed = status.state === "open";
+					/* Only a RECONNECT that gets no answer is `C2` (connection-view
+					 * rule 2). A first load stays quiet like the relay web app, which
+					 * reports only a failed leg after its outage grace (`store.ts`
+					 * `openEventStream`): under machine load the first answer is slow,
+					 * not lost, and a real failure still arrives via `onError`. */
+					const reconnecting =
+						recovering.current ||
+						(sawFrameThisVisit && lastFrameAt.current !== null);
+					if (status.state === "connecting" && reconnecting) {
+						cancelDeadline = heldTimer(
+							resumeClock.current,
+							RECONNECT_DEADLINE_MS,
+							() => {
+								if (isCurrent())
+									setFacts((current) => ({ ...current, overdue: true }));
+							},
+						);
+					}
 					if (status.lastEnd === "error" || status.state === "stalled")
 						recovering.current = true;
 					setFacts((current) => ({
@@ -541,14 +728,12 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 						lastEnd: status.lastEnd,
 						droppedSinceFrame:
 							current.droppedSinceFrame || status.lastEnd === "error",
-						// A rotation is a clean EOF: the lease is over, nothing is wrong, and
-						// `overdue` is reset here so a previous loss cannot leak through it.
-						overdue: status.lastEnd === "error" ? current.overdue : false,
+						// A successful HTTP open is not recovery; only a projection is.
+						overdue: status.state === "rotating" ? false : current.overdue,
 					}));
 				},
 				onError: (rawError) => {
-					if (!active || !sameProjectionOwner(owner, currentIdentity.current))
-						return;
+					if (!isCurrent()) return;
 					const streamError = grace.decide(rawError);
 					/* `sse.ts` stops its loop on ANY error, by design: "a caller that
 					 * wants to retry a transient failure restarts the loop itself", so a
@@ -563,27 +748,20 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 					 * reconnect by hand. Only a failure the reader must resolve (a 401, a
 					 * typed gateway refusal, a client bug) stops and surfaces. */
 					if (isTransient(streamError)) {
-						recovering.current = true;
-						setFacts((current) => ({
-							...current,
-							state: "connecting",
-							lastEnd: "error",
-							overdue: false,
-							droppedSinceFrame: true,
-						}));
-						const delay = reconnectDelay(
-							retries.current,
-							streamError.retryAfterMs,
-						);
-						retries.current += 1;
-						retryTimer.current = setTimeout(
-							() => reconnectRef.current(),
-							delay,
-						);
+						scheduleRetry(false, streamError.retryAfterMs);
 						return;
 					}
 					sessions.getState().endStream(sessionId);
 					setError(streamError);
+					/* A stop ends the recovery the missed-seed grace was guarding, so
+					 * the grace goes with it (#393 m1). Left armed, it fired after
+					 * this failure and set `overdue` behind the error, and the
+					 * reader's next `reload()` painted "Reconnecting…" at once over a
+					 * fresh first open instead of opening quietly. After `setError`,
+					 * not before: the refusal must reach the reader directly, with
+					 * nothing between the stream's end and its report
+					 * (`resume-hold.test.ts` REFUSAL_DIRECT). */
+					clearSeedGrace();
 					setFacts((current) => ({
 						...current,
 						state: "closed",
@@ -591,28 +769,35 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 					}));
 				},
 			});
-			streamRef.current = stream;
+			retireStream = () => {
+				// Stop emits `closed` synchronously, and the old body can finish late.
+				// Neither event belongs to the replacement stream.
+				retired = true;
+				cancelDeadline?.();
+				cancelDeadline = null;
+				awaitingSeed = false;
+				stream.stop();
+			};
 			stream.connection.start();
 		};
 		reconnectRef.current = connect;
 		connect();
 		return () => {
 			active = false;
-			if (retryTimer.current !== null) clearTimeout(retryTimer.current);
-			retryTimer.current = null;
-			streamRef.current?.stop();
-			streamRef.current = null;
-			sessions.getState().endStream(sessionId);
+			cancelRetry?.();
+			clearSeedGrace();
+			if (retireStream !== null) {
+				retireStream();
+				sessions.getState().endStream(sessionId);
+			}
 		};
 	}, [
-		endpoints,
 		sessionId,
-		source.reason,
-		snapshot.revision,
-		snapshot.tunnelId,
+		visit,
 		setLoading,
 		setError,
 		setFacts,
+		setDroppedGrace,
 		setHistoryErrorHeld,
 	]);
 
@@ -620,18 +805,9 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 	 *  so one blip does not leave the next one waiting fifteen seconds. */
 	const retries = useRef(0);
 
-	/* --------------------------------------------------- the reconnect deadline */
-	useEffect(() => {
-		if (facts.state !== "connecting") return;
-		// `resumeEpoch` is read so a return re-arms this for the new reopen.
-		void resumeEpoch;
-		return heldTimer(resumeClock.current, RECONNECT_DEADLINE_MS, () =>
-			setFacts((current) => ({ ...current, overdue: true })),
-		);
-	}, [facts.state, resumeEpoch, setFacts]);
-
 	/* ---------------------------------------------------------- the age ticker */
 	useEffect(() => {
+		if (!focused) return;
 		const tick = setInterval(() => {
 			const at = lastFrameAt.current;
 			if (at === null) return;
@@ -643,13 +819,15 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 			);
 		}, 1000);
 		return () => clearInterval(tick);
-	}, [setFacts]);
+	}, [focused, setFacts]);
 
 	/* A screen that was backgrounded has a stale age and a possibly dead stream:
 	 * `beginStream` on return makes the next frame authoritative, which is the
 	 * contract's rule for the first frame of a connection. */
 	useEffect(() => {
+		if (!focused) return;
 		const subscription = AppState.addEventListener("change", (state) => {
+			if (!focusedRef.current) return;
 			// Only "background" means the process may be suspended; "inactive" is
 			// also a system sheet over a running app, which must not hide a drop.
 			if (state === "background") {
@@ -684,7 +862,6 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 				droppedSinceFrame: false,
 				overdue: false,
 			}));
-			setResumeEpoch((epoch) => epoch + 1);
 			// Re-open the stream: its seed frame re-syncs the conversation. The
 			// newest history page is NOT read here any more — the seed carries the
 			// same rows, so the read is deferred to that first frame and runs only
@@ -699,7 +876,7 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 		return () => subscription.remove();
 		// The reload refs are current, but the setter also has an identity lease.
 		// Re-register on identity changes rather than using a retired setter.
-	}, [setFacts]);
+	}, [focused, setFacts]);
 
 	/* ------------------------------------------------- the one-off read requests */
 	/* Also an act, for the same reason as the stream: these are the three requests a
@@ -828,6 +1005,7 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 	);
 	saveWarmRef.current = () => saveWarmFor(sessionId, identity);
 	useEffect(() => {
+		if (!focused) return;
 		const sid = sessionId;
 		const owner = identity;
 		/* The scope is captured HERE, with the owner, not read at cleanup (PR #246
@@ -841,7 +1019,7 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 			heldHistoryRead.current = null;
 			if (hasSessionId(sid)) saveWarmFor(sid, owner, scope);
 		};
-	}, [sessionId, identity, saveWarmFor]);
+	}, [focused, sessionId, identity, saveWarmFor]);
 
 	/* CATALOGUES FOLLOW THE CONFIG STREAM, not the AppState. A config frame
 	 * that names any changed key re-reads commands and models; the seed frame
@@ -868,6 +1046,15 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 	const projection = entry.projection;
 	/** The frame on screen is the warm cache's, not a live one. */
 	const hydrated = entry.hydrated === true;
+	const turnActionsReady =
+		focused && ownsProjection && !hydrated && acceptedVisit === visit;
+	const hasProjection = projection !== null;
+	const canActOnVisit = useCallback(
+		(requireProjection = true) =>
+			currentVisit.current === visit &&
+			(turnActionsReady || (!requireProjection && !hasProjection)),
+		[hasProjection, turnActionsReady, visit],
+	);
 	if (ownsProjection) {
 		if (hydrated) historyWindow.seedFromCache(projection);
 		else historyWindow.accept(projection);
@@ -1017,6 +1204,15 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 		[endpoints, sessionId],
 	);
 
+	const loadAgentHistory = useMemo(
+		() =>
+			endpoints === null
+				? null
+				: (jobId: string, before?: string) =>
+						endpoints.agentHistory(sessionId, jobId, { before }),
+		[endpoints, sessionId],
+	);
+
 	/* ------------------------------------------------------- turn supplements */
 	/* The projection's sibling map, re-read through its ONE reader at this trust
 	 * boundary (the store keeps the frame as parsed; a beat whose anchor/state
@@ -1116,6 +1312,9 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 		 *  above stays on the raw flag — it marks where streamed TEXT lands. */
 		streaming: running,
 		streamingRowId,
+		turnActionsReady,
+		awaitingVisit: hasProjection && !turnActionsReady,
+		canActOnVisit,
 		streamArrivalEpoch:
 			ownsProjection && entry.connected && !entry.awaitingSnapshot
 				? (entry.streamEpoch ?? null)
@@ -1157,6 +1356,9 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 			olderState: historyWindow.olderState,
 			frameRows: projection?.transcript.length ?? 0,
 			frameHeadPinned: projection?.transcript_head_pinned,
+			// Fill evidence only: the reader's cursor seeding keeps reading the
+			// pin alone, so a compaction marker at row 0 is never detached.
+			frameHasOlder: projection?.transcript_has_older,
 		}),
 		// The notice is for a hole the automatic fill could not close; while the
 		// fill runs the list shows nothing (no flash, no layout jump).
@@ -1174,6 +1376,7 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 		loadVideo,
 		loadBridgeBody,
 		loadAgent,
+		loadAgentHistory,
 		supplements,
 		projectionPid: projection?.pid ?? 0,
 		loadSupplementDocument,

@@ -26,8 +26,8 @@ describe("subagent detail screen", () => {
 		expect(SOURCE).toContain("subagentBadge(detail, missing)");
 	});
 
-	it("derives missing from the settled fetch, both an empty answer and a failure", () => {
-		expect(SOURCE).toContain("setMissing(loaded === null)");
-		expect(SOURCE).toContain("if (!cancelled) setMissing(true)");
-	});
+	/* How `missing` is DERIVED (an empty answer and a failed read) is pinned by
+	 * behaviour, not by source text: `subagent-screen.test.tsx`, "says the child
+	 * is no longer available, under an unavailable badge" (agent review round 1,
+	 * R1-n2 — a literal on a variable name broke on a rename and proved nothing). */
 });
