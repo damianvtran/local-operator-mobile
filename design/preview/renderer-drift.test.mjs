@@ -167,6 +167,36 @@ test("the CLI re-reads the frozen binary it is given and exits 1 when the copy m
 	});
 });
 
+// The pinned renderer is Chrome for Testing, whose --version string and CDP
+// product differ from branded Chrome's. The drift verdict must treat them as the
+// same build when the four-part version agrees, and as drift when it does not.
+test("Chrome for Testing's --version string reads and compares like branded Chrome's", () => {
+	assert.equal(rendererVersion("Google Chrome for Testing 157.0.8103.79 \n"), "157.0.8103.79");
+	assert.equal(rendererVersion("HeadlessChrome/157.0.8103.79"), "157.0.8103.79");
+	const frozen = "Google Chrome for Testing 157.0.8103.79 ";
+	const records = [{ pass: "all", run: "all-1", version: "157.0.8103.79" }, { pass: "frames", run: "frames-2", version: "157.0.8103.79" }];
+	assert.equal(rendererDrift({ frozen, records, onDisk: frozen }).ok, true);
+	// The 158 image's branded Chrome must NOT pass as the pinned build.
+	const other = rendererDrift({ frozen, records, onDisk: "Google Chrome 158.0.8127.37 " });
+	assert.equal(other.ok, false);
+	assert.match(other.message, /modified on disk/);
+});
+
+test("the on-disk re-read works on a Chrome for Testing binary and the CLI fails a different build", () => {
+	withStubBinary("Google Chrome for Testing 157.0.8103.79 ", (binary) => {
+		assert.equal(onDiskVersion(binary), "Google Chrome for Testing 157.0.8103.79 ");
+		withDiagnostics({
+			"all-1": { product: "HeadlessChrome/157.0.8103.79" },
+			"frames-2": { product: "HeadlessChrome/157.0.8103.79" },
+		}, (directory) => {
+			const held = spawnSync(process.execPath, [script, directory, "Google Chrome for Testing 157.0.8103.79 ", binary], { encoding: "utf8", timeout: 5000 });
+			assert.equal(held.status, 0, held.stdout + held.stderr);
+			const moved = spawnSync(process.execPath, [script, directory, "Google Chrome for Testing 158.0.8127.37 ", binary], { encoding: "utf8", timeout: 5000 });
+			assert.equal(moved.status, 1, moved.stdout + moved.stderr);
+		});
+	});
+});
+
 test("the design-kit job freezes Chrome before any use and checks drift after the listing gate", () => {
 	const workflow = readFileSync(new URL("../../.github/workflows/ci.yml", import.meta.url), "utf8");
 	const design = workflow.slice(workflow.indexOf("  design-kit:"), workflow.indexOf("  ci-gate:"));
@@ -177,7 +207,12 @@ test("the design-kit job freezes Chrome before any use and checks drift after th
 	// mutable /Applications bundle as the binary to run.
 	assert.doesNotMatch(design.slice(0, freeze), /Google Chrome/);
 	assert.doesNotMatch(design.slice(freeze).split("\n      - name:").slice(1).join(""), /\/Applications\/Google/);
-	assert.ok(design.slice(freeze).includes('frozen_bin="$frozen/Contents/MacOS/Google Chrome"'));
+	// The freeze step obtains the PINNED build through the checksum-verifying
+	// script and must have no path that copies or launches the image's Chrome
+	// (comments may name it; code lines may not).
+	const code = design.slice(freeze, design.indexOf("\n      - ", freeze + 1)).split("\n").filter((line) => !/^\s*#/.test(line)).join("\n");
+	assert.ok(code.includes('frozen_bin="$(bash design/preview/fetch-capture-chrome.sh design/preview/capture-chrome.pin "$frozen_dir")"'));
+	assert.doesNotMatch(code, /\/Applications\/|ditto|continue-on-error/);
 	assert.ok(design.slice(freeze).includes('echo "CHROME=$frozen_bin" >> "$GITHUB_ENV"'));
 	const drift = at("The capture renderer did not change mid-job");
 	assert.ok(drift > at("The committed listing frames re-render identically"));

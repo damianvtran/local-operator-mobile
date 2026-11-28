@@ -1,0 +1,21 @@
+# The capture renderer the design-kit job renders the committed frames with.
+# Read by fetch-capture-chrome.sh (the job's "Freeze the capture renderer" step).
+# Exactly two `key=value` lines below; anything else is rejected. To change the
+# pin, follow "Bumping the capture renderer" in design/README.md — the frames
+# must be regenerated with the NEW build in the same change.
+#
+# 158.0.8127.37 is the build the 26 committed listing frames and the preview
+# sheets were rendered with — BY THE design-kit JOB ITSELF, on a macos-26 runner,
+# from this very Chrome for Testing archive (a temporary artefact step, since
+# removed; see design/README.md, "Bumping the capture renderer"). They cannot
+# be produced locally: the branded Google Chrome of the same version rasterizes
+# the caption SVG mark's stroke edge differently from Chrome for Testing (the
+# 157.0.8103.79 CfT run read 79-80 px beyond fuzz, max 89/255, against frames
+# rendered by branded 157). Chrome for Testing, mac-arm64:
+# https://storage.googleapis.com/chrome-for-testing-public/158.0.8127.37/mac-arm64/chrome-mac-arm64.zip
+# sha256 and size (200341689 bytes) taken from that URL by streaming:
+#   curl -fsSL "<url>" | shasum -a 256
+# and the stream's md5 (30d98598a3eebce304a55f8ea7cd690a) agrees with the
+# x-goog-hash header Google serves for the object.
+version=158.0.8127.37
+sha256=45925b7ea18e09bf0d5acdae4e36b57cb7ed08ada8dfc0e0c6422f86a3384c9d
