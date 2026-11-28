@@ -1,6 +1,8 @@
 import type { ReactNode, Ref } from "react";
 import { Text, type TextProps } from "react-native";
 
+import type { ComposedDirProps } from "@/ui/direction";
+
 /**
  * A heading with an explicit outline level.
  *
@@ -33,6 +35,15 @@ export type HeadingProps = {
 	/** The spoken name, when the visible text carries a decorative mark a
 	 *  screen reader should not read (a channel's `#` is "number sign"). */
 	accessibilityLabel?: string;
+	/** The base direction a COMPOSED heading states for itself, from
+	 *  `useComposedDir()`. A translated title that splices a Latin token (an
+	 *  organisation name, a product word) into Urdu starts with whichever script
+	 *  the splice lands first, and react-native-web's `dir="auto"` then lays the
+	 *  whole heading out left-to-right inside an RTL page, reordering its Urdu and
+	 *  Latin runs. Opt-in like `Button.labelDir`: omitted, every other heading
+	 *  keeps the inferred base. The value is `dir` on web and a `style` on native,
+	 *  so this element must never gain a `style` of its own. */
+	composedDir?: ComposedDirProps;
 };
 
 export const Heading = ({
@@ -45,6 +56,7 @@ export const Heading = ({
 	ref,
 	tabIndex,
 	accessibilityLabel,
+	composedDir,
 }: HeadingProps) => (
 	<Text
 		ref={ref}
@@ -56,6 +68,7 @@ export const Heading = ({
 		className={className}
 		numberOfLines={numberOfLines}
 		testID={testID}
+		{...composedDir}
 	>
 		{children}
 	</Text>

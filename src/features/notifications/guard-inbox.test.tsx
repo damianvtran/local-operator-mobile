@@ -13,8 +13,14 @@ import {
 	TENANT,
 	waitingOrg,
 } from "@/features/guard/guard-fixtures";
-import { resetLocaleSource, setLocaleSource } from "@/i18n";
+import {
+	type CatalogueKey,
+	renderFor,
+	resetLocaleSource,
+	setLocaleSource,
+} from "@/i18n";
 import { type DomShim, installDomShim } from "@/testing/dom-shim";
+import { DirectionProvider } from "@/ui/direction";
 
 /**
  * The inbox's Radient Guard item, MOUNTED through the real availability gate, the real
@@ -53,7 +59,19 @@ const host = vi.hoisted(() => ({
 	},
 }));
 vi.mock("expo-router", () => ({ useIsFocused: () => host.focused }));
+/** The base-direction hint a primitive was handed, as a marker node placed just
+ *  BEFORE the text it governs. This mock stands in for the NATIVE target
+ *  (`Platform.OS` "ios"), where `useComposedDir()` answers a `writingDirection`
+ *  style — the DirectionProvider's web effect needs a real `document`, and the
+ *  web `dir` prop is pinned against real react-native-web in `guard-text.test.tsx`.
+ *  Empty when none was passed. */
+type DirHint = { style?: { writingDirection?: string } };
+const dirMark = (name: string, hint: DirHint | undefined) =>
+	typeof hint?.style?.writingDirection === "string"
+		? `⟦${name}:${hint.style.writingDirection}⟧`
+		: null;
 vi.mock("react-native", () => ({
+	Platform: { OS: "ios" },
 	AppState: host.app,
 	View: ({ children, testID }: { children?: ReactNode; testID?: string }) => (
 		<>
@@ -61,9 +79,18 @@ vi.mock("react-native", () => ({
 			{children}
 		</>
 	),
-	Text: ({ children, testID }: { children?: ReactNode; testID?: string }) => (
+	Text: ({
+		children,
+		testID,
+		style,
+	}: {
+		children?: ReactNode;
+		testID?: string;
+		style?: DirHint["style"];
+	}) => (
 		<>
 			{testID ? `⟦id:${testID}⟧` : null}
+			{dirMark("dir", { style })}
 			{children}
 		</>
 	),
@@ -91,10 +118,26 @@ vi.mock("@/ui/components/button", () => ({
 	},
 }));
 vi.mock("@/ui/components/alert", () => ({
-	Alert: ({ children }: { children: string }) => <>{children}</>,
+	Alert: ({ children, bodyDir }: { children: string; bodyDir?: DirHint }) => (
+		<>
+			{dirMark("dir", bodyDir)}
+			{children}
+		</>
+	),
 }));
 vi.mock("@/ui/components/section-header", () => ({
-	SectionHeader: ({ label }: { label: string }) => <>{label}</>,
+	SectionHeader: ({
+		label,
+		labelDir,
+	}: {
+		label: string;
+		labelDir?: DirHint;
+	}) => (
+		<>
+			{dirMark("dir", labelDir)}
+			{label}
+		</>
+	),
 }));
 vi.mock("@/ui/components/divider", () => ({ Divider: () => null }));
 vi.mock("@/ui/components/sheet", () => ({
@@ -104,9 +147,11 @@ vi.mock("@/ui/components/sheet", () => ({
 		children,
 		footer,
 		testID,
+		titleDir,
 	}: {
 		visible: boolean;
 		title: string;
+		titleDir?: DirHint;
 		children?: ReactNode;
 		footer?: ReactNode;
 		testID?: string;
@@ -115,6 +160,7 @@ vi.mock("@/ui/components/sheet", () => ({
 		return (
 			<>
 				{`⟦id:${testID}⟧`}
+				{dirMark("dir", titleDir)}
 				{title}
 				{children}
 				{footer}
@@ -181,9 +227,15 @@ const settle = () => act(async () => undefined);
 
 let dom: DomShim;
 let root: ReturnType<typeof createRoot>;
-async function mount() {
+async function mount(direction: "ltr" | "rtl" = "ltr", locale = "en") {
 	host.handlers = {};
-	await act(async () => root.render(<GuardInboxItem />));
+	await act(async () =>
+		root.render(
+			<DirectionProvider direction={direction} locale={locale}>
+				<GuardInboxItem />
+			</DirectionProvider>,
+		),
+	);
 	await settle();
 }
 
@@ -412,5 +464,68 @@ describe("the inbox row stays live while it is open", () => {
 		expect(calls).toHaveLength(1);
 		expect(vi.getTimerCount()).toBe(0);
 		root = createRoot(dom.container as Element);
+	});
+});
+
+/**
+ * RTL rendering (PR #402, i18n auditor 1). In Urdu the consent heading
+ * (`Guard کے اعداد و شمار {org} کے ساتھ شیئر کریں؟`) opens with a Latin token, so
+ * react-native-web's `dir="auto"` computed `direction: ltr` for it inside the RTL
+ * sheet and reordered its Urdu/Latin runs. The catalogue is byte-pinned, so the
+ * views must state the page's base themselves. WITHOUT the fix no element below
+ * carries a `dir` hint and each assertion fails.
+ */
+/** The marker node directly before `text` in the frame, or `null` if the node
+ *  before it is not a marker (i.e. the element stated no direction). */
+const renderForUr = (key: CatalogueKey, args: Record<string, string>): string =>
+	renderFor(key, args, "ur");
+const markBefore = (text: string): string | null => {
+	const raw = frameText();
+	const at = raw.findIndex((x) => x === text);
+	if (at < 0) throw new Error(`no text ${JSON.stringify(text)} in the frame`);
+	const before = raw[at - 1];
+	return before?.startsWith("⟦dir:") ? before : null;
+};
+
+describe("Guard renders its lines in the locale's direction", () => {
+	it("Urdu: the section label, the row title, the reason and the consent sheet's heading and body each state rtl", async () => {
+		setLocaleSource(() => "ur");
+		install({ guardStatus: waiting, guardConsentCard: () => card() });
+		await mount("rtl", "ur");
+		const title = renderForUr("mobile.guard.prompt_title", {
+			org: "Example Org",
+		});
+		// The premise: the heading really mixes scripts, opening with Latin.
+		expect(title).toMatch(/^[A-Za-z]/);
+		expect(title).toMatch(/[\u0600-\u06FF]/);
+		expect(markBefore(renderForUr("mobile.guard.screen_title", {}))).toBe(
+			"⟦dir:rtl⟧",
+		);
+		expect(markBefore(title)).toBe("⟦dir:rtl⟧");
+		await press("guard-review");
+		vi.setSystemTime(Date.now() + 600);
+		const sheetTitle = markBefore(title);
+		expect(sheetTitle).toBe("⟦dir:rtl⟧");
+		// Every guard text node in the open sheet's frame carries the hint: the
+		// sheet title is the only one this test names, so also count markers
+		// against the number of Text/Alert/title/label elements drawn.
+		const raw = frameText();
+		const sheetAt = raw.indexOf("⟦id:guard-consent-sheet⟧");
+		expect(sheetAt).toBeGreaterThan(-1);
+		const inSheet = raw.slice(sheetAt + 1);
+		expect(inSheet[0]).toBe("⟦dir:rtl⟧"); // the heading
+		const lines = inSheet.filter((x) => !x.startsWith("⟦"));
+		const marks = inSheet.filter((x) => x === "⟦dir:rtl⟧");
+		expect(lines.length).toBeGreaterThan(3);
+		// One marker per text line (heading, body paragraphs, scope bullets).
+		expect(marks.length).toBe(lines.length);
+	});
+
+	it("English: no element states a direction (the LTR catalogues are unchanged)", async () => {
+		install({ guardStatus: waiting, guardConsentCard: () => card() });
+		await mount("ltr", "en");
+		await press("guard-review");
+		expect(frameText().some((x) => x.startsWith("⟦dir:"))).toBe(false);
+		expect(snapshot().texts).toContain("Share Guard stats with Example Org?");
 	});
 });

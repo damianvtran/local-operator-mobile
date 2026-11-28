@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { Text, View } from "react-native";
+import { View } from "react-native";
 
 import { useLocaleFrame } from "@/features/auth/connection-provider";
 import type { GuardController } from "@/features/guard/guard-controller";
 import { nonTeamView } from "@/features/guard/guard-model";
+import { GuardText } from "@/features/guard/guard-text";
 import {
 	GuardConsentSheet,
 	GuardNonTeamCardView,
@@ -22,6 +23,7 @@ import { CONTROL, REGION, SURFACE } from "@/ui/a11y";
 import { Button } from "@/ui/components/button";
 import { Divider } from "@/ui/components/divider";
 import { SectionHeader } from "@/ui/components/section-header";
+import { useComposedDir } from "@/ui/direction";
 
 /**
  * Settings → Radient Guard (RFC v0.9 §5.3, §14', slice M1).
@@ -48,25 +50,25 @@ export const GuardBody = ({ controller }: { controller: GuardController }) => {
 	const { read } = state;
 	if (read.kind === "loading")
 		return (
-			<Text className="text-body-sm text-ink-muted">
+			<GuardText className="text-body-sm text-ink-muted">
 				{t("mobile.guard.loading")}
-			</Text>
+			</GuardText>
 		);
 	if (read.kind === "unsupported")
 		return (
-			<Text
+			<GuardText
 				className="text-body-sm text-ink-muted"
 				testID={SURFACE.guardUnsupported}
 			>
 				{t("mobile.guard.host_old")}
-			</Text>
+			</GuardText>
 		);
 	if (read.kind === "error")
 		return (
 			<View className="gap-2">
-				<Text className="text-body-sm text-ink-muted">
+				<GuardText className="text-body-sm text-ink-muted">
 					{t("mobile.guard.load_error")}
-				</Text>
+				</GuardText>
 				<Button
 					testID={CONTROL.guardRetry}
 					label={t("mobile.common.try_again")}
@@ -87,24 +89,24 @@ export const GuardBody = ({ controller }: { controller: GuardController }) => {
 					return view === null ? null : <GuardNonTeamCardView view={view} />;
 				})()
 			) : status.mode === "unavailable" ? (
-				<Text className="text-body-sm text-ink-muted">
+				<GuardText className="text-body-sm text-ink-muted">
 					{t("mobile.guard.screen_unavailable")}
-				</Text>
+				</GuardText>
 			) : status.orgs.length === 0 ? (
-				<Text className="text-body-sm text-ink-muted">
+				<GuardText className="text-body-sm text-ink-muted">
 					{t("mobile.guard.screen_none")}
-				</Text>
+				</GuardText>
 			) : (
 				<>
-					<Text className="text-body-sm text-ink-muted">
+					<GuardText className="text-body-sm text-ink-muted">
 						{t("mobile.guard.intro")}
-					</Text>
+					</GuardText>
 					{status.this_computer !== "" ? (
-						<Text className="text-body-sm text-ink-muted">
+						<GuardText className="text-body-sm text-ink-muted">
 							{t("mobile.guard.computer_line", {
 								computer: status.this_computer,
 							})}
-						</Text>
+						</GuardText>
 					) : null}
 					{status.orgs.map((org) => (
 						<GuardOrgCard
@@ -117,9 +119,9 @@ export const GuardBody = ({ controller }: { controller: GuardController }) => {
 						/>
 					))}
 					{status.orgs.some((org) => org.can_revoke) ? (
-						<Text className="text-body-sm text-ink-muted">
+						<GuardText className="text-body-sm text-ink-muted">
 							{t("mobile.guard.computers_note")}
-						</Text>
+						</GuardText>
 					) : null}
 				</>
 			)}
@@ -144,15 +146,22 @@ export const GuardBody = ({ controller }: { controller: GuardController }) => {
 
 /** Wrapper so a section with nothing to say leaves no header (and no divider)
  *  behind: a non-Team MEMBER sees nothing at all (§14'). */
-const Frame = ({ children }: { children: React.ReactNode }) => (
-	<>
-		<View className="gap-2" testID={REGION.settingsGuard}>
-			<SectionHeader label={t("mobile.guard.screen_title")} />
-			{children}
-		</View>
-		<Divider />
-	</>
-);
+const Frame = ({ children }: { children: React.ReactNode }) => {
+	/* `Radient Guard` opens the Urdu label with Latin: state the page's base. */
+	const composedDir = useComposedDir();
+	return (
+		<>
+			<View className="gap-2" testID={REGION.settingsGuard}>
+				<SectionHeader
+					label={t("mobile.guard.screen_title")}
+					labelDir={composedDir}
+				/>
+				{children}
+			</View>
+			<Divider />
+		</>
+	);
+};
 
 const GuardEditor = ({ client }: { client: RelayEndpoints }) => {
 	const controller = useGuardController(client);
@@ -180,7 +189,7 @@ export const GuardSection = () => {
 		return <GuardEditor client={availability.client} />;
 	return (
 		<Frame>
-			<Text
+			<GuardText
 				className="text-body-sm text-ink-muted"
 				testID={
 					availability.kind === "unsupported"
@@ -195,7 +204,7 @@ export const GuardSection = () => {
 							? "mobile.guard.reconnecting"
 							: "mobile.guard.host_old",
 				)}
-			</Text>
+			</GuardText>
 		</Frame>
 	);
 };

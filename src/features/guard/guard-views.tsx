@@ -1,10 +1,11 @@
-import { Linking, Text, View } from "react-native";
+import { Linking, View } from "react-native";
 
 import { t } from "@/i18n";
 import { CONTROL, SURFACE } from "@/ui/a11y";
 import { Alert } from "@/ui/components/alert";
 import { Button } from "@/ui/components/button";
 import { Sheet } from "@/ui/components/sheet";
+import { useComposedDir } from "@/ui/direction";
 import type { GuardController } from "./guard-controller";
 import {
 	allDescribable,
@@ -21,6 +22,7 @@ import {
 	revokeBody,
 	scopeLabel,
 } from "./guard-model";
+import { GuardText } from "./guard-text";
 import { useGuardState } from "./use-guard";
 
 /** The sentence under a write. A polite live region: it reports a result the
@@ -31,9 +33,12 @@ export const GuardOutcomeAlert = ({
 	outcome: Exclude<GuardOutcome, null>;
 }) => {
 	const line = outcomeLine(outcome);
+	const composedDir = useComposedDir();
 	return (
 		<View testID={SURFACE.guardOutcome} accessibilityLiveRegion="polite">
-			<Alert severity={line.tone}>{line.text}</Alert>
+			<Alert severity={line.tone} bodyDir={composedDir}>
+				{line.text}
+			</Alert>
 		</View>
 	);
 };
@@ -59,8 +64,12 @@ export const GuardConsentSheet = ({
 	const answering = consent.phase === "answering";
 	const view = card === null ? null : consentView(card);
 	const describable = card === null || allDescribable(card.asked_scopes);
+	/* The heading and the body lines open with a Latin org name or `Guard` in
+	 *  Urdu; each states the page's base (see `GuardText`). */
+	const composedDir = useComposedDir();
 	return (
 		<Sheet
+			titleDir={composedDir}
 			visible={open && view !== null}
 			onClose={controller.closeConsent}
 			title={view?.title ?? ""}
@@ -104,21 +113,31 @@ export const GuardConsentSheet = ({
 			{view === null ? null : (
 				<View className="gap-3 py-2">
 					{view.reasonLine !== null ? (
-						<Text className="text-body text-ink">{view.reasonLine}</Text>
+						<GuardText className="text-body text-ink">
+							{view.reasonLine}
+						</GuardText>
 					) : null}
-					<Text className="text-label text-ink">{view.wouldSend}</Text>
+					<GuardText className="text-label text-ink">
+						{view.wouldSend}
+					</GuardText>
 					<View className="gap-2">
 						{view.scopeLines.map((line) => (
-							<Text key={line} className="text-body-sm text-ink">
+							<GuardText key={line} className="text-body-sm text-ink">
 								{`• ${line}`}
-							</Text>
+							</GuardText>
 						))}
 					</View>
-					<Text className="text-body-sm text-ink-muted">{view.neverSent}</Text>
-					<Text className="text-body-sm text-ink-muted">{view.visibility}</Text>
-					<Text className="text-body-sm text-ink-muted">{view.background}</Text>
+					<GuardText className="text-body-sm text-ink-muted">
+						{view.neverSent}
+					</GuardText>
+					<GuardText className="text-body-sm text-ink-muted">
+						{view.visibility}
+					</GuardText>
+					<GuardText className="text-body-sm text-ink-muted">
+						{view.background}
+					</GuardText>
 					{!view.answerable ? (
-						<Alert severity="info">
+						<Alert severity="info" bodyDir={composedDir}>
 							{t(
 								describable
 									? "mobile.guard.consent_not_signable"
@@ -174,15 +193,15 @@ export const GuardRevokeSheet = ({
 	>
 		{org === null ? null : (
 			<View className="gap-3 py-2">
-				<Text className="text-body text-ink">
+				<GuardText className="text-body text-ink">
 					{revokeBody(org, backupDays)}
-				</Text>
-				<Text className="text-body-sm text-ink-muted">
+				</GuardText>
+				<GuardText className="text-body-sm text-ink-muted">
 					{t("mobile.guard.revoke_retained")}
-				</Text>
-				<Text className="text-body-sm text-ink-muted">
+				</GuardText>
+				<GuardText className="text-body-sm text-ink-muted">
 					{t("mobile.guard.revoke_totals")}
-				</Text>
+				</GuardText>
 			</View>
 		)}
 	</Sheet>
@@ -211,15 +230,15 @@ export const GuardOrgCard = ({
 	const reviewable = org.prompt?.approval_id != null;
 	return (
 		<View className="gap-2 rounded-md bg-elevated p-3">
-			<Text className="text-label text-ink">{indicatorFor(org)}</Text>
+			<GuardText className="text-label text-ink">{indicatorFor(org)}</GuardText>
 			{shared.length > 0 ? (
 				<View className="gap-1">
-					<Text className="text-body-sm text-ink-muted">
+					<GuardText className="text-body-sm text-ink-muted">
 						{t("mobile.guard.shared_heading", { org: org.org })}
-					</Text>
-					<Text className="text-body-sm text-ink">
+					</GuardText>
+					<GuardText className="text-body-sm text-ink">
 						{listLabels(shared.map(scopeLabel))}
-					</Text>
+					</GuardText>
 				</View>
 			) : null}
 			{actions.length > 0 ? (
@@ -266,12 +285,12 @@ export const GuardNonTeamCardView = ({ view }: { view: NonTeamView }) => (
 		className="gap-2 rounded-md bg-elevated p-3"
 		testID={SURFACE.guardNonTeamCard}
 	>
-		<Text className="text-label text-ink">{view.title}</Text>
-		<Text className="text-body-sm text-ink-muted">{view.body}</Text>
+		<GuardText className="text-label text-ink">{view.title}</GuardText>
+		<GuardText className="text-body-sm text-ink-muted">{view.body}</GuardText>
 		{view.cta === "ask_owner" ? (
-			<Text className="text-body-sm text-ink">
+			<GuardText className="text-body-sm text-ink">
 				{t("mobile.guard.card_ask_owner")}
-			</Text>
+			</GuardText>
 		) : view.ctaLabel !== null && view.url !== null ? (
 			<View className="items-start">
 				<Button
@@ -286,6 +305,6 @@ export const GuardNonTeamCardView = ({ view }: { view: NonTeamView }) => (
 				/>
 			</View>
 		) : null}
-		<Text className="text-body-sm text-ink-muted">{view.footer}</Text>
+		<GuardText className="text-body-sm text-ink-muted">{view.footer}</GuardText>
 	</View>
 );

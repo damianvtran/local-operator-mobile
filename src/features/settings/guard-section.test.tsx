@@ -54,6 +54,9 @@ const host = vi.hoisted(() => ({
 }));
 vi.mock("expo-router", () => ({ useIsFocused: () => host.focused }));
 vi.mock("react-native", () => ({
+	// `GuardText` reads `Platform.OS` through `useComposedDir()`; native, LTR page
+	// (the default context) answers no hint, so every assertion here is unchanged.
+	Platform: { OS: "ios" },
 	AppState: host.app,
 	View: ({ children, testID }: { children?: ReactNode; testID?: string }) => (
 		<>
