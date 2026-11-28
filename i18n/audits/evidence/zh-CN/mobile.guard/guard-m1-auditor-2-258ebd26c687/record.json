@@ -1,0 +1,134 @@
+{
+  "schema": 1,
+  "record_kind": "i18n-audit",
+  "audit_id": "guard-m1-auditor-2-258ebd26c687",
+  "kind": "Independent i18n audit 2 of 2 (high-visibility consent and privacy)",
+  "locale": "zh-CN",
+  "namespace": "mobile.guard",
+  "audit_date": "2026-11-27",
+  "round": 1,
+  "project": "damianvtran/local-operator-mobile",
+  "pull_request": 402,
+  "base_commit": "13c007b987e236037c4f463337f03d3d00260e86",
+  "source_commit": "b72a7aff34e3c85d0610f9da77c4a8f556a2de6c",
+  "core_reference_commit": "498066e8c8270ad5c02bbb053186252ed6981212",
+  "key_count": 90,
+  "phone_authored_keys_audited": [
+    "mobile.guard.answered_elsewhere",
+    "mobile.guard.card_ask_owner",
+    "mobile.guard.card_footer_account",
+    "mobile.guard.computer_line",
+    "mobile.guard.computers_note",
+    "mobile.guard.consent_needs_update",
+    "mobile.guard.consent_not_signable",
+    "mobile.guard.disconnected",
+    "mobile.guard.host_old",
+    "mobile.guard.indicator_unknown",
+    "mobile.guard.indicator_waiting",
+    "mobile.guard.intro",
+    "mobile.guard.load_error",
+    "mobile.guard.loading",
+    "mobile.guard.prompt_background",
+    "mobile.guard.reconnecting",
+    "mobile.guard.review",
+    "mobile.guard.revoke_pending_result",
+    "mobile.guard.share_again_result",
+    "mobile.guard.shared_heading",
+    "mobile.guard.surface_terminal"
+  ],
+  "mirrored_key_count": 69,
+  "mirrored_verdict": "69/69 UTF-8 values byte-identical to local-operator origin/main (498066e8c827) tui.guard.<same suffix>; en source of those 69 also byte-identical to core en (indicator_waiting and prompt_background are the two core-adapted phone variants, audited as phone-authored)",
+  "translator": {
+    "agent": "coder (radientdev team; guard M1 remediation r1)",
+    "session": "6581613c7f27",
+    "model": "anthropic/claude-sonnet-5-5",
+    "fallback": "none",
+    "date": "2026-11-27",
+    "provenance": "PR translator receipt"
+  },
+  "first_auditor": {
+    "agent": "copy-reviewer (radientdev; independent i18n auditor 1)",
+    "session": "f484e90279c6",
+    "model": "openai/gpt-6.2-sol",
+    "record": "i18n/audits/evidence/zh-CN/mobile.guard/guard-m1-auditor-1-f484e90279c6/record.json"
+  },
+  "auditor": {
+    "agent": "copy-reviewer (radientdev; independent i18n auditor 2)",
+    "session": "258ebd26c687",
+    "model": "anthropic/claude-opus-5-5",
+    "actual_model_source": "Running session model header",
+    "fallback_used": false,
+    "independent_from_translator_session": true,
+    "independent_from_first_auditor_session": true
+  },
+  "input_hashes": {
+    "target": {
+      "path": "src/i18n/catalogues/zh-CN/mobile.guard.json",
+      "sha256": "2d7b2236065c1c207ff7489aa74d859f763dad626a3e8a06c7f589ce35708ce9"
+    },
+    "target_before": {
+      "path": "src/i18n/catalogues/zh-CN/mobile.guard.json",
+      "commit": "b72a7aff34e3c85d0610f9da77c4a8f556a2de6c",
+      "sha256": "2f81fafb307064a3b06a3ba214057955bf483e1ce6af133077384cb570fa7e3a"
+    },
+    "en": {
+      "path": "src/i18n/catalogues/en/mobile.guard.json",
+      "sha256": "4bd08d4670d429d5f87d8f63d5636b9408f350ae8a97718a84659951fdfa20b5"
+    },
+    "context": {
+      "path": "src/i18n/catalogues/en/mobile.guard.context.json",
+      "sha256": "0111504447375d32bcf80d4e5b60744b6c7cb2933ebf7cbc14157be4a73d9f1c"
+    },
+    "translator_receipt": {
+      "path": "i18n/receipts/guard-m1-r1-translator-zh-CN-6581613c7f27.json",
+      "sha256": "687361c17a797957a19fbb5c4240a3176b36dd89635b77c80c2f22345bd8fdbb"
+    },
+    "first_audit_record": {
+      "path": "i18n/audits/evidence/zh-CN/mobile.guard/guard-m1-auditor-1-f484e90279c6/record.json",
+      "sha256": "c4efba38cfa677f23c18ce0849e9e1b9756beb2b168a447941a9b979259bf3dd"
+    },
+    "core_reference": {
+      "path": "local_operator/i18n/catalogues/zh-CN/tui.guard.json",
+      "sha256": "04253a9fa0d65932f21003410a16aba1b077a68d587d943a11c136940bfc0b53"
+    },
+    "glossary": {
+      "path": "i18n/glossary.md",
+      "sha256": "5de3929198c3f603ce14bf75fb992c0f5c7a1952c440b496386977f8c636fcc7"
+    },
+    "style": {
+      "path": "i18n/style-guides/zh-CN.md",
+      "sha256": "6d9b370681d5d7fa19659240c4286a0617b303c44965b5804f4a763a2df17b52"
+    }
+  },
+  "checks": {
+    "mirrored_bytes": "Script compare of 69 keys x this locale vs core tui.guard: 0 differences.",
+    "placeholders_numbers": "Placeholder multiset and digit multiset equal to en for all 90 keys ({backup_days}, {org}, {surface}, {computer}, {trial_days}, {scopes}, {date}, {reason}; 5, 20, 14, 90, 180, 5–15).",
+    "typography": "All values NFC; no bidi control characters; no leading/trailing or doubled spaces; no em/en dashes in phone-authored values.",
+    "screen_names": "Settings and Notifications references match mobile.settings.screen_title and mobile.notifications.title in this locale; Console, Local Operator, Radient Guard, Team kept Latin.",
+    "copy_scan": "design-qa copy_scan.py over 8 mobile.guard catalogues: 672 candidate strings, 0 findings (after edits).",
+    "i18n_check": "npm run -s i18n:check: generated projection current; 56 baselined findings, 0 new.",
+    "vitest": "catalogues, bidi-controls, messages, guard-model: 4 files, 228 tests passed (maxWorkers=2).",
+    "receipt_dry_run": "Staged in the session scratchpad first; every input hash re-read from disk/core and matched, finding current/replacement strings matched target_before/target values with no untracked value change; negative controls (one-nibble-altered target hash, zeroed first-audit hash) were rejected for all seven locales before the record was written into the repository."
+  },
+  "findings": [
+    {
+      "id": "C4",
+      "severity": "NIT",
+      "key": "mobile.guard.prompt_background",
+      "current": "如果你选择共享数据，Guard会在后台发送数据。你可以随时在设置或Console中停止共享。",
+      "replacement": "如果你选择共享数据，Guard会在后台发送数据。你可以随时在“设置”或Console中停止共享。",
+      "why": "The zh-CN style guide quotes on-screen names with “ ” (e.g. 轻点“重试”), and share_again_result already writes “通知”; the Settings screen name gets the same treatment.",
+      "disposition": "fixed"
+    }
+  ],
+  "current_report_verdict": {
+    "status": "passed",
+    "unresolved_blocker_major_count": 0,
+    "finding_ids": [
+      "C4"
+    ],
+    "scope": "Second independent language audit; with auditor 1 this completes the two-audit requirement for high-visibility consent/privacy copy.",
+    "note": "PASS after C4 (NIT). No inserted CJK/Latin spaces, full-width punctuation, …… ellipsis, no 。 on short status lines."
+  },
+  "limitations": "Language audit of catalogue text only. Urdu RTL rendering, smallest-phone width and native visual fit are not approved by this record."
+}

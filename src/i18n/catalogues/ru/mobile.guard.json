@@ -85,7 +85,7 @@
 	"mobile.guard.screen_unavailable": "Guard не может прочитать свои настройки на этом компьютере. С этого экрана ничего не передано и не отправлено.",
 	"mobile.guard.screen_working": "Выполняется…",
 	"mobile.guard.share_again_result": "{org} скоро спросит снова. Ищите запрос в уведомлениях.",
-	"mobile.guard.shared_heading": "Передаётся {org} с этого компьютера:",
+	"mobile.guard.shared_heading": "Данные, которые этот компьютер передаёт {org}:",
 	"mobile.guard.surface_desktop": "настольное приложение",
 	"mobile.guard.surface_mobile": "ваш телефон",
 	"mobile.guard.surface_terminal": "терминал"

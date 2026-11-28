@@ -33,7 +33,7 @@
 	"mobile.guard.intro": "Radient Guard可以把某台电脑上的防护统计数据共享给你的Team组织，但必须在你同意之后。你的答复由那台电脑上的Local Operator执行；这部手机只负责转达。",
 	"mobile.guard.load_error": "无法从这台电脑读取Radient Guard。请检查连接后重试。",
 	"mobile.guard.loading": "正在检查Radient Guard……",
-	"mobile.guard.prompt_background": "如果你选择共享数据，Guard会在后台发送数据。你可以随时在设置或Console中停止共享。",
+	"mobile.guard.prompt_background": "如果你选择共享数据，Guard会在后台发送数据。你可以随时在“设置”或Console中停止共享。",
 	"mobile.guard.prompt_never_sent": "绝不发送：文件路径、命令、提示词、代码、模型输出或工具参数。",
 	"mobile.guard.prompt_reason_new_device": "这是你的Radient账户中的一台新电脑。每台电脑单独决定，请为这台电脑作出选择。",
 	"mobile.guard.prompt_reason_new_org": "{org}已开启Radient Guard。",
