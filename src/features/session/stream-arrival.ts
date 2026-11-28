@@ -1,4 +1,4 @@
-import { useLayoutEffect, useMemo, useRef } from "react";
+import { createContext, useLayoutEffect, useMemo, useRef } from "react";
 import type { TranscriptEntry } from "@/contracts";
 
 export type StreamArrival = {
@@ -85,3 +85,65 @@ export function useStreamArrival(
 	}, [entries, epoch, next, rowId, sessionId, text]);
 	return next;
 }
+
+/* ------------------------------------------------------------- delivery slot */
+
+/** What the streaming row reads: the arrival classification and the motion token. */
+export type StreamArrivalValue = {
+	arrival: StreamArrival | null;
+	motion: object | null;
+};
+
+/**
+ * WHY A SLOT, NOT PROPS (streaming-perf audit, hotspot #1).
+ *
+ * `useStreamArrival` builds a NEW `arrival` object on every streamed frame. It
+ * used to travel as a prop through `renderItem`'s dependency list, so every frame
+ * handed React Native's `CellRenderer` (a `PureComponent`) a new `renderItem`
+ * and every mounted cell, up to ~60, re-ran its row subtree to learn that
+ * nothing but the streaming row had changed.
+ *
+ * The slot is ONE stable object per list. The list writes the latest value into
+ * it while it renders (the same render-time write the list's other latches use),
+ * and only the streaming row's assistant body reads it. Reading at render, with
+ * no subscription, is sound because `arrival` only changes when the tail text
+ * changes, and that change re-renders the streaming row anyway (its entry is a
+ * new object, `reuseRows` keeps unchanged rows only). The one change that is NOT
+ * a text change, motion turning off (reduce-motion flipped on, the stream
+ * settling), is announced through `subscribe`, and notified from a layout effect
+ * only when the `motion` token's identity changed, which is at most a few times
+ * per answer rather than per frame.
+ */
+export type StreamArrivalSlot = {
+	read(): StreamArrivalValue;
+	write(value: StreamArrivalValue): void;
+	subscribe(listener: () => void): () => void;
+	/** Notify subscribers; called by the list's layout effect, never in render. */
+	notify(): void;
+};
+
+const NO_ARRIVAL: StreamArrivalValue = { arrival: null, motion: null };
+
+export function createStreamArrivalSlot(): StreamArrivalSlot {
+	let current = NO_ARRIVAL;
+	const listeners = new Set<() => void>();
+	return {
+		read: () => current,
+		write(value) {
+			current = value;
+		},
+		subscribe(listener) {
+			listeners.add(listener);
+			return () => listeners.delete(listener);
+		},
+		notify() {
+			for (const listener of [...listeners]) listener();
+		},
+	};
+}
+
+/** No provider = no streaming list above (a Markdown preview, a test): nothing
+ *  arrives, nothing paces. */
+export const StreamArrivalContext = createContext<StreamArrivalSlot | null>(
+	null,
+);

@@ -38,6 +38,7 @@ import {
 	groupDepth,
 	SPACING_TIER_CLASS,
 	spacingTiersOf,
+	type TranscriptSpacingTier,
 } from "@/features/session/components/trace-rail";
 import {
 	TranscriptEdgeFades,
@@ -78,9 +79,17 @@ import {
 	type ReaderScrollHold,
 	restsAtTail,
 } from "@/features/session/reader-scroll-hold";
-import { reuseRows } from "@/features/session/row-identity";
+import {
+	reuseItems,
+	reuseMap,
+	reuseRows,
+} from "@/features/session/row-identity";
 import { scrollAnchorFromHook } from "@/features/session/scroll-hook";
-import { useStreamArrival } from "@/features/session/stream-arrival";
+import {
+	createStreamArrivalSlot,
+	StreamArrivalContext,
+	useStreamArrival,
+} from "@/features/session/stream-arrival";
 import { beatLive, type SupplementBeat } from "@/features/session/supplements";
 import {
 	textSelectionContainerScroll,
@@ -453,6 +462,21 @@ export const TranscriptList = ({
 		entries,
 		reduceMotion,
 	);
+	/* Delivered through one stable slot, never through `renderItem` (see
+	 * `StreamArrivalSlot`): a per-frame `arrival` in the dependency list made
+	 * every mounted cell re-run on every streamed frame. Written in render, like
+	 * the latches below, so the streaming row that renders later in this same pass
+	 * reads the value that belongs to this frame. */
+	const [arrivalSlot] = useState(createStreamArrivalSlot);
+	arrivalSlot.write({ arrival, motion });
+	const announcedMotion = useRef<object | null>(null);
+	useLayoutEffect(() => {
+		// Only a change of the motion TOKEN needs an announcement: the arrival
+		// itself changes with the streaming row's own text, which re-renders it.
+		if (announcedMotion.current === motion) return;
+		announcedMotion.current = motion;
+		arrivalSlot.notify();
+	}, [arrivalSlot, motion]);
 	const listRef = useRef<FlatList<TranscriptItem>>(null);
 	const webRows = useRef(new Map<string, View>());
 	/* The row the reader was looking at when an older page was requested, held
@@ -774,18 +798,47 @@ export const TranscriptList = ({
 	 * nothing between trace lines that already carry the touch floor. Applied as
 	 * padding INSIDE each row's measured wrapper, so the measured heights the
 	 * offset table and the ack gate read already include it. */
-	const spacingTiers = useMemo(
-		() => spacingTiersOf(folded.items),
-		[folded.items],
-	);
+	const spacingTiersRef = useRef<ReadonlyMap<
+		string,
+		TranscriptSpacingTier
+	> | null>(null);
+	/* `reuseMap`: an unchanged lookup keeps its identity, so `renderItem` (which
+	 * lists it) keeps its own and the cells stay put on a streamed frame. */
+	const spacingTiers = useMemo(() => {
+		const next = reuseMap(
+			spacingTiersRef.current,
+			spacingTiersOf(folded.items),
+		);
+		spacingTiersRef.current = next;
+		return next;
+	}, [folded.items]);
 	/* Which rows sit inside an opened turn bar or fold, and how deep
 	 * (`group-containment.ts`). Same lifetime as the tiers above: a function of
 	 * the plan, never of scroll, so it costs nothing per frame and a closed
 	 * bar leaves every row's wrapper byte-identical to before. */
-	const containment = useMemo(
-		() => groupContainment(folded.items, plan.turns, folded.folds),
-		[folded.items, folded.folds, plan.turns],
-	);
+	const containmentRef = useRef<ReadonlyMap<string, number> | null>(null);
+	const containment = useMemo(() => {
+		const next = reuseMap(
+			containmentRef.current,
+			groupContainment(folded.items, plan.turns, folded.folds),
+		);
+		containmentRef.current = next;
+		return next;
+	}, [folded.items, folded.folds, plan.turns]);
+	/* The list's data: unchanged rows keep their item object (`reuseItems`). */
+	const listItemsRef = useRef<{
+		session: string;
+		items: readonly TranscriptItem[];
+	} | null>(null);
+	const listItems = useMemo(() => {
+		const held = listItemsRef.current;
+		const items = reuseItems(
+			held?.session === sessionId ? held.items : null,
+			folded.items,
+		);
+		listItemsRef.current = { session: sessionId, items };
+		return items;
+	}, [folded.items, sessionId]);
 	const toggleExpansion = useCallback((key: string, open: boolean) => {
 		setReaderExpanded((current) => {
 			const next = new Set(current);
@@ -2111,8 +2164,6 @@ export const TranscriptList = ({
 								streaming={
 									streamingRowId !== null && item.id === streamingRowId
 								}
-								streamArrival={item.id === streamingRowId ? arrival : null}
-								streamMotion={item.id === streamingRowId ? motion : null}
 								loadImage={loadImage}
 								loadFile={loadFile}
 								onOpenAgent={onOpenAgent}
@@ -2152,8 +2203,6 @@ export const TranscriptList = ({
 			rowOpen,
 			toggleRowOpen,
 			streamingRowId,
-			arrival,
-			motion,
 			loadImage,
 			loadFile,
 			onOpenAgent,
@@ -2348,7 +2397,7 @@ export const TranscriptList = ({
 			<FlatList
 				ref={listRef}
 				testID={testID}
-				data={folded.items}
+				data={listItems}
 				keyExtractor={keyOfItem}
 				renderItem={renderItem}
 				onLayout={onLayout}
@@ -2413,14 +2462,16 @@ export const TranscriptList = ({
 		</View>
 	);
 	return (
-		<UserMessageCollapseContext.Provider value={keepCollapsedTopInView}>
-			{KEYBOARD_DRAG.gestureArea ? (
-				<KeyboardGestureArea interpolator="ios" style={GESTURE_AREA_STYLE}>
-					{body}
-				</KeyboardGestureArea>
-			) : (
-				body
-			)}
-		</UserMessageCollapseContext.Provider>
+		<StreamArrivalContext.Provider value={arrivalSlot}>
+			<UserMessageCollapseContext.Provider value={keepCollapsedTopInView}>
+				{KEYBOARD_DRAG.gestureArea ? (
+					<KeyboardGestureArea interpolator="ios" style={GESTURE_AREA_STYLE}>
+						{body}
+					</KeyboardGestureArea>
+				) : (
+					body
+				)}
+			</UserMessageCollapseContext.Provider>
+		</StreamArrivalContext.Provider>
 	);
 };

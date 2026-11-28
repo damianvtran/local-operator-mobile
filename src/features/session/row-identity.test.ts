@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { reuseRows } from "@/features/session/row-identity";
+import {
+	reuseItems,
+	reuseMap,
+	reuseRows,
+} from "@/features/session/row-identity";
 
 /**
  * `reuseRows` is the identity half of the transcript's render isolation: a row
@@ -127,5 +131,60 @@ describe("reuseRows", () => {
 		const swappedOut = reuseRows(previous, swapped);
 		expect(swappedOut).not.toBe(previous);
 		expect(swappedOut.map((r) => r.text)).toEqual(["second", "first"]);
+	});
+});
+
+describe("reuseItems / reuseMap (streamed-frame cell identity)", () => {
+	const entry = { id: "a", kind: "assistant" } as never;
+	const item = (id: string, over: object = {}) => ({
+		kind: "entry" as const,
+		id,
+		entry,
+		...over,
+	});
+
+	it("hands back the previous object for an item whose every field is equal", () => {
+		const before = [item("a"), item("b")];
+		const after = reuseItems(before, [item("a"), item("b")]);
+		expect(after).toBe(before);
+		expect(after[0]).toBe(before[0]);
+	});
+
+	it("never reuses an item whose entry, flag or shape changed", () => {
+		const before = [item("a"), item("b"), item("c")];
+		const swapped = { id: "b", kind: "assistant", text: "more" } as never;
+		const next = [
+			item("a"),
+			{ ...item("b"), entry: swapped },
+			item("c", { condensed: true }),
+		];
+		const after = reuseItems(before, next);
+		expect(after[0]).toBe(before[0]);
+		expect(after[1]).toBe(next[1]);
+		expect(after[2]).toBe(next[2]);
+		expect(after).not.toBe(before);
+	});
+
+	it("matches by id, so an inserted row cannot hand a cell the wrong item", () => {
+		const before = [item("a"), item("b")];
+		const after = reuseItems(before, [item("x"), item("a"), item("b")]);
+		expect(after.map((row) => row.id)).toEqual(["x", "a", "b"]);
+		expect(after[1]).toBe(before[0]);
+		expect(after[2]).toBe(before[1]);
+	});
+
+	it("keeps a map's identity only when every entry is unchanged", () => {
+		const before = new Map([
+			["a", "first"],
+			["b", "block"],
+		]);
+		expect(reuseMap(before, new Map(before))).toBe(before);
+		const changed = new Map([
+			["a", "first"],
+			["b", "turn"],
+		]);
+		expect(reuseMap(before, changed)).toBe(changed);
+		const grown = new Map([...before, ["c", "block"]]);
+		expect(reuseMap(before, grown)).toBe(grown);
 	});
 });

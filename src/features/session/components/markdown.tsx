@@ -61,12 +61,19 @@ import {
 	safeMarkdownHref,
 } from "@/features/session/markdown-links";
 import { NATIVE_MONO_FAMILY } from "@/features/session/mono-face";
+import {
+	colorWithAlpha,
+	type FadePart,
+	type FadeRun,
+	splitFade,
+} from "@/features/session/paced-reveal";
 import type { StreamArrival } from "@/features/session/stream-arrival";
 import {
 	type MarkdownFrame,
 	parseMarkdownFrame,
 } from "@/features/session/streaming-markdown";
 import { forcedTableScroll } from "@/features/session/table-scroll-hook";
+import { usePacedText } from "@/features/session/use-paced-text";
 import { CONTROL, ROLE, SURFACE } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
 import { estimatedColumnWidth } from "@/ui/column";
@@ -180,6 +187,36 @@ function InlineSuffix({
 	return <Text ref={nodeRef}>{value}</Text>;
 }
 
+/**
+ * The newest revealed words of a streaming paragraph (native).
+ *
+ * A native nested `Text` cannot animate opacity (`stream-fade.tsx`), and a
+ * Reanimated prop on one is unsupported, so the fade is the one thing a nested
+ * run CAN carry: its colour. Each piece is the paragraph's own ink at a lower
+ * alpha, and it brightens as the pacing ticks (`use-paced-text.ts`) re-render
+ * this paragraph: the fade costs no render of its own. Resolved here, in a
+ * component that exists only while a tail is fading, so the token lookup is not
+ * paid by every paragraph in the transcript.
+ */
+function FadedTail({
+	parts,
+	role,
+}: {
+	parts: readonly FadePart[];
+	role: "ink" | "ink-muted";
+}) {
+	const ink = useTokenColor(role);
+	return (
+		<>
+			{parts.map((part, index) => (
+				<Text key={index} style={{ color: colorWithAlpha(ink, part.alpha) }}>
+					{part.text}
+				</Text>
+			))}
+		</>
+	);
+}
+
 type SuffixSplit = { span: number; start: number; end: number; value: string };
 
 /**
@@ -208,13 +245,36 @@ const spanBody = ({
 	split,
 	nodeRef,
 	animate,
+	faded = null,
 }: {
 	span: InlineSpan;
 	chips: boolean;
 	split: SuffixSplit | null;
 	nodeRef: RefObject<Text | null>;
 	animate: boolean;
+	faded?: { runs: readonly FadeRun[]; role: "ink" | "ink-muted" } | null;
 }): ReactNode => {
+	if (faded !== null) {
+		/* The paced tail (native). Like the web suffix above, the animated tail is
+		 * NOT chip-split: an ask id that is still fading is plain text, and
+		 * becomes the chip when the stream settles, which is when it can be
+		 * pressed. The settled head keeps its chips. */
+		const { head, parts } = splitFade(span.text, faded.runs);
+		return (
+			<>
+				{head.length > 0
+					? spanBody({
+							span: { ...span, text: head },
+							chips,
+							split: null,
+							nodeRef,
+							animate: false,
+						})
+					: null}
+				<FadedTail parts={parts} role={faded.role} />
+			</>
+		);
+	}
 	if (split !== null) {
 		return (
 			<>
@@ -261,10 +321,13 @@ const Inline = memo(function Inline({
 	text,
 	base,
 	appendFrom,
+	fade = null,
 }: {
 	text: string;
 	base?: string;
 	appendFrom?: string;
+	/** The paced tail of a streaming answer (native), on its LAST paragraph only. */
+	fade?: readonly FadeRun[] | null;
 }) {
 	/* PARSED ONCE PER STRING (design pass item E, cause 2). The parse used to run
 	 *  in the render body, so a panel re-render or a row re-render re-tokenised the
@@ -395,6 +458,20 @@ const Inline = memo(function Inline({
 						split: split?.span === index ? split : null,
 						nodeRef,
 						animate: fresh !== null,
+						// Only a plain last span carries the tail: a link or a code chip
+						// keeps its own colour, and the next frame's words are plain.
+						faded:
+							fade !== null &&
+							index === spans.length - 1 &&
+							!span.code &&
+							span.href === undefined
+								? {
+										runs: fade,
+										role: base?.includes("text-ink-muted")
+											? "ink-muted"
+											: "ink",
+									}
+								: null,
 					})}
 				</Text>
 			))}
@@ -940,21 +1017,54 @@ export const Markdown = memo(function Markdown({
 			),
 		[assistantParts],
 	);
+	/* PACED REVEAL (native, legacy `text` only). The answer is held back and
+	 * released a word at a time (`use-paced-text.ts`), here, inside the one
+	 * message that is streaming. Off for the sidecar's rich parts (their blocks
+	 * come from a different source and a widget must not be cut mid-figure), on
+	 * web (which has its own word fade), and whenever `motion` is null: not
+	 * live, reduced motion, or the OS has not yet said motion is allowed. */
+	const pacing =
+		streaming &&
+		motion !== null &&
+		assistantParts === undefined &&
+		Platform.OS !== "web";
+	const pace = usePacedText(
+		text,
+		pacing,
+		// A row that appears WITH its stream is paced from its first word; a
+		// cell mounted later (virtualiser) shows what exists and paces the rest.
+		arrival !== null && !arrival.sealed && arrival.previousText === "",
+	);
+	const shownText = pacing ? pace.text : text;
 	const previous = useRef<MarkdownFrame | null>(null);
 	const old = previous.current;
 	const source = useMemo(
-		() => rich ?? parseMarkdownFrame(text, streaming, previous.current),
-		[rich, streaming, text],
+		() => rich ?? parseMarkdownFrame(shownText, streaming, previous.current),
+		[rich, streaming, shownText],
 	);
 	const frame = Array.isArray(source) ? null : source;
 	useLayoutEffect(() => {
 		previous.current = frame;
 	}, [frame]);
 	const blocks = Array.isArray(source) ? source : source.blocks;
+	/* Where this commit's new source begins. Unpaced: the arrival's own previous
+	 * text (one commit per frame). Paced: commits are ticks, which the arrival
+	 * does not describe, so the boundary is what THIS message last drew; only the
+	 * mount commit consults the arrival, to tell a new row from a late mount. */
 	const from =
-		!frame || !arrival || arrival.sealed || motion === null
+		!frame || motion === null
 			? null
-			: arrival.previousText;
+			: pacing
+				? old !== null
+					? shownText.startsWith(old.text)
+						? old.text
+						: null
+					: arrival && !arrival.sealed
+						? arrival.previousText
+						: null
+				: !arrival || arrival.sealed
+					? null
+					: arrival.previousText;
 	const oldBlocks = from !== null && old?.text === from ? old.blocks : null;
 	// A single update can grow prose and insert a card. Its raw source start,
 	// not equality of the preceding rendered block, decides whether it is new.
@@ -963,7 +1073,11 @@ export const Markdown = memo(function Markdown({
 	const plainText = useCallback(
 		() =>
 			!Array.isArray(source)
-				? blocksPlainText(source.blocks)
+				? // Copy and select-all read what the stream DELIVERED, not the
+					// ≤300 ms of it still being paced in.
+					blocksPlainText(
+						shownText === text ? source.blocks : parseMarkdown(text),
+					)
 				: source
 						.map((block) =>
 							block.kind === "inline-ui"
@@ -971,7 +1085,7 @@ export const Markdown = memo(function Markdown({
 								: blocksPlainText([block]),
 						)
 						.join("\n\n"),
-		[source],
+		[source, shownText, text],
 	);
 	return (
 		/* The whole answer is ONE selection surface, so a drag can run across
@@ -1011,6 +1125,8 @@ export const Markdown = memo(function Markdown({
 							appendFrom={appendFrom}
 							birth={born ? motion : null}
 							motion={frame ? motion : null}
+							// Only the LAST block can hold the newest words.
+							fade={index === blocks.length - 1 ? pace.fade : null}
 						/>
 					);
 				})}
@@ -1024,11 +1140,13 @@ const MarkdownBlock = memo(function MarkdownBlock({
 	appendFrom,
 	birth,
 	motion,
+	fade,
 }: {
 	block: Block;
 	appendFrom: string | undefined;
 	birth: object | null;
 	motion: object | null;
+	fade: readonly FadeRun[] | null;
 }) {
 	return (
 		<StreamBlock
@@ -1038,7 +1156,7 @@ const MarkdownBlock = memo(function MarkdownBlock({
 				block.kind === "code" ? CODE_CARD_INITIAL_OPACITY : undefined
 			}
 		>
-			<BlockBody block={block} appendFrom={appendFrom} />
+			<BlockBody block={block} appendFrom={appendFrom} fade={fade} />
 		</StreamBlock>
 	);
 });
@@ -1046,9 +1164,11 @@ const MarkdownBlock = memo(function MarkdownBlock({
 const BlockBody = memo(function BlockBody({
 	block,
 	appendFrom,
+	fade,
 }: {
 	block: Block;
 	appendFrom: string | undefined;
+	fade: readonly FadeRun[] | null;
 }) {
 	switch (block.kind) {
 		case "code": {
@@ -1073,6 +1193,7 @@ const BlockBody = memo(function BlockBody({
 					text={block.text}
 					appendFrom={appendFrom}
 					base={HEADING_CLASS[block.level] ?? "text-body-lg text-ink"}
+					fade={fade}
 				/>
 			);
 		case "list":
@@ -1091,7 +1212,10 @@ const BlockBody = memo(function BlockBody({
 									(block.ordered ? `${itemIndex + 1}.` : "•")}
 							</Text>
 							<View className="min-w-0 flex-1">
-								<Inline text={item} />
+								<Inline
+									text={item}
+									fade={itemIndex === block.items.length - 1 ? fade : null}
+								/>
 							</View>
 						</View>
 					))}
@@ -1104,12 +1228,13 @@ const BlockBody = memo(function BlockBody({
 						text={block.text}
 						appendFrom={appendFrom}
 						base="text-body-sm text-ink-muted"
+						fade={fade}
 					/>
 				</View>
 			);
 		case "table":
 			return <Table header={block.header} rows={block.rows} />;
 		default:
-			return <Inline text={block.text} appendFrom={appendFrom} />;
+			return <Inline text={block.text} appendFrom={appendFrom} fade={fade} />;
 	}
 });
