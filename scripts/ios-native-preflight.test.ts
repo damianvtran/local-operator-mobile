@@ -229,6 +229,57 @@ describe("hosted iOS native preflight boundaries", () => {
 			);
 		}
 	});
+	// fastlane 2.242.0 has no Linux uploader (Helper.itms_path is "" off macOS), so
+	// v0.1.1's TestFlight step on ubuntu-latest died with ENOENT after the Release
+	// existed (run 46097429989). These pin the shape of the fix so a tidy-up cannot
+	// move the upload back to the Linux job.
+	it("uploads to TestFlight from a macOS job that runs after the Release", () => {
+		const release = workflow("release");
+		const testflight = job(release, "testflight");
+		expect(testflight).toContain("runs-on: macos-26");
+		expect(testflight).toMatch(/needs: \[[^\]]*\bpublish\b[^\]]*\]/);
+		expect(guard(testflight)).toContain("'ios'");
+		expect(testflight).toContain("name: ios-ipa");
+		expect(testflight).toContain("bundle exec fastlane ios testflight");
+		expect(testflight).toContain(
+			"LO_IOS_IPA_DIR: ${{ github.workspace }}/artifacts",
+		);
+		// The key is removed even when the lane fails.
+		expect(testflight).toMatch(
+			/if: always\(\)\n\s+run: rm -f "\$RUNNER_TEMP\/asc-api-key\.p8"/,
+		);
+	});
+	it("keeps the Linux publish job free of the TestFlight upload and Apple key", () => {
+		const publish = job(workflow("release"), "publish");
+		expect(publish).toContain("runs-on: ubuntu-latest");
+		expect(publish).toContain("gh release create");
+		expect(publish).not.toContain("ios testflight");
+		expect(publish).not.toContain("APPLE_ASC");
+		expect(publish).not.toContain("asc-api-key");
+	});
+	it("reports the testflight job's own result in the release summary", () => {
+		const summary = job(workflow("release"), "summary");
+		expect(summary).toContain(
+			"TESTFLIGHT_OUTCOME: ${{ needs.testflight.result }}",
+		);
+		expect(summary).toMatch(/needs: \[[^\]]*\btestflight\b[^\]]*\]/);
+	});
+	it("keeps the v0.1.1 recovery dispatch-only, verify-only by default and pinned", () => {
+		const source = workflow("recover-v011-testflight");
+		expect(source).toMatch(/^on:\n {2}workflow_dispatch:\n/m);
+		expect(source).not.toMatch(
+			/^ {2}(push|pull_request|schedule|workflow_run):/m,
+		);
+		expect(source).toMatch(/upload:\n(?: {8}.+\n)*? {8}default: false\n/);
+		expect(source).toContain("tag=v0.1.1");
+		expect(source).toContain("commit=baf13e4c690ebc2653f9fee4f4aa8c0542b83c52");
+		expect(source).toContain(
+			"digest=e4b578aa263be8389a9b4e07d5914c35ea091178915d9bb5e7cfaaea9a8b12b9",
+		);
+		expect(source).toContain("recovery_version:0.1.1 recovery_build:1700");
+		// Nothing left over from the v0.1.0 pins it was copied from.
+		expect(source).not.toMatch(/0\.1\.0|1517|43efeb6b/);
+	});
 	it("declares OS-only encryption after dependency audit", () => {
 		expect(read("app.config.ts")).toContain(
 			"ITSAppUsesNonExemptEncryption: false",

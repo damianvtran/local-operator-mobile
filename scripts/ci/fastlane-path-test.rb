@@ -41,13 +41,15 @@ module Spaceship
         raise 'synthetic authorization error (must not be echoed)' if $baseline[:build] == :denied
         return $baseline[:build]
       end
-      raise 'wrong recovery build query' unless filter == { app: 'synthetic-app', 'preReleaseVersion.version' => '0.1.0', version: '1517' } && includes.nil?
+      version, build = $recovery_target || %w[0.1.0 1517]
+      raise 'wrong recovery build query' unless filter == { app: 'synthetic-app', 'preReleaseVersion.version' => version, version: build } && includes.nil?
       $called << :lookup_build
       raise 'synthetic authorization error' if $recovery[:build] == :denied
       $recovery[:build]
     end
     def self.get_build_uploads(app_id:, filter:)
-      raise 'wrong recovery upload query' unless app_id == 'synthetic-app' && filter == { cfBundleShortVersionString: '0.1.0', cfBundleVersion: '1517' }
+      version, build = $recovery_target || %w[0.1.0 1517]
+      raise 'wrong recovery upload query' unless app_id == 'synthetic-app' && filter == { cfBundleShortVersionString: version, cfBundleVersion: build }
       $called << :lookup_upload
       $recovery[:upload]
     end
@@ -214,6 +216,59 @@ Dir.mktmpdir('fastlane-cwd-test-', base) do |root|
         puts "PASS recovery blocked before Pilot: #{label}"
       end
     end
+
+    # The recovery check is generalised from v0.1.0 to any release named by
+    # `recovery_version`/`recovery_build` (v0.1.1 / 1700 is the first user). The
+    # adapters above now assert the EXACT version and build in both queries, so a
+    # lane that kept looking for 0.1.0 (1517) would raise 'wrong recovery ... query'.
+    $recovery_target = %w[0.1.1 1700]
+    $recovery = { app: app, build: empty, upload: empty }
+    $called.clear
+    testflight.call(recovery_version: '0.1.1', recovery_build: '1700')
+    raise 'v0.1.1 recovery did not check both collections before Pilot' unless $called == [:key, :lookup_app, :lookup_build, :lookup_upload, :testflight]
+    puts 'PASS recovery v0.1.1 (1700): both exact read queries carry the named release, then internal Pilot call'
+    # An integer build (how a caller might pass it) is accepted and queried as a string.
+    $called.clear
+    testflight.call(recovery_version: '0.1.1', recovery_build: 1700)
+    raise 'integer recovery_build was not accepted' unless $called.last == :testflight
+
+    { build: 'already has a build for 0.1.1 (1700)', upload: 'already has a build upload for 0.1.1 (1700)' }.each do |field, expected|
+      $recovery = { app: app, build: empty, upload: empty }.merge(field => present)
+      $called.clear
+      begin
+        testflight.call(recovery_version: '0.1.1', recovery_build: '1700')
+        raise 'v0.1.1 recovery uploaded over an existing record'
+      rescue RuntimeError => error
+        raise unless error.message.include?(expected) && !$called.include?(:testflight)
+      end
+      puts "PASS recovery v0.1.1 blocked before Pilot: #{expected}"
+    end
+
+    # Malformed or ambiguous targets stop BEFORE any App Store Connect call.
+    $recovery = { app: app, build: empty, upload: empty }
+    [
+      [{ recovery_version: '0.1.1' }, 'must be given together'],
+      [{ recovery_build: '1700' }, 'must be given together'],
+      [{ recovery_version: '0.1', recovery_build: '1700' }, 'must look like 1.2.3'],
+      [{ recovery_version: '0.1.1', recovery_build: '0' }, 'positive integer'],
+      [{ recovery_version: '0.1.1', recovery_build: '17x' }, 'positive integer'],
+      [{ recovery_v010: true, recovery_version: '0.1.1', recovery_build: '1700' }, 'cannot be combined']
+    ].each do |options, expected|
+      $called.clear
+      begin
+        testflight.call(options)
+        raise "bad recovery target #{options.inspect} was accepted"
+      rescue RuntimeError => error
+        raise unless error.message.include?(expected) && !$called.include?(:lookup_app) && !$called.include?(:testflight)
+      end
+      puts "PASS recovery target refused before any lookup: #{options.inspect}"
+    end
+    $recovery_target = nil
+    # The legacy switch still means 0.1.0 (1517) with nothing else supplied.
+    $recovery = { app: app, build: empty, upload: empty }
+    $called.clear
+    testflight.call(recovery_v010: true)
+    raise 'legacy recovery_v010 changed meaning' unless $called.last == :testflight
 
     # A new Git tag is already reachable in this scenario (the CLI supplies
     # 0.2.0/1600), but the next main IPA must not claim its train before ASC

@@ -158,13 +158,38 @@ platform :ios do
   # Only a positively empty App Store Connect response permits recovery. No
   # unsafe retry on an auth/network error, malformed body or unseen next page.
   # Only omitted or null `next` means no next page; JSON false is malformed.
-  def require_empty_recovery_result!(response, collection)
+  # `version`/`build` are only used to name the refused release in the message;
+  # the queries themselves are built by the caller.
+  def require_empty_recovery_result!(response, collection, version, build)
     body = response&.body
     unless response&.status == 200 && body.is_a?(Hash) && body["data"].is_a?(Array) &&
            body["links"].is_a?(Hash) && body["links"]["next"].nil?
       UI.user_error!("Cannot confirm App Store Connect #{collection} absence; refusing recovery")
     end
-    UI.user_error!("App Store Connect already has a #{collection} for 0.1.0 (1517); refusing recovery upload") unless body["data"].empty?
+    UI.user_error!("App Store Connect already has a #{collection} for #{version} (#{build}); refusing recovery upload") unless body["data"].empty?
+  end
+
+  # Which release a recovery upload targets, as [version, build], or nil when the
+  # lane is not a recovery. `recovery_v010: true` is the original v0.1.0 switch and
+  # keeps meaning exactly 0.1.0 (1517). A later release is named explicitly with
+  # `recovery_version:X.Y.Z recovery_build:N` — both required, shape-checked, so a
+  # typo cannot silently make the duplicate check look for the wrong release and
+  # pass. Mixing the two forms is refused rather than guessed at.
+  def recovery_target(options)
+    legacy = options&.fetch(:recovery_v010, false) == true
+    version = options&.fetch(:recovery_version, nil)
+    build = options&.fetch(:recovery_build, nil)
+    if legacy
+      UI.user_error!("recovery_v010 cannot be combined with recovery_version/recovery_build") if version || build
+      return ["0.1.0", "1517"]
+    end
+    return nil if version.nil? && build.nil?
+    UI.user_error!("recovery_version and recovery_build must be given together") if version.nil? || build.nil?
+    version = version.to_s
+    build = build.to_s
+    UI.user_error!("recovery_version must look like 1.2.3") unless version.match?(/\A\d+\.\d+\.\d+\z/)
+    UI.user_error!("recovery_build must be a positive integer") unless build.match?(/\A[1-9]\d*\z/)
+    [version, build]
   end
 
   def tagged_baseline_valid?(response, app_id, train, number)
@@ -255,7 +280,9 @@ platform :ios do
 
     require_tagged_baseline! if options&.fetch(:require_tagged_baseline, false) == true
 
-    if options&.fetch(:recovery_v010, false) == true
+    recovery = recovery_target(options)
+    if recovery
+      recovery_version, recovery_build = recovery
       # Check both exact version/build collections with the same credential as
       # Pilot. Neither the latest build nor the processed list alone can rule
       # out a duplicate. No processing-state filter: any matching record blocks.
@@ -263,12 +290,12 @@ platform :ios do
       app = asc::App.find("com.localoperator.mobile")
       UI.user_error!("Cannot confirm Local Operator's App Store Connect app; refusing recovery") unless app && !app.id.to_s.empty?
       require_empty_recovery_result!(asc.get_builds(
-        filter: { app: app.id, "preReleaseVersion.version" => "0.1.0", version: "1517" }, includes: nil
-      ), "build")
+        filter: { app: app.id, "preReleaseVersion.version" => recovery_version, version: recovery_build }, includes: nil
+      ), "build", recovery_version, recovery_build)
       require_empty_recovery_result!(asc.get_build_uploads(
-        app_id: app.id, filter: { cfBundleShortVersionString: "0.1.0", cfBundleVersion: "1517" }
-      ), "build upload")
-      UI.message("App Store Connect has no visible 0.1.0 (1517) build or upload; continuing recovery")
+        app_id: app.id, filter: { cfBundleShortVersionString: recovery_version, cfBundleVersion: recovery_build }
+      ), "build upload", recovery_version, recovery_build)
+      UI.message("App Store Connect has no visible #{recovery_version} (#{recovery_build}) build or upload; continuing recovery")
     end
 
     # `distribute_external: false` — external testers need an App Store review of
