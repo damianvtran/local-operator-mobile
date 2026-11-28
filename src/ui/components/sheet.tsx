@@ -260,8 +260,16 @@ export type SheetProps = {
 	 *  truncation idiom, below); a sheet whose title IS its state — the session
 	 *  health sheet's "Not answering" — passes 2, because an ellipsis there cuts
 	 *  the one word the sheet exists to say ("Not answe…" at 320 pt / 200 %,
-	 *  design round 1 D7). */
-	titleLines?: 1 | 2;
+	 *  design round 1 D7). THREE is for a title that carries a name the reader
+	 *  must not lose: the Guard consent question names the asking organisation
+	 *  (`Share Guard stats with {org}?`), and at 200 % text or in Urdu at 320 pt
+	 *  two lines cut the org or the verb (design D2, PR #402). Opt-in: the
+	 *  default stays one line. */
+	titleLines?: 1 | 2 | 3;
+	/** Dim the header's Close control while the sheet is mid-act (an answer in
+	 *  flight): the scrim, Escape and back are already held by the caller, and a
+	 *  Close that looks live but does nothing is a lie (UX U4, PR #402). Opt-in. */
+	closeDisabled?: boolean;
 	/** The title's base direction, from `useComposedDir()`, for a title composed
 	 *  from a translated frame and a Latin token (the Guard consent heading,
 	 *  `Guard کے اعداد و شمار {org} کے ساتھ…`). Passed to `Heading.composedDir`;
@@ -326,6 +334,7 @@ export const Sheet = ({
 	pinned,
 	onBodyScroll,
 	titleLines = 1,
+	closeDisabled = false,
 	titleDir,
 	testID,
 	resizable = false,
@@ -1251,6 +1260,7 @@ export const Sheet = ({
 				accessibilityLabel={t("mobile.common.close")}
 				testID={CONTROL.sheetClose}
 				onPress={onClose}
+				disabled={closeDisabled}
 				icon={({ color, size }) => <X color={color} size={size} />}
 			/>
 		</View>

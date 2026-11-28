@@ -1,4 +1,11 @@
-import { Linking, View } from "react-native";
+import { useEffect, useRef } from "react";
+import {
+	AccessibilityInfo,
+	findNodeHandle,
+	Linking,
+	Platform,
+	View,
+} from "react-native";
 
 import { t } from "@/i18n";
 import { CONTROL, SURFACE } from "@/ui/a11y";
@@ -6,6 +13,7 @@ import { Alert } from "@/ui/components/alert";
 import { Button } from "@/ui/components/button";
 import { Sheet } from "@/ui/components/sheet";
 import { useComposedDir } from "@/ui/direction";
+import { DURATIONS } from "@/ui/tokens.gen";
 import type { GuardController } from "./guard-controller";
 import {
 	allDescribable,
@@ -26,7 +34,16 @@ import { GuardText } from "./guard-text";
 import { useGuardState } from "./use-guard";
 
 /** The sentence under a write. A polite live region: it reports a result the
- *  reader just caused, and must not steal focus (RFC §5.2.3). */
+ *  reader just caused, and must not steal focus when a REQUEST arrives (RFC
+ *  §5.2.3).
+ *
+ *  Focus, after the member's OWN act (UX U5, PR #402): Share, Stop sharing and
+ *  Share again each unmount the control that was pressed (the row's Review, the
+ *  org's Stop), so keyboard focus fell to `<body>` and the next Tab restarted at
+ *  the top of the screen. The outcome takes focus instead, but only when focus
+ *  was actually lost (web) — a sheet that returns focus to a control that still
+ *  exists keeps its own return — after the sheet's exit animation has had its
+ *  turn. On a phone the screen reader's cursor moves to the same line. */
 export const GuardOutcomeAlert = ({
 	outcome,
 }: {
@@ -34,8 +51,31 @@ export const GuardOutcomeAlert = ({
 }) => {
 	const line = outcomeLine(outcome);
 	const composedDir = useComposedDir();
+	const ref = useRef<View>(null);
+	// biome-ignore lint/correctness/useExhaustiveDependencies: the outcome OBJECT is the trigger — a new result (even with identical text) re-focuses.
+	useEffect(() => {
+		const timer = setTimeout(() => {
+			const node = ref.current;
+			if (node === null) return;
+			if (Platform.OS === "web") {
+				const active = document.activeElement;
+				if (active !== null && active !== document.body) return;
+				(node as unknown as HTMLElement).focus({ preventScroll: true });
+				return;
+			}
+			const handle = findNodeHandle(node);
+			if (handle !== null) AccessibilityInfo.setAccessibilityFocus(handle);
+		}, DURATIONS.fast + 40);
+		return () => clearTimeout(timer);
+	}, [outcome]);
 	return (
-		<View testID={SURFACE.guardOutcome} accessibilityLiveRegion="polite">
+		<View
+			ref={ref}
+			focusable
+			tabIndex={-1}
+			testID={SURFACE.guardOutcome}
+			accessibilityLiveRegion="polite"
+		>
 			<Alert severity={line.tone} bodyDir={composedDir}>
 				{line.text}
 			</Alert>
@@ -67,21 +107,56 @@ export const GuardConsentSheet = ({
 	/* The heading and the body lines open with a Latin org name or `Guard` in
 	 *  Urdu; each states the page's base (see `GuardText`). */
 	const composedDir = useComposedDir();
+	const approvalId = card?.approval_id ?? null;
+	/* The 500 ms debounce counts from when the card is INTERACTIVE: the sheet
+	 *  rises over `DURATIONS.slow`, so the stamp is renewed once that is spent
+	 *  (security S-1). Keyed on the card, not the phase, so answering does not
+	 *  restart it. */
+	// biome-ignore lint/correctness/useExhaustiveDependencies: `controller` is stable per client; the card id is the trigger.
+	useEffect(() => {
+		if (approvalId === null) return;
+		const timer = setTimeout(controller.consentShown, DURATIONS.slow);
+		return () => clearTimeout(timer);
+	}, [approvalId]);
 	return (
 		<Sheet
 			titleDir={composedDir}
 			visible={open && view !== null}
 			onClose={controller.closeConsent}
 			title={view?.title ?? ""}
-			titleLines={2}
+			/* FULL height, three title lines (design D1/D2, UX U3, PR #402). At the
+			 *  default 0.6 detent the pinned three-button footer and a two-line title
+			 *  left the disclosure a 120 pt window at 320 pt wide — 3.7 to 5.7 bands
+			 *  of scrolling while all three answers stayed live — and at 200 % text
+			 *  the title ellipsised past the asking organisation. The privacy
+			 *  sentences are what the member is consenting to: they get the room, not
+			 *  a read-through gate (Share and Don't share stay equal). The third
+			 *  title line keeps the org name and the verb visible in Urdu at 320. */
+			detent="full"
+			titleLines={3}
+			closeDisabled={answering}
 			testID={SURFACE.guardConsentSheet}
 			footer={
 				view === null ? undefined : view.answerable ? (
 					<View className="gap-2">
+						{answering ? (
+							/* The existing "Working…" line (core paints it before the
+							 *  request too): without it a slow link looked like three
+							 *  dead buttons (UX U4). */
+							<GuardText
+								className="text-body-sm text-ink-muted"
+								accessibilityLiveRegion="polite"
+							>
+								{t("mobile.guard.screen_working")}
+							</GuardText>
+						) : null}
 						<Button
 							testID={CONTROL.guardConsentDontShare}
 							label={view.declineLabel}
 							variant="outline"
+							loading={
+								consent.phase === "answering" && consent.answer === "decline"
+							}
 							disabled={answering}
 							onPress={() => void controller.decline()}
 						/>
@@ -96,6 +171,9 @@ export const GuardConsentSheet = ({
 							testID={CONTROL.guardConsentShare}
 							label={view.shareLabel}
 							variant="outline"
+							loading={
+								consent.phase === "answering" && consent.answer === "share"
+							}
 							disabled={answering}
 							onPress={() => void controller.share()}
 						/>
@@ -228,9 +306,27 @@ export const GuardOrgCard = ({
 	// it; otherwise the member answers in the terminal and the phone offers no
 	// answer (the org still reads as waiting).
 	const reviewable = org.prompt?.approval_id != null;
+	const indicator = indicatorFor(org);
+	const nameIt = org.org !== "" && !indicator.includes(org.org);
+	/* Each button's accessible name carries the org, so "Share again" is not
+	 *  announced three times with nothing to tell the cards apart (UX U6). Joined
+	 *  with the existing label and the org's own name: no new catalogue string
+	 *  (a bridged phrase is proposed for the copy pass in PR #402). */
+	const named = (label: string) =>
+		org.org === "" ? label : `${label}, ${org.org}`;
 	return (
 		<View className="gap-2 rounded-md bg-elevated p-3">
-			<GuardText className="text-label text-ink">{indicatorFor(org)}</GuardText>
+			{/* The org's NAME heads a card whose indicator does not say it (UX U6):
+			 *  "Guard: paused, you stopped sharing" names no org, so with several
+			 *  orgs the member could not tell which one "Share again" re-asks. It is
+			 *  data, not a catalogue string; where the indicator already names the
+			 *  org ("Guard: sharing with X") a heading would only repeat it. */}
+			{nameIt ? (
+				<GuardText accessibilityRole="header" className="text-label text-ink">
+					{org.org}
+				</GuardText>
+			) : null}
+			<GuardText className="text-label text-ink">{indicator}</GuardText>
 			{shared.length > 0 ? (
 				<View className="gap-1">
 					<GuardText className="text-body-sm text-ink-muted">
@@ -247,6 +343,7 @@ export const GuardOrgCard = ({
 						<Button
 							testID={CONTROL.guardReview}
 							label={t("mobile.guard.review")}
+							accessibilityLabel={named(t("mobile.guard.review"))}
 							variant="outline"
 							size="sm"
 							disabled={busy}
@@ -257,6 +354,7 @@ export const GuardOrgCard = ({
 						<Button
 							testID={CONTROL.guardStop}
 							label={t("mobile.guard.button_stop_sharing")}
+							accessibilityLabel={named(t("mobile.guard.button_stop_sharing"))}
 							variant="outline"
 							size="sm"
 							disabled={busy}
@@ -267,6 +365,7 @@ export const GuardOrgCard = ({
 						<Button
 							testID={CONTROL.guardShareAgain}
 							label={t("mobile.guard.button_share_again")}
+							accessibilityLabel={named(t("mobile.guard.button_share_again"))}
 							variant="outline"
 							size="sm"
 							disabled={busy}

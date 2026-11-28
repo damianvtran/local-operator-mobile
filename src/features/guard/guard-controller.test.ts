@@ -397,9 +397,12 @@ describe("a failed answer is reconciled with the host, not assumed", () => {
 		});
 		c.advance(600);
 		await controller.share();
-		expect(controller.getState().outcome).toEqual({
+		expect(controller.getState().outcome).toMatchObject({
 			kind: "answered_elsewhere",
 			surface: "desktop",
+			// U9: the line also carries the host's row, so it can say what the
+			// answer left behind for THIS org.
+			org: { org: "Example Org", state: "not_sharing" },
 		});
 	});
 
@@ -683,5 +686,238 @@ describe("lifecycle", () => {
 		await controller.revoke(TENANT);
 		await controller.shareAgain(TENANT);
 		expect(fake.names()).toEqual([]);
+	});
+});
+
+/* ------------------------------------------------------------------------
+ * Round-2 remediation (PR #402): security S-1/S-2, UX U1/U2.
+ * --------------------------------------------------------------------- */
+
+describe("S-1: the debounce counts from an interactive sheet", () => {
+	it("consentShown() restarts the 500 ms window; it only ever moves the stamp later", async () => {
+		const { controller, fake, clock: c } = await opened();
+		// The sheet is still rising: 400 ms after the state opened, it is shown.
+		c.advance(400);
+		controller.consentShown();
+		// 499 ms after the open would have passed the old stamp; 300 ms after the
+		// sheet settled must not.
+		c.advance(300);
+		expect(await controller.share()).toBe("ignored");
+		expect(fake.names()).not.toContain("acceptGuardConsent");
+		c.advance(200);
+		expect(await controller.share()).toBe("sent");
+	});
+
+	it("consentShown() is a no-op with no open card", async () => {
+		const fake = fakeClient({ guardStatus: () => status() });
+		const controller = createGuardController(fake.client);
+		await controller.activate();
+		controller.consentShown();
+		expect(controller.getState().consent.phase).toBe("closed");
+	});
+});
+
+describe("S-2: a 200 is believed only when it answers THIS act", () => {
+	const settledStatus = (over: Parameters<typeof org>[0] = {}) =>
+		status({ orgs: [org({ answered_via: "mobile", ...over })] });
+	const twoReads = (second: ReturnType<typeof status>) => {
+		let reads = 0;
+		return () => (++reads === 1 ? status({ orgs: [waitingOrg()] }) : second);
+	};
+
+	it("a share answered with another request's id/tenant/state is not 'shared'", async () => {
+		const { controller, clock: c } = await opened({
+			guardStatus: twoReads(status({ orgs: [waitingOrg()] })),
+			acceptGuardConsent: () => ({
+				approval_id: "req_OTHER",
+				state: "denied",
+				tenant: "other",
+			}),
+		});
+		c.advance(600);
+		await controller.share();
+		// The host still files the request, so the phone says "not saved"
+		// rather than "Sharing with Example Org".
+		expect(controller.getState().outcome).toEqual({
+			kind: "failed",
+			org: "Example Org",
+		});
+	});
+
+	it("a share answered 200 'denied' (the host's 'no live consent') is not 'shared'", async () => {
+		const { controller, clock: c } = await opened({
+			guardStatus: twoReads(settledStatus({ state: "not_sharing" })),
+			acceptGuardConsent: () => ({
+				approval_id: APPROVAL,
+				state: "denied",
+				tenant: TENANT,
+			}),
+		});
+		c.advance(600);
+		await controller.share();
+		// The re-read is what the line is built from: not sharing.
+		expect(controller.getState().outcome).toEqual({
+			kind: "declined",
+			org: "Example Org",
+		});
+	});
+
+	it("a decline answered 200 'approved' is worded by the host's status, not the button", async () => {
+		const { controller, clock: c } = await opened({
+			guardStatus: twoReads(settledStatus({ state: "sharing" })),
+			declineGuardConsent: () => ({
+				approval_id: APPROVAL,
+				state: "approved",
+				tenant: TENANT,
+			}),
+		});
+		c.advance(600);
+		await controller.decline();
+		expect(controller.getState().outcome).toEqual({
+			kind: "shared",
+			org: "Example Org",
+		});
+	});
+
+	it("a matching reply is believed without waiting on a re-read", async () => {
+		const { controller, clock: c } = await opened();
+		c.advance(600);
+		await controller.decline();
+		expect(controller.getState().outcome?.kind).toBe("declined");
+	});
+});
+
+describe("U1: a card another surface already answered", () => {
+	it("says what the host now says, not 'changed this request'", async () => {
+		let reads = 0;
+		const c = clock();
+		const fake = fakeClient({
+			guardStatus: () =>
+				++reads === 1
+					? status({ orgs: [waitingOrg()] })
+					: status({
+							orgs: [org({ state: "sharing", answered_via: "desktop" })],
+						}),
+			guardConsentCard: () => card({ state: "granted", signable: false }),
+		});
+		const controller = createGuardController(fake.client, c.now);
+		await controller.activate();
+		await controller.openConsent(TENANT);
+		expect(controller.getState().consent.phase).toBe("closed");
+		expect(controller.getState().outcome).toMatchObject({
+			kind: "answered_elsewhere",
+			surface: "desktop",
+			org: { org: "Example Org", state: "sharing" },
+		});
+	});
+
+	it("an answer this phone's own twin gave reads as the shared/declined line", async () => {
+		let reads = 0;
+		const c = clock();
+		const fake = fakeClient({
+			guardStatus: () =>
+				++reads === 1
+					? status({ orgs: [waitingOrg()] })
+					: status({
+							orgs: [org({ state: "sharing", answered_via: "mobile" })],
+						}),
+			guardConsentCard: () => card({ state: "granted", signable: false }),
+		});
+		const controller = createGuardController(fake.client, c.now);
+		await controller.activate();
+		await controller.openConsent(TENANT);
+		expect(controller.getState().outcome).toEqual({
+			kind: "shared",
+			org: "Example Org",
+		});
+	});
+
+	it("a real new revision (another approval id) is still 'changed'", async () => {
+		const c = clock();
+		const fake = fakeClient({
+			guardStatus: () => status({ orgs: [waitingOrg()] }),
+			guardConsentCard: () =>
+				card({ approval_id: "req_NEW", state: "granted" }),
+		});
+		const controller = createGuardController(fake.client, c.now);
+		await controller.activate();
+		await controller.openConsent(TENANT);
+		expect(controller.getState().outcome?.kind).toBe("changed");
+	});
+});
+
+describe("U2: 'Keep current' on a request to collect more keeps sharing", () => {
+	const widening = card({
+		reason: "widened",
+		widening: true,
+		asked_scopes: ["admin_share"],
+	});
+	const widenedOrg = (over: Parameters<typeof org>[0] = {}) =>
+		org({
+			state: "sharing_pending",
+			prompt: {
+				approval_id: APPROVAL,
+				collection_rev: 8,
+				reason: "widened",
+				widening: true,
+				asked_scopes: ["admin_share"],
+				grant_scopes: ["decisions", "task_time", "admin_share"],
+			},
+			...over,
+		});
+
+	it("never says 'Not sharing': the host's re-read words it", async () => {
+		let reads = 0;
+		const c = clock();
+		const fake = fakeClient({
+			guardStatus: () =>
+				++reads === 1
+					? status({ orgs: [widenedOrg()] })
+					: status({ orgs: [org({ answered_via: "mobile" })] }),
+			guardConsentCard: () => widening,
+			declineGuardConsent: () => ({
+				approval_id: APPROVAL,
+				state: "denied",
+				tenant: TENANT,
+			}),
+		});
+		const controller = createGuardController(fake.client, c.now);
+		await controller.activate();
+		await controller.openConsent(TENANT);
+		c.advance(600);
+		await controller.decline();
+		const outcome = controller.getState().outcome;
+		expect(outcome).toEqual({ kind: "shared", org: "Example Org" });
+		expect(outcome?.kind).not.toBe("declined");
+	});
+
+	it("a widening decline whose re-read fails states nothing false", async () => {
+		let reads = 0;
+		const c = clock();
+		const fake = fakeClient({
+			guardStatus: () => {
+				if (++reads === 1) return status({ orgs: [widenedOrg()] });
+				throw transport();
+			},
+			guardConsentCard: () => widening,
+			declineGuardConsent: () => ({
+				approval_id: APPROVAL,
+				state: "denied",
+				tenant: TENANT,
+			}),
+		});
+		const controller = createGuardController(fake.client, c.now);
+		await controller.activate();
+		await controller.openConsent(TENANT);
+		c.advance(600);
+		await controller.decline();
+		expect(controller.getState().outcome).toBeNull();
+	});
+
+	it("a first request's decline is still 'Not sharing'", async () => {
+		const { controller, clock: c } = await opened();
+		c.advance(600);
+		await controller.decline();
+		expect(controller.getState().outcome?.kind).toBe("declined");
 	});
 });

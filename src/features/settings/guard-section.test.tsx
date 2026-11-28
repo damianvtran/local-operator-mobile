@@ -14,6 +14,7 @@ import {
 	waitingOrg,
 } from "@/features/guard/guard-fixtures";
 import { resetLocaleSource, setLocaleSource } from "@/i18n";
+import { RelayError } from "@/relay";
 import { type DomShim, installDomShim } from "@/testing/dom-shim";
 
 /**
@@ -35,6 +36,8 @@ const host = vi.hoisted(() => ({
 	list: { capabilities: {} as Record<string, unknown>, frameCount: 1 },
 	client: null as unknown,
 	handlers: {} as Record<string, () => void>,
+	/** The props each stubbed Button was last drawn with (accessible names). */
+	buttonProps: {} as Record<string, Record<string, unknown>>,
 	opened: [] as string[],
 	/** `useIsFocused` (the live refresh only runs on a focused screen). */
 	focused: true,
@@ -90,6 +93,7 @@ vi.mock("@/features/auth/connection-provider", () => ({
 vi.mock("@/ui/components/button", () => ({
 	Button: (props: Pressable & { label: string }) => {
 		host.handlers[props.testID ?? ""] = props.onPress;
+		host.buttonProps[props.testID ?? ""] = props;
 		return <>{`⟦btn:${props.testID}:${props.label}⟧`}</>;
 	},
 }));
@@ -186,6 +190,7 @@ let dom: DomShim;
 let root: ReturnType<typeof createRoot>;
 async function mount() {
 	host.handlers = {};
+	host.buttonProps = {};
 	await act(async () => root.render(<GuardSection />));
 	await settle();
 }
@@ -657,5 +662,70 @@ describe("the section stays live while it is open", () => {
 			expect(calls).toEqual([]);
 			expect(vi.getTimerCount()).toBe(0);
 		}
+	});
+});
+
+describe("round-2 remediation (PR #402): UX U6 and U7", () => {
+	const stopped = (over: Parameters<typeof org>[0] = {}) =>
+		org({
+			state: "paused",
+			reason: "scope_revoked",
+			scopes_shared: [],
+			can_revoke: false,
+			can_share_again: true,
+			...over,
+		});
+
+	it("U6: a stopped card names its org, and its button's accessible name does too", async () => {
+		install({
+			guardStatus: () =>
+				status({
+					orgs: [
+						stopped({ tenant: "t1", org: "Acme" }),
+						stopped({ tenant: "t2", org: "Globex" }),
+					],
+				}),
+		});
+		await mount();
+		const s = snapshot();
+		// The indicator ("Guard: paused, you stopped sharing") names no org, so
+		// each card is headed by its org's name.
+		expect(s.texts.filter((x) => x === "Acme" || x === "Globex")).toEqual([
+			"Acme",
+			"Globex",
+		]);
+		expect(host.buttonProps["guard-share-again"]?.accessibilityLabel).toBe(
+			"Share again, Globex",
+		);
+	});
+
+	it("U6: where the indicator already names the org there is no repeated heading", async () => {
+		install({ guardStatus: () => status() });
+		await mount();
+		expect(snapshot().texts.filter((x) => x === "Example Org")).toEqual([]);
+		expect(host.buttonProps["guard-stop"]?.accessibilityLabel).toBe(
+			"Stop sharing, Example Org",
+		);
+	});
+
+	it("U7: 'Check the new one below' is drawn above the cards it points at", async () => {
+		install({
+			guardStatus: () => status({ orgs: [waitingOrg()] }),
+			guardConsentCard: () => {
+				throw new RelayError("rejected", "gone", {
+					status: 409,
+					code: "guard_consent_expected_mismatch",
+				});
+			},
+		});
+		await mount();
+		await press("guard-review");
+		const texts = snapshot().texts;
+		const line = texts.indexOf(
+			"Example Org changed this request. Check the new one below.",
+		);
+		const card = texts.indexOf("Guard: Example Org is waiting for your choice");
+		expect(line).toBeGreaterThanOrEqual(0);
+		expect(card).toBeGreaterThan(line);
 	});
 });

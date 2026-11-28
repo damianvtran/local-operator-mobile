@@ -84,14 +84,18 @@ describe("the phone controller against the mock twin", () => {
 		controller.deactivate();
 	});
 
-	it("opening a card the host kept as settled says the request changed", async () => {
+	it("opening a card the host kept as settled says what the host now says (U1)", async () => {
 		const { s, controller } = phoneAgainst(waitingSeed());
 		void controller.activate();
 		await controller.reload();
 		s.handle("POST", `/api/guard/consents/${ID}/decline`, undefined);
 		await controller.openConsent("tenant_example_1");
 		expect(controller.getState().consent.phase).toBe("closed");
-		expect(controller.getState().outcome).toMatchObject({ kind: "changed" });
+		// Not "changed this request": nothing changed, the request was answered.
+		expect(controller.getState().outcome).toEqual({
+			kind: "declined",
+			org: "Example Org",
+		});
 		controller.deactivate();
 	});
 

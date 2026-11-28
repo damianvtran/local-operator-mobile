@@ -19,8 +19,10 @@ import {
 	resetLocaleSource,
 	setLocaleSource,
 } from "@/i18n";
+import { RelayError } from "@/relay";
 import { type DomShim, installDomShim } from "@/testing/dom-shim";
 import { DirectionProvider } from "@/ui/direction";
+import { DURATIONS } from "@/ui/tokens.gen";
 
 /**
  * The inbox's Radient Guard item, MOUNTED through the real availability gate, the real
@@ -41,6 +43,10 @@ const host = vi.hoisted(() => ({
 	list: { capabilities: {} as Record<string, unknown>, frameCount: 1 },
 	client: null as unknown,
 	handlers: {} as Record<string, () => void>,
+	/** The last props each stubbed primitive was drawn with, so layout-bearing
+	 *  props (detent, title lines, loading, accessible names) are measured. */
+	buttonProps: {} as Record<string, Record<string, unknown>>,
+	sheetProps: {} as Record<string, unknown>,
 	opened: [] as string[],
 	/** `useIsFocused` (the live refresh only runs on a focused screen). */
 	focused: true,
@@ -114,6 +120,7 @@ vi.mock("@/features/auth/connection-provider", () => ({
 vi.mock("@/ui/components/button", () => ({
 	Button: (props: Pressable & { label: string }) => {
 		host.handlers[props.testID ?? ""] = props.onPress;
+		host.buttonProps[props.testID ?? ""] = props;
 		return <>{`⟦btn:${props.testID}:${props.label}⟧`}</>;
 	},
 }));
@@ -141,14 +148,7 @@ vi.mock("@/ui/components/section-header", () => ({
 }));
 vi.mock("@/ui/components/divider", () => ({ Divider: () => null }));
 vi.mock("@/ui/components/sheet", () => ({
-	Sheet: ({
-		visible,
-		title,
-		children,
-		footer,
-		testID,
-		titleDir,
-	}: {
+	Sheet: (props: {
 		visible: boolean;
 		title: string;
 		titleDir?: DirHint;
@@ -156,7 +156,9 @@ vi.mock("@/ui/components/sheet", () => ({
 		footer?: ReactNode;
 		testID?: string;
 	}) => {
+		const { visible, title, children, footer, testID, titleDir } = props;
 		if (!visible) return null;
+		host.sheetProps = props;
 		return (
 			<>
 				{`⟦id:${testID}⟧`}
@@ -229,6 +231,8 @@ let dom: DomShim;
 let root: ReturnType<typeof createRoot>;
 async function mount(direction: "ltr" | "rtl" = "ltr", locale = "en") {
 	host.handlers = {};
+	host.buttonProps = {};
+	host.sheetProps = {};
 	await act(async () =>
 		root.render(
 			<DirectionProvider direction={direction} locale={locale}>
@@ -396,6 +400,119 @@ describe("the inbox's Guard item", () => {
 		install({ guardStatus: waiting });
 		await mount();
 		expect(snapshot().ids).not.toContain("guard-consent-sheet");
+	});
+});
+
+/**
+ * Round-2 remediation (PR #402): the rendered half of UX U1/U4/U7, design D1/D2
+ * and security S-1, through the real controller and views.
+ */
+describe("round-2 remediation, mounted", () => {
+	it("D1/D2: the consent sheet takes the full detent and three title lines", async () => {
+		install({ guardStatus: waiting, guardConsentCard: () => card() });
+		await mount();
+		await press("guard-review");
+		expect(host.sheetProps).toMatchObject({ detent: "full", titleLines: 3 });
+	});
+
+	it("U4: while an answer is in flight, 'Working…' shows, the pressed button spins and Close is held", async () => {
+		let release: (() => void) | undefined;
+		install({
+			guardStatus: waiting,
+			guardConsentCard: () => card(),
+			declineGuardConsent: () =>
+				new Promise((resolve) => {
+					release = () =>
+						resolve({ approval_id: APPROVAL, state: "denied", tenant: TENANT });
+				}),
+		});
+		await mount();
+		await press("guard-review");
+		expect(host.sheetProps).toMatchObject({ closeDisabled: false });
+		expect(snapshot().texts).not.toContain("Working…");
+		vi.setSystemTime(Date.now() + 600);
+		await act(async () => void host.handlers["guard-consent-dont-share"]?.());
+		expect(snapshot().texts).toContain("Working…");
+		expect(host.sheetProps).toMatchObject({ closeDisabled: true });
+		expect(host.buttonProps["guard-consent-dont-share"]).toMatchObject({
+			loading: true,
+			disabled: true,
+		});
+		expect(host.buttonProps["guard-consent-share"]).toMatchObject({
+			loading: false,
+			disabled: true,
+		});
+		await act(async () => release?.());
+		await settle();
+		expect(snapshot().texts).not.toContain("Working…");
+	});
+
+	it("U1: Review on a request another device already answered says so, not 'changed'", async () => {
+		let reads = 0;
+		install({
+			guardStatus: () =>
+				++reads === 1
+					? waiting()
+					: status({
+							orgs: [org({ state: "sharing", answered_via: "desktop" })],
+						}),
+			guardConsentCard: () => card({ state: "granted", signable: false }),
+		});
+		await mount();
+		await press("guard-review");
+		const { texts, ids } = snapshot();
+		expect(ids).not.toContain("guard-consent-sheet");
+		expect(texts).toContain(
+			"Answered on the desktop app · Guard: sharing with Example Org",
+		);
+		expect(texts.join(" ")).not.toContain("changed this request");
+	});
+
+	it("U7: the 'changed … below' line is drawn ABOVE the request it points at", async () => {
+		install({
+			guardStatus: waiting,
+			guardConsentCard: () => {
+				throw new RelayError("rejected", "gone", {
+					status: 409,
+					code: "guard_consent_expected_mismatch",
+				});
+			},
+		});
+		await mount();
+		await press("guard-review");
+		const texts = snapshot().texts;
+		const line = texts.indexOf(
+			"Example Org changed this request. Check the new one below.",
+		);
+		const request = texts.indexOf("Share Guard stats with Example Org?");
+		expect(line).toBeGreaterThanOrEqual(0);
+		expect(request).toBeGreaterThan(line);
+	});
+
+	it("S-1: answers stay ignored for 500 ms AFTER the sheet has finished rising", async () => {
+		const calls = install({
+			guardStatus: waiting,
+			guardConsentCard: () => card(),
+			declineGuardConsent: () => ({
+				approval_id: APPROVAL,
+				state: "denied",
+				tenant: TENANT,
+			}),
+		});
+		await mount();
+		await press("guard-review");
+		// 400 ms of the rise has gone by when the sheet reports itself settled…
+		vi.setSystemTime(Date.now() + 400);
+		await act(
+			async () => new Promise((r) => setTimeout(r, DURATIONS.slow + 60)),
+		);
+		// …so 300 ms later the card has been interactive for 300, not 700 ms.
+		vi.setSystemTime(Date.now() + 300);
+		await press("guard-consent-dont-share");
+		expect(calls.map((c) => c.name)).not.toContain("declineGuardConsent");
+		vi.setSystemTime(Date.now() + 250);
+		await press("guard-consent-dont-share");
+		expect(calls.map((c) => c.name)).toContain("declineGuardConsent");
 	});
 });
 

@@ -80,6 +80,30 @@ describe("the mock Guard twin keeps the host's rules", () => {
 		});
 	});
 
+	it("declining a widening keeps sharing what was agreed (host parity, U2)", () => {
+		const s = store("guard-widening");
+		const before = s.handle("GET", "/api/guard", undefined)?.body as {
+			orgs: { scopes_shared: string[] }[];
+		};
+		s.handle("POST", `/api/guard/consents/${ID}/decline`, undefined);
+		const after = s.handle("GET", "/api/guard", undefined)?.body as {
+			orgs: {
+				state: string;
+				prompt: unknown;
+				can_revoke: boolean;
+				can_share_again: boolean;
+				scopes_shared: string[];
+			}[];
+		};
+		expect(after.orgs[0]).toMatchObject({
+			state: "sharing",
+			prompt: null,
+			can_revoke: true,
+			can_share_again: false,
+			scopes_shared: before.orgs[0]?.scopes_shared,
+		});
+	});
+
 	it("revoke is sticky; share-again re-opens the ask but grants nothing", () => {
 		const s = store("guard-sharing");
 		const revoke = s.handle(

@@ -327,6 +327,11 @@ describe("non-Team card (§14')", () => {
 		});
 		expect(view?.cta).toBe("see");
 	});
+	it("the Console URL is the one that opens, case-insensitively", () => {
+		expect(safeTeamUrl("https://CONSOLE.radienthq.com/dashboard/team")).toBe(
+			"https://console.radienthq.com/dashboard/team",
+		);
+	});
 	it("a Team account never renders the card", () => {
 		expect(nonTeamView(status(), null)).toBeNull();
 		expect(nonTeamView(status({ mode: "none", orgs: [] }), null)).toBeNull();
@@ -337,6 +342,16 @@ describe("non-Team card (§14')", () => {
 			"http://console.radienthq.com/x",
 			"https://evil.example.com/",
 			"https://radienthq.com.evil.example/",
+			// S-3: the zone holds user-controlled tunnel hosts
+			// (`<reservation>-lop.radienthq.com`, `-oc.`); only the Console opens.
+			"https://evil-lop.radienthq.com/x",
+			"https://evil-oc.radienthq.com/dashboard/team",
+			"https://radienthq.com/",
+			"https://docs.radienthq.com/",
+			"https://console.radienthq.com@evil.example/x",
+			"https://user:pw@console.radienthq.com/x",
+			"https://console.radienthq.com:8443/x",
+			"https://console.radienthq.com.evil.example/",
 			"javascript:alert(1)",
 			"tel:123",
 			"not a url",
@@ -387,5 +402,28 @@ describe("outcome sentences state what the host confirmed", () => {
 describe("fixtures stay honest", () => {
 	it("the waiting org's tenant is the fixture tenant", () => {
 		expect(waitingOrg().tenant).toBe(TENANT);
+	});
+});
+
+describe("U9: 'answered elsewhere' says what the host now reports", () => {
+	it("appends the org's indicator when the host's row is known", () => {
+		expect(
+			outcomeLine({
+				kind: "answered_elsewhere",
+				surface: "desktop",
+				org: org({ state: "sharing" }),
+			}).text,
+		).toBe(
+			`${en("mobile.guard.answered_on", { surface: en("mobile.guard.surface_desktop") })} · ${en("mobile.guard.indicator_sharing", { org: "Example Org" })}`,
+		);
+	});
+	it("is the bare line when no row was read", () => {
+		expect(
+			outcomeLine({ kind: "answered_elsewhere", surface: "desktop" }).text,
+		).toBe(
+			en("mobile.guard.answered_on", {
+				surface: en("mobile.guard.surface_desktop"),
+			}),
+		);
 	});
 });

@@ -69,7 +69,11 @@ export type GuardConsent =
 			phase: "open";
 			tenant: string;
 			card: GuardConsentCard;
-			/** When the card finished rendering, for the 500 ms input debounce. */
+			/** When the card became INTERACTIVE, for the 500 ms input debounce. Stamped
+			 *  when the state opens (so a caller that never reports the sheet shown
+			 *  still gets a debounce) and RE-stamped by `consentShown()` once the
+			 *  sheet has finished rising: the member must see a settled card for the
+			 *  full window, not a card still sliding up (security S-1, PR #402). */
 			openedAt: number;
 	  }
 	| {
@@ -128,6 +132,23 @@ const isChanged = (error: unknown): boolean =>
 	(error.status === 404 ||
 		error.status === 410 ||
 		(error.code !== undefined && CHANGED_CODES.has(error.code)));
+
+/** A request to collect MORE than is already agreed, on the card the member read
+ *  (the same predicate `consentView` uses for "Keep current"). */
+const isWidening = (card: GuardConsentCard): boolean =>
+	card.widening || card.reason === "widened";
+
+/** Does the host's 200 describe THIS answer? The act's own card id and tenant,
+ *  and the state the L2d contract returns for that verb (accept → "granted",
+ *  decline → "denied", `docs/guard.md` relay table). */
+const confirms = (
+	reply: { approval_id: string; tenant: string; state: string },
+	kind: "share" | "decline",
+	card: GuardConsentCard,
+): boolean =>
+	reply.approval_id === card.approval_id &&
+	reply.tenant === card.tenant &&
+	reply.state === (kind === "share" ? "granted" : "denied");
 
 /** Re-read cadence while a Guard surface is open and focused. The status read is
  *  a LOCAL host read (the host's own account of Guard; no Radient call), so the
@@ -228,8 +249,15 @@ export function createGuardController(
 		}
 		// The request is gone: someone answered it. Name the surface the host says.
 		if (org.answered_via !== "" && org.answered_via !== "mobile") {
+			// Say which org and what the host now says about sharing, not just who
+			// answered (UX U9): "Answered on the desktop app" alone leaves the
+			// member guessing whether they are now sharing.
 			store.setState({
-				outcome: { kind: "answered_elsewhere", surface: org.answered_via },
+				outcome: {
+					kind: "answered_elsewhere",
+					surface: org.answered_via,
+					org,
+				},
 			});
 			return;
 		}
@@ -250,18 +278,25 @@ export function createGuardController(
 		try {
 			const card = await client.guardConsentCard(approvalId);
 			if (!active) return;
-			// The card must be the one the status named, for this org, and still
-			// waiting for an answer: anything else is a stale pointer.
-			if (
-				card.approval_id !== approvalId ||
-				card.tenant !== tenant ||
-				card.state !== "requested"
-			) {
+			// The card must be the one the status named, for this org: anything else
+			// is a stale pointer and the request really did change.
+			if (card.approval_id !== approvalId || card.tenant !== tenant) {
 				store.setState({
 					consent: { phase: "closed" },
 					outcome: { kind: "changed", org: org.org },
 				});
 				void reload({ silent: true });
+				return;
+			}
+			// The SAME card, already settled (another surface answered between the
+			// last status read and this press): nothing changed and there is no new
+			// request to look for, so ask the host what is true now and say THAT
+			// ("Answered on the desktop app", shared, declined), exactly as a failed
+			// answer does (UX U1, PR #402). `changed` stays the fallback if the host
+			// still files a prompt for this org.
+			if (card.state !== "requested") {
+				store.setState({ consent: { phase: "closed" } });
+				await reconcile(tenant, { kind: "changed", org: org.org }, org.org);
 				return;
 			}
 			store.setState({
@@ -280,6 +315,17 @@ export function createGuardController(
 			if (isChanged(error) || isUnavailable(error))
 				void reload({ silent: true });
 		}
+	};
+
+	/** The sheet has finished rising and is interactive: (re)start the 500 ms
+	 *  debounce from NOW. The rise (`DURATIONS.slow`) is spent before the member
+	 *  can read, so counting from the state change left ~260 ms of settled card
+	 *  (RFC §5.2.3 says "within 500 ms of the card rendering"). Only ever moves
+	 *  the stamp later; a no-op for any other phase. */
+	const consentShown = () => {
+		const consent = store.getState().consent;
+		if (consent.phase !== "open") return;
+		store.setState({ consent: { ...consent, openedAt: now() } });
 	};
 
 	/** "Decide later": close the card and send NOTHING. The request stays pending
@@ -310,18 +356,34 @@ export function createGuardController(
 			busy: tenant,
 		});
 		try {
-			if (kind === "share") {
-				await client.acceptGuardConsent(card.approval_id, {
-					request_digest: card.request_digest,
-					disclosure_digest: card.disclosure_digest,
-				});
-			} else {
-				await client.declineGuardConsent(card.approval_id);
-			}
+			const reply =
+				kind === "share"
+					? await client.acceptGuardConsent(card.approval_id, {
+							request_digest: card.request_digest,
+							disclosure_digest: card.disclosure_digest,
+						})
+					: await client.declineGuardConsent(card.approval_id);
 			if (!active) return "sent";
+			// A 200 is only believed when it is the answer to THIS card for THIS org
+			// and says what the act should leave behind ("granted" for a share,
+			// "denied" for a decline). A replayed, crossed or surprising reply is a
+			// bug or a hostile relay: the banner must not state the phone's intent,
+			// so the host's own status words it (security S-2, PR #402).
+			if (!confirms(reply, kind, card)) {
+				store.setState({ consent: { phase: "closed" }, busy: null });
+				await reconcile(tenant, { kind: "failed", org: orgName }, orgName);
+				return "sent";
+			}
+			store.setState({ consent: { phase: "closed" }, busy: null });
+			if (kind === "decline" && isWidening(card)) {
+				// "Keep current" on a request to COLLECT MORE does not stop sharing:
+				// the host keeps what was already agreed (UX U2). Never say "Not
+				// sharing"; let the re-read paint the real indicator.
+				store.setState({ outcome: null });
+				await reconcile(tenant, null, orgName);
+				return "sent";
+			}
 			store.setState({
-				consent: { phase: "closed" },
-				busy: null,
 				outcome: {
 					kind: kind === "share" ? "shared" : "declined",
 					org: orgName,
@@ -404,6 +466,7 @@ export function createGuardController(
 		reload,
 		refresh,
 		openConsent,
+		consentShown,
 		closeConsent,
 		share: () => answer("share"),
 		decline: () => answer("decline"),

@@ -47,6 +47,12 @@ const GuardInboxBody = ({ client }: { client: RelayEndpoints }) => {
 				label={t("mobile.guard.screen_title")}
 				labelDir={composedDir}
 			/>
+			{/* ABOVE the request, not below it (UX U7): "{org} changed this request.
+			 *  Check the new one below" must point down at the new card, and an
+			 *  outcome under the request it refers to pointed at nothing. */}
+			{state.outcome !== null ? (
+				<GuardOutcomeAlert outcome={state.outcome} />
+			) : null}
 			{pending.map((org) => {
 				const prompt = org.prompt;
 				if (prompt === null) return null;
@@ -80,9 +86,6 @@ const GuardInboxBody = ({ client }: { client: RelayEndpoints }) => {
 					</View>
 				);
 			})}
-			{state.outcome !== null ? (
-				<GuardOutcomeAlert outcome={state.outcome} />
-			) : null}
 			<GuardConsentSheet controller={controller} />
 		</View>
 	);

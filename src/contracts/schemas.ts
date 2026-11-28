@@ -31,6 +31,7 @@
 
 import { z } from "zod";
 
+import { displayName } from "./display-name";
 import type {
 	AccountRoutingPayload,
 	ApiError,
@@ -2052,6 +2053,10 @@ export const projectionStreamFrameSchema = z.looseObject({
  * rejected at the boundary. The two things that ARE required are the ones a
  * wrong answer would turn into a wrong sentence about sharing: `mode`, and each
  * org's `state`. */
+/* An org name is sanitised ON PARSE (`displayName`): it is interpolated into the
+ * question the member answers, and a hostile relay must not be able to forge the
+ * sentence above Share. The tenant id (an identifier, never displayed) is not. */
+const guardOrgName = z.string().transform(displayName);
 const guardPromptSchema = z.looseObject({
 	approval_id: z.string().nullable(),
 	collection_rev: z.number(),
@@ -2062,7 +2067,7 @@ const guardPromptSchema = z.looseObject({
 });
 const guardOrgSchema = z.looseObject({
 	tenant: z.string().min(1),
-	org: z.string(),
+	org: guardOrgName,
 	role: z.string(),
 	state: z.string().min(1),
 	reason: z.string().default(""),
@@ -2075,7 +2080,7 @@ const guardOrgSchema = z.looseObject({
 });
 export const guardNonTeamCardSchema = z.looseObject({
 	trial_days: z.number().int().nullable().default(null),
-	org: z.string().nullable().default(null),
+	org: guardOrgName.nullable().default(null),
 	url: z.string(),
 	role: z.string().nullable().optional(),
 });
@@ -2088,7 +2093,7 @@ export const guardStatusSchema = z.looseObject({
 			z.looseObject({
 				id: z.string(),
 				tenant: z.string(),
-				org: z.string(),
+				org: guardOrgName,
 				kind: z.string(),
 				created_at: z.number(),
 			}),
@@ -2100,7 +2105,7 @@ export const guardStatusSchema = z.looseObject({
 				id: z.number(),
 				tenant: z.string(),
 				kind: z.string(),
-				org: z.string(),
+				org: guardOrgName,
 				scopes: z.array(z.string()),
 				at: z.number(),
 			}),
@@ -2108,7 +2113,11 @@ export const guardStatusSchema = z.looseObject({
 		.default([]),
 	insights: z
 		.array(
-			z.looseObject({ tenant: z.string(), org: z.string(), url: z.string() }),
+			z.looseObject({
+				tenant: z.string(),
+				org: guardOrgName,
+				url: z.string(),
+			}),
 		)
 		.default([]),
 	non_team: guardNonTeamCardSchema.nullable().default(null),
@@ -2131,7 +2140,7 @@ export const guardConsentCardSchema = z.looseObject({
 	approval_id: z.string().min(1),
 	state: z.string(),
 	tenant: z.string(),
-	org: z.string(),
+	org: guardOrgName,
 	reason: z.string(),
 	widening: z.boolean(),
 	asked_scopes: z.array(z.string()),

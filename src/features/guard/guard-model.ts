@@ -348,16 +348,30 @@ export interface NonTeamView {
 	url: string | null;
 }
 
-/** Only first-party, https Radient URLs are ever opened from this card. The host
+/** The ONE host the host's team-upgrade URL may open: the Console. The host
  *  supplies the URL, and a CTA that opens an arbitrary scheme or host from a
- *  settings screen would be an open door for a misbehaving relay. */
+ *  settings screen would be an open door for a misbehaving relay. An exact
+ *  host, NOT a `*.radienthq.com` suffix: that zone also holds the personal
+ *  tunnel hosts (`<reservation>-lop.radienthq.com`, `-oc.`), i.e. other people's
+ *  content on a first-party-looking name (security S-3, PR #402). The only
+ *  URL this CTA is specified to carry is the Console's `/dashboard/team` (the
+ *  twin's seed and every fixture here); widen this list by a reviewed change,
+ *  never by pattern. */
+const TEAM_URL_HOSTS: ReadonlySet<string> = new Set(["console.radienthq.com"]);
+
+/** Only an allowlisted https host on the default port, with no userinfo, is ever
+ *  opened. Compared by hostname + empty port rather than `URL.origin`, which is
+ *  the one getter some React Native URL polyfills leave unimplemented. */
 export function safeTeamUrl(raw: string | null | undefined): string | null {
 	if (!raw) return null;
 	try {
 		const url = new URL(raw);
-		const host = url.hostname.toLowerCase();
-		const first = host === "radienthq.com" || host.endsWith(".radienthq.com");
-		return url.protocol === "https:" && first ? url.toString() : null;
+		if (url.username !== "" || url.password !== "") return null;
+		return url.protocol === "https:" &&
+			url.port === "" &&
+			TEAM_URL_HOSTS.has(url.hostname.toLowerCase())
+			? url.toString()
+			: null;
 	} catch {
 		return null;
 	}
@@ -426,7 +440,10 @@ export type GuardOutcome =
 	| { kind: "shared" | "declined" | "revoked" | "share_again"; org: string }
 	| { kind: "revoke_pending"; org: string }
 	| { kind: "changed"; org: string }
-	| { kind: "answered_elsewhere"; surface: string }
+	/** `org` is the host's row for the request that was answered, when the
+	 *  re-read supplied it: the line then also says what the host now reports
+	 *  about sharing with that org (UX U9). */
+	| { kind: "answered_elsewhere"; surface: string; org?: GuardOrg }
 	| { kind: "failed"; org: string }
 	| { kind: "card_unreadable"; org: string };
 
@@ -470,7 +487,16 @@ export function outcomeLine(outcome: Exclude<GuardOutcome, null>): OutcomeLine {
 				tone: "info",
 			};
 		case "answered_elsewhere":
-			return { text: answeredOnLine(outcome.surface), tone: "info" };
+			return {
+				// Who answered, then the host's own indicator for the org (existing
+				// keys only, joined with the same "·" the catalogue itself uses):
+				// "Answered on the desktop app · Guard: sharing with X".
+				text:
+					outcome.org === undefined
+						? answeredOnLine(outcome.surface)
+						: `${answeredOnLine(outcome.surface)} · ${indicatorFor(outcome.org)}`,
+				tone: "info",
+			};
 		case "failed":
 			return { text: t("mobile.guard.screen_failed"), tone: "error" };
 		case "card_unreadable":

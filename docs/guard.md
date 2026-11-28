@@ -66,8 +66,30 @@ without `features.guard`.
 Presentation safety (RFC section 5.2.3): the card opens only when the member
 presses Review (arrival never opens it or takes focus); the non-sharing answer is
 first and nothing is pre-selected; closing the card is "Decide later" and sends
-nothing; input in the first 500 ms after the card renders is ignored; a card
+nothing; input in the first 500 ms after the card is **interactive** (the sheet
+has finished rising, not merely when its state opened) is ignored; a card
 whose scopes the app cannot describe withholds every answer button.
+
+Round-2 behaviours worth knowing before changing this code (PR #402):
+
+- **The sheet is full height with up to three title lines**, so the privacy
+  sentences get room instead of a 120 pt window on a small phone and the title
+  keeps the asking org's name at 200 % text. Share is never gated on scrolling.
+- **A 200 is believed only when it answers THIS act**: the card's own approval id
+  and tenant, and `granted` for a share / `denied` for a decline. Anything else is
+  reconciled against the host's status, never worded from the button.
+- **"Keep current" on a widening keeps sharing** what was already agreed (the host
+  and the twin do), so the phone never says "Not sharing" for it; the status
+  re-read paints the real indicator. (Core's TUI maps this the same wrong way at
+  `guard_view.py:739`: a core follow-up.)
+- **Opening a card another surface already answered** reconciles instead of saying
+  "changed": the member reads "Answered on the desktop app · Guard: sharing with
+  X" (existing catalogue strings only).
+- **Org names are sanitised on parse** (`src/contracts/display-name.ts`): control
+  and bidi characters are removed (ZWNJ/ZWJ kept), whitespace collapsed, 80 code
+  points. The host already does this; the phone does not rely on it.
+- **The non-Team CTA opens only `https://console.radienthq.com`** (an exact host,
+  not the `*.radienthq.com` zone, which holds user-controlled tunnel hosts).
 
 ## The relay twin (the host's contract, as the phone reads it)
 

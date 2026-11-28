@@ -155,12 +155,25 @@ export function createGuardStore(seed: GuardSeed): GuardStore {
 					};
 				}
 				if (verb === "decline" && method === "POST") {
-					settle(waiting, {
-						state: "not_sharing",
-						prompt: null,
-						answered_via: "mobile",
-						can_share_again: true,
-					});
+					// Host parity (UX U2): declining a request to COLLECT MORE ("Keep
+					// current") keeps sharing what was already agreed; only declining a
+					// first request leaves the org not sharing. The twin used to settle
+					// both to `not_sharing`, so the phone's wrong "Not sharing" line
+					// could not be seen against it.
+					const widening =
+						(waiting.prompt as Record<string, Json> | null)?.widening ===
+							true || card.widening === true;
+					settle(
+						waiting,
+						widening
+							? { state: "sharing", prompt: null, answered_via: "mobile" }
+							: {
+									state: "not_sharing",
+									prompt: null,
+									answered_via: "mobile",
+									can_share_again: true,
+								},
+					);
 					Object.assign(card, { state: "denied", signable: false });
 					return {
 						status: state.dropAnswerResponse ? 503 : 200,

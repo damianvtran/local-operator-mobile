@@ -83,6 +83,11 @@ export const GuardBody = ({ controller }: { controller: GuardController }) => {
 		status.orgs.find((org) => org.tenant === confirmTenant) ?? null;
 	return (
 		<View className="gap-3">
+			{/* ABOVE the cards (UX U7): the "changed" line says the new request is
+			 *  "below", which an outcome drawn under the cards contradicted. */}
+			{state.outcome !== null ? (
+				<GuardOutcomeAlert outcome={state.outcome} />
+			) : null}
 			{status.mode === "non_team" ? (
 				(() => {
 					const view = nonTeamView(status, card);
@@ -125,9 +130,6 @@ export const GuardBody = ({ controller }: { controller: GuardController }) => {
 					) : null}
 				</>
 			)}
-			{state.outcome !== null ? (
-				<GuardOutcomeAlert outcome={state.outcome} />
-			) : null}
 			<GuardConsentSheet controller={controller} />
 			<GuardRevokeSheet
 				org={confirmOrg}
