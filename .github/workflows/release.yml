@@ -226,11 +226,12 @@ jobs:
   fastlane:
     name: The pinned fastlane resolves (${{ matrix.os }})
     # Runs on EVERY run, dry runs included, and needs no secret and no environment:
-    # a dry run skips `publish` and `ios`, which are the only jobs that run a lane,
-    # so without this job a dry run says nothing about whether the uploader exists
-    # — which is how v0.1.0 reached its TestFlight step with no fastlane on the
-    # runner. Both images that run lanes are covered: ubuntu-latest (`publish`)
-    # and macos-26 (`ios`, through `ios-signed-ipa`). `publish` needs this job, so
+    # a dry run skips `publish`, `ios` and `testflight`, which are the only jobs
+    # that run a lane, so without this job a dry run says nothing about whether the
+    # uploader exists — which is how v0.1.0 reached its TestFlight step with no
+    # fastlane on the runner. Both images that run lanes are covered: ubuntu-latest
+    # (`publish`, the Play lane) and macos-26 (`ios`, through `ios-signed-ipa`, and
+    # `testflight`). `publish` needs this job, so
     # a missing uploader stops the release before its GitHub Release is created.
     # `fastlane lanes` loads the real Fastfile under the pinned version without
     # running a lane: no credential, no store call.
@@ -471,6 +472,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     environment: release
+    # The `summary` job reports these. A job output is computed when the job ends,
+    # failed or not, so it still names the step that stopped this job.
+    outputs:
+      release_outcome: ${{ steps.release.outcome }}
+      play_outcome: ${{ steps.play.outcome }}
     # The one job that elevates, and only for the Release it creates.
     permissions:
       contents: write
@@ -569,15 +575,6 @@ jobs:
           umask 077
           printf '%s' "$PLAY_SERVICE_ACCOUNT_JSON_BASE64" | base64 --decode > "$RUNNER_TEMP/play-service-account.json"
 
-      - name: Decode the App Store Connect API key
-        if: contains(needs.credentials.outputs.platforms, 'ios')
-        env:
-          APPLE_ASC_PRIVATE_KEY_BASE64: ${{ secrets.APPLE_ASC_PRIVATE_KEY_BASE64 }}
-        run: |
-          set -euo pipefail
-          umask 077
-          printf '%s' "$APPLE_ASC_PRIVATE_KEY_BASE64" | base64 --decode > "$RUNNER_TEMP/asc-api-key.p8"
-
       - name: Upload the AAB to the Play internal track (fastlane)
         id: play
         if: contains(needs.credentials.outputs.platforms, 'android')
@@ -588,37 +585,101 @@ jobs:
           LO_ANDROID_AAB: ${{ github.workspace }}/artifacts/local-operator-${{ needs.version.outputs.version }}.aab
         run: bundle exec fastlane android internal
 
+      - name: Remove the decoded Play credential
+        if: always()
+        run: rm -f "$RUNNER_TEMP/play-service-account.json"
+
+  testflight:
+    name: TestFlight upload (macOS)
+    # WHY A SEPARATE macOS JOB. The upload used to be the last steps of `publish`,
+    # which runs on ubuntu-latest, and tag v0.1.1 failed there at
+    # `bundle exec fastlane ios testflight` with
+    # `Dir.chdir: No such file or directory @ dir_chdir0 - (ENOENT)` (run
+    # 46097429989): fastlane 2.242.0's `Helper.itms_path` returns "" off macOS
+    # (fastlane_core/helper.rb#L278-L280) and the transporter wrapper then does
+    # `FileUtils.cd(Helper.itms_path)` (itunes_transporter.rb#L733). fastlane ships
+    # no Linux uploader by design (fastlane/fastlane#14256), so no Gemfile or
+    # runner-image change can make the Linux job upload. The IPA is built on macos-26
+    # already; it is uploaded from there too.
+    #
+    # ORDER IS UNCHANGED: `needs: publish` means the GitHub Release (with the IPA
+    # attached) exists before Apple is called, and a failure here leaves that
+    # Release in place. The implicit success() condition is deliberate: this runs
+    # only when `publish` succeeded, which already implies the gate passed and this
+    # is not a dry run (publish skips on `dry_run`, and a skipped `needs` skips
+    # this job), so the dry-run guard is not repeated. `version`, `credentials` and
+    # `fastlane` are listed because their outputs/results are read below.
+    needs: [version, credentials, fastlane, publish]
+    if: contains(needs.credentials.outputs.platforms, 'ios')
+    runs-on: macos-26
+    timeout-minutes: 30
+    # Same environment as the jobs that already read the APPLE_ASC_* secrets.
+    environment: release
+    steps:
+      # Only the Fastfile, Gemfile and the local action are read: no dependency
+      # install, no history.
+      - uses: actions/checkout@v7
+
+      # `bundle exec fastlane`, pinned by Gemfile.lock, exactly as `publish` and the
+      # macOS leg of the `fastlane` job resolve it.
+      - uses: ./.github/actions/setup-fastlane
+
+      # The `ios-ipa` artifact this run's `ios` job uploaded: the same bytes that
+      # `publish` renamed to local-operator-<version>.ipa and attached to the
+      # Release. It holds exactly one `.ipa`, which is all the lane's glob accepts.
+      - uses: actions/download-artifact@v8
+        with:
+          name: ios-ipa
+          path: artifacts
+
+      - name: Decode the App Store Connect API key
+        env:
+          APPLE_ASC_PRIVATE_KEY_BASE64: ${{ secrets.APPLE_ASC_PRIVATE_KEY_BASE64 }}
+        run: |
+          set -euo pipefail
+          umask 077
+          : "${APPLE_ASC_PRIVATE_KEY_BASE64:?No App Store Connect private key in release environment}"
+          printf '%s' "$APPLE_ASC_PRIVATE_KEY_BASE64" | base64 --decode > "$RUNNER_TEMP/asc-api-key.p8"
+
       - name: Upload the IPA to TestFlight (fastlane)
-        id: testflight
-        if: contains(needs.credentials.outputs.platforms, 'ios')
         env:
           APPLE_ASC_KEY_ID: ${{ secrets.APPLE_ASC_KEY_ID }}
           APPLE_ASC_ISSUER_ID: ${{ secrets.APPLE_ASC_ISSUER_ID }}
           APPLE_ASC_PRIVATE_KEY_PATH: ${{ runner.temp }}/asc-api-key.p8
-          # The directory, not the file: the lane globs `*.ipa` in it, and after the
-          # staging step that directory holds `local-operator-<version>.ipa`.
+          # The directory, not the file: the lane globs `*.ipa` in it.
           LO_IOS_IPA_DIR: ${{ github.workspace }}/artifacts
         run: bundle exec fastlane ios testflight
 
-      - name: Remove the decoded credentials
+      - name: Remove the decoded App Store Connect key
         if: always()
-        run: rm -f "$RUNNER_TEMP/play-service-account.json" "$RUNNER_TEMP/asc-api-key.p8"
+        run: rm -f "$RUNNER_TEMP/asc-api-key.p8"
 
+  summary:
+    name: Release summary
+    # After the store jobs, because it reports what they did. It was the last step
+    # of `publish` until the TestFlight upload moved to its own job. It runs when
+    # `publish` ran at all (success, failure or cancelled): a skipped publish (gate
+    # failed, dry run) wrote no summary before and writes none now.
+    needs: [version, credentials, publish, testflight]
+    if: ${{ always() && needs.publish.result != 'skipped' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
       - name: Release summary
-        if: always()
         env:
           TAG: ${{ needs.version.outputs.tag }}
           VERSION: ${{ needs.version.outputs.version }}
           BUILD_NUMBER: ${{ needs.version.outputs.version_code }}
           REPOSITORY: ${{ github.repository }}
           PLATFORMS: ${{ needs.credentials.outputs.platforms }}
-          # The OUTCOME of each step, not merely whether it was enabled: this step
-          # runs under `always()`, so a lane that failed or never started must not
-          # be reported as an upload. `outcome` is `success`, `failure`, `skipped`
-          # or `cancelled` (and empty if the step id does not exist).
-          RELEASE_OUTCOME: ${{ steps.release.outcome }}
-          PLAY_OUTCOME: ${{ steps.play.outcome }}
-          TESTFLIGHT_OUTCOME: ${{ steps.testflight.outcome }}
+          # The OUTCOME of each step or job, not merely whether it was enabled:
+          # this runs under `always()`, so a lane that failed or never started must
+          # not be reported as an upload. `success`, `failure`, `skipped` or
+          # `cancelled` (empty if the output was never set).
+          RELEASE_OUTCOME: ${{ needs.publish.outputs.release_outcome }}
+          PLAY_OUTCOME: ${{ needs.publish.outputs.play_outcome }}
+          # The `testflight` JOB's result, not a step's.
+          TESTFLIGHT_OUTCOME: ${{ needs.testflight.result }}
         run: |
           # Built from the platforms AND the outcomes, so the summary claims no
           # store the run never reached.

@@ -16,7 +16,7 @@ view — what runs, what it needs, and what to do when it goes red.
 | `ios.yml` | `pull_request` (native-input filter), `workflow_call` (`full: true`), push to `main`, `workflow_dispatch` | `changes`, `ios`, `internal` (main only) | The app builds for the iOS 26 SDK with Xcode 26 on `macos-26`, **launches on a simulator and its process is still running** — `launchctl list` inside the simulator lists the app's `UIKitApplication:<bundle>` job with a pid at t+5s, t+7s and again at least 30 s after launch (the log and summary print the measured elapsed time; under load that probe can follow the t+7s one by a second) — a launchctl read that fails is shown as `unknown`, never `no`, and still fails the job — **no crash report** for its executable was written after launch (one that exists is printed — exception, termination reason, abort message, crashed thread's top frames — and fails the job; `~/Library/Logs/DiagnosticReports`, `/Library/Logs/DiagnosticReports` and the simulator's own log directory are searched, and on the hosted image the reverted-#168 negative control's report landed in the first about 199 s after the launch returned, so a dead app's run waits for it until 300 s after the launch while a live one waits not at all; a dead app with no report gets an inventory of what did land), **the app's own log, stderr and stdout carry no fatal** (`Unhandled JS Exception`, `RCTFatal`, `Terminating app due to uncaught exception`, `libc++abi: terminating`, `EXC_CRASH`, `SIGABRT`; read with a `process ==` predicate so another process cannot fail it). The t+5s frame's difference from the installed home screen is **reported, not asserted**: a dead app has measured 0.14% and 73.81% against it and a live one 73.33% and 73.52%, so it cannot judge a crash and liveness is the verdict. Red runs upload their frames and the app's stdout, stderr and log read too. Liveness is the primary signal because builds 419, 446 and 449 crashed natively at launch and passed the frame-and-JS-fatal version of this gate: their frame was the springboard, 23.05-23.06% different from the old pre-install baseline (it shows the page with the new icon), against 73.63% for a build that rendered; the abort itself reaches only the app's **stderr** (`libc++abi: terminating due to uncaught exception of type facebook::jsi::JSError: [Worklets] …`), which is why stderr is captured; `scripts/ci/ios-launch-gate.ts` does the judging. The settle delta between two captures two seconds apart is **reported, not asserted**, in pixel-channel bytes: a byte-identity gate was tried and removed because a working UI with a caret moves (measured, run 36727261140). The version in the built app's `Info.plist` is asserted against the one the ref derived, **the built `Info.plist` carries `NSLocalNetworkUsageDescription` and the ATS local-networking configuration** (`NSAllowsLocalNetworking` plus the private-range `NSExceptionDomains` — which mechanism the OS honours is Apple's ambiguity, ADR 0002 §5), and the native project re-generates identically. Content is not judged here — a wrong screen renders just as green. On per-push pull requests, `changes` runs the build only when native-affecting inputs change; pure JS/UI pushes defer to `merge-gate.yml` (`full: true`). On `main`, additionally a signed IPA and, when configured, a TestFlight upload. |
 | `e2e.yml` | `workflow_call` (from `merge-gate.yml`), push to `main`, nightly, `workflow_dispatch` | `harness`, `mock-relay-contract` on `merge-gate.yml` and `main` push; `docs-commands`, `web-audit` (one leg per `ci`-tier device), `web-audit-verdict`, `web-audit-core`, `maestro-android` nightly and on demand only (see [Frames and the device sample: nightly and on demand](#frames-and-the-device-sample-nightly-and-on-demand)) | **The harness was present and its suites ran** — the `harness` job FAILS when it is absent rather than skipping, so a green `e2e` cannot mean "the thing did not run". Then: `pnpm e2e:relay` in its own job (which prints its own assertion count — quote that line, not a number written here) and `pnpm e2e:divergences`; `pnpm e2e:typecheck` in the audit job and in `ci.yml`'s `checks` on every PR (the only typecheck `tools/**` and `e2e/**` get — `pnpm typecheck` covers the app and `scripts/**` only); the web export driven in headless Chrome into a frame per audit cell with every frame checked against the design kit's rubric, and `pnpm e2e:canary`. That audit is **two jobs, not one**: `web-audit` is a device matrix with one leg per `ci`-tier profile (each leg captures and audits only its own profile, and the flows that are not per-cell — the inbox-return proof with its base export, and the canary — run once, on the `flows` leg), and `web-audit-verdict` folds the legs into a single pass/fail, because a failed matrix child would otherwise read as cancelled rather than red. **Every command goes through the harness's own package scripts**, never a file path, so a rename inside the harness cannot silently disable this workflow. **The bounds come from measurements, not from hope**: `pnpm e2e:relay` is the harness's slowest documented command — its own note says the contract plus the canary's mutation self-test is "LOAD-DEPENDENT: 28 minutes measured on this host at load averages 32-46, ~13 minutes on a quiet one" and sizes its default bound at 45 (`--timeout 2700`), and a reviewer's attempt on this host was killed at ~14 minutes inside the mutation group at load 120-226 — so that job gets **45 minutes** and the step 25 — the job's bound covers its parts (install + the contract + the divergence check), not its largest one, and the install prints its own duration so the next person sizing this has a measurement — rather than the 15 minutes it had, which could only ever report a timeout. `pnpm e2e:docs` (every command `docs/e2e/README.md` names, the relay one included) runs only in the nightly `docs-commands` job; on a pull request it would run the relay contract a second time for no extra coverage. The relay job installs explicitly with `--frozen-lockfile`, because the implicit install pnpm 12 performs before a script (`verify-deps-before-run`) was already happening: measured, a "no install" job pulled 631 packages into a tree that had none. Maestro runs the flow set on an Android 16 emulator — nightly and on demand only, because it is the slowest job here and the harness's own note asks for it that way; it, `docs-commands`, `web-audit`/`web-audit-verdict` and `web-audit-core` are the jobs absent from a green merge-gate run (skipped by their event guard). |
 | `merge-gate.yml` | `pull_request: [labeled]` (`ready-to-merge` via `pnpm merge-gate <pr>`), `workflow_dispatch` | `ios` (`full: true`), `android` (`full: true`), `e2e`, `merge-gate` (`Merge gate (full suite)`) | The terminal pre-merge gate on `refs/pull/<n>/merge`. Calls `ios.yml` (`full: true`), `android.yml` (`full: true`), and `e2e.yml` unconditionally, and fails closed (`if: always()`) unless all three conclude `success` — never `skipped`, `failure`, or `cancelled`. |
-| `release.yml` | tag `v*` (or `workflow_dispatch` with a tag and `dry_run`) | `version`, `credentials`, `gate` (= `ci.yml`), `android`, `ios`, `publish` | The same gate a pull request runs, the platforms named by `RELEASE_PLATFORMS` (default `ios`) built and signed, a GitHub Release carrying their artefacts (APK/AAB and/or IPA), and the matching uploads to the Play internal track and/or TestFlight. |
+| `release.yml` | tag `v*` (or `workflow_dispatch` with a tag and `dry_run`) | `version`, `credentials`, `gate` (= `ci.yml`), `android`, `ios`, `publish`, `testflight`, `summary` | The same gate a pull request runs, the platforms named by `RELEASE_PLATFORMS` (default `ios`) built and signed, a GitHub Release carrying their artefacts (APK/AAB and/or IPA), and the matching uploads: the Play internal track from `publish` (Linux) and TestFlight from `testflight` (`macos-26`, after the Release exists). `summary` reports both. |
 
 Native jobs are **skipped, not failed**, on a per-push pull request that touches
 no native-affecting inputs (`ios/**`, `android/**`, `modules/**`, `plugins/**`,
@@ -426,12 +426,12 @@ deployment rules: a BRANCH rule `main` and a TAG rule `v*`.** Both halves matter
   ref, and the first tagged release dies at the environment before it signs
   anything (review round 4, M4-1). The tag rule is what lets the four
   `environment: release` jobs in `release.yml` (`credentials`, `android`, `ios`,
-  `publish`) run on `refs/tags/v*`.
+  `publish`, `testflight`) run on `refs/tags/v*`.
 - Every job that reads a credential declares `environment: release`: the two
   signing jobs in `android.yml`/`ios.yml` (which run only on a push to `main`, so
   the branch rule covers them), the `credentials` gate beside each of them, and
-  `release.yml`'s `credentials`, `android`, `ios` and `publish` jobs (tag refs, so
-  the tag rule covers them).
+  `release.yml`'s `credentials`, `android`, `ios`, `publish` and `testflight` jobs
+  (tag refs, so the tag rule covers them).
 - **Environment** secrets are the point of the exercise: only a job that declares
   the environment can read them, so the deployment rules are what keep signing
   material out of a pull request that edits a workflow to drop an `if:`. Keeping
@@ -775,16 +775,53 @@ environment `bundleRelease` fails loudly instead of signing with the debug key.
    passes for each (it names any missing secret and stops), the gate runs, the
    enabled platforms build and sign, the GitHub Release is created with their
    artefacts attached (APK + AAB for Android, IPA for iOS), and only then do the
-   matching Play and TestFlight uploads run. A release
+   uploads run: Play from `publish` on Linux, TestFlight from the separate
+   `testflight` job on `macos-26` (it downloads the run's `ios-ipa` artifact and
+   runs `bundle exec fastlane ios testflight`; see the paragraph below). A release
    that dies half-way still leaves the Release — the artefact a user can install.
 5. **Verify**, in this order: the Release page lists the artefacts of the enabled
    platforms (the IPA alone for the default; three with Android); the run summary
    names the version, build number and platforms; the Play internal track shows the
-   new `versionCode` (Android only); the build appears in App Store Connect. TestFlight
-   processing is asynchronous — the job does not wait for it.
+   new `versionCode` (Android only); the build appears in App Store Connect. The
+   `testflight` job's result is on the run summary (`summary` job) — a red
+   `testflight` job with a green Release means the IPA is published but never
+   reached Apple; recover it as described below. TestFlight processing is
+   asynchronous — the job does not wait for it.
 6. **Install the build** — the APK from the Release on an Android device (when
    Android is enabled), or the TestFlight build on an iPhone — and open it. The
    artefacts being present is not the same claim as the app working.
+
+**Why TestFlight uploads from macOS.** The upload used to be the last step of
+`publish` on `ubuntu-latest`, and tag v0.1.1 failed there with `Dir.chdir: No such
+file or directory @ dir_chdir0 - (ENOENT)` after its Release existed (run
+46097429989). fastlane 2.242.0's `Helper.itms_path` returns `""` off macOS
+([helper.rb#L278-L280](https://github.com/fastlane/fastlane/blob/2.242.0/fastlane_core/lib/fastlane_core/helper.rb#L278-L280))
+and the transporter wrapper then does `FileUtils.cd(Helper.itms_path)`
+([itunes_transporter.rb#L733](https://github.com/fastlane/fastlane/blob/2.242.0/fastlane_core/lib/fastlane_core/itunes_transporter.rb#L733)).
+fastlane ships no Linux uploader by design
+([fastlane#14256](https://github.com/fastlane/fastlane/issues/14256)), so no
+dependency or image change fixes it; the upload runs where the IPA was built.
+The Play upload stays on Linux, which `supply` supports.
+
+**Recovering a published IPA that never reached TestFlight.** Only for a release
+whose Release exists and whose upload failed; a normal tag does not need it.
+`recover-v011-testflight.yml` (v0.1.1; `recover-v010-testflight.yml` is the
+v0.1.0 original) is `workflow_dispatch`-only and runs on `main`. It pins the tag,
+the tagged commit, the Release asset id, size and SHA-256 of the IPA, downloads
+that asset and refuses anything that differs, then (with `upload: true`) has the
+lane (`recovery_version:0.1.1 recovery_build:1700`) check that App Store Connect
+holds no build or upload for that version/build before it calls Pilot. The
+default, `upload: false`, verifies the pinned bytes and makes no Apple request:
+
+```sh
+gh workflow run recover-v011-testflight.yml --ref main              # verify only
+gh workflow run recover-v011-testflight.yml --ref main -f upload=true  # uploads
+```
+
+The `upload=true` run reads the `release` environment's Apple secrets and sends a
+build to App Store Connect, so it is an operator decision, not a routine step.
+A later release needs its own copy with its own pins (never edit a pin in place:
+the pin is what proves which bytes were uploaded).
 
 **A dry run.** `workflow_dispatch` with a tag and `dry_run: true` runs the version
 derivation, the credential check and the full gate, then stops before any build
@@ -826,8 +863,8 @@ still fails.
 
 | Runner | Used for | Notes |
 |---|---|---|
-| `ubuntu-latest` (24.04 when this table was written; 26.04 by 2026-11) | `checks`, the Android build, the uploader jobs | Ships the Android SDK, Java 17/21/25 and Google Chrome. Timeouts are set on every job. |
-| `macos-26` | the iOS build, the design-kit asset gates | Ships Xcode 26.x (which is what Apple requires for uploads) and CocoaPods 1.17.0. The simulator is named in `env` in `ios.yml` and resolved by `scripts/ci/ios-simulator.ts`, which prints what it chose. |
+| `ubuntu-latest` (24.04 when this table was written; 26.04 by 2026-11) | `checks`, the Android build, `publish` (GitHub Release and Play upload) | Ships the Android SDK, Java 17/21/25 and Google Chrome. Timeouts are set on every job. |
+| `macos-26` | the iOS build, the TestFlight upload (`release.yml` `testflight`), the design-kit asset gates | Ships Xcode 26.x (which is what Apple requires for uploads) and CocoaPods 1.17.0. The simulator is named in `env` in `ios.yml` and resolved by `scripts/ci/ios-simulator.ts`, which prints what it chose. |
 
 `fastlane` is NOT taken from the runner image. It used to be, until
 `ubuntu-latest` moved to ubuntu-26.04, which ships none: tag v0.1.0 failed at its
@@ -839,7 +876,8 @@ job that runs a lane, which then runs as `bundle exec fastlane ...`. Upgrading i
 Gemfile + lock change (`bundle lock --update fastlane --add-platform x86_64-linux
 arm64-darwin`). `release.yml`'s `fastlane` job installs it and loads the Fastfile on
 both images on every run, dry runs included, and `publish` waits for it, so a
-missing uploader stops a release before its GitHub Release is created.
+missing uploader stops a release before its GitHub Release is created. The macOS
+leg is also the one `testflight` runs on.
 
 Every job sets `timeout-minutes`. A wedged step failing in 30 minutes rather than
 GitHub's 360-minute default is the difference between a retry and a lost

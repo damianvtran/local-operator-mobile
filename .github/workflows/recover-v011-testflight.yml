@@ -1,0 +1,109 @@
+name: Recover v0.1.1 TestFlight upload
+
+# The v0.1.1 release signed and published the IPA, but its TestFlight step ran on
+# a Linux runner, where fastlane has no uploader, and failed before calling Apple
+# (release.yml run 46097429989: `Dir.chdir: No such file or directory`, from
+# fastlane 2.242.0 Helper.itms_path being "" off macOS). release.yml now uploads
+# from a macOS job; this dispatch recovers the ALREADY-PUBLISHED v0.1.1 binary
+# only. Normal tag releases and signing are not part of this workflow. Copied from
+# recover-v010-testflight.yml, with every pin re-derived for v0.1.1.
+on:
+  workflow_dispatch:
+    inputs:
+      upload:
+        description: "Upload the verified v0.1.1 IPA to internal TestFlight (default: verify only)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: recover-v011-testflight
+  cancel-in-progress: false
+
+jobs:
+  recover:
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      github.repository == 'damianvtran/local-operator-mobile' &&
+      github.ref == 'refs/heads/main'
+    runs-on: macos-26
+    environment: release
+    env:
+      FASTLANE_DISABLE_COLORS: "1"
+      FASTLANE_SKIP_UPDATE_CHECK: "1"
+    steps:
+      # Use the same Fastfile as the reviewed dispatch, not the old tagged source.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Download and verify the published IPA
+        id: ipa
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          repo="repos/$GITHUB_REPOSITORY"
+          tag=v0.1.1
+          commit=baf13e4c690ebc2653f9fee4f4aa8c0542b83c52
+          asset=802912773
+          name=local-operator-0.1.1.ipa
+          size=27459118
+          digest=e4b578aa263be8389a9b4e07d5914c35ea091178915d9bb5e7cfaaea9a8b12b9
+
+          # Resolve the exact annotated tag ref. Never select a new asset by name
+          # alone: membership, immutable ID and the downloaded bytes must agree.
+          tag_object=$(gh api "$repo/git/ref/tags/$tag" --jq '.object | select(.type == "tag") | .sha')
+          [[ "$tag_object" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::$tag is not an annotated tag"; exit 1; }
+          actual_commit=$(gh api "$repo/git/tags/$tag_object" --jq '.object | select(.type == "commit") | .sha')
+          [[ "$actual_commit" == "$commit" ]] || { echo "::error::$tag no longer resolves to the pinned commit"; exit 1; }
+          release=$(gh api "$repo/releases/tags/$tag")
+          jq -e --arg tag "$tag" --argjson asset "$asset" --arg name "$name" \
+            --argjson size "$size" --arg digest "sha256:$digest" '
+              .tag_name == $tag and .draft == false and
+              ([.assets[] | select(.id == $asset and .name == $name and .state == "uploaded" and
+                .size == $size and .digest == $digest)] | length == 1)
+            ' <<< "$release" > /dev/null || { echo "::error::Pinned IPA is not present on the published release"; exit 1; }
+
+          ipa_dir=$(mktemp -d "$RUNNER_TEMP/recovery-ipa.XXXXXXXX")
+          ipa="$ipa_dir/$name"
+          gh api "$repo/releases/assets/$asset" -H 'Accept: application/octet-stream' > "$ipa"
+          # The existing lane globs the directory. Reject any extra entries,
+          # including hidden paths, so it can only see the verified regular file.
+          shopt -s dotglob nullglob
+          files=("$ipa_dir"/*)
+          [[ "${#files[@]}" == 1 && "${files[0]}" == "$ipa" && -f "$ipa" && ! -L "$ipa" ]] || {
+            echo '::error::Recovery directory must contain only the downloaded IPA'; exit 1;
+          }
+          [[ "$(wc -c < "$ipa" | tr -d '[:space:]')" == "$size" ]] || { echo "::error::IPA size mismatch"; exit 1; }
+          printf '%s  %s\n' "$digest" "$ipa" | shasum -a 256 -c -
+          echo "Verified $tag ($commit), asset $asset ($size bytes), SHA-256 $digest"
+          echo "dir=$ipa_dir" >> "$GITHUB_OUTPUT"
+
+      - name: Check the runner's preinstalled Fastlane
+        run: fastlane --version
+
+      - name: Finish without Apple credentials or upload
+        if: inputs.upload == false
+        run: echo 'Verification only. No App Store Connect request or TestFlight upload was made.'
+
+      - name: Check App Store Connect and upload the verified IPA
+        if: inputs.upload == true
+        env:
+          APPLE_ASC_KEY_ID: ${{ secrets.APPLE_ASC_KEY_ID }}
+          APPLE_ASC_ISSUER_ID: ${{ secrets.APPLE_ASC_ISSUER_ID }}
+          APPLE_ASC_PRIVATE_KEY_BASE64: ${{ secrets.APPLE_ASC_PRIVATE_KEY_BASE64 }}
+          LO_IOS_IPA_DIR: ${{ steps.ipa.outputs.dir }}
+        run: |
+          set -euo pipefail
+          umask 077
+          : "${APPLE_ASC_PRIVATE_KEY_BASE64:?No App Store Connect private key in release environment}"
+          export APPLE_ASC_PRIVATE_KEY_PATH
+          APPLE_ASC_PRIVATE_KEY_PATH=$(mktemp "$RUNNER_TEMP/recovery-asc-key.XXXXXXXX")
+          trap 'rm -f "$APPLE_ASC_PRIVATE_KEY_PATH"' EXIT
+          printf '%s' "$APPLE_ASC_PRIVATE_KEY_BASE64" | base64 --decode > "$APPLE_ASC_PRIVATE_KEY_PATH"
+          unset APPLE_ASC_PRIVATE_KEY_BASE64
+          fastlane ios testflight recovery_version:0.1.1 recovery_build:1700
