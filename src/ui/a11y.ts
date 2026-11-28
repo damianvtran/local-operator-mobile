@@ -481,6 +481,19 @@ export const CONTROL = {
 	settingsAccountRoutingGroup: "settings-account-routing-group",
 	settingsAccountRoutingSave: "settings-account-routing-save",
 	settingsAccountRoutingRetry: "settings-account-routing-retry",
+	/** Radient Guard (RFC v0.9): the controls the member acts on. Ids are shared by
+	 *  the Settings section and the inbox row because they are the same act on
+	 *  the same host request. */
+	guardReview: "guard-review",
+	guardConsentDontShare: "guard-consent-dont-share",
+	guardConsentLater: "guard-consent-later",
+	guardConsentShare: "guard-consent-share",
+	guardStop: "guard-stop",
+	guardStopConfirm: "guard-stop-confirm",
+	guardStopKeep: "guard-stop-keep",
+	guardShareAgain: "guard-share-again",
+	guardRetry: "guard-retry",
+	guardNonTeamCta: "guard-non-team-cta",
 	/** Diagnostics: copies the section as redacted plain text for a helper. */
 	settingsCopyDiagnostics: "settings-copy-diagnostics",
 	refusalSignIn: "refusal-sign-in",
@@ -909,6 +922,14 @@ export const CONTROL = {
  * a state ("the certificate was rejected") without inventing a control for it.
  */
 export const SURFACE = {
+	/** Radient Guard: the consent card's sheet, the stop-sharing confirm, the
+	 *  non-Team card, a write's result line and the inbox's pinned row. */
+	guardConsentSheet: "guard-consent-sheet",
+	guardRevokeSheet: "guard-revoke-sheet",
+	guardNonTeamCard: "guard-non-team-card",
+	guardOutcome: "guard-outcome",
+	guardInboxRow: "guard-inbox-row",
+	guardUnsupported: "guard-unsupported",
 	/** The remote-conversation admission gate, shown before readers mount (PR #271). */
 	remoteSessionUnavailable: "remote-session-unavailable",
 	/** The remote transcript's "previews not available here" footer (PR #271). */
@@ -1663,6 +1684,7 @@ export const state = (options: {
  * one of them is a place the flows and this file must agree.
  */
 export const REGION = {
+	settingsGuard: "settings-section-guard",
 	transcriptHistory: "transcript-history",
 	/** The marker at a disconnected gap's actual position in the transcript. */
 	transcriptGap: "transcript-gap",

@@ -173,6 +173,14 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 		"813657253a6dcf107c3b905d8a246b828c7ca8aa29bbc018762bfebd8a528d2b",
 	"tools/mock-relay/fixtures.ts":
 		"1641e6e2b3b424a2143ea6c3b8e69f3f2fc5ca02f8418429ca0835e54cf8bb4e",
+	/* Re-pinned 2026-11-27 for PR #402 (Radient Guard, M1): the mock relay gains
+	 *  the stateful `/api/guard*` twin (this module, loaded by relay.ts) and the
+	 *  seven `guard-*` worlds (scenarios.ts). Round 2 changes the twin's decline of
+	 *  a widening to keep sharing (host parity). Source identity only — no U-08
+	 *  scene, assertion or threshold changed; not rendered evidence. Pinned from
+	 *  the FINAL bytes, with --print. */
+	"tools/mock-relay/guard.ts":
+		"3ce112229cdea3c5b12e9d3c8b7443e499ff51156591f49a13170726ec573076",
 	"tools/mock-relay/library.ts":
 		"e33cd28ff3c0fb72bc8088cb06c0290993c115ceaf3b4d6bb2773ec89b3fd304",
 	"tools/mock-relay/notifications.ts":
@@ -235,7 +243,7 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	 * the changed sources and the chart dataset module the registry now loads;
 	 * the U-08 scene, checks and thresholds are unchanged. */
 	"tools/mock-relay/relay.ts":
-		"53ba7d083d6e3c5fae20cc20b4ecc591c3793e6f4660625fdae87ac4f10b8f9e",
+		"1ae2fd75355661077d07c76378277eafc78061af87080446df909976d2e101ca",
 	/* Inline-chart redesign: the chart dataset gains the operator's Datadog
 	 * series, a 32-day line, a long-label bar and a 12-slice pie; round-1
 	 * remediation ends the 32-day line on a real date (Nov 1, not Oct 32). Data
@@ -275,7 +283,7 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	 *  the union of #325's `run-settings*` worlds and main's `start-targets*`
 	 *  worlds. Source identity only — no U-08 scene moved. */
 	"tools/mock-relay/scenarios.ts":
-		"0acc19a1cc13ec9b6d026a1bcb7e5a85238a8a23a3910f359636617736a32b9e",
+		"de4163ff3752554cd5efbbd68fac994dfb2c42a0ec41f80db25cd9bd761e33e4",
 	"tools/mock-relay/shape.ts":
 		"0ef0c342578ffaf4a7067d4427f10a999740152d6a56ec2da63d75697f08fb5b",
 	/* The startup evidence helper the fixture's relay imports. It has been loaded by

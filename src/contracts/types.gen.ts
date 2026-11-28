@@ -770,6 +770,114 @@ export interface UnreadBlock {
 	degraded: string[];
 }
 
+/* ------------------------------------------------ Radient Guard (host twin) */
+
+/**
+ * Radient Guard on the phone relay. The shapes are the desktop plane's own
+ * (`local_operator/server/models/desktop_guard.py`, L2c) so the phone and the
+ * desktop read ONE description; the relay twin (`/api/guard*`, "L2d") is a thin
+ * cookie-gated adapter over the same engine calls. Two differences are
+ * deliberate and listed in `docs/guard.md`: the consent read/answer routes, and
+ * the optional `role` on the non-Team card.
+ *
+ * Scope names and org states are `string` here rather than the closed unions on
+ * purpose: a value this build does not know must reach the model layer, which
+ * renders the plain fallback line (states) or refuses to offer an answer
+ * (scopes it cannot describe), instead of failing the whole read.
+ */
+export interface GuardPrompt {
+	approval_id: string | null;
+	collection_rev: number;
+	reason: string;
+	widening: boolean;
+	asked_scopes: string[];
+	grant_scopes: string[];
+}
+
+export interface GuardOrg {
+	tenant: string;
+	org: string;
+	role: string;
+	state: string;
+	reason: string;
+	since: number | null;
+	answered_via: string;
+	scopes_shared: string[];
+	prompt: GuardPrompt | null;
+	can_revoke: boolean;
+	can_share_again: boolean;
+}
+
+export interface GuardNonTeamCard {
+	trial_days: number | null;
+	org: string | null;
+	url: string;
+	/** Twin-only, additive: the member's role in the org the card is about. */
+	role?: string | null;
+}
+
+export interface GuardStatus {
+	mode: string;
+	badge: string;
+	orgs: GuardOrg[];
+	reports: {
+		id: string;
+		tenant: string;
+		org: string;
+		kind: string;
+		created_at: number;
+	}[];
+	notices: {
+		id: number;
+		tenant: string;
+		kind: string;
+		org: string;
+		scopes: string[];
+		at: number;
+	}[];
+	insights: { tenant: string; org: string; url: string }[];
+	non_team: GuardNonTeamCard | null;
+	backup_days: number | null;
+	this_computer: string;
+	can_answer: boolean;
+	team_url: string;
+}
+
+export interface GuardRevokeResult {
+	tenant: string;
+	status: string;
+	code: string;
+	org: GuardOrg | null;
+}
+
+export interface GuardShareAgainResult {
+	tenant: string;
+	org: GuardOrg | null;
+}
+
+/** Twin-only: the queued consent card as the host would sign it. The phone
+ *  renders `asked_scopes` and `reason` FROM THIS READ and echoes its two
+ *  digests; the host recomputes both and refuses a mismatch before signing. */
+export interface GuardConsentCard {
+	approval_id: string;
+	state: string;
+	tenant: string;
+	org: string;
+	reason: string;
+	widening: boolean;
+	asked_scopes: string[];
+	request_digest: string;
+	disclosure_digest: string;
+	signable: boolean;
+	refusal?: string;
+}
+
+export interface GuardConsentAnswer {
+	approval_id: string;
+	state: string;
+	tenant: string;
+}
+
 /* --------------------------------------------- the config stream (slice D) */
 
 /** Narrow selected-computer policy projection, core account_routing.py.

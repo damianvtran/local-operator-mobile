@@ -519,6 +519,96 @@ export type CatalogueKey =
 	| "mobile.computers.wait.tunnel_status"
 	| "mobile.computers.wait.use_computer"
 	| "mobile.computers.your_computer"
+	| "mobile.guard.answered_elsewhere"
+	| "mobile.guard.answered_on"
+	| "mobile.guard.button_decide_later"
+	| "mobile.guard.button_dont_share"
+	| "mobile.guard.button_keep_current"
+	| "mobile.guard.button_keep_sharing"
+	| "mobile.guard.button_share"
+	| "mobile.guard.button_share_again"
+	| "mobile.guard.button_share_new"
+	| "mobile.guard.button_stop_sharing"
+	| "mobile.guard.card_ask_owner"
+	| "mobile.guard.card_body"
+	| "mobile.guard.card_cta_see"
+	| "mobile.guard.card_cta_trial"
+	| "mobile.guard.card_footer"
+	| "mobile.guard.card_footer_account"
+	| "mobile.guard.card_title"
+	| "mobile.guard.computer_line"
+	| "mobile.guard.computers_note"
+	| "mobile.guard.consent_needs_update"
+	| "mobile.guard.consent_not_signable"
+	| "mobile.guard.disconnected"
+	| "mobile.guard.host_old"
+	| "mobile.guard.indicator_not_sharing"
+	| "mobile.guard.indicator_paused"
+	| "mobile.guard.indicator_paused_plain"
+	| "mobile.guard.indicator_sharing"
+	| "mobile.guard.indicator_sharing_pending"
+	| "mobile.guard.indicator_unknown"
+	| "mobile.guard.indicator_waiting"
+	| "mobile.guard.indicator_will_ask"
+	| "mobile.guard.intro"
+	| "mobile.guard.load_error"
+	| "mobile.guard.loading"
+	| "mobile.guard.prompt_background"
+	| "mobile.guard.prompt_never_sent"
+	| "mobile.guard.prompt_reason_new_device"
+	| "mobile.guard.prompt_reason_new_org"
+	| "mobile.guard.prompt_reason_plan_gap"
+	| "mobile.guard.prompt_reason_reactivated"
+	| "mobile.guard.prompt_reason_rejoined"
+	| "mobile.guard.prompt_reason_widened"
+	| "mobile.guard.prompt_title"
+	| "mobile.guard.prompt_visibility"
+	| "mobile.guard.prompt_visibility_admin_share"
+	| "mobile.guard.prompt_visibility_admin_share_posture"
+	| "mobile.guard.prompt_visibility_posture"
+	| "mobile.guard.prompt_would_send"
+	| "mobile.guard.reason_console_revoked"
+	| "mobile.guard.reason_entitlement_lapsed"
+	| "mobile.guard.reason_membership_ended"
+	| "mobile.guard.reason_org_off"
+	| "mobile.guard.reason_revoke_pending"
+	| "mobile.guard.reason_scope_revoked"
+	| "mobile.guard.reconnecting"
+	| "mobile.guard.review"
+	| "mobile.guard.revoke_body"
+	| "mobile.guard.revoke_body_trace"
+	| "mobile.guard.revoke_pending_result"
+	| "mobile.guard.revoke_retained"
+	| "mobile.guard.revoke_title"
+	| "mobile.guard.revoke_totals"
+	| "mobile.guard.scope_admin_share"
+	| "mobile.guard.scope_decisions"
+	| "mobile.guard.scope_label_admin_share"
+	| "mobile.guard.scope_label_decisions"
+	| "mobile.guard.scope_label_posture"
+	| "mobile.guard.scope_label_reports"
+	| "mobile.guard.scope_label_review_cycles"
+	| "mobile.guard.scope_label_task_time"
+	| "mobile.guard.scope_label_trace_detail"
+	| "mobile.guard.scope_posture"
+	| "mobile.guard.scope_reports"
+	| "mobile.guard.scope_review_cycles"
+	| "mobile.guard.scope_task_time"
+	| "mobile.guard.scope_trace_detail"
+	| "mobile.guard.screen_declined"
+	| "mobile.guard.screen_failed"
+	| "mobile.guard.screen_none"
+	| "mobile.guard.screen_prompt_changed"
+	| "mobile.guard.screen_revoked"
+	| "mobile.guard.screen_shared"
+	| "mobile.guard.screen_title"
+	| "mobile.guard.screen_unavailable"
+	| "mobile.guard.screen_working"
+	| "mobile.guard.share_again_result"
+	| "mobile.guard.shared_heading"
+	| "mobile.guard.surface_desktop"
+	| "mobile.guard.surface_mobile"
+	| "mobile.guard.surface_terminal"
 	| "mobile.home.chip.effort_chosen"
 	| "mobile.home.chip.effort_default"
 	| "mobile.home.chip.effort_default_unnamed"
@@ -1937,6 +2027,67 @@ export type NoParamKey =
 	| "mobile.computers.wait.start_again"
 	| "mobile.computers.wait.use_computer"
 	| "mobile.computers.your_computer"
+	| "mobile.guard.answered_elsewhere"
+	| "mobile.guard.button_decide_later"
+	| "mobile.guard.button_dont_share"
+	| "mobile.guard.button_keep_current"
+	| "mobile.guard.button_keep_sharing"
+	| "mobile.guard.button_share"
+	| "mobile.guard.button_share_again"
+	| "mobile.guard.button_share_new"
+	| "mobile.guard.button_stop_sharing"
+	| "mobile.guard.card_ask_owner"
+	| "mobile.guard.card_body"
+	| "mobile.guard.card_cta_see"
+	| "mobile.guard.card_footer_account"
+	| "mobile.guard.card_title"
+	| "mobile.guard.computers_note"
+	| "mobile.guard.consent_needs_update"
+	| "mobile.guard.consent_not_signable"
+	| "mobile.guard.disconnected"
+	| "mobile.guard.host_old"
+	| "mobile.guard.indicator_paused_plain"
+	| "mobile.guard.indicator_unknown"
+	| "mobile.guard.intro"
+	| "mobile.guard.load_error"
+	| "mobile.guard.loading"
+	| "mobile.guard.prompt_background"
+	| "mobile.guard.prompt_never_sent"
+	| "mobile.guard.prompt_reason_new_device"
+	| "mobile.guard.prompt_visibility"
+	| "mobile.guard.prompt_visibility_admin_share"
+	| "mobile.guard.prompt_visibility_admin_share_posture"
+	| "mobile.guard.prompt_visibility_posture"
+	| "mobile.guard.prompt_would_send"
+	| "mobile.guard.reason_entitlement_lapsed"
+	| "mobile.guard.reason_revoke_pending"
+	| "mobile.guard.reason_scope_revoked"
+	| "mobile.guard.reconnecting"
+	| "mobile.guard.review"
+	| "mobile.guard.revoke_body"
+	| "mobile.guard.revoke_pending_result"
+	| "mobile.guard.revoke_retained"
+	| "mobile.guard.revoke_totals"
+	| "mobile.guard.scope_decisions"
+	| "mobile.guard.scope_label_admin_share"
+	| "mobile.guard.scope_label_decisions"
+	| "mobile.guard.scope_label_posture"
+	| "mobile.guard.scope_label_reports"
+	| "mobile.guard.scope_label_review_cycles"
+	| "mobile.guard.scope_label_task_time"
+	| "mobile.guard.scope_label_trace_detail"
+	| "mobile.guard.scope_posture"
+	| "mobile.guard.scope_review_cycles"
+	| "mobile.guard.scope_task_time"
+	| "mobile.guard.scope_trace_detail"
+	| "mobile.guard.screen_failed"
+	| "mobile.guard.screen_none"
+	| "mobile.guard.screen_title"
+	| "mobile.guard.screen_unavailable"
+	| "mobile.guard.screen_working"
+	| "mobile.guard.surface_desktop"
+	| "mobile.guard.surface_mobile"
+	| "mobile.guard.surface_terminal"
 	| "mobile.home.chip.effort_default_unnamed"
 	| "mobile.home.chip.model_default_short"
 	| "mobile.home.chip.model_no_default"
@@ -3246,6 +3397,96 @@ export type MessageParams = {
 	"mobile.computers.wait.tunnel_status": { status: string | number };
 	"mobile.computers.wait.use_computer": NoParams;
 	"mobile.computers.your_computer": NoParams;
+	"mobile.guard.answered_elsewhere": NoParams;
+	"mobile.guard.answered_on": { surface: string | number };
+	"mobile.guard.button_decide_later": NoParams;
+	"mobile.guard.button_dont_share": NoParams;
+	"mobile.guard.button_keep_current": NoParams;
+	"mobile.guard.button_keep_sharing": NoParams;
+	"mobile.guard.button_share": NoParams;
+	"mobile.guard.button_share_again": NoParams;
+	"mobile.guard.button_share_new": NoParams;
+	"mobile.guard.button_stop_sharing": NoParams;
+	"mobile.guard.card_ask_owner": NoParams;
+	"mobile.guard.card_body": NoParams;
+	"mobile.guard.card_cta_see": NoParams;
+	"mobile.guard.card_cta_trial": { trial_days: string | number };
+	"mobile.guard.card_footer": { org: string | number };
+	"mobile.guard.card_footer_account": NoParams;
+	"mobile.guard.card_title": NoParams;
+	"mobile.guard.computer_line": { computer: string | number };
+	"mobile.guard.computers_note": NoParams;
+	"mobile.guard.consent_needs_update": NoParams;
+	"mobile.guard.consent_not_signable": NoParams;
+	"mobile.guard.disconnected": NoParams;
+	"mobile.guard.host_old": NoParams;
+	"mobile.guard.indicator_not_sharing": { org: string | number };
+	"mobile.guard.indicator_paused": { reason: string | number };
+	"mobile.guard.indicator_paused_plain": NoParams;
+	"mobile.guard.indicator_sharing": { org: string | number };
+	"mobile.guard.indicator_sharing_pending": { org: string | number };
+	"mobile.guard.indicator_unknown": NoParams;
+	"mobile.guard.indicator_waiting": { org: string | number };
+	"mobile.guard.indicator_will_ask": { org: string | number };
+	"mobile.guard.intro": NoParams;
+	"mobile.guard.load_error": NoParams;
+	"mobile.guard.loading": NoParams;
+	"mobile.guard.prompt_background": NoParams;
+	"mobile.guard.prompt_never_sent": NoParams;
+	"mobile.guard.prompt_reason_new_device": NoParams;
+	"mobile.guard.prompt_reason_new_org": { org: string | number };
+	"mobile.guard.prompt_reason_plan_gap": { org: string | number };
+	"mobile.guard.prompt_reason_reactivated": { org: string | number };
+	"mobile.guard.prompt_reason_rejoined": { org: string | number };
+	"mobile.guard.prompt_reason_widened": { org: string | number; scopes: string | number };
+	"mobile.guard.prompt_title": { org: string | number };
+	"mobile.guard.prompt_visibility": NoParams;
+	"mobile.guard.prompt_visibility_admin_share": NoParams;
+	"mobile.guard.prompt_visibility_admin_share_posture": NoParams;
+	"mobile.guard.prompt_visibility_posture": NoParams;
+	"mobile.guard.prompt_would_send": NoParams;
+	"mobile.guard.reason_console_revoked": { date: string | number };
+	"mobile.guard.reason_entitlement_lapsed": NoParams;
+	"mobile.guard.reason_membership_ended": { org: string | number };
+	"mobile.guard.reason_org_off": { org: string | number };
+	"mobile.guard.reason_revoke_pending": NoParams;
+	"mobile.guard.reason_scope_revoked": NoParams;
+	"mobile.guard.reconnecting": NoParams;
+	"mobile.guard.review": NoParams;
+	"mobile.guard.revoke_body": NoParams;
+	"mobile.guard.revoke_body_trace": { backup_days: string | number };
+	"mobile.guard.revoke_pending_result": NoParams;
+	"mobile.guard.revoke_retained": NoParams;
+	"mobile.guard.revoke_title": { org: string | number };
+	"mobile.guard.revoke_totals": NoParams;
+	"mobile.guard.scope_admin_share": { org: string | number };
+	"mobile.guard.scope_decisions": NoParams;
+	"mobile.guard.scope_label_admin_share": NoParams;
+	"mobile.guard.scope_label_decisions": NoParams;
+	"mobile.guard.scope_label_posture": NoParams;
+	"mobile.guard.scope_label_reports": NoParams;
+	"mobile.guard.scope_label_review_cycles": NoParams;
+	"mobile.guard.scope_label_task_time": NoParams;
+	"mobile.guard.scope_label_trace_detail": NoParams;
+	"mobile.guard.scope_posture": NoParams;
+	"mobile.guard.scope_reports": { org: string | number };
+	"mobile.guard.scope_review_cycles": NoParams;
+	"mobile.guard.scope_task_time": NoParams;
+	"mobile.guard.scope_trace_detail": NoParams;
+	"mobile.guard.screen_declined": { org: string | number };
+	"mobile.guard.screen_failed": NoParams;
+	"mobile.guard.screen_none": NoParams;
+	"mobile.guard.screen_prompt_changed": { org: string | number };
+	"mobile.guard.screen_revoked": { org: string | number };
+	"mobile.guard.screen_shared": { org: string | number };
+	"mobile.guard.screen_title": NoParams;
+	"mobile.guard.screen_unavailable": NoParams;
+	"mobile.guard.screen_working": NoParams;
+	"mobile.guard.share_again_result": { org: string | number };
+	"mobile.guard.shared_heading": { org: string | number };
+	"mobile.guard.surface_desktop": NoParams;
+	"mobile.guard.surface_mobile": NoParams;
+	"mobile.guard.surface_terminal": NoParams;
 	"mobile.home.chip.effort_chosen": { effort: string | number };
 	"mobile.home.chip.effort_default": { effort: string | number };
 	"mobile.home.chip.effort_default_unnamed": NoParams;
@@ -4760,6 +5001,96 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.computers.wait.tunnel_status": "Radient has the tunnel — {status}.",
 	"mobile.computers.wait.use_computer": "Use this computer",
 	"mobile.computers.your_computer": "Your computer",
+	"mobile.guard.answered_elsewhere": "Answered on another device",
+	"mobile.guard.answered_on": "Answered on {surface}",
+	"mobile.guard.button_decide_later": "Decide later",
+	"mobile.guard.button_dont_share": "Don't share",
+	"mobile.guard.button_keep_current": "Keep current",
+	"mobile.guard.button_keep_sharing": "Keep sharing",
+	"mobile.guard.button_share": "Share",
+	"mobile.guard.button_share_again": "Share again",
+	"mobile.guard.button_share_new": "Share the new items",
+	"mobile.guard.button_stop_sharing": "Stop sharing",
+	"mobile.guard.card_ask_owner": "Ask your owner to upgrade",
+	"mobile.guard.card_body": "Radient Team is for software factories, consulting teams and knowledge work done as a team. Agents share context and hand work between people, and Guard gives admins guardrail stats from members who opt in.",
+	"mobile.guard.card_cta_see": "See Radient Team",
+	"mobile.guard.card_cta_trial": "Start {trial_days}-day free trial",
+	"mobile.guard.card_footer": "Guard collects nothing for {org}.",
+	"mobile.guard.card_footer_account": "Nothing is collected from this account.",
+	"mobile.guard.card_title": "Radient Guard is part of Radient Team",
+	"mobile.guard.computer_line": "This computer: {computer}",
+	"mobile.guard.computers_note": "Stopping sharing applies to all your computers. You can review them in Console.",
+	"mobile.guard.consent_needs_update": "This request includes something this app can’t describe yet, so it can’t be answered here. Update the app, or answer in Local Operator on your computer.",
+	"mobile.guard.consent_not_signable": "Your phone can’t answer this one. Open Local Operator on your computer to choose.",
+	"mobile.guard.disconnected": "Connect to a computer to see Radient Guard.",
+	"mobile.guard.host_old": "This computer’s Local Operator can’t show Radient Guard to your phone yet. Update Local Operator on it to review or stop sharing from here.",
+	"mobile.guard.indicator_not_sharing": "Guard: not sharing with {org}",
+	"mobile.guard.indicator_paused": "Guard: paused, {reason}",
+	"mobile.guard.indicator_paused_plain": "Guard: paused",
+	"mobile.guard.indicator_sharing": "Guard: sharing with {org}",
+	"mobile.guard.indicator_sharing_pending": "Guard: sharing with {org} · new items waiting for your choice",
+	"mobile.guard.indicator_unknown": "Guard: status isn’t available here",
+	"mobile.guard.indicator_waiting": "Guard: {org} is waiting for your choice",
+	"mobile.guard.indicator_will_ask": "Guard: {org} will ask you again soon",
+	"mobile.guard.intro": "Radient Guard can share guardrail stats from a computer with your Team organization, only after you agree. Local Operator on that computer carries out your answer; this phone only relays it.",
+	"mobile.guard.load_error": "Couldn’t read Radient Guard from this computer. Check the connection and try again.",
+	"mobile.guard.loading": "Checking Radient Guard…",
+	"mobile.guard.prompt_background": "After you answer, this runs in the background. You can stop anytime in Settings or in Console.",
+	"mobile.guard.prompt_never_sent": "Never sent: file paths, commands, prompts, code, model output or tool arguments.",
+	"mobile.guard.prompt_reason_new_device": "This is a new computer for your Radient account. You choose per computer, so choose for this one.",
+	"mobile.guard.prompt_reason_new_org": "{org} turned on Radient Guard.",
+	"mobile.guard.prompt_reason_plan_gap": "{org}'s Team plan lapsed and restarted, so Guard needs your answer again. Nothing is shared until you choose.",
+	"mobile.guard.prompt_reason_reactivated": "{org} turned Radient Guard back on. Nothing is shared until you choose again.",
+	"mobile.guard.prompt_reason_rejoined": "You rejoined {org}. Your earlier answer ended when you left, so choose again.",
+	"mobile.guard.prompt_reason_widened": "{org} wants to collect more: {scopes}. Until you choose, Guard keeps sharing only what you already agreed to.",
+	"mobile.guard.prompt_title": "Share Guard stats with {org}?",
+	"mobile.guard.prompt_visibility": "Admins see totals only when at least 5 people contributed, never your own numbers.",
+	"mobile.guard.prompt_visibility_admin_share": "Admins see totals only when at least 5 people contributed. With step-by-step timing shared, they can also see your own timing, but not what the steps contained.",
+	"mobile.guard.prompt_visibility_admin_share_posture": "Admins see totals only when at least 5 people contributed, and setup-check estimates only when at least 20 did. With step-by-step timing shared, they can also see your own timing, but not what the steps contained.",
+	"mobile.guard.prompt_visibility_posture": "Admins see totals only when at least 5 people contributed, and setup-check estimates only when at least 20 did. Never your own numbers.",
+	"mobile.guard.prompt_would_send": "From this computer, Guard would send:",
+	"mobile.guard.reason_console_revoked": "you stopped sharing from Console on {date}",
+	"mobile.guard.reason_entitlement_lapsed": "Team plan inactive",
+	"mobile.guard.reason_membership_ended": "you're no longer in {org}",
+	"mobile.guard.reason_org_off": "turned off by {org}",
+	"mobile.guard.reason_revoke_pending": "will stop once Radient confirms",
+	"mobile.guard.reason_scope_revoked": "you stopped sharing",
+	"mobile.guard.reconnecting": "Reconnecting to your computer…",
+	"mobile.guard.review": "Review",
+	"mobile.guard.revoke_body": "Guard stops sending from all your computers now.",
+	"mobile.guard.revoke_body_trace": "Guard stops sending from all your computers now and deletes your step-by-step timing. Copies in backups are gone within {backup_days} days.",
+	"mobile.guard.revoke_pending_result": "Stopped on this computer. Radient hasn’t confirmed yet, and Guard will keep trying.",
+	"mobile.guard.revoke_retained": "Other records you already sent stay until they expire: stats after 90 days, reports after 180 days.",
+	"mobile.guard.revoke_title": "Stop sharing with {org}?",
+	"mobile.guard.revoke_totals": "Past totals that included you stay published. They never show you on your own.",
+	"mobile.guard.scope_admin_share": "Let {org} admins see your step-by-step timing",
+	"mobile.guard.scope_decisions": "Guardrail results: whether each check allowed, asked or blocked, and the rule type",
+	"mobile.guard.scope_label_admin_share": "admin view of your timing",
+	"mobile.guard.scope_label_decisions": "guardrail results",
+	"mobile.guard.scope_label_posture": "setup checks",
+	"mobile.guard.scope_label_reports": "reports",
+	"mobile.guard.scope_label_review_cycles": "review rounds",
+	"mobile.guard.scope_label_task_time": "task time",
+	"mobile.guard.scope_label_trace_detail": "step-by-step timing",
+	"mobile.guard.scope_posture": "Setup checks: whether recommended settings are on. Each computer randomises its answers before they leave, so admins see estimates, not anyone's real answer. Admins may be able to tell when one of these settings changes on your computer.",
+	"mobile.guard.scope_reports": "Reports you choose to send, such as a suspected exposed key or too much blocking. {org} admins see only how many of each kind were sent, and only for a kind that at least 5 people sent that day. No one at {org} can open your report. Radient staff open a report only when you ask us for help with it or the law requires it.",
+	"mobile.guard.scope_review_cycles": "Review rounds per change, and whether it merged or closed",
+	"mobile.guard.scope_task_time": "Task time, in ranges such as 5–15 min",
+	"mobile.guard.scope_trace_detail": "Step-by-step timing of your tasks, without content (kept 14 days)",
+	"mobile.guard.screen_declined": "Not sharing with {org}.",
+	"mobile.guard.screen_failed": "Your choice wasn't saved, so nothing changed. Try again.",
+	"mobile.guard.screen_none": "No organization has asked you to share Guard stats.",
+	"mobile.guard.screen_prompt_changed": "{org} changed this request. Check the new one below.",
+	"mobile.guard.screen_revoked": "Stopped sharing with {org}.",
+	"mobile.guard.screen_shared": "Sharing with {org} from this computer.",
+	"mobile.guard.screen_title": "Radient Guard",
+	"mobile.guard.screen_unavailable": "Guard can't read its settings on this computer. Nothing was shared or sent from this screen.",
+	"mobile.guard.screen_working": "Working…",
+	"mobile.guard.share_again_result": "{org} will ask you again soon. Look for it in Notifications.",
+	"mobile.guard.shared_heading": "Shared with {org} from this computer:",
+	"mobile.guard.surface_desktop": "the desktop app",
+	"mobile.guard.surface_mobile": "your phone",
+	"mobile.guard.surface_terminal": "the terminal",
 	"mobile.home.chip.effort_chosen": "Effort, {effort}, chosen for this conversation",
 	"mobile.home.chip.effort_default": "Effort, {effort}, this computer's default",
 	"mobile.home.chip.effort_default_unnamed": "Effort, this computer's configured level",
@@ -6259,6 +6590,96 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.computers.wait.tunnel_status": { role: "status", note: "Second step of the add-a-computer wait panel. {status} is a LOCALISED status label chosen by tunnel-status-key.ts from Radient's own tunnel-status word (active -> mobile.computers.badge.active; provisioning, suspended, disabled, revoked and unknown -> mobile.computers.status.*). It is a lower-case predicate word placed after the dash, so the sentence must read naturally with a lower-case word or short phrase there. Ends with a full stop; keep {status} unchanged." },
 	"mobile.computers.wait.use_computer": { role: "button", note: "Primary button under the add-a-computer wait panel once the computer answered; switches the app to it. Imperative, short." },
 	"mobile.computers.your_computer": { role: "meta", note: "Names the reader's computer inside connection-failure headlines on the Computers screen when the failing computer has no name of its own (a Radient route, before the list knows it). The same text fills {subject} in headlines such as \"{subject} is not answering.\" and \"The relay is not running on {subject}.\", so it appears both at the start of a sentence and after a preposition: choose a form that reads in both places. Capitalised in English because it usually starts the sentence." },
+	"mobile.guard.answered_elsewhere": { role: "status", note: "Used when the host says another surface answered the request but names none this build knows. Mirrors the shape of 'Answered on {surface}'." },
+	"mobile.guard.answered_on": { role: "status", note: "{surface} is one of the surface_* strings (already localized), e.g. 'the desktop app'. Mirrors the core TUI key tui.guard.answered_on (same words on every surface; audited there)." },
+	"mobile.guard.button_decide_later": { role: "button", note: "Mirrors the core TUI key tui.guard.button_decide_later (same words on every surface; audited there)." },
+	"mobile.guard.button_dont_share": { role: "button", note: "Mirrors the core TUI key tui.guard.button_dont_share (same words on every surface; audited there)." },
+	"mobile.guard.button_keep_current": { role: "button", note: "Mirrors the core TUI key tui.guard.button_keep_current (same words on every surface; audited there)." },
+	"mobile.guard.button_keep_sharing": { role: "button", note: "Mirrors the core TUI key tui.guard.button_keep_sharing (same words on every surface; audited there)." },
+	"mobile.guard.button_share": { role: "button", note: "Mirrors the core TUI key tui.guard.button_share (same words on every surface; audited there)." },
+	"mobile.guard.button_share_again": { role: "button", note: "Mirrors the core TUI key tui.guard.button_share_again (same words on every surface; audited there)." },
+	"mobile.guard.button_share_new": { role: "button", note: "Mirrors the core TUI key tui.guard.button_share_new (same words on every surface; audited there)." },
+	"mobile.guard.button_stop_sharing": { role: "button", note: "Mirrors the core TUI key tui.guard.button_stop_sharing (same words on every surface; audited there)." },
+	"mobile.guard.card_ask_owner": { role: "meta", note: "Admin variant of the non-Team card: replaces the call to action. Plain text, not a button; an admin cannot buy for the org." },
+	"mobile.guard.card_body": { role: "help", note: "Mirrors the core TUI key tui.guard.card_body (same words on every surface; audited there)." },
+	"mobile.guard.card_cta_see": { role: "button", note: "Mirrors the core TUI key tui.guard.card_cta_see (same words on every surface; audited there)." },
+	"mobile.guard.card_cta_trial": { role: "button", note: "{trial_days} is a whole number of days from the server (e.g. 30); never a literal. Mirrors the core TUI key tui.guard.card_cta_trial (same words on every surface; audited there)." },
+	"mobile.guard.card_footer": { role: "help", note: "{org} is the display name of the organization this card is about (one that is not on Radient Team). The line is scoped to that org on purpose: the same account may share with a different Team org from this computer. Mirrors the core TUI key tui.guard.card_footer (same words on every surface; audited there)." },
+	"mobile.guard.card_footer_account": { role: "help", note: "Non-Team card footer when the organization's name is not known (RFC copy). When it is known the org-scoped core line is used instead." },
+	"mobile.guard.card_title": { role: "heading", note: "Mirrors the core TUI key tui.guard.card_title (same words on every surface; audited there)." },
+	"mobile.guard.computer_line": { role: "meta", note: "{computer} is the host's own short name for the computer the phone is connected to, passed through unchanged." },
+	"mobile.guard.computers_note": { role: "help", note: "Matches the revoke semantics: a stop is per account and organization, not per computer. 'Console' is the web product name." },
+	"mobile.guard.consent_needs_update": { role: "status", note: "The card asks for a data scope this app version has no description for. The phone must never let a member agree to something it cannot show, so it refuses to offer an answer. Nothing is shared." },
+	"mobile.guard.consent_not_signable": { role: "status", note: "The host did not offer a signable card for the phone (no operator key on that computer, or already answered). The member answers on the computer. Nothing is shared." },
+	"mobile.guard.disconnected": { role: "status", note: "Shown when the phone has no live connection to a computer. Says nothing about whether anything is shared." },
+	"mobile.guard.host_old": { role: "help", note: "Shown when the computer does not advertise Guard to the phone (older Local Operator). Calm, not an error; nothing is implied about sharing state." },
+	"mobile.guard.indicator_not_sharing": { role: "status", note: "{org} is the organization's display name, verbatim. Mirrors the core TUI key tui.guard.indicator_not_sharing (same words on every surface; audited there)." },
+	"mobile.guard.indicator_paused": { role: "status", note: "{reason} is one of the reason_* strings (already localized), lower-case continuation. Mirrors the core TUI key tui.guard.indicator_paused (same words on every surface; audited there)." },
+	"mobile.guard.indicator_paused_plain": { role: "status", note: "No placeholders; never name a cause. Mirrors the core TUI key tui.guard.indicator_paused_plain (same words on every surface; audited there)." },
+	"mobile.guard.indicator_sharing": { role: "status", note: "{org} is the organization's display name, verbatim. Mirrors the core TUI key tui.guard.indicator_sharing (same words on every surface; audited there)." },
+	"mobile.guard.indicator_sharing_pending": { role: "status", note: "{org} is the organization's display name, verbatim. Mirrors the core TUI key tui.guard.indicator_sharing_pending (same words on every surface; audited there)." },
+	"mobile.guard.indicator_unknown": { role: "status", note: "The host sent an organization state this app version does not know. Say nothing about sharing." },
+	"mobile.guard.indicator_waiting": { role: "status", note: "First grant pending: nothing is shared yet. {org} is the organization's display name. Phone variant: the core line names the /guard command." },
+	"mobile.guard.indicator_will_ask": { role: "status", note: "{org} is the organization's display name, verbatim. Mirrors the core TUI key tui.guard.indicator_will_ask (same words on every surface; audited there)." },
+	"mobile.guard.intro": { role: "help", note: "Settings section intro. Must say plainly that consent is given per computer and that the phone cannot grant by itself. 'Team' is the Radient Team plan name; 'Local Operator' is a product name." },
+	"mobile.guard.load_error": { role: "status", note: "Read failed (network or relay error). Must not imply anything is shared or not shared." },
+	"mobile.guard.loading": { role: "status", note: "Read in flight. Asserts nothing about whether the member is sharing." },
+	"mobile.guard.prompt_background": { role: "help", note: "Phone variant of the core prompt line that points at the /guard command; the phone says Settings. 'Console' is the web product name." },
+	"mobile.guard.prompt_never_sent": { role: "help", note: "Mirrors the core TUI key tui.guard.prompt_never_sent (same words on every surface; audited there)." },
+	"mobile.guard.prompt_reason_new_device": { role: "help", note: "Mirrors the core TUI key tui.guard.prompt_reason_new_device (same words on every surface; audited there)." },
+	"mobile.guard.prompt_reason_new_org": { role: "help", note: "{org} is the organization's display name, verbatim. Mirrors the core TUI key tui.guard.prompt_reason_new_org (same words on every surface; audited there)." },
+	"mobile.guard.prompt_reason_plan_gap": { role: "help", note: "{org} is the organization's display name, verbatim. Mirrors the core TUI key tui.guard.prompt_reason_plan_gap (same words on every surface; audited there)." },
+	"mobile.guard.prompt_reason_reactivated": { role: "help", note: "{org} is the organization's display name, verbatim. Mirrors the core TUI key tui.guard.prompt_reason_reactivated (same words on every surface; audited there)." },
+	"mobile.guard.prompt_reason_rejoined": { role: "help", note: "{org} is the organization's display name, verbatim. Mirrors the core TUI key tui.guard.prompt_reason_rejoined (same words on every surface; audited there)." },
+	"mobile.guard.prompt_reason_widened": { role: "help", note: "{org} is the organization's display name, verbatim. {scopes} is a comma-separated list of already-localized scope names. Mirrors the core TUI key tui.guard.prompt_reason_widened (same words on every surface; audited there)." },
+	"mobile.guard.prompt_title": { role: "heading", note: "{org} is the organization's display name, verbatim. Mirrors the core TUI key tui.guard.prompt_title (same words on every surface; audited there)." },
+	"mobile.guard.prompt_visibility": { role: "help", note: "Mirrors the core TUI key tui.guard.prompt_visibility (same words on every surface; audited there)." },
+	"mobile.guard.prompt_visibility_admin_share": { role: "help", note: "Mirrors the core TUI key tui.guard.prompt_visibility_admin_share (same words on every surface; audited there)." },
+	"mobile.guard.prompt_visibility_admin_share_posture": { role: "help", note: "Mirrors the core TUI key tui.guard.prompt_visibility_admin_share_posture (same words on every surface; audited there)." },
+	"mobile.guard.prompt_visibility_posture": { role: "help", note: "Mirrors the core TUI key tui.guard.prompt_visibility_posture (same words on every surface; audited there)." },
+	"mobile.guard.prompt_would_send": { role: "help", note: "Mirrors the core TUI key tui.guard.prompt_would_send (same words on every surface; audited there)." },
+	"mobile.guard.reason_console_revoked": { role: "status", note: "{date} is an ISO date (YYYY-MM-DD). Lower-case continuation. Mirrors the core TUI key tui.guard.reason_console_revoked (same words on every surface; audited there)." },
+	"mobile.guard.reason_entitlement_lapsed": { role: "status", note: "Continues 'Guard: paused, …' so starts lower-case. Mirrors the core TUI key tui.guard.reason_entitlement_lapsed (same words on every surface; audited there)." },
+	"mobile.guard.reason_membership_ended": { role: "status", note: "{org} is the organization's display name, verbatim. Continues 'Guard: paused, …' so starts lower-case. Mirrors the core TUI key tui.guard.reason_membership_ended (same words on every surface; audited there)." },
+	"mobile.guard.reason_org_off": { role: "status", note: "{org} is the organization's display name, verbatim. Continues 'Guard: paused, …' so starts lower-case. Mirrors the core TUI key tui.guard.reason_org_off (same words on every surface; audited there)." },
+	"mobile.guard.reason_revoke_pending": { role: "status", note: "Continues 'Guard: paused, …' so starts lower-case. Mirrors the core TUI key tui.guard.reason_revoke_pending (same words on every surface; audited there)." },
+	"mobile.guard.reason_scope_revoked": { role: "status", note: "Continues 'Guard: paused, …' so starts lower-case. Mirrors the core TUI key tui.guard.reason_scope_revoked (same words on every surface; audited there)." },
+	"mobile.guard.reconnecting": { role: "status", note: "Settings section while the phone's live connection to the computer is degraded (it still has a route, so this is not 'connect to a computer'). Asserts nothing about whether anything is shared." },
+	"mobile.guard.review": { role: "button", note: "Opens the consent card from the inbox row. Does not answer anything." },
+	"mobile.guard.revoke_body": { role: "help", note: "Mirrors the core TUI key tui.guard.revoke_body (same words on every surface; audited there)." },
+	"mobile.guard.revoke_body_trace": { role: "help", note: "{backup_days} is a whole number of days (RFC §5.4 X). Not rendered until X is measured. Mirrors the core TUI key tui.guard.revoke_body_trace (same words on every surface; audited there)." },
+	"mobile.guard.revoke_pending_result": { role: "status", note: "Local stop committed but Radient was not reached (host status revoke_pending). Truthful: this install is no longer sharing; the server-side confirmation is pending." },
+	"mobile.guard.revoke_retained": { role: "help", note: "Mirrors the core TUI key tui.guard.revoke_retained (same words on every surface; audited there)." },
+	"mobile.guard.revoke_title": { role: "heading", note: "{org} is the organization's display name, verbatim. Mirrors the core TUI key tui.guard.revoke_title (same words on every surface; audited there)." },
+	"mobile.guard.revoke_totals": { role: "help", note: "Mirrors the core TUI key tui.guard.revoke_totals (same words on every surface; audited there)." },
+	"mobile.guard.scope_admin_share": { role: "help", note: "{org} is the organization's display name, verbatim. Mirrors the core TUI key tui.guard.scope_admin_share (same words on every surface; audited there)." },
+	"mobile.guard.scope_decisions": { role: "help", note: "Mirrors the core TUI key tui.guard.scope_decisions (same words on every surface; audited there)." },
+	"mobile.guard.scope_label_admin_share": { role: "help", note: "Lower-case list item inside a sentence. Mirrors the core TUI key tui.guard.scope_label_admin_share (same words on every surface; audited there)." },
+	"mobile.guard.scope_label_decisions": { role: "help", note: "Lower-case list item inside a sentence. Mirrors the core TUI key tui.guard.scope_label_decisions (same words on every surface; audited there)." },
+	"mobile.guard.scope_label_posture": { role: "help", note: "Lower-case list item inside a sentence. Mirrors the core TUI key tui.guard.scope_label_posture (same words on every surface; audited there)." },
+	"mobile.guard.scope_label_reports": { role: "help", note: "Lower-case list item inside a sentence. Mirrors the core TUI key tui.guard.scope_label_reports (same words on every surface; audited there)." },
+	"mobile.guard.scope_label_review_cycles": { role: "help", note: "Lower-case list item inside a sentence. Mirrors the core TUI key tui.guard.scope_label_review_cycles (same words on every surface; audited there)." },
+	"mobile.guard.scope_label_task_time": { role: "help", note: "Lower-case list item inside a sentence. Mirrors the core TUI key tui.guard.scope_label_task_time (same words on every surface; audited there)." },
+	"mobile.guard.scope_label_trace_detail": { role: "help", note: "Lower-case list item inside a sentence. Mirrors the core TUI key tui.guard.scope_label_trace_detail (same words on every surface; audited there)." },
+	"mobile.guard.scope_posture": { role: "help", note: "Mirrors the core TUI key tui.guard.scope_posture (same words on every surface; audited there)." },
+	"mobile.guard.scope_reports": { role: "help", note: "{org} is the organization's display name, verbatim. Mirrors the core TUI key tui.guard.scope_reports (same words on every surface; audited there)." },
+	"mobile.guard.scope_review_cycles": { role: "help", note: "Mirrors the core TUI key tui.guard.scope_review_cycles (same words on every surface; audited there)." },
+	"mobile.guard.scope_task_time": { role: "help", note: "Mirrors the core TUI key tui.guard.scope_task_time (same words on every surface; audited there)." },
+	"mobile.guard.scope_trace_detail": { role: "help", note: "Mirrors the core TUI key tui.guard.scope_trace_detail (same words on every surface; audited there)." },
+	"mobile.guard.screen_declined": { role: "status", note: "{org} is the organization's display name, verbatim. Mirrors the core TUI key tui.guard.screen_declined (same words on every surface; audited there)." },
+	"mobile.guard.screen_failed": { role: "status", note: "No placeholders. Mirrors the core TUI key tui.guard.screen_failed (same words on every surface; audited there)." },
+	"mobile.guard.screen_none": { role: "status", note: "Mirrors the core TUI key tui.guard.screen_none (same words on every surface; audited there)." },
+	"mobile.guard.screen_prompt_changed": { role: "status", note: "{org} is the organization's display name. The new request is rendered directly below this line. Mirrors the core TUI key tui.guard.screen_prompt_changed (same words on every surface; audited there)." },
+	"mobile.guard.screen_revoked": { role: "status", note: "{org} is the organization's display name, verbatim. Mirrors the core TUI key tui.guard.screen_revoked (same words on every surface; audited there)." },
+	"mobile.guard.screen_shared": { role: "status", note: "{org} is the organization's display name, verbatim. Mirrors the core TUI key tui.guard.screen_shared (same words on every surface; audited there)." },
+	"mobile.guard.screen_title": { role: "heading", note: "Mirrors the core TUI key tui.guard.screen_title (same words on every surface; audited there)." },
+	"mobile.guard.screen_unavailable": { role: "status", note: "No placeholders. Says only what this screen did not do; a local stop may already have been saved. Mirrors the core TUI key tui.guard.screen_unavailable (same words on every surface; audited there)." },
+	"mobile.guard.screen_working": { role: "status", note: "Mirrors the core TUI key tui.guard.screen_working (same words on every surface; audited there)." },
+	"mobile.guard.share_again_result": { role: "status", note: "After 'Share again': the request is not a push; it appears as a row in the in-app Notifications inbox. 'Notifications' is that screen's name." },
+	"mobile.guard.shared_heading": { role: "meta", note: "Heading above the short labels of the scopes currently shared. {org} is the organization's display name." },
+	"mobile.guard.surface_desktop": { role: "status", note: "Completes 'Answered on {surface}'. Mirrors the core TUI key tui.guard.surface_desktop (same words on every surface; audited there)." },
+	"mobile.guard.surface_mobile": { role: "status", note: "Completes 'Answered on {surface}'. Mirrors the core TUI key tui.guard.surface_mobile (same words on every surface; audited there)." },
+	"mobile.guard.surface_terminal": { role: "status", note: "Fills {surface} in 'Answered on {surface}' when the answer was given in the Local Operator terminal app. Not 'this terminal': the reader is on a phone." },
 	"mobile.home.chip.effort_chosen": { role: "meta", note: "Spoken label of the effort chip when the reader chose a level. {effort} is the translated level name. New in the three-pickers change; the non-English text awaits the translation audit." },
 	"mobile.home.chip.effort_default": { role: "meta", note: "Spoken label of the effort chip when the computer's configured level applies. {effort} is the translated level name. New in the three-pickers change; the non-English text awaits the translation audit." },
 	"mobile.home.chip.effort_default_unnamed": { role: "meta", note: "Spoken label of the effort chip when the computer's configured level applies but the app cannot name it (another model than the default). New in the three-pickers change; the non-English text awaits the translation audit." },
@@ -7772,6 +8193,96 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.wait.tunnel_status": "Radient ya tiene el túnel — {status}.",
 		"mobile.computers.wait.use_computer": "Usar esta máquina",
 		"mobile.computers.your_computer": "Tu máquina",
+		"mobile.guard.answered_elsewhere": "Respondido desde otro dispositivo",
+		"mobile.guard.answered_on": "Respondido desde {surface}",
+		"mobile.guard.button_decide_later": "Decidir más tarde",
+		"mobile.guard.button_dont_share": "No compartir",
+		"mobile.guard.button_keep_current": "Mantener lo actual",
+		"mobile.guard.button_keep_sharing": "Seguir compartiendo",
+		"mobile.guard.button_share": "Compartir",
+		"mobile.guard.button_share_again": "Volver a compartir",
+		"mobile.guard.button_share_new": "Compartir lo nuevo",
+		"mobile.guard.button_stop_sharing": "Dejar de compartir",
+		"mobile.guard.card_ask_owner": "Pide a quien sea propietario de tu organización que cambie a un plan superior",
+		"mobile.guard.card_body": "Radient Team es para fábricas de software, equipos de consultoría y trabajo intelectual en equipo. Los agentes comparten contexto y se pasan el trabajo entre personas, y Guard da a los administradores estadísticas de protecciones de los miembros que lo aceptan.",
+		"mobile.guard.card_cta_see": "Ver Radient Team",
+		"mobile.guard.card_cta_trial": "Empezar prueba gratuita de {trial_days} días",
+		"mobile.guard.card_footer": "Guard no recopila nada para {org}.",
+		"mobile.guard.card_footer_account": "No se recopila nada de esta cuenta.",
+		"mobile.guard.card_title": "Radient Guard forma parte de Radient Team",
+		"mobile.guard.computer_line": "Esta máquina: {computer}",
+		"mobile.guard.computers_note": "Dejar de compartir se aplica a todas tus máquinas. Puedes revisarlas en Console.",
+		"mobile.guard.consent_needs_update": "Esta solicitud incluye algo que la app aún no sabe describir, así que no se puede responder aquí. Actualiza la app o responde en Local Operator en tu máquina.",
+		"mobile.guard.consent_not_signable": "Tu teléfono no puede responder a esta solicitud. Abre Local Operator en tu máquina para elegir.",
+		"mobile.guard.disconnected": "Conéctate a una máquina para ver Radient Guard.",
+		"mobile.guard.host_old": "Local Operator en esta máquina todavía no puede mostrar Radient Guard en tu teléfono. Actualízalo para revisar o dejar de compartir desde aquí.",
+		"mobile.guard.indicator_not_sharing": "Guard: sin compartir con {org}",
+		"mobile.guard.indicator_paused": "Guard: en pausa, {reason}",
+		"mobile.guard.indicator_paused_plain": "Guard: en pausa",
+		"mobile.guard.indicator_sharing": "Guard: compartiendo con {org}",
+		"mobile.guard.indicator_sharing_pending": "Guard: compartiendo con {org} · elementos nuevos esperan tu decisión",
+		"mobile.guard.indicator_unknown": "Guard: el estado no está disponible aquí",
+		"mobile.guard.indicator_waiting": "Guard: {org} espera tu decisión",
+		"mobile.guard.indicator_will_ask": "Guard: {org} te volverá a preguntar pronto",
+		"mobile.guard.intro": "Radient Guard puede compartir estadísticas de protecciones de una máquina con tu organización Team, solo después de que aceptes. Local Operator en esa máquina aplica tu respuesta; este teléfono solo la transmite.",
+		"mobile.guard.load_error": "No se pudo leer Radient Guard desde esta máquina. Comprueba la conexión e inténtalo de nuevo.",
+		"mobile.guard.loading": "Comprobando Radient Guard…",
+		"mobile.guard.prompt_background": "Si compartes datos, Guard los envía en segundo plano. Puedes dejar de compartir en cualquier momento desde Ajustes o Console.",
+		"mobile.guard.prompt_never_sent": "Nunca se envían: rutas de archivos, comandos, prompts, código, salida del modelo ni argumentos de herramientas.",
+		"mobile.guard.prompt_reason_new_device": "Esta es una máquina nueva para tu cuenta de Radient. La decisión es por máquina, así que decide para esta.",
+		"mobile.guard.prompt_reason_new_org": "{org} activó Radient Guard.",
+		"mobile.guard.prompt_reason_plan_gap": "El plan Team de {org} caducó y se reactivó, así que Guard necesita tu respuesta de nuevo. No se comparte nada hasta que decidas.",
+		"mobile.guard.prompt_reason_reactivated": "{org} volvió a activar Radient Guard. No se comparte nada hasta que vuelvas a decidir.",
+		"mobile.guard.prompt_reason_rejoined": "Volviste a unirte a {org}. Tu respuesta anterior terminó cuando saliste, así que decide de nuevo.",
+		"mobile.guard.prompt_reason_widened": "{org} quiere recopilar más: {scopes}. Hasta que decidas, Guard solo comparte lo que ya aceptaste.",
+		"mobile.guard.prompt_title": "¿Compartir estadísticas de Guard con {org}?",
+		"mobile.guard.prompt_visibility": "Los administradores solo ven totales cuando contribuyeron al menos 5 personas, nunca tus propias cifras.",
+		"mobile.guard.prompt_visibility_admin_share": "Los administradores solo ven totales cuando contribuyeron al menos 5 personas. Si compartes los tiempos paso a paso, también pueden ver tus propios tiempos, pero no lo que contenían los pasos.",
+		"mobile.guard.prompt_visibility_admin_share_posture": "Los administradores solo ven totales cuando contribuyeron al menos 5 personas, y estimaciones de las comprobaciones de configuración solo cuando contribuyeron al menos 20. Si compartes los tiempos paso a paso, también pueden ver tus propios tiempos, pero no lo que contenían los pasos.",
+		"mobile.guard.prompt_visibility_posture": "Los administradores solo ven totales cuando contribuyeron al menos 5 personas, y estimaciones de las comprobaciones de configuración solo cuando contribuyeron al menos 20. Nunca tus propias cifras.",
+		"mobile.guard.prompt_would_send": "Desde esta máquina, Guard enviaría:",
+		"mobile.guard.reason_console_revoked": "dejaste de compartir desde Console el {date}",
+		"mobile.guard.reason_entitlement_lapsed": "plan Team inactivo",
+		"mobile.guard.reason_membership_ended": "ya no perteneces a {org}",
+		"mobile.guard.reason_org_off": "desactivado por {org}",
+		"mobile.guard.reason_revoke_pending": "se detendrá cuando Radient lo confirme",
+		"mobile.guard.reason_scope_revoked": "dejaste de compartir",
+		"mobile.guard.reconnecting": "Reconectando con tu máquina…",
+		"mobile.guard.review": "Revisar",
+		"mobile.guard.revoke_body": "Guard deja de enviar desde todas tus máquinas ahora mismo.",
+		"mobile.guard.revoke_body_trace": "Guard deja de enviar desde todas tus máquinas ahora mismo y elimina tus tiempos paso a paso. Las copias en respaldos desaparecen en un plazo de {backup_days} días.",
+		"mobile.guard.revoke_pending_result": "Dejaste de compartir desde esta máquina. Radient aún no ha confirmado el cambio y Guard seguirá intentando obtener la confirmación.",
+		"mobile.guard.revoke_retained": "Los demás registros que ya enviaste se conservan hasta que caducan: las estadísticas a los 90 días y los informes a los 180 días.",
+		"mobile.guard.revoke_title": "¿Dejar de compartir con {org}?",
+		"mobile.guard.revoke_totals": "Los totales anteriores que te incluían siguen publicados. Nunca te muestran por separado.",
+		"mobile.guard.scope_admin_share": "Permitir que los administradores de {org} vean tus tiempos paso a paso",
+		"mobile.guard.scope_decisions": "Resultados de las protecciones: si cada comprobación permitió, preguntó o bloqueó, y el tipo de regla",
+		"mobile.guard.scope_label_admin_share": "acceso de los administradores a tus tiempos",
+		"mobile.guard.scope_label_decisions": "resultados de las protecciones",
+		"mobile.guard.scope_label_posture": "comprobaciones de configuración",
+		"mobile.guard.scope_label_reports": "informes",
+		"mobile.guard.scope_label_review_cycles": "rondas de revisión",
+		"mobile.guard.scope_label_task_time": "tiempo por tarea",
+		"mobile.guard.scope_label_trace_detail": "tiempos paso a paso",
+		"mobile.guard.scope_posture": "Comprobaciones de configuración: si los ajustes recomendados están activados. Cada máquina aleatoriza sus respuestas antes de enviarlas, así que los administradores ven estimaciones, no la respuesta real de nadie. Es posible que los administradores noten cuándo cambia uno de estos ajustes en tu máquina.",
+		"mobile.guard.scope_reports": "Los informes que decidas enviar, como una clave posiblemente expuesta o demasiados bloqueos. Los administradores de {org} solo ven cuántos se enviaron de cada tipo, y solo de un tipo que enviaron al menos 5 personas ese día. Nadie en {org} puede abrir tu informe. El personal de Radient solo abre un informe si nos pides ayuda con él o si la ley lo exige.",
+		"mobile.guard.scope_review_cycles": "Rondas de revisión por cambio, y si se hizo merge o se cerró",
+		"mobile.guard.scope_task_time": "Tiempo por tarea, en rangos como 5–15 min",
+		"mobile.guard.scope_trace_detail": "Tiempos paso a paso de tus tareas, sin contenido (se conservan 14 días)",
+		"mobile.guard.screen_declined": "Sin compartir con {org}.",
+		"mobile.guard.screen_failed": "Tu decisión no se guardó, así que no cambió nada. Vuelve a intentarlo.",
+		"mobile.guard.screen_none": "Ninguna organización te ha pedido compartir estadísticas de Guard.",
+		"mobile.guard.screen_prompt_changed": "{org} cambió esta solicitud. Revisa la nueva a continuación.",
+		"mobile.guard.screen_revoked": "Dejaste de compartir con {org}.",
+		"mobile.guard.screen_shared": "Compartiendo con {org} desde esta máquina.",
+		"mobile.guard.screen_title": "Radient Guard",
+		"mobile.guard.screen_unavailable": "Guard no puede leer su configuración en esta máquina. No se compartió ni envió nada desde esta pantalla.",
+		"mobile.guard.screen_working": "Procesando…",
+		"mobile.guard.share_again_result": "{org} volverá a preguntarte pronto. Busca la solicitud en Notificaciones.",
+		"mobile.guard.shared_heading": "Compartido con {org} desde esta máquina:",
+		"mobile.guard.surface_desktop": "la aplicación de escritorio",
+		"mobile.guard.surface_mobile": "tu teléfono",
+		"mobile.guard.surface_terminal": "la terminal",
 		"mobile.home.chip.effort_chosen": "Esfuerzo, {effort}, elegido para esta conversación",
 		"mobile.home.chip.effort_default": "Esfuerzo, {effort}, predeterminado de esta máquina",
 		"mobile.home.chip.effort_default_unnamed": "Esfuerzo, el nivel configurado en esta máquina",
@@ -9269,6 +9780,96 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.wait.tunnel_status": "Radient dispose du tunnel — {status}.",
 		"mobile.computers.wait.use_computer": "Utiliser cet ordinateur",
 		"mobile.computers.your_computer": "Votre ordinateur",
+		"mobile.guard.answered_elsewhere": "Réponse donnée depuis un autre appareil",
+		"mobile.guard.answered_on": "Réponse donnée depuis {surface}",
+		"mobile.guard.button_decide_later": "Décider plus tard",
+		"mobile.guard.button_dont_share": "Ne pas partager",
+		"mobile.guard.button_keep_current": "Garder l’actuel",
+		"mobile.guard.button_keep_sharing": "Continuer le partage",
+		"mobile.guard.button_share": "Partager",
+		"mobile.guard.button_share_again": "Partager à nouveau",
+		"mobile.guard.button_share_new": "Partager les nouveaux éléments",
+		"mobile.guard.button_stop_sharing": "Arrêter le partage",
+		"mobile.guard.card_ask_owner": "Demandez au propriétaire de l’organisation de passer à l’offre supérieure",
+		"mobile.guard.card_body": "Radient Team s’adresse aux usines logicielles, aux équipes de conseil et au travail intellectuel mené en équipe. Les agents partagent le contexte et font circuler le travail entre les personnes, et Guard fournit aux administrateurs des statistiques de garde-fous issues des membres qui l’acceptent.",
+		"mobile.guard.card_cta_see": "Découvrir Radient Team",
+		"mobile.guard.card_cta_trial": "Démarrer l’essai gratuit de {trial_days} jours",
+		"mobile.guard.card_footer": "Guard ne collecte rien pour {org}.",
+		"mobile.guard.card_footer_account": "Rien n’est collecté depuis ce compte.",
+		"mobile.guard.card_title": "Radient Guard fait partie de Radient Team",
+		"mobile.guard.computer_line": "Cet ordinateur : {computer}",
+		"mobile.guard.computers_note": "L’arrêt du partage s’applique à tous vos ordinateurs. Vous pouvez les consulter dans Console.",
+		"mobile.guard.consent_needs_update": "Cette demande contient un élément que l’application ne sait pas encore décrire ; il est donc impossible d’y répondre ici. Mettez l’application à jour ou répondez dans Local Operator sur votre ordinateur.",
+		"mobile.guard.consent_not_signable": "Votre téléphone ne peut pas répondre à cette demande. Ouvrez Local Operator sur votre ordinateur pour choisir.",
+		"mobile.guard.disconnected": "Connectez-vous à un ordinateur pour voir Radient Guard.",
+		"mobile.guard.host_old": "Local Operator sur cet ordinateur ne peut pas encore afficher Radient Guard sur votre téléphone. Mettez-le à jour pour examiner ou arrêter le partage d’ici.",
+		"mobile.guard.indicator_not_sharing": "Guard : pas de partage avec {org}",
+		"mobile.guard.indicator_paused": "Guard : en pause, {reason}",
+		"mobile.guard.indicator_paused_plain": "Guard : en pause",
+		"mobile.guard.indicator_sharing": "Guard : partage avec {org}",
+		"mobile.guard.indicator_sharing_pending": "Guard : partage avec {org} · nouveaux éléments en attente de votre choix",
+		"mobile.guard.indicator_unknown": "Guard : l’état n’est pas disponible ici",
+		"mobile.guard.indicator_waiting": "Guard : {org} attend votre choix",
+		"mobile.guard.indicator_will_ask": "Guard : {org} vous redemandera bientôt",
+		"mobile.guard.intro": "Radient Guard peut partager des statistiques de garde-fous depuis un ordinateur avec votre organisation Team, uniquement après votre accord. Local Operator sur cet ordinateur applique votre réponse ; ce téléphone ne fait que la transmettre.",
+		"mobile.guard.load_error": "Impossible de lire Radient Guard depuis cet ordinateur. Vérifiez la connexion et réessayez.",
+		"mobile.guard.loading": "Vérification de Radient Guard…",
+		"mobile.guard.prompt_background": "Si vous choisissez de partager vos données, Guard les envoie en arrière-plan. Vous pouvez arrêter le partage à tout moment dans Paramètres ou dans Console.",
+		"mobile.guard.prompt_never_sent": "Jamais envoyés : chemins de fichiers, commandes, prompts, code, sorties du modèle ou arguments d’outils.",
+		"mobile.guard.prompt_reason_new_device": "C’est un nouvel ordinateur pour votre compte Radient. Le choix se fait ordinateur par ordinateur : faites-le pour celui-ci.",
+		"mobile.guard.prompt_reason_new_org": "{org} a activé Radient Guard.",
+		"mobile.guard.prompt_reason_plan_gap": "L’offre Team de {org} a expiré puis redémarré : Guard a donc de nouveau besoin de votre réponse. Rien n’est partagé tant que vous n’avez pas choisi.",
+		"mobile.guard.prompt_reason_reactivated": "{org} a réactivé Radient Guard. Rien n’est partagé tant que vous n’avez pas choisi à nouveau.",
+		"mobile.guard.prompt_reason_rejoined": "Vous avez rejoint {org} à nouveau. Votre réponse précédente a pris fin à votre départ : choisissez de nouveau.",
+		"mobile.guard.prompt_reason_widened": "{org} souhaite collecter davantage : {scopes}. Tant que vous n’avez pas choisi, Guard ne partage que ce que vous avez déjà accepté.",
+		"mobile.guard.prompt_title": "Partager les statistiques Guard avec {org} ?",
+		"mobile.guard.prompt_visibility": "Les administrateurs ne voient des totaux que si au moins 5 personnes y ont contribué, et jamais vos propres chiffres.",
+		"mobile.guard.prompt_visibility_admin_share": "Les administrateurs ne voient des totaux que si au moins 5 personnes y ont contribué. Si le minutage étape par étape est partagé, ils peuvent aussi voir votre propre minutage, mais pas le contenu des étapes.",
+		"mobile.guard.prompt_visibility_admin_share_posture": "Les administrateurs ne voient des totaux que si au moins 5 personnes y ont contribué, et les estimations des contrôles de configuration que si au moins 20 l’ont fait. Si le minutage étape par étape est partagé, ils peuvent aussi voir votre propre minutage, mais pas le contenu des étapes.",
+		"mobile.guard.prompt_visibility_posture": "Les administrateurs ne voient des totaux que si au moins 5 personnes y ont contribué, et les estimations des contrôles de configuration que si au moins 20 l’ont fait. Jamais vos propres chiffres.",
+		"mobile.guard.prompt_would_send": "Depuis cet ordinateur, Guard enverrait :",
+		"mobile.guard.reason_console_revoked": "vous avez arrêté le partage depuis Console le {date}",
+		"mobile.guard.reason_entitlement_lapsed": "offre Team inactive",
+		"mobile.guard.reason_membership_ended": "vous ne faites plus partie de {org}",
+		"mobile.guard.reason_org_off": "désactivé par {org}",
+		"mobile.guard.reason_revoke_pending": "arrêt dès que Radient aura confirmé",
+		"mobile.guard.reason_scope_revoked": "vous avez arrêté le partage",
+		"mobile.guard.reconnecting": "Reconnexion à votre ordinateur…",
+		"mobile.guard.review": "Examiner",
+		"mobile.guard.revoke_body": "Guard arrête dès maintenant d’envoyer depuis tous vos ordinateurs.",
+		"mobile.guard.revoke_body_trace": "Guard arrête dès maintenant d’envoyer depuis tous vos ordinateurs et supprime votre minutage étape par étape. Les copies dans les sauvegardes disparaissent sous {backup_days} jours.",
+		"mobile.guard.revoke_pending_result": "Le partage est arrêté sur cet ordinateur. Radient n’a pas encore confirmé cet arrêt. Guard continuera de demander confirmation.",
+		"mobile.guard.revoke_retained": "Les autres données déjà envoyées sont conservées jusqu’à expiration : 90 jours pour les statistiques et 180 jours pour les signalements.",
+		"mobile.guard.revoke_title": "Arrêter le partage avec {org} ?",
+		"mobile.guard.revoke_totals": "Les totaux passés qui vous incluaient restent publiés. Ils ne vous montrent jamais individuellement.",
+		"mobile.guard.scope_admin_share": "Permettre aux administrateurs de {org} de voir votre minutage étape par étape",
+		"mobile.guard.scope_decisions": "Résultats des garde-fous : pour chaque contrôle, action autorisée, confirmation demandée ou action bloquée, et type de règle",
+		"mobile.guard.scope_label_admin_share": "accès des administrateurs à votre minutage",
+		"mobile.guard.scope_label_decisions": "résultats des garde-fous",
+		"mobile.guard.scope_label_posture": "contrôles de configuration",
+		"mobile.guard.scope_label_reports": "signalements",
+		"mobile.guard.scope_label_review_cycles": "tours de revue",
+		"mobile.guard.scope_label_task_time": "durée des tâches",
+		"mobile.guard.scope_label_trace_detail": "minutage étape par étape",
+		"mobile.guard.scope_posture": "Contrôles de configuration : si les réglages recommandés sont activés. Chaque ordinateur rend ses réponses aléatoires avant qu’elles ne partent : les administrateurs voient des estimations, jamais la vraie réponse de quelqu’un. Il se peut que les administrateurs remarquent quand l’un de ces réglages change sur votre ordinateur.",
+		"mobile.guard.scope_reports": "Les signalements que vous choisissez d’envoyer, par exemple une clé peut-être exposée ou trop de blocages. Les administrateurs de {org} ne voient que le nombre envoyé pour chaque type, et seulement pour un type envoyé par au moins 5 personnes ce jour-là. Personne chez {org} ne peut ouvrir votre signalement. L’équipe Radient n’ouvre un signalement que si vous nous demandez de l’aide à son sujet ou si la loi l’exige.",
+		"mobile.guard.scope_review_cycles": "Tours de revue par modification, et leur issue : merge ou fermeture",
+		"mobile.guard.scope_task_time": "Durée des tâches, par tranches comme 5–15 min",
+		"mobile.guard.scope_trace_detail": "Minutage étape par étape de vos tâches, sans leur contenu (conservé 14 jours)",
+		"mobile.guard.screen_declined": "Pas de partage avec {org}.",
+		"mobile.guard.screen_failed": "Votre choix n’a pas été enregistré, donc rien n’a changé. Réessayez.",
+		"mobile.guard.screen_none": "Aucune organisation ne vous a demandé de partager des statistiques Guard.",
+		"mobile.guard.screen_prompt_changed": "{org} a modifié cette demande. Consultez la nouvelle ci-dessous.",
+		"mobile.guard.screen_revoked": "Partage avec {org} arrêté.",
+		"mobile.guard.screen_shared": "Partage avec {org} depuis cet ordinateur.",
+		"mobile.guard.screen_title": "Radient Guard",
+		"mobile.guard.screen_unavailable": "Guard ne peut pas lire ses paramètres sur cet ordinateur. Rien n’a été partagé ni envoyé depuis cet écran.",
+		"mobile.guard.screen_working": "En cours…",
+		"mobile.guard.share_again_result": "{org} vous redemandera bientôt. Cherchez la demande dans Notifications.",
+		"mobile.guard.shared_heading": "Partagé avec {org} depuis cet ordinateur :",
+		"mobile.guard.surface_desktop": "l’application de bureau",
+		"mobile.guard.surface_mobile": "votre téléphone",
+		"mobile.guard.surface_terminal": "le terminal",
 		"mobile.home.chip.effort_chosen": "Effort, {effort}, choisi pour cette conversation",
 		"mobile.home.chip.effort_default": "Effort, {effort}, par défaut sur cet ordinateur",
 		"mobile.home.chip.effort_default_unnamed": "Effort, le niveau configuré sur cet ordinateur",
@@ -10766,6 +11367,96 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.wait.tunnel_status": "Radient के पास टनल है — {status}।",
 		"mobile.computers.wait.use_computer": "इस कंप्यूटर का उपयोग करें",
 		"mobile.computers.your_computer": "कंप्यूटर",
+		"mobile.guard.answered_elsewhere": "किसी दूसरे डिवाइस पर जवाब दिया गया",
+		"mobile.guard.answered_on": "{surface} पर जवाब दिया गया",
+		"mobile.guard.button_decide_later": "बाद में तय करें",
+		"mobile.guard.button_dont_share": "शेयर न करें",
+		"mobile.guard.button_keep_current": "मौजूदा रखें",
+		"mobile.guard.button_keep_sharing": "शेयर करना जारी रखें",
+		"mobile.guard.button_share": "शेयर करें",
+		"mobile.guard.button_share_again": "फिर से शेयर करें",
+		"mobile.guard.button_share_new": "नए आइटम शेयर करें",
+		"mobile.guard.button_stop_sharing": "शेयर करना बंद करें",
+		"mobile.guard.card_ask_owner": "संगठन के स्वामी से प्लान अपग्रेड करने को कहें",
+		"mobile.guard.card_body": "Radient Team सॉफ़्टवेयर फ़ैक्टरियों, कंसल्टिंग टीमों और टीम के रूप में किए जाने वाले ज्ञान-कार्य के लिए है। एजेंट संदर्भ शेयर करते हैं और लोगों के बीच काम आगे बढ़ाते हैं, और Guard एडमिन को उन सदस्यों से सुरक्षा उपायों के आँकड़े देता है जो इसमें शामिल होना चुनते हैं।",
+		"mobile.guard.card_cta_see": "Radient Team देखें",
+		"mobile.guard.card_cta_trial": "{trial_days} दिन का मुफ़्त ट्रायल शुरू करें",
+		"mobile.guard.card_footer": "Guard {org} के लिए कुछ भी इकट्ठा नहीं करता।",
+		"mobile.guard.card_footer_account": "इस खाते से कुछ भी इकट्ठा नहीं किया जाता।",
+		"mobile.guard.card_title": "Radient Guard, Radient Team का हिस्सा है",
+		"mobile.guard.computer_line": "यह कंप्यूटर: {computer}",
+		"mobile.guard.computers_note": "शेयर करना बंद करना आपके सभी कंप्यूटरों पर लागू होता है। आप उन्हें Console में देख सकते हैं।",
+		"mobile.guard.consent_needs_update": "इस अनुरोध में कुछ ऐसा है जिसे यह ऐप अभी बता नहीं सकता, इसलिए यहाँ जवाब नहीं दिया जा सकता। ऐप अपडेट करें, या अपने कंप्यूटर पर Local Operator में जवाब दें।",
+		"mobile.guard.consent_not_signable": "आपका फ़ोन इसका जवाब नहीं दे सकता। चुनने के लिए अपने कंप्यूटर पर Local Operator खोलें।",
+		"mobile.guard.disconnected": "Radient Guard देखने के लिए किसी कंप्यूटर से जुड़ें।",
+		"mobile.guard.host_old": "इस कंप्यूटर का Local Operator अभी आपके फ़ोन पर Radient Guard नहीं दिखा सकता। यहाँ से देखने या शेयर करना बंद करने के लिए उसे अपडेट करें।",
+		"mobile.guard.indicator_not_sharing": "Guard: {org} के साथ शेयर नहीं हो रहा",
+		"mobile.guard.indicator_paused": "Guard: रुका हुआ, {reason}",
+		"mobile.guard.indicator_paused_plain": "Guard: रुका हुआ",
+		"mobile.guard.indicator_sharing": "Guard: {org} के साथ शेयर हो रहा है",
+		"mobile.guard.indicator_sharing_pending": "Guard: {org} के साथ शेयर हो रहा है · नए आइटम आपके फ़ैसले के इंतज़ार में",
+		"mobile.guard.indicator_unknown": "Guard: स्थिति यहाँ उपलब्ध नहीं है",
+		"mobile.guard.indicator_waiting": "Guard: {org} आपके फ़ैसले का इंतज़ार कर रहा है",
+		"mobile.guard.indicator_will_ask": "Guard: {org} जल्द ही आपसे फिर पूछेगा",
+		"mobile.guard.intro": "Radient Guard किसी कंप्यूटर से सुरक्षा उपायों के आँकड़े आपके Team संगठन के साथ शेयर कर सकता है, केवल आपकी सहमति के बाद। आपके जवाब को उस कंप्यूटर का Local Operator लागू करता है; यह फ़ोन उसे सिर्फ़ आगे भेजता है।",
+		"mobile.guard.load_error": "इस कंप्यूटर से Radient Guard नहीं पढ़ा जा सका। कनेक्शन जाँचें और फिर कोशिश करें।",
+		"mobile.guard.loading": "Radient Guard की जाँच हो रही है…",
+		"mobile.guard.prompt_background": "अगर आप डेटा शेयर करते हैं, तो Guard उसे बैकग्राउंड में भेजता है। आप कभी भी सेटिंग या Console में शेयर करना बंद कर सकते हैं।",
+		"mobile.guard.prompt_never_sent": "कभी नहीं भेजा जाता: फ़ाइल पाथ, कमांड, प्रॉम्प्ट, कोड, मॉडल का आउटपुट या टूल आर्ग्युमेंट।",
+		"mobile.guard.prompt_reason_new_device": "यह आपके Radient खाते के लिए नया कंप्यूटर है। फ़ैसला हर कंप्यूटर के लिए अलग होता है, इसलिए इस कंप्यूटर के लिए चुनें।",
+		"mobile.guard.prompt_reason_new_org": "{org} ने Radient Guard चालू किया है।",
+		"mobile.guard.prompt_reason_plan_gap": "{org} का Team प्लान समाप्त होकर फिर शुरू हुआ, इसलिए Guard को आपका जवाब फिर से चाहिए। जब तक आप फ़ैसला नहीं करते, कुछ भी शेयर नहीं होता।",
+		"mobile.guard.prompt_reason_reactivated": "{org} ने Radient Guard फिर से चालू किया है। जब तक आप दोबारा फ़ैसला नहीं करते, कुछ भी शेयर नहीं होता।",
+		"mobile.guard.prompt_reason_rejoined": "आप {org} में फिर से शामिल हुए हैं। आपके छोड़ने पर आपका पिछला जवाब समाप्त हो गया था, इसलिए फिर से चुनें।",
+		"mobile.guard.prompt_reason_widened": "{org} और जानकारी इकट्ठा करना चाहता है: {scopes}। जब तक आप फ़ैसला नहीं करते, Guard सिर्फ़ वही शेयर करता है जिसके लिए आप पहले सहमति दे चुके हैं।",
+		"mobile.guard.prompt_title": "Guard के आँकड़े {org} के साथ शेयर करें?",
+		"mobile.guard.prompt_visibility": "एडमिन को कुल आँकड़े तभी दिखते हैं जब कम से कम 5 लोगों ने योगदान दिया हो, आपके अपने आँकड़े कभी नहीं।",
+		"mobile.guard.prompt_visibility_admin_share": "एडमिन को कुल आँकड़े तभी दिखते हैं जब कम से कम 5 लोगों ने योगदान दिया हो। चरण-दर-चरण समय शेयर होने पर वे आपका अपना समय भी देख सकते हैं, लेकिन यह नहीं कि चरणों में क्या था।",
+		"mobile.guard.prompt_visibility_admin_share_posture": "एडमिन को कुल आँकड़े तभी दिखते हैं जब कम से कम 5 लोगों ने योगदान दिया हो, और सेटअप जाँच के अनुमान तभी जब कम से कम 20 ने दिया हो। चरण-दर-चरण समय शेयर होने पर वे आपका अपना समय भी देख सकते हैं, लेकिन यह नहीं कि चरणों में क्या था।",
+		"mobile.guard.prompt_visibility_posture": "एडमिन को कुल आँकड़े तभी दिखते हैं जब कम से कम 5 लोगों ने योगदान दिया हो, और सेटअप जाँच के अनुमान तभी जब कम से कम 20 ने दिया हो। आपके अपने आँकड़े कभी नहीं।",
+		"mobile.guard.prompt_would_send": "अगर आप सहमति दें, तो Guard इस कंप्यूटर से यह भेजेगा:",
+		"mobile.guard.reason_console_revoked": "आपने {date} को Console से शेयर करना बंद किया",
+		"mobile.guard.reason_entitlement_lapsed": "Team प्लान निष्क्रिय",
+		"mobile.guard.reason_membership_ended": "अब आप {org} में नहीं हैं",
+		"mobile.guard.reason_org_off": "{org} ने बंद किया",
+		"mobile.guard.reason_revoke_pending": "Radient की पुष्टि के बाद बंद होगा",
+		"mobile.guard.reason_scope_revoked": "आपने शेयर करना बंद किया",
+		"mobile.guard.reconnecting": "आपके कंप्यूटर से फिर से कनेक्ट किया जा रहा है…",
+		"mobile.guard.review": "देखें",
+		"mobile.guard.revoke_body": "Guard अभी आपके सभी कंप्यूटरों से भेजना बंद कर देता है।",
+		"mobile.guard.revoke_body_trace": "Guard अभी आपके सभी कंप्यूटरों से भेजना बंद कर देता है और आपका चरण-दर-चरण समय हटा देता है। बैकअप में मौजूद कॉपियाँ {backup_days} दिनों के भीतर मिट जाती हैं।",
+		"mobile.guard.revoke_pending_result": "इस कंप्यूटर पर शेयर करना बंद हो गया है। Radient ने अभी इसकी पुष्टि नहीं की है। Guard पुष्टि पाने की कोशिश करता रहेगा।",
+		"mobile.guard.revoke_retained": "आपके पहले से भेजे गए दूसरे रिकॉर्ड अवधि पूरी होने तक रहते हैं: आँकड़े 90 दिन तक और रिपोर्ट 180 दिन तक।",
+		"mobile.guard.revoke_title": "{org} के साथ शेयर करना बंद करें?",
+		"mobile.guard.revoke_totals": "पिछले कुल आँकड़े जिनमें आप शामिल थे, प्रकाशित रहते हैं। उनमें आप कभी अलग से नहीं दिखते।",
+		"mobile.guard.scope_admin_share": "{org} के एडमिन को आपका चरण-दर-चरण समय देखने दें",
+		"mobile.guard.scope_decisions": "सुरक्षा उपायों के नतीजे: हर जाँच ने अनुमति दी, पूछा या रोका, और नियम का प्रकार",
+		"mobile.guard.scope_label_admin_share": "आपके चरण-दर-चरण समय को देखने की एडमिन की पहुँच",
+		"mobile.guard.scope_label_decisions": "सुरक्षा उपायों के नतीजे",
+		"mobile.guard.scope_label_posture": "सेटअप जाँच",
+		"mobile.guard.scope_label_reports": "रिपोर्ट",
+		"mobile.guard.scope_label_review_cycles": "रिव्यू के दौर",
+		"mobile.guard.scope_label_task_time": "काम का समय",
+		"mobile.guard.scope_label_trace_detail": "चरण-दर-चरण समय",
+		"mobile.guard.scope_posture": "सेटअप जाँच: अनुशंसित सेटिंग्स चालू हैं या नहीं। हर कंप्यूटर अपने जवाब भेजने से पहले उनमें बेतरतीब बदलाव करता है, इसलिए एडमिन को अनुमान दिखते हैं, किसी का असली जवाब नहीं। एडमिन शायद यह जान सकें कि आपके कंप्यूटर पर इनमें से कोई सेटिंग कब बदली।",
+		"mobile.guard.scope_reports": "वे रिपोर्ट जो आप भेजना चुनते हैं, जैसे किसी कुंजी के उजागर होने का संदेह या ज़रूरत से ज़्यादा रोक-टोक। {org} के एडमिन सिर्फ़ यह देखते हैं कि हर प्रकार की कितनी रिपोर्ट भेजी गईं, और सिर्फ़ उस प्रकार की जिसे उस दिन कम से कम 5 लोगों ने भेजा हो। {org} में कोई भी आपकी रिपोर्ट नहीं खोल सकता। Radient के कर्मचारी कोई रिपोर्ट तभी खोलते हैं जब आप उसके बारे में हमसे मदद माँगें या क़ानून इसकी माँग करे।",
+		"mobile.guard.scope_review_cycles": "हर बदलाव पर रिव्यू के दौर, और वह merge हुआ या बंद हुआ",
+		"mobile.guard.scope_task_time": "काम का समय, दायरों में, जैसे 5–15 मिनट",
+		"mobile.guard.scope_trace_detail": "आपके कामों का चरण-दर-चरण समय, सामग्री के बिना (14 दिन रखा जाता है)",
+		"mobile.guard.screen_declined": "{org} के साथ शेयर नहीं हो रहा।",
+		"mobile.guard.screen_failed": "आपका फ़ैसला सहेजा नहीं गया, इसलिए कुछ नहीं बदला। फिर से कोशिश करें।",
+		"mobile.guard.screen_none": "किसी संगठन ने आपसे Guard के आँकड़े शेयर करने को नहीं कहा है।",
+		"mobile.guard.screen_prompt_changed": "{org} ने यह अनुरोध बदल दिया है। नीचे नया अनुरोध देखें।",
+		"mobile.guard.screen_revoked": "{org} के साथ शेयर करना बंद किया गया।",
+		"mobile.guard.screen_shared": "इस कंप्यूटर से {org} के साथ शेयर हो रहा है।",
+		"mobile.guard.screen_title": "Radient Guard",
+		"mobile.guard.screen_unavailable": "Guard इस कंप्यूटर पर अपनी सेटिंग्स नहीं पढ़ सकता। इस स्क्रीन से न कुछ शेयर हुआ, न भेजा गया।",
+		"mobile.guard.screen_working": "काम चल रहा है…",
+		"mobile.guard.share_again_result": "{org} जल्द ही आपसे फिर पूछेगा। अनुरोध देखने के लिए सूचनाएँ खोलें।",
+		"mobile.guard.shared_heading": "इस कंप्यूटर से {org} के साथ शेयर किया जा रहा है:",
+		"mobile.guard.surface_desktop": "डेस्कटॉप ऐप",
+		"mobile.guard.surface_mobile": "आपके फ़ोन",
+		"mobile.guard.surface_terminal": "टर्मिनल",
 		"mobile.home.chip.effort_chosen": "प्रयास, {effort}, इस बातचीत के लिए चुना गया",
 		"mobile.home.chip.effort_default": "प्रयास, {effort}, इस कंप्यूटर का डिफ़ॉल्ट",
 		"mobile.home.chip.effort_default_unnamed": "प्रयास, इस कंप्यूटर पर कॉन्फ़िगर किया गया स्तर",
@@ -12263,6 +12954,96 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.wait.tunnel_status": "Туннель на стороне Radient: {status}.",
 		"mobile.computers.wait.use_computer": "Использовать этот компьютер",
 		"mobile.computers.your_computer": "Ваш компьютер",
+		"mobile.guard.answered_elsewhere": "Ответ дан на другом устройстве",
+		"mobile.guard.answered_on": "Ответ дан: {surface}",
+		"mobile.guard.button_decide_later": "Решить позже",
+		"mobile.guard.button_dont_share": "Не делиться",
+		"mobile.guard.button_keep_current": "Оставить как есть",
+		"mobile.guard.button_keep_sharing": "Продолжить передачу",
+		"mobile.guard.button_share": "Делиться",
+		"mobile.guard.button_share_again": "Делиться снова",
+		"mobile.guard.button_share_new": "Делиться новыми пунктами",
+		"mobile.guard.button_stop_sharing": "Прекратить передачу",
+		"mobile.guard.card_ask_owner": "Попросите владельца организации перейти на более высокий тариф",
+		"mobile.guard.card_body": "Radient Team — для софтверных фабрик, консалтинговых команд и интеллектуальной работы, которую ведут командой. Агенты делятся контекстом и передают работу между людьми, а Guard даёт администраторам статистику защитных правил от участников, которые на это согласились.",
+		"mobile.guard.card_cta_see": "Подробнее о Radient Team",
+		"mobile.guard.card_cta_trial": "Начать бесплатный пробный период ({trial_days} дн.)",
+		"mobile.guard.card_footer": "Guard ничего не собирает для {org}.",
+		"mobile.guard.card_footer_account": "С этого аккаунта ничего не собирается.",
+		"mobile.guard.card_title": "Radient Guard входит в Radient Team",
+		"mobile.guard.computer_line": "Этот компьютер: {computer}",
+		"mobile.guard.computers_note": "Прекращение передачи действует на все ваши компьютеры. Просмотреть их можно в Console.",
+		"mobile.guard.consent_needs_update": "В этом запросе есть пункт, который приложение пока не может описать, поэтому ответить здесь нельзя. Обновите приложение или ответьте в Local Operator на компьютере.",
+		"mobile.guard.consent_not_signable": "На этот запрос нельзя ответить с телефона. Откройте Local Operator на компьютере и сделайте выбор там.",
+		"mobile.guard.disconnected": "Подключитесь к компьютеру, чтобы увидеть Radient Guard.",
+		"mobile.guard.host_old": "Local Operator на этом компьютере пока не может показать Radient Guard на телефоне. Обновите его, чтобы просматривать и прекращать передачу отсюда.",
+		"mobile.guard.indicator_not_sharing": "Guard: данные не передаются {org}",
+		"mobile.guard.indicator_paused": "Guard: на паузе, {reason}",
+		"mobile.guard.indicator_paused_plain": "Guard: на паузе",
+		"mobile.guard.indicator_sharing": "Guard: данные передаются {org}",
+		"mobile.guard.indicator_sharing_pending": "Guard: данные передаются {org} · новые пункты ждут вашего решения",
+		"mobile.guard.indicator_unknown": "Guard: состояние здесь недоступно",
+		"mobile.guard.indicator_waiting": "Guard: {org} ждёт вашего выбора",
+		"mobile.guard.indicator_will_ask": "Guard: {org} скоро спросит вас снова",
+		"mobile.guard.intro": "Radient Guard может передавать вашей организации Team статистику защитных правил с компьютера, но только с вашего согласия. Ваш выбор применяет Local Operator на этом компьютере. Телефон только передаёт его.",
+		"mobile.guard.load_error": "Не удалось прочитать Radient Guard с этого компьютера. Проверьте соединение и повторите попытку.",
+		"mobile.guard.loading": "Проверка Radient Guard…",
+		"mobile.guard.prompt_background": "Если вы разрешите передачу данных, Guard будет отправлять их в фоновом режиме. Остановить передачу можно в любой момент в настройках или в Console.",
+		"mobile.guard.prompt_never_sent": "Никогда не отправляются: пути к файлам, команды, промпты, код, вывод модели и аргументы инструментов.",
+		"mobile.guard.prompt_reason_new_device": "Это новый компьютер для вашего аккаунта Radient. Решение принимается для каждого компьютера отдельно, поэтому решите для этого.",
+		"mobile.guard.prompt_reason_new_org": "В {org} включили Radient Guard.",
+		"mobile.guard.prompt_reason_plan_gap": "Тариф Team у {org} прерывался и возобновлён, поэтому Guard снова нужен ваш ответ. Ничего не передаётся, пока вы не решите.",
+		"mobile.guard.prompt_reason_reactivated": "В {org} снова включили Radient Guard. Ничего не передаётся, пока вы не решите заново.",
+		"mobile.guard.prompt_reason_rejoined": "Вы снова вступили в {org}. Прежний ответ перестал действовать, когда вы вышли, поэтому решите заново.",
+		"mobile.guard.prompt_reason_widened": "{org} хочет собирать больше: {scopes}. Пока вы не решите, Guard передаёт только то, на что вы уже согласились.",
+		"mobile.guard.prompt_title": "Делиться статистикой Guard с {org}?",
+		"mobile.guard.prompt_visibility": "Администраторы видят итоги, только если в них участвовали не менее 5 человек, и никогда — ваши собственные цифры.",
+		"mobile.guard.prompt_visibility_admin_share": "Администраторы видят итоги, только если в них участвовали не менее 5 человек. Если вы делитесь пошаговым хронометражем, они видят и ваш собственный хронометраж, но не содержимое шагов.",
+		"mobile.guard.prompt_visibility_admin_share_posture": "Администраторы видят итоги, только если в них участвовали не менее 5 человек, а оценки проверок настройки — только если не менее 20. Если вы делитесь пошаговым хронометражем, они видят и ваш собственный хронометраж, но не содержимое шагов.",
+		"mobile.guard.prompt_visibility_posture": "Администраторы видят итоги, только если в них участвовали не менее 5 человек, а оценки проверок настройки — только если не менее 20. Ваши собственные цифры — никогда.",
+		"mobile.guard.prompt_would_send": "С этого компьютера Guard отправлял бы:",
+		"mobile.guard.reason_console_revoked": "вы прекратили передачу из Console {date}",
+		"mobile.guard.reason_entitlement_lapsed": "тариф Team неактивен",
+		"mobile.guard.reason_membership_ended": "вы больше не состоите в {org}",
+		"mobile.guard.reason_org_off": "отключено организацией {org}",
+		"mobile.guard.reason_revoke_pending": "остановится после подтверждения Radient",
+		"mobile.guard.reason_scope_revoked": "вы прекратили передачу",
+		"mobile.guard.reconnecting": "Повторное подключение к компьютеру…",
+		"mobile.guard.review": "Просмотреть",
+		"mobile.guard.revoke_body": "Guard сразу прекращает отправку со всех ваших компьютеров.",
+		"mobile.guard.revoke_body_trace": "Guard сразу прекращает отправку со всех ваших компьютеров и удаляет ваш пошаговый хронометраж. Из резервных копий эти данные исчезнут в течение {backup_days} дн.",
+		"mobile.guard.revoke_pending_result": "Передача с этого компьютера остановлена. Radient пока не подтвердил остановку. Guard продолжит запрашивать подтверждение.",
+		"mobile.guard.revoke_retained": "Другие уже отправленные записи хранятся до истечения срока: статистика — 90 дней, отчёты — 180 дней.",
+		"mobile.guard.revoke_title": "Прекратить передачу данных {org}?",
+		"mobile.guard.revoke_totals": "Прошлые итоги, в которые вы входили, остаются опубликованными. В них вас никогда не видно по отдельности.",
+		"mobile.guard.scope_admin_share": "Разрешить администраторам {org} видеть ваш пошаговый хронометраж",
+		"mobile.guard.scope_decisions": "Результаты защитных правил: разрешила ли каждая проверка действие, запросила подтверждение или заблокировала его, и тип правила",
+		"mobile.guard.scope_label_admin_share": "доступ администраторов к вашему хронометражу",
+		"mobile.guard.scope_label_decisions": "результаты защитных правил",
+		"mobile.guard.scope_label_posture": "проверки настройки",
+		"mobile.guard.scope_label_reports": "отчёты",
+		"mobile.guard.scope_label_review_cycles": "раунды ревью",
+		"mobile.guard.scope_label_task_time": "время выполнения задач",
+		"mobile.guard.scope_label_trace_detail": "пошаговый хронометраж",
+		"mobile.guard.scope_posture": "Проверки настройки: включены ли рекомендуемые параметры. Каждый компьютер перед отправкой случайным образом искажает свои ответы, поэтому администраторы видят оценки, а не реальный ответ конкретного человека. Администраторы могут заметить, когда один из этих параметров меняется на вашем компьютере.",
+		"mobile.guard.scope_reports": "Отчёты, которые вы решите отправить, например о возможной утечке ключа или о слишком частых блокировках. Администраторы {org} видят только, сколько отчётов каждого вида отправлено, и только по виду, который в тот день отправили не менее 5 человек. Никто в {org} не может открыть ваш отчёт. Сотрудники Radient открывают отчёт, только если вы просите нас помочь с ним или этого требует закон.",
+		"mobile.guard.scope_review_cycles": "Число раундов ревью на изменение и итог: merge или закрытие",
+		"mobile.guard.scope_task_time": "Время выполнения задач в диапазонах, например 5–15 мин",
+		"mobile.guard.scope_trace_detail": "Пошаговый хронометраж ваших задач без содержимого (хранится 14 дней)",
+		"mobile.guard.screen_declined": "Данные не передаются {org}.",
+		"mobile.guard.screen_failed": "Ваш выбор не сохранён, поэтому ничего не изменилось. Попробуйте ещё раз.",
+		"mobile.guard.screen_none": "Ни одна организация не просила вас делиться статистикой Guard.",
+		"mobile.guard.screen_prompt_changed": "В {org} изменили этот запрос. Посмотрите новый ниже.",
+		"mobile.guard.screen_revoked": "Передача данных {org} прекращена.",
+		"mobile.guard.screen_shared": "Данные с этого компьютера передаются {org}.",
+		"mobile.guard.screen_title": "Radient Guard",
+		"mobile.guard.screen_unavailable": "Guard не может прочитать свои настройки на этом компьютере. С этого экрана ничего не передано и не отправлено.",
+		"mobile.guard.screen_working": "Выполняется…",
+		"mobile.guard.share_again_result": "{org} скоро спросит снова. Ищите запрос в уведомлениях.",
+		"mobile.guard.shared_heading": "Данные, которые этот компьютер передаёт {org}:",
+		"mobile.guard.surface_desktop": "настольное приложение",
+		"mobile.guard.surface_mobile": "ваш телефон",
+		"mobile.guard.surface_terminal": "терминал",
 		"mobile.home.chip.effort_chosen": "Усилие, {effort}, выбрано для этой беседы",
 		"mobile.home.chip.effort_default": "Усилие, {effort}, по умолчанию на этом компьютере",
 		"mobile.home.chip.effort_default_unnamed": "Усилие, уровень, настроенный на этом компьютере",
@@ -13760,6 +14541,96 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.wait.tunnel_status": "Radient کے پاس ٹنل ہے — {status}۔",
 		"mobile.computers.wait.use_computer": "یہ کمپیوٹر استعمال کریں",
 		"mobile.computers.your_computer": "کمپیوٹر",
+		"mobile.guard.answered_elsewhere": "کسی اور ڈیوائس پر جواب دیا گیا",
+		"mobile.guard.answered_on": "{surface} پر جواب دیا گیا",
+		"mobile.guard.button_decide_later": "بعد میں فیصلہ کریں",
+		"mobile.guard.button_dont_share": "شیئر نہ کریں",
+		"mobile.guard.button_keep_current": "موجودہ برقرار رکھیں",
+		"mobile.guard.button_keep_sharing": "شیئرنگ جاری رکھیں",
+		"mobile.guard.button_share": "شیئر کریں",
+		"mobile.guard.button_share_again": "دوبارہ شیئر کریں",
+		"mobile.guard.button_share_new": "نئے آئٹمز شیئر کریں",
+		"mobile.guard.button_stop_sharing": "شیئرنگ بند کریں",
+		"mobile.guard.card_ask_owner": "تنظیم کے مالک سے پلان اپ گریڈ کرنے کو کہیں",
+		"mobile.guard.card_body": "Radient Team سافٹ ویئر فیکٹریوں، کنسلٹنگ ٹیموں اور ٹیم کی صورت میں کیے جانے والے علمی کام کے لیے ہے۔ ایجنٹس سیاق و سباق شیئر کرتے ہیں اور لوگوں کے درمیان کام آگے بڑھاتے ہیں، اور Guard منتظمین کو ان اراکین کی طرف سے حفاظتی انتظامات کے اعداد و شمار دیتا ہے جو اس میں شامل ہونا چنیں۔",
+		"mobile.guard.card_cta_see": "Radient Team دیکھیں",
+		"mobile.guard.card_cta_trial": "{trial_days} دن کا مفت ٹرائل شروع کریں",
+		"mobile.guard.card_footer": "Guard {org} کے لیے کچھ جمع نہیں کرتا۔",
+		"mobile.guard.card_footer_account": "اس اکاؤنٹ سے کچھ بھی جمع نہیں کیا جاتا۔",
+		"mobile.guard.card_title": "Radient Guard، Radient Team کا حصہ ہے",
+		"mobile.guard.computer_line": "یہ کمپیوٹر: {computer}",
+		"mobile.guard.computers_note": "شیئرنگ بند کرنا آپ کے تمام کمپیوٹرز پر لاگو ہوتا ہے۔ آپ انہیں Console میں دیکھ سکتے ہیں۔",
+		"mobile.guard.consent_needs_update": "اس درخواست میں کچھ ایسا ہے جسے یہ ایپ ابھی بیان نہیں کر سکتی، اس لیے یہاں جواب نہیں دیا جا سکتا۔ ایپ اپ ڈیٹ کریں، یا اپنے کمپیوٹر پر Local Operator میں جواب دیں۔",
+		"mobile.guard.consent_not_signable": "آپ کا فون اس کا جواب نہیں دے سکتا۔ انتخاب کے لیے اپنے کمپیوٹر پر Local Operator کھولیں۔",
+		"mobile.guard.disconnected": "Radient Guard دیکھنے کے لیے کسی کمپیوٹر سے جڑیں۔",
+		"mobile.guard.host_old": "اس کمپیوٹر کا Local Operator ابھی آپ کے فون پر Radient Guard نہیں دکھا سکتا۔ یہاں سے دیکھنے یا شیئرنگ بند کرنے کے لیے اسے اپ ڈیٹ کریں۔",
+		"mobile.guard.indicator_not_sharing": "Guard: {org} کے ساتھ شیئر نہیں ہو رہا",
+		"mobile.guard.indicator_paused": "Guard: موقوف، {reason}",
+		"mobile.guard.indicator_paused_plain": "Guard: موقوف",
+		"mobile.guard.indicator_sharing": "Guard: {org} کے ساتھ شیئر ہو رہا ہے",
+		"mobile.guard.indicator_sharing_pending": "Guard: {org} کے ساتھ شیئر ہو رہا ہے · نئے آئٹمز آپ کے فیصلے کے منتظر ہیں",
+		"mobile.guard.indicator_unknown": "Guard: حالت یہاں دستیاب نہیں",
+		"mobile.guard.indicator_waiting": "Guard: {org} کو آپ کے فیصلے کا انتظار ہے",
+		"mobile.guard.indicator_will_ask": "Guard: {org} جلد آپ سے دوبارہ پوچھے گی",
+		"mobile.guard.intro": "Radient Guard کسی کمپیوٹر سے حفاظتی انتظامات کے اعداد و شمار آپ کی Team تنظیم کے ساتھ شیئر کر سکتا ہے، صرف آپ کی رضامندی کے بعد۔ آپ کا جواب اس کمپیوٹر پر Local Operator نافذ کرتا ہے؛ یہ فون صرف اسے آگے پہنچاتا ہے۔",
+		"mobile.guard.load_error": "اس کمپیوٹر سے Radient Guard نہیں پڑھا جا سکا۔ کنکشن چیک کریں اور دوبارہ کوشش کریں۔",
+		"mobile.guard.loading": "Radient Guard کی جانچ ہو رہی ہے…",
+		"mobile.guard.prompt_background": "اگر آپ ڈیٹا شیئر کرتے ہیں تو Guard اسے پس منظر میں بھیجتا ہے۔ آپ کسی بھی وقت ترتیبات یا Console میں شیئرنگ بند کر سکتے ہیں۔",
+		"mobile.guard.prompt_never_sent": "کبھی نہیں بھیجا جاتا: فائل پاتھ، کمانڈز، پرامپٹس، کوڈ، ماڈل کا آؤٹ پٹ یا ٹول کے آرگیومنٹس۔",
+		"mobile.guard.prompt_reason_new_device": "یہ آپ کے Radient اکاؤنٹ کے لیے نیا کمپیوٹر ہے۔ فیصلہ ہر کمپیوٹر کے لیے الگ ہوتا ہے، اس لیے اس کمپیوٹر کے لیے فیصلہ کریں۔",
+		"mobile.guard.prompt_reason_new_org": "{org} نے Radient Guard آن کر دیا ہے۔",
+		"mobile.guard.prompt_reason_plan_gap": "{org} کا Team پلان ختم ہو کر دوبارہ شروع ہوا، اس لیے Guard کو آپ کا جواب دوبارہ چاہیے۔ جب تک آپ فیصلہ نہ کریں، کچھ شیئر نہیں ہوتا۔",
+		"mobile.guard.prompt_reason_reactivated": "{org} نے Radient Guard دوبارہ آن کر دیا ہے۔ جب تک آپ دوبارہ فیصلہ نہ کریں، کچھ شیئر نہیں ہوتا۔",
+		"mobile.guard.prompt_reason_rejoined": "آپ دوبارہ {org} میں شامل ہوئے ہیں۔ آپ کا پچھلا جواب آپ کے جانے پر ختم ہو گیا تھا، اس لیے دوبارہ فیصلہ کریں۔",
+		"mobile.guard.prompt_reason_widened": "{org} مزید جمع کرنا چاہتی ہے: {scopes}۔ جب تک آپ فیصلہ نہ کریں، Guard صرف وہی شیئر کرتا ہے جس پر آپ پہلے متفق ہو چکے ہیں۔",
+		"mobile.guard.prompt_title": "Guard کے اعداد و شمار {org} کے ساتھ شیئر کریں؟",
+		"mobile.guard.prompt_visibility": "منتظمین کو مجموعی اعداد صرف تب نظر آتے ہیں جب کم از کم 5 لوگوں نے حصہ ڈالا ہو، آپ کے اپنے اعداد کبھی نہیں۔",
+		"mobile.guard.prompt_visibility_admin_share": "منتظمین کو مجموعی اعداد صرف تب نظر آتے ہیں جب کم از کم 5 لوگوں نے حصہ ڈالا ہو۔ مرحلہ وار وقت شیئر ہونے پر وہ آپ کا اپنا وقت بھی دیکھ سکتے ہیں، مگر یہ نہیں کہ مراحل میں کیا تھا۔",
+		"mobile.guard.prompt_visibility_admin_share_posture": "منتظمین کو مجموعی اعداد صرف تب نظر آتے ہیں جب کم از کم 5 لوگوں نے حصہ ڈالا ہو، اور سیٹ اپ کی جانچ کے اندازے صرف تب جب کم از کم 20 نے ڈالا ہو۔ مرحلہ وار وقت شیئر ہونے پر وہ آپ کا اپنا وقت بھی دیکھ سکتے ہیں، مگر یہ نہیں کہ مراحل میں کیا تھا۔",
+		"mobile.guard.prompt_visibility_posture": "منتظمین کو مجموعی اعداد صرف تب نظر آتے ہیں جب کم از کم 5 لوگوں نے حصہ ڈالا ہو، اور سیٹ اپ کی جانچ کے اندازے صرف تب جب کم از کم 20 نے ڈالا ہو۔ آپ کے اپنے اعداد کبھی نہیں۔",
+		"mobile.guard.prompt_would_send": "اگر آپ اجازت دیں تو Guard اس کمپیوٹر سے یہ بھیجے گا:",
+		"mobile.guard.reason_console_revoked": "آپ نے {date} کو Console سے شیئرنگ بند کی",
+		"mobile.guard.reason_entitlement_lapsed": "Team پلان غیر فعال",
+		"mobile.guard.reason_membership_ended": "آپ اب {org} میں شامل نہیں",
+		"mobile.guard.reason_org_off": "{org} نے بند کر دیا",
+		"mobile.guard.reason_revoke_pending": "Radient کی تصدیق کے بعد بند ہو جائے گا",
+		"mobile.guard.reason_scope_revoked": "آپ نے شیئرنگ بند کر دی",
+		"mobile.guard.reconnecting": "آپ کے کمپیوٹر سے دوبارہ منسلک ہو رہا ہے…",
+		"mobile.guard.review": "دیکھیں",
+		"mobile.guard.revoke_body": "Guard ابھی آپ کے تمام کمپیوٹرز سے بھیجنا بند کر دیتا ہے۔",
+		"mobile.guard.revoke_body_trace": "Guard ابھی آپ کے تمام کمپیوٹرز سے بھیجنا بند کر دیتا ہے اور آپ کا مرحلہ وار وقت حذف کر دیتا ہے۔ بیک اپس میں موجود کاپیاں {backup_days} دن کے اندر ختم ہو جاتی ہیں۔",
+		"mobile.guard.revoke_pending_result": "اس کمپیوٹر پر شیئرنگ بند ہو گئی ہے۔ Radient نے ابھی اس کی تصدیق نہیں کی۔ Guard تصدیق حاصل کرنے کی کوشش جاری رکھے گا۔",
+		"mobile.guard.revoke_retained": "آپ کے پہلے سے بھیجے گئے دوسرے ریکارڈ میعاد ختم ہونے تک رہتے ہیں: اعداد و شمار 90 دن تک اور رپورٹس 180 دن تک۔",
+		"mobile.guard.revoke_title": "{org} کے ساتھ شیئرنگ بند کریں؟",
+		"mobile.guard.revoke_totals": "ماضی کے مجموعی اعداد جن میں آپ شامل تھے، شائع رہتے ہیں۔ ان میں آپ کبھی الگ سے نظر نہیں آتے۔",
+		"mobile.guard.scope_admin_share": "{org} کے منتظمین کو آپ کا مرحلہ وار وقت دیکھنے دیں",
+		"mobile.guard.scope_decisions": "حفاظتی انتظامات کے نتائج: ہر جانچ نے اجازت دی، پوچھا یا روکا، اور اصول کی قسم",
+		"mobile.guard.scope_label_admin_share": "آپ کے مرحلہ وار وقت تک منتظمین کی رسائی",
+		"mobile.guard.scope_label_decisions": "حفاظتی انتظامات کے نتائج",
+		"mobile.guard.scope_label_posture": "سیٹ اپ کی جانچ",
+		"mobile.guard.scope_label_reports": "رپورٹس",
+		"mobile.guard.scope_label_review_cycles": "ریویو کے دور",
+		"mobile.guard.scope_label_task_time": "کام کا وقت",
+		"mobile.guard.scope_label_trace_detail": "مرحلہ وار وقت",
+		"mobile.guard.scope_posture": "سیٹ اپ کی جانچ: کیا تجویز کردہ ترتیبات آن ہیں۔ ہر کمپیوٹر اپنے جوابات بھیجنے سے پہلے بے ترتیب کر دیتا ہے، اس لیے منتظمین کو اندازے نظر آتے ہیں، کسی کا اصل جواب نہیں۔ ممکن ہے منتظمین یہ جان سکیں کہ آپ کے کمپیوٹر پر ان میں سے کوئی ترتیب کب بدلی۔",
+		"mobile.guard.scope_reports": "وہ رپورٹس جو آپ بھیجنے کا انتخاب کریں، جیسے ممکنہ طور پر ظاہر ہو جانے والی کلید یا ضرورت سے زیادہ روک ٹوک۔ {org} کے منتظمین صرف یہ دیکھتے ہیں کہ ہر قسم کی کتنی رپورٹس بھیجی گئیں، اور صرف اس قسم کی جو اس دن کم از کم 5 لوگوں نے بھیجی ہو۔ {org} میں کوئی بھی آپ کی رپورٹ نہیں کھول سکتا۔ Radient کا عملہ کوئی رپورٹ صرف تب کھولتا ہے جب آپ اس کے بارے میں ہم سے مدد مانگیں یا قانون اس کا تقاضا کرے۔",
+		"mobile.guard.scope_review_cycles": "ہر تبدیلی پر ریویو کے دور، اور یہ کہ وہ merge ہوئی یا بند",
+		"mobile.guard.scope_task_time": "کام کا وقت، حدود میں، جیسے 5–15 منٹ",
+		"mobile.guard.scope_trace_detail": "آپ کے کاموں کا مرحلہ وار وقت، مواد کے بغیر (14 دن رکھا جاتا ہے)",
+		"mobile.guard.screen_declined": "{org} کے ساتھ شیئر نہیں ہو رہا۔",
+		"mobile.guard.screen_failed": "آپ کا انتخاب محفوظ نہیں ہوا، اس لیے کچھ نہیں بدلا۔ دوبارہ کوشش کریں۔",
+		"mobile.guard.screen_none": "کسی تنظیم نے آپ سے Guard کے اعداد و شمار شیئر کرنے کو نہیں کہا۔",
+		"mobile.guard.screen_prompt_changed": "{org} نے یہ درخواست بدل دی ہے۔ نیچے نئی درخواست دیکھیں۔",
+		"mobile.guard.screen_revoked": "{org} کے ساتھ شیئرنگ بند کر دی گئی۔",
+		"mobile.guard.screen_shared": "اس کمپیوٹر سے {org} کے ساتھ شیئر ہو رہا ہے۔",
+		"mobile.guard.screen_title": "Radient Guard",
+		"mobile.guard.screen_unavailable": "Guard اس کمپیوٹر پر اپنی ترتیبات نہیں پڑھ سکتا۔ اس اسکرین سے نہ کچھ شیئر ہوا اور نہ بھیجا گیا۔",
+		"mobile.guard.screen_working": "کام جاری ہے…",
+		"mobile.guard.share_again_result": "{org} جلد آپ سے دوبارہ پوچھے گی۔ درخواست اطلاعات میں دیکھیں۔",
+		"mobile.guard.shared_heading": "اس کمپیوٹر سے {org} کے ساتھ شیئر کیا جا رہا ہے:",
+		"mobile.guard.surface_desktop": "ڈیسک ٹاپ ایپ",
+		"mobile.guard.surface_mobile": "آپ کے فون",
+		"mobile.guard.surface_terminal": "ٹرمینل",
 		"mobile.home.chip.effort_chosen": "استدلال کی شدت، {effort}، اس گفتگو کے لیے منتخب",
 		"mobile.home.chip.effort_default": "استدلال کی شدت، {effort}، اس کمپیوٹر کا ڈیفالٹ",
 		"mobile.home.chip.effort_default_unnamed": "استدلال کی شدت، اس کمپیوٹر پر ترتیب شدہ سطح",
@@ -15257,6 +16128,96 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.wait.tunnel_status": "Radient đã có đường hầm — {status}.",
 		"mobile.computers.wait.use_computer": "Dùng máy tính này",
 		"mobile.computers.your_computer": "Máy tính của bạn",
+		"mobile.guard.answered_elsewhere": "Đã trả lời trên thiết bị khác",
+		"mobile.guard.answered_on": "Đã trả lời trên {surface}",
+		"mobile.guard.button_decide_later": "Để sau",
+		"mobile.guard.button_dont_share": "Không chia sẻ",
+		"mobile.guard.button_keep_current": "Giữ như hiện tại",
+		"mobile.guard.button_keep_sharing": "Tiếp tục chia sẻ",
+		"mobile.guard.button_share": "Chia sẻ",
+		"mobile.guard.button_share_again": "Chia sẻ lại",
+		"mobile.guard.button_share_new": "Chia sẻ mục mới",
+		"mobile.guard.button_stop_sharing": "Ngừng chia sẻ",
+		"mobile.guard.card_ask_owner": "Hãy nhờ chủ sở hữu tổ chức nâng cấp",
+		"mobile.guard.card_body": "Radient Team dành cho các xưởng phần mềm, nhóm tư vấn và công việc tri thức làm theo nhóm. Tác nhân chia sẻ ngữ cảnh và chuyển giao công việc giữa mọi người, còn Guard cung cấp cho quản trị viên số liệu bảo vệ từ các thành viên chọn tham gia.",
+		"mobile.guard.card_cta_see": "Xem Radient Team",
+		"mobile.guard.card_cta_trial": "Dùng thử miễn phí {trial_days} ngày",
+		"mobile.guard.card_footer": "Guard không thu thập gì cho {org}.",
+		"mobile.guard.card_footer_account": "Không có gì được thu thập từ tài khoản này.",
+		"mobile.guard.card_title": "Radient Guard là một phần của Radient Team",
+		"mobile.guard.computer_line": "Máy tính này: {computer}",
+		"mobile.guard.computers_note": "Việc ngừng chia sẻ áp dụng cho tất cả máy tính của bạn. Bạn có thể xem chúng trong Console.",
+		"mobile.guard.consent_needs_update": "Yêu cầu này có nội dung mà ứng dụng chưa mô tả được nên không thể trả lời tại đây. Hãy cập nhật ứng dụng hoặc trả lời trong Local Operator trên máy tính.",
+		"mobile.guard.consent_not_signable": "Điện thoại của bạn không thể trả lời yêu cầu này. Hãy mở Local Operator trên máy tính để chọn.",
+		"mobile.guard.disconnected": "Hãy kết nối với một máy tính để xem Radient Guard.",
+		"mobile.guard.host_old": "Local Operator trên máy tính này chưa thể hiển thị Radient Guard trên điện thoại của bạn. Hãy cập nhật nó để xem hoặc ngừng chia sẻ từ đây.",
+		"mobile.guard.indicator_not_sharing": "Guard: không chia sẻ với {org}",
+		"mobile.guard.indicator_paused": "Guard: tạm dừng, {reason}",
+		"mobile.guard.indicator_paused_plain": "Guard: tạm dừng",
+		"mobile.guard.indicator_sharing": "Guard: đang chia sẻ với {org}",
+		"mobile.guard.indicator_sharing_pending": "Guard: đang chia sẻ với {org} · có mục mới chờ bạn chọn",
+		"mobile.guard.indicator_unknown": "Guard: trạng thái không khả dụng ở đây",
+		"mobile.guard.indicator_waiting": "Guard: {org} đang chờ bạn chọn",
+		"mobile.guard.indicator_will_ask": "Guard: {org} sẽ sớm hỏi lại bạn",
+		"mobile.guard.intro": "Radient Guard chỉ có thể chia sẻ số liệu bảo vệ từ máy tính với tổ chức Team của bạn khi bạn đồng ý. Local Operator trên máy tính đó áp dụng lựa chọn của bạn. Điện thoại này chỉ chuyển tiếp lựa chọn đó.",
+		"mobile.guard.load_error": "Không đọc được Radient Guard từ máy tính này. Hãy kiểm tra kết nối và thử lại.",
+		"mobile.guard.loading": "Đang kiểm tra Radient Guard…",
+		"mobile.guard.prompt_background": "Nếu bạn chọn chia sẻ dữ liệu, Guard sẽ gửi dữ liệu trong nền. Bạn có thể ngừng chia sẻ bất cứ lúc nào trong Cài đặt hoặc Console.",
+		"mobile.guard.prompt_never_sent": "Không bao giờ gửi: đường dẫn tệp, lệnh, prompt, mã, đầu ra của mô hình hay tham số công cụ.",
+		"mobile.guard.prompt_reason_new_device": "Đây là máy tính mới với tài khoản Radient của bạn. Bạn chọn riêng cho từng máy tính, vì vậy hãy chọn cho máy này.",
+		"mobile.guard.prompt_reason_new_org": "{org} đã bật Radient Guard.",
+		"mobile.guard.prompt_reason_plan_gap": "Gói Team của {org} đã hết hạn rồi kích hoạt lại, nên Guard cần bạn trả lời lại. Không có gì được chia sẻ cho đến khi bạn chọn.",
+		"mobile.guard.prompt_reason_reactivated": "{org} đã bật lại Radient Guard. Không có gì được chia sẻ cho đến khi bạn chọn lại.",
+		"mobile.guard.prompt_reason_rejoined": "Bạn đã tham gia lại {org}. Câu trả lời trước đó đã hết hiệu lực khi bạn rời đi, vì vậy hãy chọn lại.",
+		"mobile.guard.prompt_reason_widened": "{org} muốn thu thập thêm: {scopes}. Cho đến khi bạn chọn, Guard chỉ chia sẻ những gì bạn đã đồng ý.",
+		"mobile.guard.prompt_title": "Chia sẻ số liệu Guard với {org}?",
+		"mobile.guard.prompt_visibility": "Quản trị viên chỉ thấy số tổng khi có ít nhất 5 người đóng góp, không bao giờ thấy số liệu riêng của bạn.",
+		"mobile.guard.prompt_visibility_admin_share": "Quản trị viên chỉ thấy số tổng khi có ít nhất 5 người đóng góp. Khi bạn chia sẻ thời gian từng bước, họ cũng thấy được thời gian của riêng bạn, nhưng không thấy nội dung các bước.",
+		"mobile.guard.prompt_visibility_admin_share_posture": "Quản trị viên chỉ thấy số tổng khi có ít nhất 5 người đóng góp, và chỉ thấy ước tính kiểm tra thiết lập khi có ít nhất 20 người đóng góp. Khi bạn chia sẻ thời gian từng bước, họ cũng thấy được thời gian của riêng bạn, nhưng không thấy nội dung các bước.",
+		"mobile.guard.prompt_visibility_posture": "Quản trị viên chỉ thấy số tổng khi có ít nhất 5 người đóng góp, và chỉ thấy ước tính kiểm tra thiết lập khi có ít nhất 20 người đóng góp. Không bao giờ thấy số liệu riêng của bạn.",
+		"mobile.guard.prompt_would_send": "Nếu bạn đồng ý, Guard sẽ gửi từ máy tính này:",
+		"mobile.guard.reason_console_revoked": "bạn đã ngừng chia sẻ từ Console vào {date}",
+		"mobile.guard.reason_entitlement_lapsed": "gói Team không hoạt động",
+		"mobile.guard.reason_membership_ended": "bạn không còn trong {org}",
+		"mobile.guard.reason_org_off": "bị {org} tắt",
+		"mobile.guard.reason_revoke_pending": "sẽ dừng khi Radient xác nhận",
+		"mobile.guard.reason_scope_revoked": "bạn đã ngừng chia sẻ",
+		"mobile.guard.reconnecting": "Đang kết nối lại với máy tính của bạn…",
+		"mobile.guard.review": "Xem",
+		"mobile.guard.revoke_body": "Guard ngừng gửi từ tất cả máy tính của bạn ngay bây giờ.",
+		"mobile.guard.revoke_body_trace": "Guard ngừng gửi từ tất cả máy tính của bạn ngay bây giờ và xóa thời gian từng bước của bạn. Các bản sao trong bản sao lưu sẽ mất trong vòng {backup_days} ngày.",
+		"mobile.guard.revoke_pending_result": "Máy tính này đã ngừng chia sẻ. Radient chưa xác nhận việc ngừng chia sẻ. Guard sẽ tiếp tục yêu cầu xác nhận.",
+		"mobile.guard.revoke_retained": "Các bản ghi khác bạn đã gửi được giữ đến khi hết hạn: số liệu được giữ 90 ngày, báo cáo được giữ 180 ngày.",
+		"mobile.guard.revoke_title": "Ngừng chia sẻ với {org}?",
+		"mobile.guard.revoke_totals": "Các số tổng trước đây có bạn vẫn được công bố. Chúng không bao giờ hiển thị riêng bạn.",
+		"mobile.guard.scope_admin_share": "Cho phép quản trị viên {org} xem thời gian từng bước của bạn",
+		"mobile.guard.scope_decisions": "Kết quả bảo vệ: mỗi lần kiểm tra đã cho phép, hỏi trước hay chặn, và loại quy tắc",
+		"mobile.guard.scope_label_admin_share": "quản trị viên xem thời gian của bạn",
+		"mobile.guard.scope_label_decisions": "kết quả bảo vệ",
+		"mobile.guard.scope_label_posture": "kiểm tra thiết lập",
+		"mobile.guard.scope_label_reports": "báo cáo",
+		"mobile.guard.scope_label_review_cycles": "vòng đánh giá",
+		"mobile.guard.scope_label_task_time": "thời gian tác vụ",
+		"mobile.guard.scope_label_trace_detail": "thời gian từng bước",
+		"mobile.guard.scope_posture": "Kiểm tra thiết lập: các cài đặt được khuyến nghị có bật hay không. Mỗi máy tính thêm nhiễu ngẫu nhiên vào câu trả lời trước khi gửi đi, nên quản trị viên chỉ thấy số ước tính, không thấy câu trả lời thật của ai. Quản trị viên có thể nhận ra khi một trong các cài đặt này thay đổi trên máy tính của bạn.",
+		"mobile.guard.scope_reports": "Các báo cáo bạn chọn gửi, chẳng hạn nghi ngờ lộ khóa hoặc quy tắc bảo vệ chặn quá nhiều. Quản trị viên {org} chỉ thấy số lượng đã gửi của mỗi loại, và chỉ với loại có ít nhất 5 người gửi trong ngày đó. Không ai ở {org} mở được báo cáo của bạn. Nhân viên Radient chỉ mở một báo cáo khi bạn nhờ chúng tôi hỗ trợ về nó hoặc khi pháp luật yêu cầu.",
+		"mobile.guard.scope_review_cycles": "Số vòng đánh giá cho mỗi thay đổi, và thay đổi đó đã được merge hay bị đóng",
+		"mobile.guard.scope_task_time": "Thời gian làm tác vụ, theo khoảng như 5–15 phút",
+		"mobile.guard.scope_trace_detail": "Thời gian từng bước của các tác vụ, không kèm nội dung (lưu 14 ngày)",
+		"mobile.guard.screen_declined": "Không chia sẻ với {org}.",
+		"mobile.guard.screen_failed": "Lựa chọn của bạn chưa được lưu nên không có gì thay đổi. Hãy thử lại.",
+		"mobile.guard.screen_none": "Chưa có tổ chức nào yêu cầu bạn chia sẻ số liệu Guard.",
+		"mobile.guard.screen_prompt_changed": "{org} đã thay đổi yêu cầu này. Hãy xem yêu cầu mới bên dưới.",
+		"mobile.guard.screen_revoked": "Đã ngừng chia sẻ với {org}.",
+		"mobile.guard.screen_shared": "Đang chia sẻ với {org} từ máy tính này.",
+		"mobile.guard.screen_title": "Radient Guard",
+		"mobile.guard.screen_unavailable": "Guard không đọc được cài đặt của mình trên máy tính này. Màn hình này chưa chia sẻ hay gửi gì.",
+		"mobile.guard.screen_working": "Đang xử lý…",
+		"mobile.guard.share_again_result": "{org} sẽ sớm hỏi lại bạn. Hãy tìm yêu cầu trong Thông báo.",
+		"mobile.guard.shared_heading": "Đang chia sẻ với {org} từ máy tính này:",
+		"mobile.guard.surface_desktop": "ứng dụng máy tính",
+		"mobile.guard.surface_mobile": "điện thoại của bạn",
+		"mobile.guard.surface_terminal": "terminal",
 		"mobile.home.chip.effort_chosen": "Mức suy luận, {effort}, đã chọn cho cuộc trò chuyện này",
 		"mobile.home.chip.effort_default": "Mức suy luận, {effort}, mặc định của máy tính này",
 		"mobile.home.chip.effort_default_unnamed": "Mức suy luận, mức đã cấu hình trên máy tính này",
@@ -16754,6 +17715,96 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.wait.tunnel_status": "Radient已有此隧道，状态：{status}。",
 		"mobile.computers.wait.use_computer": "使用此电脑",
 		"mobile.computers.your_computer": "你的电脑",
+		"mobile.guard.answered_elsewhere": "已在其他设备上作答",
+		"mobile.guard.answered_on": "已在{surface}上作答",
+		"mobile.guard.button_decide_later": "稍后决定",
+		"mobile.guard.button_dont_share": "不共享",
+		"mobile.guard.button_keep_current": "保持现状",
+		"mobile.guard.button_keep_sharing": "继续共享",
+		"mobile.guard.button_share": "共享",
+		"mobile.guard.button_share_again": "重新共享",
+		"mobile.guard.button_share_new": "共享新项目",
+		"mobile.guard.button_stop_sharing": "停止共享",
+		"mobile.guard.card_ask_owner": "请让组织所有者升级",
+		"mobile.guard.card_body": "Radient Team面向软件工厂、咨询团队以及以团队形式开展的知识工作。智能体共享上下文并在成员之间交接工作，Guard则根据同意共享的成员的数据为管理员提供防护统计数据。",
+		"mobile.guard.card_cta_see": "了解Radient Team",
+		"mobile.guard.card_cta_trial": "开始{trial_days}天免费试用",
+		"mobile.guard.card_footer": "Guard不会为{org}收集任何内容。",
+		"mobile.guard.card_footer_account": "不会从此账户收集任何内容。",
+		"mobile.guard.card_title": "Radient Guard是Radient Team的一部分",
+		"mobile.guard.computer_line": "这台电脑：{computer}",
+		"mobile.guard.computers_note": "停止共享适用于你的所有电脑。你可以在Console中查看它们。",
+		"mobile.guard.consent_needs_update": "这条请求包含此应用暂时无法描述的内容，因此无法在这里作答。请更新应用，或在电脑上的Local Operator中作答。",
+		"mobile.guard.consent_not_signable": "这条请求无法在手机上作答。请在电脑上打开Local Operator进行选择。",
+		"mobile.guard.disconnected": "连接到一台电脑后即可查看Radient Guard。",
+		"mobile.guard.host_old": "这台电脑上的Local Operator暂时无法在手机上显示Radient Guard。请更新它，以便在这里查看或停止共享。",
+		"mobile.guard.indicator_not_sharing": "Guard：未与{org}共享",
+		"mobile.guard.indicator_paused": "Guard：已暂停，{reason}",
+		"mobile.guard.indicator_paused_plain": "Guard：已暂停",
+		"mobile.guard.indicator_sharing": "Guard：正在与{org}共享",
+		"mobile.guard.indicator_sharing_pending": "Guard：正在与{org}共享 · 有新项目等你决定",
+		"mobile.guard.indicator_unknown": "Guard：此处无法显示状态",
+		"mobile.guard.indicator_waiting": "Guard：{org}正在等你决定",
+		"mobile.guard.indicator_will_ask": "Guard：{org}很快会再次询问你",
+		"mobile.guard.intro": "Radient Guard可以把某台电脑上的防护统计数据共享给你的Team组织，但必须在你同意之后。你的答复由那台电脑上的Local Operator执行；这部手机只负责转达。",
+		"mobile.guard.load_error": "无法从这台电脑读取Radient Guard。请检查连接后重试。",
+		"mobile.guard.loading": "正在检查Radient Guard……",
+		"mobile.guard.prompt_background": "如果你选择共享数据，Guard会在后台发送数据。你可以随时在“设置”或Console中停止共享。",
+		"mobile.guard.prompt_never_sent": "绝不发送：文件路径、命令、提示词、代码、模型输出或工具参数。",
+		"mobile.guard.prompt_reason_new_device": "这是你的Radient账户中的一台新电脑。每台电脑单独决定，请为这台电脑作出选择。",
+		"mobile.guard.prompt_reason_new_org": "{org}已开启Radient Guard。",
+		"mobile.guard.prompt_reason_plan_gap": "{org}的Team套餐曾中断后又恢复，因此Guard需要你重新作答。在你决定之前，不会共享任何内容。",
+		"mobile.guard.prompt_reason_reactivated": "{org}重新开启了Radient Guard。在你再次决定之前，不会共享任何内容。",
+		"mobile.guard.prompt_reason_rejoined": "你已重新加入{org}。你之前的答复在你离开时已失效，请重新选择。",
+		"mobile.guard.prompt_reason_widened": "{org}希望收集更多内容：{scopes}。在你决定之前，Guard只共享你已同意的内容。",
+		"mobile.guard.prompt_title": "与{org}共享Guard统计数据？",
+		"mobile.guard.prompt_visibility": "仅当至少5人参与时，管理员才能看到汇总数据，绝不会看到你个人的数字。",
+		"mobile.guard.prompt_visibility_admin_share": "仅当至少5人参与时，管理员才能看到汇总数据。共享逐步耗时后，他们还能看到你个人的耗时，但看不到各步骤的内容。",
+		"mobile.guard.prompt_visibility_admin_share_posture": "仅当至少5人参与时，管理员才能看到汇总数据；仅当至少20人参与时，才能看到设置检查的估算值。共享逐步耗时后，他们还能看到你个人的耗时，但看不到各步骤的内容。",
+		"mobile.guard.prompt_visibility_posture": "仅当至少5人参与时，管理员才能看到汇总数据；仅当至少20人参与时，才能看到设置检查的估算值。绝不会看到你个人的数字。",
+		"mobile.guard.prompt_would_send": "如果你同意，Guard会从这台电脑发送：",
+		"mobile.guard.reason_console_revoked": "你已于{date}在Console中停止共享",
+		"mobile.guard.reason_entitlement_lapsed": "Team套餐未生效",
+		"mobile.guard.reason_membership_ended": "你已不在{org}中",
+		"mobile.guard.reason_org_off": "已被{org}关闭",
+		"mobile.guard.reason_revoke_pending": "Radient确认后即停止",
+		"mobile.guard.reason_scope_revoked": "你已停止共享",
+		"mobile.guard.reconnecting": "正在重新连接到你的电脑……",
+		"mobile.guard.review": "查看",
+		"mobile.guard.revoke_body": "Guard将立即停止从你所有电脑发送数据。",
+		"mobile.guard.revoke_body_trace": "Guard将立即停止从你所有电脑发送数据，并删除你的逐步耗时。备份中的副本将在{backup_days}天内清除。",
+		"mobile.guard.revoke_pending_result": "这台电脑已停止共享。Radient尚未确认，Guard会继续请求确认。",
+		"mobile.guard.revoke_retained": "你已发送的其他记录会保留到过期为止：统计数据90天，报告180天。",
+		"mobile.guard.revoke_title": "停止与{org}共享？",
+		"mobile.guard.revoke_totals": "过去包含你的汇总数据仍会保持发布状态，但绝不会单独显示你。",
+		"mobile.guard.scope_admin_share": "允许{org}的管理员查看你的逐步耗时",
+		"mobile.guard.scope_decisions": "防护结果：每项检查是允许、询问还是阻止，以及规则类型",
+		"mobile.guard.scope_label_admin_share": "管理员查看你的耗时",
+		"mobile.guard.scope_label_decisions": "防护结果",
+		"mobile.guard.scope_label_posture": "设置检查",
+		"mobile.guard.scope_label_reports": "报告",
+		"mobile.guard.scope_label_review_cycles": "审查轮数",
+		"mobile.guard.scope_label_task_time": "任务耗时",
+		"mobile.guard.scope_label_trace_detail": "逐步耗时",
+		"mobile.guard.scope_posture": "设置检查：推荐设置是否已开启。每台电脑会在发送前随机化自己的答案，因此管理员看到的是估算值，而不是任何人的真实答案。管理员可能会察觉到你电脑上某项设置发生了变化。",
+		"mobile.guard.scope_reports": "你选择发送的报告，例如疑似泄露的密钥或防护规则阻止过多。{org}的管理员只能看到每类报告的发送数量，且仅限当天至少有5人发送的类别。{org}中任何人都无法打开你的报告。只有在你请我们协助处理该报告或法律要求时，Radient工作人员才会打开它。",
+		"mobile.guard.scope_review_cycles": "每项更改的审查轮数，以及最终是merge还是关闭",
+		"mobile.guard.scope_task_time": "任务耗时，按区间统计，例如5–15分钟",
+		"mobile.guard.scope_trace_detail": "任务的逐步耗时，不含内容（保留14天）",
+		"mobile.guard.screen_declined": "未与{org}共享。",
+		"mobile.guard.screen_failed": "你的选择未能保存，因此没有任何更改。请重试。",
+		"mobile.guard.screen_none": "目前没有组织请你共享Guard统计数据。",
+		"mobile.guard.screen_prompt_changed": "{org}更改了此请求。请查看下方的新请求。",
+		"mobile.guard.screen_revoked": "已停止与{org}共享。",
+		"mobile.guard.screen_shared": "正在从这台电脑与{org}共享。",
+		"mobile.guard.screen_title": "Radient Guard",
+		"mobile.guard.screen_unavailable": "Guard无法读取这台电脑上的设置。此界面未共享或发送任何内容。",
+		"mobile.guard.screen_working": "处理中……",
+		"mobile.guard.share_again_result": "{org}很快会再次询问你。请在“通知”中查看。",
+		"mobile.guard.shared_heading": "正从这台电脑向{org}共享：",
+		"mobile.guard.surface_desktop": "桌面应用",
+		"mobile.guard.surface_mobile": "你的手机",
+		"mobile.guard.surface_terminal": "终端",
 		"mobile.home.chip.effort_chosen": "推理强度，{effort}，已为此对话选择",
 		"mobile.home.chip.effort_default": "推理强度，{effort}，此电脑的默认设置",
 		"mobile.home.chip.effort_default_unnamed": "推理强度，此电脑已配置的级别",

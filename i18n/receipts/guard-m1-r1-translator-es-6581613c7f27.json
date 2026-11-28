@@ -1,0 +1,71 @@
+{
+	"schema": 1,
+	"receipt_kind": "translation-only; independent audit pending",
+	"instance": "6581613c7f27",
+	"date": "2026-11-27",
+	"translator": {
+		"agent": "coder (radientdev team; guard M1 remediation r1)",
+		"session": "6581613c7f27",
+		"model": "anthropic/claude-sonnet-5-5",
+		"fallback": "none"
+	},
+	"status": "translated-awaiting-independent-audit",
+	"scope_note": "Translator receipt only. Scope: the 21 phone-authored mobile.guard keys (19 phone-only + the 2 core-adapted keys indicator_waiting and prompt_background) re-read against the English source, the context notes, the core glossary, this locale's style guide and the core tui.guard words for the same concepts (computer, guardrail, share, answer, Settings). The other 69 keys are byte-identical to core's audited tui.guard.* (checked by script, 0 differences) and were not touched. No auditor result, native-speaker review, rendered-fit or activation claim: the independent audit has NOT happened and no ledger or audit evidence was written or edited by this receipt.",
+	"style_inputs": {
+		"repository": "local-operator",
+		"revision": "498066e8c8270ad5c02bbb053186252ed6981212",
+		"glossary_sha256": "5de3929198c3f603ce14bf75fb992c0f5c7a1952c440b496386977f8c636fcc7",
+		"style_sha256": "4a6f6270f028e5f5fbca7156a8f5099077f92585db94c14653482e9b188248a6",
+		"core_catalogue": "local_operator/i18n/catalogues/es/tui.guard.json",
+		"core_catalogue_sha256": "31d146015062e4c8a7cc873f350449c76f794638f567c3e7e6675d35266cc516"
+	},
+	"namespaces": {
+		"mobile.guard": {
+			"keys_translated_reviewed": [
+				"mobile.guard.answered_elsewhere",
+				"mobile.guard.card_ask_owner",
+				"mobile.guard.card_footer_account",
+				"mobile.guard.computer_line",
+				"mobile.guard.computers_note",
+				"mobile.guard.consent_needs_update",
+				"mobile.guard.consent_not_signable",
+				"mobile.guard.disconnected",
+				"mobile.guard.host_old",
+				"mobile.guard.indicator_unknown",
+				"mobile.guard.indicator_waiting",
+				"mobile.guard.intro",
+				"mobile.guard.load_error",
+				"mobile.guard.loading",
+				"mobile.guard.prompt_background",
+				"mobile.guard.reconnecting",
+				"mobile.guard.review",
+				"mobile.guard.revoke_pending_result",
+				"mobile.guard.share_again_result",
+				"mobile.guard.shared_heading",
+				"mobile.guard.surface_terminal"
+			],
+			"keys_changed_in_remediation_r1": [
+				"mobile.guard.computer_line",
+				"mobile.guard.computers_note",
+				"mobile.guard.consent_needs_update",
+				"mobile.guard.consent_not_signable",
+				"mobile.guard.disconnected",
+				"mobile.guard.host_old",
+				"mobile.guard.intro",
+				"mobile.guard.load_error",
+				"mobile.guard.prompt_background",
+				"mobile.guard.reconnecting",
+				"mobile.guard.revoke_pending_result",
+				"mobile.guard.shared_heading"
+			],
+			"source_path": "src/i18n/catalogues/en/mobile.guard.json",
+			"target_path": "src/i18n/catalogues/es/mobile.guard.json",
+			"context_path": "src/i18n/catalogues/en/mobile.guard.context.json",
+			"sha256": {
+				"en": "4bd08d4670d429d5f87d8f63d5636b9408f350ae8a97718a84659951fdfa20b5",
+				"es": "a1a5d803f3bbcccd4d0054efa11d9fd675d98ed30187dc43f13331a56514c78b",
+				"context": "0111504447375d32bcf80d4e5b60744b6c7cb2933ebf7cbc14157be4a73d9f1c"
+			}
+		}
+	}
+}

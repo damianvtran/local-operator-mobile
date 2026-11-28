@@ -148,6 +148,7 @@ vi.mock("./account-card", () => ({ AccountCard: Nothing }));
 vi.mock("./account-routing-section", () => ({
 	AccountRoutingSection: Nothing,
 }));
+vi.mock("./guard-section", () => ({ GuardSection: Nothing }));
 vi.mock("./notifications-section", () => ({ NotificationsSection: Nothing }));
 vi.mock("./own-tunnel-settings", () => ({ OwnTunnelSettings: Nothing }));
 vi.mock("./sidebar-section", () => ({ SidebarSettingsSection: Nothing }));
