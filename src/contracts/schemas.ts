@@ -31,7 +31,11 @@
 
 import { z } from "zod";
 
-import { displayName } from "./display-name";
+// The extension is load-bearing: tools/mock-relay/verify.ts imports this file
+// under plain Node type-stripping (no bundler resolution), where an
+// extensionless VALUE import fails with ERR_MODULE_NOT_FOUND. Every other
+// relative import here is `import type` (erased), so this is the one that bites.
+import { displayName } from "./display-name.ts";
 import type {
 	AccountRoutingPayload,
 	ApiError,
